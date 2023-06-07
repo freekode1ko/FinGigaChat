@@ -7,8 +7,9 @@ import config
 
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
-chat = ''
 token = ''
+chat = ''
+
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
@@ -36,7 +37,7 @@ async def start_handler(message: types.Message):
 async def bonds_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
-    columns = ['Название', 'Доходность', 'Осн.', 'Макс.', 'Мин.', 'Изм.', 'Изм. %', 'Время']
+    columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
     bonds = bonds[columns].dropna(axis=0)
     bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')]
 
