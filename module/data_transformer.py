@@ -22,9 +22,10 @@ class Transformer:
         :param html: HTML codes as text
         :return: list with DataFrames
         """
-        if euro_standart:
-            return pd.read_html(html)
-        return pd.read_html(html, decimal=',', thousands='.')
+        # if euro_standart:
+        #     return pd.read_html(html)
+        html_rep = html.replace('.', ',')
+        return pd.read_html(html_rep, decimal=',', thousands='.')
 
     @staticmethod
     def save_df_as_png(df: pd.DataFrame, path_to_source: str,
