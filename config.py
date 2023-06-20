@@ -23,6 +23,8 @@ user_agents = \
     ]
 
 chat_base_url = 'url'
+research_base_url = 'url'
 path_to_source = '/Desktop/Chat_bot/FinGigaChat/sources'
 api_token = ''
 user_cred = ('login', 'password')
+research_cred = ('login', 'password')
