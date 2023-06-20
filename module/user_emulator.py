@@ -35,7 +35,7 @@ class ResearchParser:
         Get review text from popup menu after a click
         :param table: HTML element to click
         :param driver: Browser session where to work
-        :return: list with text from HTML element and first and last <P> tag from review text
+        :return: list with text from HTML element, first and last <P> tag from review text and date of publicity
         """
         table.click()
         self.__sleep_some_time(2, 3)
@@ -90,9 +90,12 @@ class ResearchParser:
         self.__sleep_some_time()
 
         table = driver.find_elements('class name', 'title')
+        dates = driver.find_elements('class name', 'date')
+        row_numb = 0
         for i in table[1:6:2]:
             self.__sleep_some_time(2, 3)
-            reviews.append(self.__popup_worker(i, driver))
+            row_numb += 1
+            reviews.append([*self.__popup_worker(i, driver), dates[row_numb].text])
         return reviews
 
     def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
@@ -113,6 +116,7 @@ class ResearchParser:
         self.__sleep_some_time(2, 3)
 
         table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
-        review.append(self.__popup_worker(table, driver))
+        date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[5]')
+        review.append([*self.__popup_worker(table, driver), date.text])
 
         return review
