@@ -59,14 +59,13 @@ class ResearchParser:
         wait.until(ec.presence_of_element_located((By.ID, self.tabs['everyday'])))  # Ежедневные
         self.__sleep_some_time()
 
-        driver.find_element('id', '905--910--900').click()
+        driver.find_element('id', self.tabs['everyday']).click()
         wait.until(ec.presence_of_element_located((By.CLASS_NAME, 'title')))
         self.__sleep_some_time()
 
         table = driver.find_elements('class name', 'title')
         for i in table[1:6:2]:
             self.__sleep_some_time(2, 3)
-            # print(i.text)
             reviews.append(self.popup_worker(i, driver))
         return reviews
 
@@ -74,20 +73,14 @@ class ResearchParser:
         review = []
         driver.get(url)
         wait = WebDriverWait(driver, 10)
+        assert 'Экономика' in driver.title
         self.__sleep_some_time(2, 3)
+
         wait.until(ec.presence_of_element_located((By.ID, self.tabs['reviews'])))  # Обзоры
         driver.find_element('id', self.tabs['reviews']).click()
         self.__sleep_some_time(2, 3)
+
         table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
         review.append(self.popup_worker(table, driver))
-        '''
-        eco_xpath = '//*[@id="publicationsTableContainer"]/div[2]'
-        last_eco_review = driver.find_element(By.XPATH, eco_xpath)
-        last_eco_review.click()
-        time.sleep(2)
-        eco_review_text = driver.find_element(By.XPATH, '/html/body/div[2]/div/div/div/div/div/div/div[3]/p[1]').text
-        # last_eco_review.send_keys(Keys.ESCAPE)
-        review.append([last_eco_review.text, eco_review_text])
-        print(review)
-        '''
+
         return review
