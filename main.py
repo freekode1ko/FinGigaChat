@@ -39,7 +39,7 @@ def main():
 
     exchenge_kot = []
 
-    U7M23 = []
+    U7N23 = []
     metals_kot = []
     metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
     metals_coal_kot = []
@@ -99,7 +99,9 @@ def main():
 
         elif table[0] == 'Металлы' and page == 'U7*0':
             if {'Last', 'Change'}.issubset(table[3].columns):
-                U7M23.append(['кокс. уголь', table[3].loc[table[3]['Symbol'] == 'U7M23'].values.tolist()[0][1]])
+                print(table[3])
+                print(table[3].loc[table[3]['Symbol'] == 'U7N23'].values.tolist())
+                U7N23.append(['кокс. уголь', table[3].loc[table[3]['Symbol'] == 'U7N23'].values.tolist()[0][1]])
 
         elif table[0] == 'Металлы' and page == 'commodities':
             if 'Metals' in table[3].columns:
@@ -141,10 +143,10 @@ def main():
     metal_writer = pd.ExcelWriter('sources/tables/metal.xlsx')
     big_table = pd.DataFrame(columns=['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date'])
     metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Day', 'Weekly', 'Date'])
-    U7M23_df = pd.DataFrame(U7M23, columns=['Metals', 'Price'])
+    U7N23_df = pd.DataFrame(U7N23, columns=['Metals', 'Price'])
     for table in metals_kot:
         big_table = pd.concat([big_table, table], ignore_index=True)
-    big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7M23_df], ignore_index=True)
+    big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)
     big_table.to_excel(metal_writer, sheet_name='Металы')
 
     exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
