@@ -51,6 +51,7 @@ def main():
             page = table[2].split('/')[-1]
         else:
             page = table[2].split('/')[-2]
+
         # BONDS BLOCK
         if table[0] == 'Облигации' and table[1] == 'Блок котировки':
             bonds_kot = pd.concat([bonds_kot, table[3]])

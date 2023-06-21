@@ -12,15 +12,17 @@ class ResearchParser:
     def __init__(self):
         cred = config.research_cred
         research_base_url = config.research_base_url
-        tabs = {'all': 'all', 'everyday': '905--910--900', 'reviews': '3--0--5--106--15--63--81--87'}
+        tabs_eco = {'all': 'all', 'everyday': '905--910--900', 'reviews': '3--0--5--106--15--63--81--87'}
+        tabs_money = {'all': 'all', 'everyday': '93', 'reviews': '0--113--123--110--91--82--101--100'}
         base_popup_xpath = '/html/body/div[2]/div/div/div/div/div/div/div[3]'
         self.base_popup_xpath = base_popup_xpath
         self.research_base_url = research_base_url
-        self.tabs = tabs
+        self.tabs_eco = tabs_eco
+        self.tabs_money = tabs_money
         self.cred = cred
 
     @staticmethod
-    def __sleep_some_time(start: int = 1, end: int = 2):
+    def __sleep_some_time(start: float = 1.0, end: float = 2.0):
         """
         Send user emulator to sleep.
         Fake user delay and wait to load HTML elements
@@ -30,7 +32,7 @@ class ResearchParser:
         """
         time.sleep(random.uniform(start, end))
 
-    def __popup_worker(self, table: wb.remote.webelement.WebElement, driver: wb.firefox.webdriver.WebDriver):
+    def __popup_worker_eco(self, table: wb.remote.webelement.WebElement, driver: wb.firefox.webdriver.WebDriver):
         """
         Get review text from popup menu after a click
         :param table: HTML element to click
@@ -45,9 +47,29 @@ class ResearchParser:
         review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows))).text
         # if last <P> tag is empty or to small - take previously 
         if len(review_last) < 5:
-            review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows)-1)).text
+            review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows) - 1)).text
         review_page.send_keys(Keys.ESCAPE)
-        return [table.text, '{} {}'.format(review_first, review_last)]
+        return [table.text, '{} {}'.format(review_first, review_last).replace('>', '')]
+
+    def __popup_worker_money(self, table: wb.remote.webelement.WebElement, driver: wb.firefox.webdriver.WebDriver):
+        """
+        Get review with filter text from popup menu after a click
+        :param table: HTML element to click
+        :param driver: Browser session where to work
+        :return: Review name and review without '>' symbol
+        """
+        table.click()
+        self.__sleep_some_time(2, 3)
+        review_page = driver.find_element(By.XPATH, self.base_popup_xpath)
+        rows = review_page.find_elements('tag name', 'p')
+        output = ''
+        for row in rows:
+            if ('Прогноз.' not in row.text) \
+                    and ('Процентные ставки:' not in row.text) \
+                    and ('@sber' not in row.text):
+                output += ''.join(row.text)
+        review_page.send_keys(Keys.ESCAPE)
+        return [table.text, output.replace('>', '')]
 
     def auth(self, driver: wb.firefox.webdriver.WebDriver):
         """
@@ -73,20 +95,16 @@ class ResearchParser:
 
     def get_everyday_reviews(self, driver: wb.firefox.webdriver.WebDriver, url: str):
         """
-        Get last everyday reviews
+        Get last everyday economical reviews
         :param driver: Browser session where to work
         :param url: URL with reviews
         :return: list with lists filled with reviews info
         """
         reviews = []
         driver.get(url)
-        wait = WebDriverWait(driver, 10)
         assert 'Экономика' in driver.title
-        wait.until(ec.presence_of_element_located((By.ID, self.tabs['everyday'])))  # Ежедневные
         self.__sleep_some_time()
-
-        driver.find_element('id', self.tabs['everyday']).click()
-        wait.until(ec.presence_of_element_located((By.CLASS_NAME, 'title')))
+        driver.find_element('id', self.tabs_eco['everyday']).click()
         self.__sleep_some_time()
 
         table = driver.find_elements('class name', 'title')
@@ -95,7 +113,7 @@ class ResearchParser:
         for i in table[1:6:2]:
             self.__sleep_some_time(2, 3)
             row_numb += 1
-            reviews.append([*self.__popup_worker(i, driver), dates[row_numb].text])
+            reviews.append([*self.__popup_worker_eco(i, driver), dates[row_numb].text])
         return reviews
 
     def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
@@ -107,16 +125,54 @@ class ResearchParser:
         """
         review = []
         driver.get(url)
-        wait = WebDriverWait(driver, 10)
         assert 'Экономика' in driver.title
-        self.__sleep_some_time(2, 3)
-
-        wait.until(ec.presence_of_element_located((By.ID, self.tabs['reviews'])))  # Обзоры
-        driver.find_element('id', self.tabs['reviews']).click()
+        self.__sleep_some_time(1.5, 2.5)
+        driver.find_element('id', self.tabs_eco['reviews']).click()
         self.__sleep_some_time(2, 3)
 
         table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
         date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[5]')
-        review.append([*self.__popup_worker(table, driver), date.text])
+        review.append([*self.__popup_worker_eco(table, driver), date.text])
 
+        return review
+
+    def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str):
+        """
+        Get last everyday money reviews
+        :param driver: Browser session where to work
+        :param url: URL with reviews
+        :return: list with lists filled with reviews info
+        """
+        reviews = []
+        driver.get(url)
+        assert 'FX & Ставки' in driver.title
+        self.__sleep_some_time(2, 3)
+
+        driver.find_element('id', self.tabs_money['everyday']).click()
+        self.__sleep_some_time()
+
+        table = driver.find_elements('class name', 'summarylink')
+        dates = driver.find_elements('class name', 'date')
+        for row_numb, i in enumerate(table[:2]):
+            self.__sleep_some_time(2, 3)
+            reviews.append(([*self.__popup_worker_money(i, driver), dates[row_numb].text]))
+        return reviews
+
+    def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
+        """
+        Get review from global every month money review
+        :param driver: Browser session where to work
+        :param url: URL with reviews
+        :return: list with review info
+        """
+        review = []
+        driver.get(url)
+        assert 'FX & Ставки' in driver.title
+        self.__sleep_some_time(1.5, 2.5)
+        driver.find_element('id', self.tabs_money['reviews']).click()
+        self.__sleep_some_time(2, 3)
+
+        table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
+        date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[4]')
+        review.append([*self.__popup_worker_eco(table, driver), date.text])
         return review
