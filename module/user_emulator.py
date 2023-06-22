@@ -155,7 +155,7 @@ class ResearchParser:
         dates = driver.find_elements('class name', 'date')
         for row_numb, i in enumerate(table[:2]):
             self.__sleep_some_time(2, 3)
-            reviews.append(([*self.__popup_worker_money(i, driver), dates[row_numb].text]))
+            reviews.append(([*self.__popup_worker_money(i, driver), dates[row_numb+1].text]))
         return reviews
 
     def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
