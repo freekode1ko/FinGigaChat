@@ -1,3 +1,4 @@
+import selenium
 import selenium.webdriver as wb
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -51,10 +52,13 @@ class ResearchParser:
         review_page.send_keys(Keys.ESCAPE)
         return [table.text, '{} {}'.format(review_first, review_last).replace('>', '')]
 
-    def __popup_worker_money(self, table: wb.remote.webelement.WebElement, driver: wb.firefox.webdriver.WebDriver):
+    def __popup_worker_money(self, table: wb.remote.webelement.WebElement,
+                             driver: wb.firefox.webdriver.WebDriver,
+                             filter: tuple):
         """
         Get review with filter text from popup menu after a click
         :param table: HTML element to click
+        :param filter: Keywords for searching in review text
         :param driver: Browser session where to work
         :return: Review name and review without '>' symbol
         """
@@ -64,8 +68,8 @@ class ResearchParser:
         rows = review_page.find_elements('tag name', 'p')
         output = ''
         for row in rows:
-            if ('Прогноз.' not in row.text) \
-                    and ('Процентные ставки:' not in row.text) \
+            if (filter[0] not in row.text) \
+                    and (filter[1] not in row.text) \
                     and ('@sber' not in row.text):
                 output += ''.join(row.text)
         review_page.send_keys(Keys.ESCAPE)
@@ -136,9 +140,11 @@ class ResearchParser:
 
         return review
 
-    def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str):
+    def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str,
+                           text_filter: tuple = (['Процентные ставки', 'Прогноз'])):
         """
         Get last everyday money reviews
+        :param text_filter: Keywords for searching in review text
         :param driver: Browser session where to work
         :param url: URL with reviews
         :return: list with lists filled with reviews info
@@ -155,13 +161,15 @@ class ResearchParser:
         dates = driver.find_elements('class name', 'date')
         for row_numb, i in enumerate(table[:2]):
             self.__sleep_some_time(2, 3)
-            reviews.append(([*self.__popup_worker_money(i, driver), dates[row_numb+1].text]))
+            reviews.append(([*self.__popup_worker_money(i, driver, text_filter), dates[row_numb+1].text]))
         return reviews
 
-    def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
+    def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str,
+                         review_filter: str = 'Денежный рынок. Еженедельный обзор'):
         """
         Get review from global every month money review
         :param driver: Browser session where to work
+        :param review_filter: Find specific review
         :param url: URL with reviews
         :return: list with review info
         """
@@ -169,10 +177,20 @@ class ResearchParser:
         driver.get(url)
         assert 'FX & Ставки' in driver.title
         self.__sleep_some_time(1.5, 2.5)
-        driver.find_element('id', self.tabs_money['reviews']).click()
+        driver.find_element('id', self.tabs_money['all']).click()
         self.__sleep_some_time(2, 3)
 
-        table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
-        date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[4]')
+        search = driver.find_element('id', '_cibfxmmpublicationportlet_WAR_cibpublicationsportlet_'
+                                           'INSTANCE_K5rpkFlwUUMi_publication-search-input')
+        search.click()
+        search.send_keys(review_filter, Keys.ENTER)
+        self.__sleep_some_time(2.5, 3.2)
+        try:
+            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
+            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[4]')
+        except selenium.common.exceptions.NoSuchElementException:
+            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[1]/div/a')
+            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[4]')
+
         review.append([*self.__popup_worker_eco(table, driver), date.text])
         return review
