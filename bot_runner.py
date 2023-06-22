@@ -10,7 +10,6 @@ API_TOKEN = config.api_token
 token = ''
 chat = ''
 
-
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
@@ -19,6 +18,7 @@ eco_aliases = ['экономика', 'ставки', 'ключевая став�
 exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 metal_aliases = ['металлы', 'сырьевые товары', 'commodities']
 analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
+
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
@@ -140,9 +140,17 @@ async def metal_info(message: types.Message):
     transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
                                figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
+    day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
     photo = open(png_path, 'rb')
     await message.answer('Да да - Вот оно:')
     await bot.send_photo(message.chat.id, photo)
+    for rev in day:
+        await message.answer('Публикация дня: {}, от: {}'.format(rev[0], rev[2]))
+        await message.answer('Краткое содержание:')
+        if len(rev[1]) > 4096:
+            for x in range(0, len(rev[1]), 4096):
+                await message.answer(rev[1][x:x+4096])
+
     # ////
     # await message.answer('Да да - Вот оно:\n{}'.format(metal.to_markdown(index=False)))
 
