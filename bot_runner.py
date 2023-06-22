@@ -116,9 +116,16 @@ async def exchange_info(message: types.Message):
     transformer = dt.Transformer()
     transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
                                figure_size=(5, 2), path_to_source=path_to_source, name='exc')
+    day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     photo = open(png_path, 'rb')
     await message.answer('Да да - Вот оно:\nКурсы валют:')
     await bot.send_photo(message.chat.id, photo)
+    for rev in day:
+        await message.answer('Публикация дня: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
+
+    for rev in month:
+        await message.answer('Публикация месяца: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
