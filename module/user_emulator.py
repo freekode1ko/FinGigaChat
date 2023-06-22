@@ -15,11 +15,14 @@ class ResearchParser:
         research_base_url = config.research_base_url
         tabs_eco = {'all': 'all', 'everyday': '905--910--900', 'reviews': '3--0--5--106--15--63--81--87'}
         tabs_money = {'all': 'all', 'everyday': '93', 'reviews': '0--113--123--110--91--82--101--100'}
+        tabs_metal = {'all': 'all', 'everyday': '96--905--900', 'reviews': '134--0--137'}
         base_popup_xpath = '/html/body/div[2]/div/div/div/div/div/div/div[3]'
+
         self.base_popup_xpath = base_popup_xpath
         self.research_base_url = research_base_url
         self.tabs_eco = tabs_eco
         self.tabs_money = tabs_money
+        self.tabs_metal = tabs_metal
         self.cred = cred
 
     @staticmethod
@@ -72,7 +75,11 @@ class ResearchParser:
                     and (filter[1] not in row.text) \
                     and ('@sber' not in row.text):
                 output += ''.join(row.text)
-        review_page.send_keys(Keys.ESCAPE)
+        try:
+            review_page.send_keys(Keys.ESCAPE)
+        except selenium.common.exceptions.ElementNotInteractableException:
+            review_page = driver.find_element(By.XPATH, '/html/body/div[2]/div/div/a')
+            review_page.click()
         return [table.text, output.replace('>', '')]
 
     def auth(self, driver: wb.firefox.webdriver.WebDriver):
@@ -140,10 +147,11 @@ class ResearchParser:
 
         return review
 
-    def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str,
+    def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str, title: str = 'FX & Ставки',
                            text_filter: tuple = (['Процентные ставки', 'Прогноз'])):
         """
         Get last everyday money reviews
+        :param title: Name of browser tab (Page name)
         :param text_filter: Keywords for searching in review text
         :param driver: Browser session where to work
         :param url: URL with reviews
@@ -151,10 +159,12 @@ class ResearchParser:
         """
         reviews = []
         driver.get(url)
-        assert 'FX & Ставки' in driver.title
+        assert title in driver.title
         self.__sleep_some_time(2, 3)
-
-        driver.find_element('id', self.tabs_money['everyday']).click()
+        try:
+            driver.find_element('id', self.tabs_money['everyday']).click()
+        except selenium.common.exceptions.NoSuchElementException:
+            driver.find_element('id', self.tabs_metal['everyday']).click()
         self.__sleep_some_time()
 
         table = driver.find_elements('class name', 'summarylink')
