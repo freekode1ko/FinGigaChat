@@ -10,7 +10,6 @@ API_TOKEN = config.api_token
 token = ''
 chat = ''
 
-
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
@@ -18,6 +17,7 @@ bonds_aliases = ['облигации', 'бонды', 'офз']
 eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
 exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 metal_aliases = ['металлы', 'сырьевые товары', 'commodities']
+analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
 
 
 @dp.message_handler(commands=['start'])
@@ -47,8 +47,15 @@ async def bonds_info(message: types.Message):
     transformer.save_df_as_png(df=bond_ru, column_width=[0.11] * len(bond_ru.columns),
                                figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
     photo = open(png_path, 'rb')
+    day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     await message.answer('Да да - Вот оно: \nГосударственные ценные бумаги:')
     await bot.send_photo(message.chat.id, photo)
+    for rev in day:
+        await message.answer('Публикация дня: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
+
+    for rev in month:
+        await message.answer('Публикация месяца: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -70,11 +77,18 @@ async def economy_info(message: types.Message):
     transformer.save_df_as_png(df=world_bet, column_width=[0.25] * len(world_bet.columns),
                                figure_size=(8, 6), path_to_source=path_to_source, name='world_bet')
     photo = open(png_path, 'rb')
-
+    day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     await message.answer('Да да - Вот оно:\n{}\n{}\n{}'
                          .format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
     await message.answer('Ключевые ставки ЦБ мира:')
     await bot.send_photo(message.chat.id, photo)
+
+    for rev in day:
+        await message.answer('Публикация дня: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
+
+    for rev in month:
+        await message.answer('Публикация месяца: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
 
     transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
                                figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
@@ -102,9 +116,16 @@ async def exchange_info(message: types.Message):
     transformer = dt.Transformer()
     transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
                                figure_size=(5, 2), path_to_source=path_to_source, name='exc')
+    day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     photo = open(png_path, 'rb')
     await message.answer('Да да - Вот оно:\nКурсы валют:')
     await bot.send_photo(message.chat.id, photo)
+    for rev in day:
+        await message.answer('Публикация дня: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
+
+    for rev in month:
+        await message.answer('Публикация месяца: {}, от: {}\n\nКраткое содержание:\n{}'.format(rev[0], rev[2], rev[1]))
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
@@ -119,9 +140,17 @@ async def metal_info(message: types.Message):
     transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
                                figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
+    day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
     photo = open(png_path, 'rb')
     await message.answer('Да да - Вот оно:')
     await bot.send_photo(message.chat.id, photo)
+    for rev in day:
+        await message.answer('Публикация дня: {}, от: {}'.format(rev[0], rev[2]))
+        await message.answer('Краткое содержание:')
+        if len(rev[1]) > 4096:
+            for x in range(0, len(rev[1]), 4096):
+                await message.answer(rev[1][x:x+4096])
+
     # ////
     # await message.answer('Да да - Вот оно:\n{}'.format(metal.to_markdown(index=False)))
 
