@@ -20,6 +20,7 @@ class GigaChat:
                                   headers=headers, verify=False)
         try:
             giga_version = gig_version_ans.json()['data'][0]['id']
+            print('GigaChat version is: {}'.format(giga_version))
         except KeyError:
             print('Error while getting gigachat version: HTTP code - {},\n{}'.format(giga_version, giga_version.text))
 
@@ -49,7 +50,8 @@ class GigaChat:
                     "content": "{}".format(question)
                 }
             ],
-            "model": "{}".format(giga_version)
+            "model": "{}".format(giga_version),
+            "profanity_check": False
         })
         headers = {
             'Authorization': 'Bearer {}'.format(token),
