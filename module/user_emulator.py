@@ -47,21 +47,25 @@ class ResearchParser:
         self.__sleep_some_time(2, 3)
         review_page = driver.find_element(By.XPATH, self.base_popup_xpath)
         rows = review_page.find_elements('tag name', 'p')
-        review_first = driver.find_element(By.XPATH, '{}/p[1]'.format(self.base_popup_xpath)).text
-        review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows))).text
+        review = ''
+        for i in range(0, len(rows)):
+            review += driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, i)).text
+        # review_first = driver.find_element(By.XPATH, '{}/p[1]'.format(self.base_popup_xpath)).text
+        # review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows))).text
         # if last <P> tag is empty or to small - take previously 
-        if len(review_last) < 5:
-            review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows) - 1)).text
+        # if len(review_last) < 5:
+        #     review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows) - 1)).text
         review_page.send_keys(Keys.ESCAPE)
-        return [table.text, '{} {}'.format(review_first, review_last).replace('>', '')]
+        return [table.text, review]
+        # return [table.text, '{} {}'.format(review_first, review_last).replace('>', '')]
 
     def __popup_worker_money(self, table: wb.remote.webelement.WebElement,
                              driver: wb.firefox.webdriver.WebDriver,
-                             filter: tuple):
+                             text_filter: tuple):
         """
         Get review with filter text from popup menu after a click
         :param table: HTML element to click
-        :param filter: Keywords for searching in review text
+        :param text_filter: Keywords for searching in review text
         :param driver: Browser session where to work
         :return: Review name and review without '>' symbol
         """
@@ -71,8 +75,8 @@ class ResearchParser:
         rows = review_page.find_elements('tag name', 'p')
         output = ''
         for row in rows:
-            if (filter[0] not in row.text) \
-                    and (filter[1] not in row.text) \
+            if (text_filter[0] not in row.text) \
+                    and (text_filter[1] not in row.text) \
                     and ('@sber' not in row.text):
                 output += ''.join(row.text)
         try:
