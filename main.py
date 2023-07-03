@@ -99,9 +99,8 @@ def metal_block(table_metals, page_metals):
     elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
         if {'Last', 'Change'}.issubset(table_metals[3].columns):
             print(table_metals[3])
-            print(table_metals[3].loc[table_metals[3]['Symbol'] == 'U7M23'].values.tolist())
-            U7N23.append(
-                ['кокс. уголь', table_metals[3].loc[table_metals[3]['Symbol'] == 'U7M23'].values.tolist()[0][1]])
+            jap_coal = table_metals[3][table_metals[3].Symbol.str.contains('U7.23')]
+            U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
 
     elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
         if 'Metals' in table_metals[3].columns:
