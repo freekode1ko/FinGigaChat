@@ -18,6 +18,9 @@ eco_aliases = ['экономика', 'ставки', 'ключевая став�
 exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 metal_aliases = ['металлы', 'сырьевые товары', 'commodities']
 analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
+summ_prompt = 'Сократи текст, оставь только ключевую информацию с числовыми показателями и прогнозами на будущее, ' \
+              'кратко указывай источник данных, убери из текста сравнительные обороты, вводные фразы, авторские ' \
+              'мнения и другую не ключевую информацию. Вот текст:'
 
 
 def __text_splitter(text, batch_size: int = 2048):
@@ -29,26 +32,29 @@ def __text_splitter(text, batch_size: int = 2048):
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = ''):
+    batch_size = 2048
     await bot.send_photo(message.chat.id, photo)
     for day_rev in day:
-        if len(day_rev[1]) > 5:
-            await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
-            await message.answer('Краткое содержание:')
-            for batch in __text_splitter(day_rev[1]):
+        await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
+        await message.answer('Краткое содержание:')
+        giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, day_rev[1]), return_ans=True)
+        if len(giga_ans) > batch_size:
+            for batch in __text_splitter(giga_ans, batch_size):
                 await message.answer(batch)
         else:
-            await message.answer(day_rev[1])
+            # await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, giga_ans))
+            await message.answer(giga_ans)
 
     for month_rev in month:
-        print(month_rev)
-        if len(month_rev[1]) > 5:
-            await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
-            await message.answer('Краткое содержание:')
-            for batch in __text_splitter(month_rev[1]):
-                # print(batch)
+        await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
+        await message.answer('Краткое содержание:')
+        giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, month_rev[1]), return_ans=True)
+        if len(giga_ans) > batch_size:
+            for batch in __text_splitter(giga_ans, batch_size):
                 await message.answer(batch)
-            else:
-                await message.answer(month_rev[1])
+        else:
+            # await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, month_rev[1]))
+            await message.answer(giga_ans)
 
 
 @dp.message_handler(commands=['start'])
@@ -78,7 +84,6 @@ async def bonds_info(message: types.Message):
     transformer.save_df_as_png(df=bond_ru, column_width=[0.11] * len(bond_ru.columns),
                                figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
     photo = open(png_path, 'rb')
-    print(type(photo))
     day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     await message.answer('Да да - Вот оно: \nГосударственные ценные бумаги:')
@@ -157,10 +162,15 @@ async def metal_info(message: types.Message):
 
 
 @dp.message_handler()
-async def giga_ask(message: types.Message):
+async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     global chat
     global token
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    msg = '{} {}'.format(prompt, message.text)
+    msg = msg.replace('/bonds', '')
+    msg = msg.replace('/eco', '')
+    msg = msg.replace('/metal', '')
+    msg = msg.replace('/exchange', '')
+    print('{} - {}'.format(message.from_user.full_name, msg))
 
     if message.text.lower() in bonds_aliases:
         await bonds_info(message)
@@ -172,7 +182,7 @@ async def giga_ask(message: types.Message):
         await exchange_info(message)
     else:
         try:
-            giga_answer = chat.ask_giga_chat(message.text, token)
+            giga_answer = chat.ask_giga_chat(msg, token)
             giga_js = giga_answer.json()['choices'][0]['message']['content']
 
         except AttributeError:
@@ -181,19 +191,17 @@ async def giga_ask(message: types.Message):
             print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
                                                          message.from_user.full_name,
                                                          message.from_user.username))
-            giga_answer = chat.ask_giga_chat(message.text, token)
+            giga_answer = chat.ask_giga_chat(msg, token)
             giga_js = giga_answer.json()['choices'][0]['message']['content']
 
         except KeyError:
-            giga_answer = chat.ask_giga_chat(message.text, token)
+            giga_answer = chat.ask_giga_chat(msg, token)
             giga_js = giga_answer.json()
-
-        await message.answer(giga_js)
+        if not return_ans:
+            await message.answer(giga_js)
+        else:
+            return giga_js
         print('{} - {}'.format('GigaChat_say', giga_js))
-
-        # print(chat.ask_giga_chat(message.text, token))
-    # df = pd.DataFrame(data=[[1, 2, 3, 4], [5, 6, 7, 8]], columns=['A', 'B', 'C', 'D'])
-    # await message.answer(tabulate(df, headers='keys', tablefmt='psql'))
 
 
 if __name__ == '__main__':
