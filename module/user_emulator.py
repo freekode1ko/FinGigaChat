@@ -43,21 +43,22 @@ class ResearchParser:
         :param driver: Browser session where to work
         :return: list with text from HTML element, first and last <P> tag from review text and date of publicity
         """
-        table.click()
+        try:
+            table.find_elements('tag name', 'a')[0].click()
+        except IndexError:
+            table.click()
         self.__sleep_some_time(2, 3)
         review_page = driver.find_element(By.XPATH, self.base_popup_xpath)
         rows = review_page.find_elements('tag name', 'p')
         review = ''
-        for i in range(0, len(rows)):
-            review += driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, i)).text
-        # review_first = driver.find_element(By.XPATH, '{}/p[1]'.format(self.base_popup_xpath)).text
-        # review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows))).text
-        # if last <P> tag is empty or to small - take previously 
-        # if len(review_last) < 5:
-        #     review_last = driver.find_element(By.XPATH, '{}/p[{}]'.format(self.base_popup_xpath, len(rows) - 1)).text
-        review_page.send_keys(Keys.ESCAPE)
+        for row in rows:
+            review += row.text
+        try:
+            review_page.send_keys(Keys.ESCAPE)
+        except selenium.common.exceptions.ElementNotInteractableException:
+            review_page = driver.find_element(By.XPATH, '/html/body/div[2]/div/div/a')
+            review_page.click()
         return [table.text, review]
-        # return [table.text, '{} {}'.format(review_first, review_last).replace('>', '')]
 
     def __popup_worker_money(self, table: wb.remote.webelement.WebElement,
                              driver: wb.firefox.webdriver.WebDriver,

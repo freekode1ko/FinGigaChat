@@ -1,4 +1,5 @@
 from dateutil.relativedelta import relativedelta
+from config import research_base_url as rebase
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
@@ -98,9 +99,8 @@ def metal_block(table_metals, page_metals):
     elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
         if {'Last', 'Change'}.issubset(table_metals[3].columns):
             print(table_metals[3])
-            print(table_metals[3].loc[table_metals[3]['Symbol'] == 'U7M23'].values.tolist())
-            U7N23.append(
-                ['кокс. уголь', table_metals[3].loc[table_metals[3]['Symbol'] == 'U7M23'].values.tolist()[0][1]])
+            jap_coal = table_metals[3][table_metals[3].Symbol.str.contains('U7.23')]
+            U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
 
     elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
         if 'Metals' in table_metals[3].columns:
@@ -209,6 +209,54 @@ def main():
     eco_writer.close()
     exchange_writer.close()
     metal_writer.close()
+
+    collect_research()
+
+
+def collect_research():
+    user_object = ue.ResearchParser()
+    economy_url = '{}group/guest/econ?countryIsoCode=RUS'.format(rebase)
+    money_url = '{}group/guest/money'.format(rebase)
+    metal_url = '{}group/guest/comm'.format(rebase)
+
+    driver = webdriver.Firefox()
+    authed_user = user_object.auth(driver)
+
+    # ECONOMY
+    actual_reviews = user_object.get_everyday_reviews(authed_user, economy_url)
+    global_eco_review = user_object.get_eco_review(authed_user, economy_url)
+
+    # BONDS
+    every_money = user_object.get_everyday_money(authed_user, money_url)
+    global_money_review = user_object.get_money_review(authed_user, money_url)
+
+    # EXCHANGE
+    every_kurs = user_object.get_everyday_money(authed_user, money_url, text_filter=('Валютный рынок:', 'Прогноз.'))
+    global_kurs_review_uan = user_object.get_money_review(authed_user, money_url, 'Ежемесячный обзор по юаню')
+    global_kurs_review_soft = user_object.get_money_review(authed_user, money_url,
+                                                           'Ежемесячный обзор по мягким валютам')
+
+    # METALS
+    every_metals = user_object.get_everyday_money(authed_user, metal_url, 'Сырьевые товары', ('>', '>'))
+
+    print('Done! Closing Browser after 30 sec...')
+    time.sleep(30)
+    driver.close()
+
+    text_writer = pd.ExcelWriter('sources/tables/text.xlsx')
+    pd.DataFrame(actual_reviews).to_excel(text_writer, sheet_name='Экономика. День')
+    pd.DataFrame(global_eco_review).to_excel(text_writer, sheet_name='Экономика. Месяц')
+
+    pd.DataFrame(every_money).to_excel(text_writer, sheet_name='Облиигации. День')
+    pd.DataFrame(global_money_review).to_excel(text_writer, sheet_name='Облиигации. Месяц')
+
+    pd.DataFrame(every_kurs).to_excel(text_writer, sheet_name='Курсы. День')
+    pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_excel(text_writer, sheet_name='Курсы. Месяц')
+
+    pd.DataFrame(every_metals[0]).to_excel(text_writer, sheet_name='Металлы. День')
+
+    text_writer.close()
+    return None
 
 
 if __name__ == '__main__':
