@@ -23,12 +23,17 @@ summ_prompt = 'Сократи текст, оставь только ключев
               'мнения и другую не ключевую информацию. Вот текст:'
 
 
-def __text_splitter(text, batch_size: int = 2048):
+async def __text_splitter(message: types.Message, text: str, batch_size: int = 2048):
     text_group = []
-    if len(text) > batch_size:
-        for batch in range(0, len(text), batch_size):
+    await message.answer('Краткое содержание:')
+    giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
+    if len(giga_ans) > batch_size:
+        for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
-    return text_group
+        for summ_part in text_group:
+            await message.answer(summ_part)
+    else:
+        await message.answer(giga_ans)
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = ''):
@@ -36,25 +41,11 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
     await bot.send_photo(message.chat.id, photo)
     for day_rev in day:
         await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
-        await message.answer('Краткое содержание:')
-        giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, day_rev[1]), return_ans=True)
-        if len(giga_ans) > batch_size:
-            for batch in __text_splitter(giga_ans, batch_size):
-                await message.answer(batch)
-        else:
-            # await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, giga_ans))
-            await message.answer(giga_ans)
+        await __text_splitter(message,  day_rev[1], batch_size)
 
     for month_rev in month:
         await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
-        await message.answer('Краткое содержание:')
-        giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, month_rev[1]), return_ans=True)
-        if len(giga_ans) > batch_size:
-            for batch in __text_splitter(giga_ans, batch_size):
-                await message.answer(batch)
-        else:
-            # await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, month_rev[1]))
-            await message.answer(giga_ans)
+        await __text_splitter(message, month_rev[1], batch_size)
 
 
 @dp.message_handler(commands=['start'])
