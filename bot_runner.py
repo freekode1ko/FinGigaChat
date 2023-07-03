@@ -109,8 +109,8 @@ async def economy_info(message: types.Message):
     transformer.save_df_as_png(df=world_bet, column_width=[0.25] * len(world_bet.columns),
                                figure_size=(8, 6), path_to_source=path_to_source, name='world_bet')
     photo = open(png_path, 'rb')
-    day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
-    month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
+    day = analysis_text['Экономика. День'].values.tolist()
+    month = analysis_text['Экономика. Месяц'].values.tolist()
     await message.answer('Да да - Вот оно:\n{}\n{}\n{}'
                          .format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
     await message.answer('Ключевые ставки ЦБ мира:')
