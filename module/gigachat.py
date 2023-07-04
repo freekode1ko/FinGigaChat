@@ -51,7 +51,8 @@ class GigaChat:
                 }
             ],
             "model": "{}".format(giga_version),
-            "profanity_check": False
+            "profanity_check": False,
+            "temperature": 0.1
         })
         headers = {
             'Authorization': 'Bearer {}'.format(token),

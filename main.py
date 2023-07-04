@@ -98,7 +98,7 @@ def metal_block(table_metals, page_metals):
 
     elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
         if {'Last', 'Change'}.issubset(table_metals[3].columns):
-            print(table_metals[3])
+            # print(table_metals[3])
             jap_coal = table_metals[3][table_metals[3].Symbol.str.contains('U7.23')]
             U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
 
@@ -218,9 +218,12 @@ def collect_research():
     economy_url = '{}group/guest/econ?countryIsoCode=RUS'.format(rebase)
     money_url = '{}group/guest/money'.format(rebase)
     metal_url = '{}group/guest/comm'.format(rebase)
+    company_url = '{}group/guest/companies?companyId='.format(rebase)
 
     driver = webdriver.Firefox()
     authed_user = user_object.auth(driver)
+
+    ''' MAIN BLOCK '''
 
     # ECONOMY
     actual_reviews = user_object.get_everyday_reviews(authed_user, economy_url)
@@ -239,6 +242,38 @@ def collect_research():
     # METALS
     every_metals = user_object.get_everyday_money(authed_user, metal_url, 'Сырьевые товары', ('>', '>'))
 
+    ''' COMPANIES '''
+
+    list_of_companies = [
+        ['831', 'Полиметалл',
+         'https://www.polymetalinternational.com/ru/investors-and-media/reports-and-results/result-centre/'],
+        ['675', 'ММК', 'https://mmk.ru/ru/press-center/news/operatsionnye-rezultaty-gruppy-mmk-za-1-kvartal-2023-g/'],
+        ['689', 'Норникель', 'https://www.nornickel.ru/investors/disclosure/financials/#accordion-2022'],
+        ['827', 'Полюс', 'https://polyus.com/ru/investors/results-and-reports/'],
+        ['798', 'Русал', 'https://rusal.ru/investors/financial-stat/annual-reports/'],
+        ['714', 'Северсталь', 'https://severstal.com/rus/ir/indicators-reporting/operational-results/']]
+    list_of_companies_df = pd.DataFrame(list_of_companies, columns=['ID', 'Name', 'URL'])
+    transformer_obj = dt.Transformer()
+    page_tables = []
+
+    for company in list_of_companies:
+        authed_user.get('{}{}'.format(company_url, company[0]))
+        page_html = authed_user.page_source
+
+        tables = transformer_obj.get_table_from_html(True, page_html)
+        pd.set_option('display.max_columns', None)
+        tables[0]["group_no"] = tables[0].isnull().all(axis=1).cumsum()
+        tables = tables[0].dropna(subset='Unnamed: 1')
+        tables_names = tables['Unnamed: 0'].dropna().tolist()
+
+        for i in range(0, len(tables_names)):
+            df = tables[tables['group_no'] == i]
+            df.reset_index(inplace=True)
+            df = df.drop(['Unnamed: 0', 'index', 'group_no'], axis=1)
+            df = df.drop(index=df.index[0], axis=0)
+            df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
+            page_tables.append([tables_names[i], company[0], df])
+
     print('Done! Closing Browser after 30 sec...')
     time.sleep(30)
     driver.close()
@@ -254,8 +289,14 @@ def collect_research():
     pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_excel(text_writer, sheet_name='Курсы. Месяц')
 
     pd.DataFrame(every_metals[0]).to_excel(text_writer, sheet_name='Металлы. День')
-
     text_writer.close()
+
+    companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
+    list_of_companies_df.to_excel(companies_writer, sheet_name='head')
+    for df in page_tables:
+        df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
+    companies_writer.close()
+
     return None
 
 
