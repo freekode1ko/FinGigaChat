@@ -41,6 +41,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
     await bot.send_photo(message.chat.id, photo)
     if day:
         for day_rev in day:
+            print(day_rev[0], day_rev[2])
             await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
             await __text_splitter(message, day_rev[1], batch_size)
     if month:
@@ -164,8 +165,9 @@ async def economy_info(message: types.Message):
     transformer.save_df_as_png(df=world_bet, column_width=[0.25] * len(world_bet.columns),
                                figure_size=(8, 6), path_to_source=path_to_source, name='world_bet')
     photo = open(png_path, 'rb')
-    day = analysis_text['Экономика. День'].values.tolist()
-    month = analysis_text['Экономика. Месяц'].values.tolist()
+    day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
+
     await message.answer('Да да - Вот оно:\n{}\n{}\n{}'
                          .format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
     await message.answer('Ключевые ставки ЦБ мира:')

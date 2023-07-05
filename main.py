@@ -1,16 +1,19 @@
+from selenium.webdriver.firefox.options import Options
 from dateutil.relativedelta import relativedelta
 from config import research_base_url as rebase
+from config import list_of_companies
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from selenium import webdriver
+import requests as req
 from lxml import html
 import pandas as pd
 import warnings
 import time
 
 
-def table_collector() -> list:
+def table_collector(session: req.sessions.Session) -> list:
     path_to_source = 'Sources/ТЗ.xlsx'
     transformer_obj = dt.Transformer()
     parser_obj = crawler.Parser()
@@ -20,7 +23,7 @@ def table_collector() -> list:
     df_urls = pd.DataFrame(urls).dropna().drop_duplicates()
     urls = df_urls.values.tolist()
     for url in urls:
-        euro_standard, page_html = parser_obj.get_html(url[2])
+        euro_standard, page_html = parser_obj.get_html(url[2], session)
         print(euro_standard, url[2])
         try:
             tables = transformer_obj.get_table_from_html(euro_standard, page_html)
@@ -33,14 +36,14 @@ def table_collector() -> list:
     return all_tables
 
 
-def bond_block(table_bonds):
+def bond_block(table_bonds: list) -> pd.DataFrame:
     bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
     if table_bonds[0] == 'Облигации' and table_bonds[1] == 'Блок котировки':
         bonds_kot = pd.concat([bonds_kot, table_bonds[3]])
     return bonds_kot
 
 
-def economic_block(table_eco, page_eco):
+def economic_block(table_eco: list, page_eco: str):
     eco_frst_third = []
     world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
     rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
@@ -60,7 +63,7 @@ def economic_block(table_eco, page_eco):
     return eco_frst_third, world_bet, rus_infl
 
 
-def exchange_block(table_exchange, exchange_page):
+def exchange_block(table_exchange: list, exchange_page: str, session: req.sessions.Session):
     exchange_kot = []
     parser_obj = crawler.Parser()
     if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
@@ -70,7 +73,7 @@ def exchange_block(table_exchange, exchange_page):
             exchange_kot.append(row)
 
     elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cny', 'usdollar']:
-        euro_standart, page_html = parser_obj.get_html(table_exchange[2])
+        euro_standart, page_html = parser_obj.get_html(table_exchange[2], session)
         tree = html.fromstring(page_html)
         object_xpath = '//*[@id="__next"]/div[2]/div/div/div[2]/main/div/div[1]/div[2]/div[1]'
         price = tree.xpath('{}/span/text()'.format(object_xpath))
@@ -79,7 +82,7 @@ def exchange_block(table_exchange, exchange_page):
     return exchange_kot
 
 
-def metal_block(table_metals, page_metals):
+def metal_block(table_metals: list, page_metals: str, session: req.sessions.Session):
     U7N23 = []
     metals_kot = []
     metals_coal_kot = []
@@ -87,7 +90,7 @@ def metal_block(table_metals, page_metals):
     metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
 
     if table_metals[0] == 'Металлы' and page_metals == 'LMCADS03:COM':
-        euro_standart, page_html = parser_obj.get_html(table_metals[2])
+        euro_standart, page_html = parser_obj.get_html(table_metals[2], session)
         tree = html.fromstring(page_html)
         object_xpath = '//*[@id="root"]/div/div/section/section[1]/div/div[2]/section[1]/section/section/section'
         price = tree.xpath('{}/div[1]/span[1]/text()'.format(object_xpath))
@@ -137,12 +140,13 @@ def metal_block(table_metals, page_metals):
             temp_table['Metals'] = 'Железорудное сырье'
             temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
             metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                    *temp_table['%'].tolist()[1:], str(temp_table['Date'][0]).split()[0]])
+                                    *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
     return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
 
 def main():
-    all_tables = table_collector()
+    session = req.Session()
+    all_tables = table_collector(session)
     print('All collected')
     all_tables.append(['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
     bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
@@ -175,10 +179,10 @@ def main():
         rus_infl = pd.concat([rus_infl, rus_infl_df])
 
         # EXCENGE BLOCK
-        exchange_kot += exchange_block(tables_row, source_page)
+        exchange_kot += exchange_block(tables_row, source_page, session)
 
         # METALS BLOCK
-        metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = metal_block(tables_row, source_page)
+        metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = metal_block(tables_row, source_page, session)
         U7N23 += U7_ls
         metals_coal_kot += metal_coal_ls
         metals_kot += metal_cat_ls
@@ -194,7 +198,8 @@ def main():
     big_table.to_excel(metal_writer, sheet_name='Металы')
 
     exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-    pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']).drop_duplicates() \
+    pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
+        .drop_duplicates(subset=['Валюта'], ignore_index=True) \
         .to_excel(exchange_writer, sheet_name='Курсы валют')
 
     eco_writer = pd.ExcelWriter('sources/tables/eco.xlsx')
@@ -215,48 +220,51 @@ def main():
 
 def collect_research():
     user_object = ue.ResearchParser()
-    economy_url = '{}group/guest/econ?countryIsoCode=RUS'.format(rebase)
-    money_url = '{}group/guest/money'.format(rebase)
-    metal_url = '{}group/guest/comm'.format(rebase)
-    company_url = '{}group/guest/companies?companyId='.format(rebase)
+    guest_group = 'group/guest'
+    economy_url = '{}{}/econ?countryIsoCode=RUS'.format(rebase, guest_group)
+    money_url = '{}{}/money'.format(rebase, guest_group)
+    metal_url = '{}{}/comm'.format(rebase, guest_group)
+    company_url = '{}{}/companies?companyId='.format(rebase, guest_group)
+    print('Start to parce research...')
 
-    driver = webdriver.Firefox()
+    options = Options()
+    options.headless = True
+
+    driver = webdriver.Firefox(options=options)
     authed_user = user_object.auth(driver)
-
+    print('Auth... OK')
     ''' MAIN BLOCK '''
 
     # ECONOMY
     actual_reviews = user_object.get_everyday_reviews(authed_user, economy_url)
     global_eco_review = user_object.get_eco_review(authed_user, economy_url)
+    print('ECONOMY... OK')
 
     # BONDS
     every_money = user_object.get_everyday_money(authed_user, money_url)
     global_money_review = user_object.get_money_review(authed_user, money_url)
+    print('BONDS... OK')
 
     # EXCHANGE
     every_kurs = user_object.get_everyday_money(authed_user, money_url, text_filter=('Валютный рынок:', 'Прогноз.'))
     global_kurs_review_uan = user_object.get_money_review(authed_user, money_url, 'Ежемесячный обзор по юаню')
     global_kurs_review_soft = user_object.get_money_review(authed_user, money_url,
                                                            'Ежемесячный обзор по мягким валютам')
+    print('EXCHANGE... OK')
 
     # METALS
     every_metals = user_object.get_everyday_money(authed_user, metal_url, 'Сырьевые товары', ('>', '>'))
+    print('METALS... OK')
 
     ''' COMPANIES '''
 
-    list_of_companies = [
-        ['831', 'Полиметалл',
-         'https://www.polymetalinternational.com/ru/investors-and-media/reports-and-results/result-centre/'],
-        ['675', 'ММК', 'https://mmk.ru/ru/press-center/news/operatsionnye-rezultaty-gruppy-mmk-za-1-kvartal-2023-g/'],
-        ['689', 'Норникель', 'https://www.nornickel.ru/investors/disclosure/financials/#accordion-2022'],
-        ['827', 'Полюс', 'https://polyus.com/ru/investors/results-and-reports/'],
-        ['798', 'Русал', 'https://rusal.ru/investors/financial-stat/annual-reports/'],
-        ['714', 'Северсталь', 'https://severstal.com/rus/ir/indicators-reporting/operational-results/']]
     list_of_companies_df = pd.DataFrame(list_of_companies, columns=['ID', 'Name', 'URL'])
     transformer_obj = dt.Transformer()
+    comp_size = len(list_of_companies)
     page_tables = []
 
-    for company in list_of_companies:
+    for comp_num, company in enumerate(list_of_companies):
+        print('{}/{}'.format(comp_num+1, comp_size))
         authed_user.get('{}{}'.format(company_url, company[0]))
         page_html = authed_user.page_source
 
@@ -273,28 +281,34 @@ def collect_research():
             df = df.drop(index=df.index[0], axis=0)
             df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
             page_tables.append([tables_names[i], company[0], df])
+        print('OK\n')
 
-    print('Done! Closing Browser after 30 sec...')
-    time.sleep(30)
+    # print('Done! Closing Browser after 30 sec...')
+    # time.sleep(30)
     driver.close()
 
     text_writer = pd.ExcelWriter('sources/tables/text.xlsx')
     pd.DataFrame(actual_reviews).to_excel(text_writer, sheet_name='Экономика. День')
     pd.DataFrame(global_eco_review).to_excel(text_writer, sheet_name='Экономика. Месяц')
+    print('ECO block is saved')
 
     pd.DataFrame(every_money).to_excel(text_writer, sheet_name='Облиигации. День')
     pd.DataFrame(global_money_review).to_excel(text_writer, sheet_name='Облиигации. Месяц')
+    print('BONDS block is saved')
 
     pd.DataFrame(every_kurs).to_excel(text_writer, sheet_name='Курсы. День')
     pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_excel(text_writer, sheet_name='Курсы. Месяц')
+    print('EXCHANGE block is saved')
 
     pd.DataFrame(every_metals[0]).to_excel(text_writer, sheet_name='Металлы. День')
+    print('METAL block is saved')
     text_writer.close()
 
     companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
     list_of_companies_df.to_excel(companies_writer, sheet_name='head')
     for df in page_tables:
         df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
+    print('companies block is saved')
     companies_writer.close()
 
     return None
