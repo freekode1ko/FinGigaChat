@@ -1,3 +1,4 @@
+from selenium.webdriver.firefox.options import Options
 from dateutil.relativedelta import relativedelta
 from config import research_base_url as rebase
 from config import list_of_companies
@@ -225,7 +226,10 @@ def collect_research():
     metal_url = '{}{}/comm'.format(rebase, guest_group)
     company_url = '{}{}/companies?companyId='.format(rebase, guest_group)
 
-    driver = webdriver.Firefox()
+    options = Options()
+    options.headless = True
+
+    driver = webdriver.Firefox(options=options)
     authed_user = user_object.auth(driver)
 
     ''' MAIN BLOCK '''
