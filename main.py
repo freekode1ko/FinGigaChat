@@ -225,39 +225,46 @@ def collect_research():
     money_url = '{}{}/money'.format(rebase, guest_group)
     metal_url = '{}{}/comm'.format(rebase, guest_group)
     company_url = '{}{}/companies?companyId='.format(rebase, guest_group)
+    print('Start to parce research...')
 
     options = Options()
     options.headless = True
 
     driver = webdriver.Firefox(options=options)
     authed_user = user_object.auth(driver)
-
+    print('Auth... OK')
     ''' MAIN BLOCK '''
 
     # ECONOMY
     actual_reviews = user_object.get_everyday_reviews(authed_user, economy_url)
     global_eco_review = user_object.get_eco_review(authed_user, economy_url)
+    print('ECONOMY... OK')
 
     # BONDS
     every_money = user_object.get_everyday_money(authed_user, money_url)
     global_money_review = user_object.get_money_review(authed_user, money_url)
+    print('BONDS... OK')
 
     # EXCHANGE
     every_kurs = user_object.get_everyday_money(authed_user, money_url, text_filter=('Валютный рынок:', 'Прогноз.'))
     global_kurs_review_uan = user_object.get_money_review(authed_user, money_url, 'Ежемесячный обзор по юаню')
     global_kurs_review_soft = user_object.get_money_review(authed_user, money_url,
                                                            'Ежемесячный обзор по мягким валютам')
+    print('EXCHANGE... OK')
 
     # METALS
     every_metals = user_object.get_everyday_money(authed_user, metal_url, 'Сырьевые товары', ('>', '>'))
+    print('METALS... OK')
 
     ''' COMPANIES '''
 
     list_of_companies_df = pd.DataFrame(list_of_companies, columns=['ID', 'Name', 'URL'])
     transformer_obj = dt.Transformer()
+    comp_size = len(list_of_companies)
     page_tables = []
 
-    for company in list_of_companies:
+    for comp_num, company in enumerate(list_of_companies):
+        print('{}/{}'.format(comp_num+1, comp_size))
         authed_user.get('{}{}'.format(company_url, company[0]))
         page_html = authed_user.page_source
 
@@ -274,6 +281,7 @@ def collect_research():
             df = df.drop(index=df.index[0], axis=0)
             df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
             page_tables.append([tables_names[i], company[0], df])
+        print('OK\n')
 
     # print('Done! Closing Browser after 30 sec...')
     # time.sleep(30)
@@ -282,20 +290,25 @@ def collect_research():
     text_writer = pd.ExcelWriter('sources/tables/text.xlsx')
     pd.DataFrame(actual_reviews).to_excel(text_writer, sheet_name='Экономика. День')
     pd.DataFrame(global_eco_review).to_excel(text_writer, sheet_name='Экономика. Месяц')
+    print('ECO block is saved')
 
     pd.DataFrame(every_money).to_excel(text_writer, sheet_name='Облиигации. День')
     pd.DataFrame(global_money_review).to_excel(text_writer, sheet_name='Облиигации. Месяц')
+    print('BONDS block is saved')
 
     pd.DataFrame(every_kurs).to_excel(text_writer, sheet_name='Курсы. День')
     pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_excel(text_writer, sheet_name='Курсы. Месяц')
+    print('EXCHANGE block is saved')
 
     pd.DataFrame(every_metals[0]).to_excel(text_writer, sheet_name='Металлы. День')
+    print('METAL block is saved')
     text_writer.close()
 
     companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
     list_of_companies_df.to_excel(companies_writer, sheet_name='head')
     for df in page_tables:
         df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
+    print('companies block is saved')
     companies_writer.close()
 
     return None
