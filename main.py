@@ -219,10 +219,11 @@ def main():
 
 def collect_research():
     user_object = ue.ResearchParser()
-    economy_url = '{}group/guest/econ?countryIsoCode=RUS'.format(rebase)
-    money_url = '{}group/guest/money'.format(rebase)
-    metal_url = '{}group/guest/comm'.format(rebase)
-    company_url = '{}group/guest/companies?companyId='.format(rebase)
+    guest_group = 'group/guest'
+    economy_url = '{}{}/econ?countryIsoCode=RUS'.format(rebase, guest_group)
+    money_url = '{}{}/money'.format(rebase, guest_group)
+    metal_url = '{}{}/comm'.format(rebase, guest_group)
+    company_url = '{}{}/companies?companyId='.format(rebase, guest_group)
 
     driver = webdriver.Firefox()
     authed_user = user_object.auth(driver)
@@ -270,8 +271,8 @@ def collect_research():
             df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
             page_tables.append([tables_names[i], company[0], df])
 
-    print('Done! Closing Browser after 30 sec...')
-    time.sleep(30)
+    # print('Done! Closing Browser after 30 sec...')
+    # time.sleep(30)
     driver.close()
 
     text_writer = pd.ExcelWriter('sources/tables/text.xlsx')
