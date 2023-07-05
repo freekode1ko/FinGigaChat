@@ -71,7 +71,7 @@ def exchange_block(table_exchange: list, exchange_page: str, session: req.sessio
             exchange_kot.append(row)
 
     elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cny', 'usdollar']:
-        euro_standart, page_html = parser_obj.get_html(table_exchange[2])
+        euro_standart, page_html = parser_obj.get_html(table_exchange[2], session)
         tree = html.fromstring(page_html)
         object_xpath = '//*[@id="__next"]/div[2]/div/div/div[2]/main/div/div[1]/div[2]/div[1]'
         price = tree.xpath('{}/span/text()'.format(object_xpath))
@@ -88,7 +88,7 @@ def metal_block(table_metals: list, page_metals: str, session: req.sessions.Sess
     metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
 
     if table_metals[0] == 'Металлы' and page_metals == 'LMCADS03:COM':
-        euro_standart, page_html = parser_obj.get_html(table_metals[2])
+        euro_standart, page_html = parser_obj.get_html(table_metals[2], session)
         tree = html.fromstring(page_html)
         object_xpath = '//*[@id="root"]/div/div/section/section[1]/div/div[2]/section[1]/section/section/section'
         price = tree.xpath('{}/div[1]/span[1]/text()'.format(object_xpath))
@@ -143,7 +143,8 @@ def metal_block(table_metals: list, page_metals: str, session: req.sessions.Sess
 
 
 def main():
-    all_tables = table_collector()
+    session = req.Session()
+    all_tables = table_collector(session)
     print('All collected')
     all_tables.append(['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
     bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
@@ -176,10 +177,10 @@ def main():
         rus_infl = pd.concat([rus_infl, rus_infl_df])
 
         # EXCENGE BLOCK
-        exchange_kot += exchange_block(tables_row, source_page)
+        exchange_kot += exchange_block(tables_row, source_page, session)
 
         # METALS BLOCK
-        metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = metal_block(tables_row, source_page)
+        metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = metal_block(tables_row, source_page, session)
         U7N23 += U7_ls
         metals_coal_kot += metal_coal_ls
         metals_kot += metal_cat_ls
@@ -195,7 +196,8 @@ def main():
     big_table.to_excel(metal_writer, sheet_name='Металы')
 
     exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-    pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']).drop_duplicates() \
+    pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс'])\
+        .drop_duplicates(subset=['Валюта'], ignore_index=True) \
         .to_excel(exchange_writer, sheet_name='Курсы валют')
 
     eco_writer = pd.ExcelWriter('sources/tables/eco.xlsx')
