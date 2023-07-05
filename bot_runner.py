@@ -39,13 +39,33 @@ async def __text_splitter(message: types.Message, text: str, batch_size: int = 2
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = ''):
     batch_size = 2048
     await bot.send_photo(message.chat.id, photo)
-    for day_rev in day:
-        await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
-        await __text_splitter(message,  day_rev[1], batch_size)
+    if day:
+        for day_rev in day:
+            await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
+            await __text_splitter(message, day_rev[1], batch_size)
+    if month:
+        for month_rev in month:
+            await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
+            await __text_splitter(message, month_rev[1], batch_size)
 
-    for month_rev in month:
-        await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
-        await __text_splitter(message, month_rev[1], batch_size)
+
+async def __read_tables_from_companies(message: types.Message, companies: dict):
+    company = companies['head'].loc[companies['head']['Name'] == message.text].values.tolist()
+    company_id = company[0][1]
+    company_url = company[0][3]
+    transformer = dt.Transformer()
+    await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url))
+    await message.answer('Табличные данные по показателям:')
+
+    for key in companies.keys():
+        if str(company_id) in key:
+            png_path = '{}/img/{}_table.png'.format(path_to_source, key)
+            await message.answer('{}:'.format(key.split('_')[1]))
+            transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
+                                       column_width=[0.15] * len(companies[key].columns),
+                                       figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
+            photo = open(png_path, 'rb')
+            await __sent_photo_and_msg(message, photo)
 
 
 @dp.message_handler(commands=['start'])
@@ -58,6 +78,50 @@ async def start_handler(message: types.Message):
                                     message.from_user.full_name,
                                     message.from_user.username))
     await message.reply("Давай я спрошу ГигаЧат за тебя")
+
+
+@dp.message_handler(commands=['companies'])
+async def company_info(message: types.Message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
+    keyboard.add(*buttons)
+    await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard)
+
+
+@dp.message_handler(lambda message: message.text == "Полиметалл")
+async def button_polymetal(message: types.Message):
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    await __read_tables_from_companies(message, companies)
+
+
+@dp.message_handler(lambda message: message.text == "ММК")
+async def button_mmk(message: types.Message):
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    await __read_tables_from_companies(message, companies)
+
+
+@dp.message_handler(lambda message: message.text == "Норникель")
+async def button_nornikel(message: types.Message):
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    await __read_tables_from_companies(message, companies)
+
+
+@dp.message_handler(lambda message: message.text == "Полюс")
+async def button_polus(message: types.Message):
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    await __read_tables_from_companies(message, companies)
+
+
+@dp.message_handler(lambda message: message.text == "Русал")
+async def button_rusal(message: types.Message):
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    await __read_tables_from_companies(message, companies)
+
+
+@dp.message_handler(lambda message: message.text == "Северсталь")
+async def button_severstal(message: types.Message):
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    await __read_tables_from_companies(message, companies)
 
 
 # ['облигации', 'бонды', 'офз']
