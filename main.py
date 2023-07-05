@@ -4,13 +4,14 @@ import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from selenium import webdriver
+import requests as req
 from lxml import html
 import pandas as pd
 import warnings
 import time
 
 
-def table_collector() -> list:
+def table_collector(session: req.sessions.Session) -> list:
     path_to_source = 'Sources/ТЗ.xlsx'
     transformer_obj = dt.Transformer()
     parser_obj = crawler.Parser()
@@ -20,7 +21,7 @@ def table_collector() -> list:
     df_urls = pd.DataFrame(urls).dropna().drop_duplicates()
     urls = df_urls.values.tolist()
     for url in urls:
-        euro_standard, page_html = parser_obj.get_html(url[2])
+        euro_standard, page_html = parser_obj.get_html(url[2], session)
         print(euro_standard, url[2])
         try:
             tables = transformer_obj.get_table_from_html(euro_standard, page_html)
@@ -33,14 +34,14 @@ def table_collector() -> list:
     return all_tables
 
 
-def bond_block(table_bonds):
+def bond_block(table_bonds: list) -> pd.DataFrame:
     bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
     if table_bonds[0] == 'Облигации' and table_bonds[1] == 'Блок котировки':
         bonds_kot = pd.concat([bonds_kot, table_bonds[3]])
     return bonds_kot
 
 
-def economic_block(table_eco, page_eco):
+def economic_block(table_eco: list, page_eco: str):
     eco_frst_third = []
     world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
     rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
@@ -60,7 +61,7 @@ def economic_block(table_eco, page_eco):
     return eco_frst_third, world_bet, rus_infl
 
 
-def exchange_block(table_exchange, exchange_page):
+def exchange_block(table_exchange: list, exchange_page: str, session: req.sessions.Session):
     exchange_kot = []
     parser_obj = crawler.Parser()
     if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
@@ -79,7 +80,7 @@ def exchange_block(table_exchange, exchange_page):
     return exchange_kot
 
 
-def metal_block(table_metals, page_metals):
+def metal_block(table_metals: list, page_metals: str, session: req.sessions.Session):
     U7N23 = []
     metals_kot = []
     metals_coal_kot = []
@@ -137,7 +138,7 @@ def metal_block(table_metals, page_metals):
             temp_table['Metals'] = 'Железорудное сырье'
             temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
             metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                    *temp_table['%'].tolist()[1:], str(temp_table['Date'][0]).split()[0]])
+                                    *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
     return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
 
