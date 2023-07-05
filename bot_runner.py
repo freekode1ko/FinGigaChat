@@ -51,7 +51,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
 
 
 async def __read_tables_from_companies(message: types.Message, companies: dict):
-    company = companies['head'].loc[companies['head']['Name'] == message.text].values.tolist()
+    company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
     company_id = company[0][1]
     company_url = company[0][3]
     transformer = dt.Transformer()
@@ -90,8 +90,8 @@ async def company_info(message: types.Message):
     await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard)
 
 
-@dp.message_handler(lambda message: message.text in ["Полиметалл", 'ММК', 'Норникель',
-                                                     'Полюс', 'Русал', 'Северсталь'])
+@dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
+                                                             'полюс', 'русал', 'северсталь'])
 async def button_polymetal(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source), sheet_name=None)
