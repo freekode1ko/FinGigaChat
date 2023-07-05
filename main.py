@@ -1,5 +1,6 @@
 from dateutil.relativedelta import relativedelta
 from config import research_base_url as rebase
+from config import list_of_companies
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
@@ -196,7 +197,7 @@ def main():
     big_table.to_excel(metal_writer, sheet_name='Металы')
 
     exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-    pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс'])\
+    pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
         .drop_duplicates(subset=['Валюта'], ignore_index=True) \
         .to_excel(exchange_writer, sheet_name='Курсы валют')
 
@@ -247,14 +248,6 @@ def collect_research():
 
     ''' COMPANIES '''
 
-    list_of_companies = [
-        ['831', 'Полиметалл',
-         'https://www.polymetalinternational.com/ru/investors-and-media/reports-and-results/result-centre/'],
-        ['675', 'ММК', 'https://mmk.ru/ru/press-center/news/operatsionnye-rezultaty-gruppy-mmk-za-1-kvartal-2023-g/'],
-        ['689', 'Норникель', 'https://www.nornickel.ru/investors/disclosure/financials/#accordion-2022'],
-        ['827', 'Полюс', 'https://polyus.com/ru/investors/results-and-reports/'],
-        ['798', 'Русал', 'https://rusal.ru/investors/financial-stat/annual-reports/'],
-        ['714', 'Северсталь', 'https://severstal.com/rus/ir/indicators-reporting/operational-results/']]
     list_of_companies_df = pd.DataFrame(list_of_companies, columns=['ID', 'Name', 'URL'])
     transformer_obj = dt.Transformer()
     page_tables = []
