@@ -21,6 +21,16 @@ user_agents = \
         'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 '
         'Safari/605.1.15',
     ]
+list_of_companies = \
+    [
+        ['831', 'Полиметалл',
+         'https://www.polymetalinternational.com/ru/investors-and-media/reports-and-results/result-centre/'],
+        ['675', 'ММК', 'https://mmk.ru/ru/press-center/news/operatsionnye-rezultaty-gruppy-mmk-za-1-kvartal-2023-g/'],
+        ['689', 'Норникель', 'https://www.nornickel.ru/investors/disclosure/financials/#accordion-2022'],
+        ['827', 'Полюс', 'https://polyus.com/ru/investors/results-and-reports/'],
+        ['798', 'Русал', 'https://rusal.ru/investors/financial-stat/annual-reports/'],
+        ['714', 'Северсталь', 'https://severstal.com/rus/ir/indicators-reporting/operational-results/']
+    ]
 
 chat_base_url = 'url'
 research_base_url = 'url'
