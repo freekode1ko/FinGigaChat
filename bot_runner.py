@@ -83,45 +83,18 @@ async def start_handler(message: types.Message):
 
 @dp.message_handler(commands=['companies'])
 async def company_info(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
     keyboard.add(*buttons)
     await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard)
 
 
-@dp.message_handler(lambda message: message.text == "Полиметалл")
+@dp.message_handler(lambda message: message.text in ["Полиметалл", 'ММК', 'Норникель',
+                                                     'Полюс', 'Русал', 'Северсталь'])
 async def button_polymetal(message: types.Message):
-    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
-    await __read_tables_from_companies(message, companies)
-
-
-@dp.message_handler(lambda message: message.text == "ММК")
-async def button_mmk(message: types.Message):
-    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
-    await __read_tables_from_companies(message, companies)
-
-
-@dp.message_handler(lambda message: message.text == "Норникель")
-async def button_nornikel(message: types.Message):
-    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
-    await __read_tables_from_companies(message, companies)
-
-
-@dp.message_handler(lambda message: message.text == "Полюс")
-async def button_polus(message: types.Message):
-    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
-    await __read_tables_from_companies(message, companies)
-
-
-@dp.message_handler(lambda message: message.text == "Русал")
-async def button_rusal(message: types.Message):
-    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
-    await __read_tables_from_companies(message, companies)
-
-
-@dp.message_handler(lambda message: message.text == "Северсталь")
-async def button_severstal(message: types.Message):
-    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source),  sheet_name=None)
+    print('{} - {}'.format(message.from_user.full_name, message.text))
+    companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source), sheet_name=None)
     await __read_tables_from_companies(message, companies)
 
 
