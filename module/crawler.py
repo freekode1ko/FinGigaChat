@@ -20,7 +20,7 @@ class Parser:
     user_agents = user_agents
 
     @staticmethod
-    def get_proxy_addresses():
+    def get_proxy_addresses() -> None:
         """
         Method to get free proxy list from web
         :return: None
