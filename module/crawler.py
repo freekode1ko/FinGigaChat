@@ -5,7 +5,13 @@ import random
 
 
 class Dictlist(dict):
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> dict:
+        """
+        Overwrite default method setitem in class dict to append in list new urls
+        :param key: Where need to add
+        :param value: What need to add
+        :return: dict with appended value in list for selected key
+        """
         try:
             self[key]
         except KeyError:
@@ -23,6 +29,7 @@ class Parser:
     def get_proxy_addresses() -> None:
         """
         Method to get free proxy list from web
+        and load it to package variable
         :return: None
         """
         global proxy
@@ -35,9 +42,9 @@ class Parser:
         proxy['https'] = ['https://10.10.1.10:1080']
         proxy['http'] = ['http://10.10.1.10:3128']
         for ip in ip_table.values.tolist():
-            if ip[1] in [443, 4849, 5443, 5989, 5990, 6443, 6771, 7443, 7677]:
+            if ip[1] in [443, 4849, 5443, 5989, 5990, 6443, 6771, 1080, 7677]:
                 proxy['https'] = 'https://{}:{}'.format(ip[0], ip[1])
-            elif ip in [80, 280, 777, 832, 1001, 1183, 2688, 8080, 8088, 8008]:
+            elif ip in [80, 280, 777, 3128, 1001, 1183, 2688, 8080, 8088, 8008]:
                 proxy['http'] = 'http://{}:{}'.format(ip[0], ip[1])
 
     def get_html(self, url: str, session: req.sessions.Session):
