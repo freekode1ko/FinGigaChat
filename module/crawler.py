@@ -28,13 +28,13 @@ class Parser:
         for table in pd.read_html(html.text):
             if 'IP Address' in table.keys():
                 ip_table = table
-        proxy['https'] = ['162.223.94.164:443', '100.19.135.109:4849', '5.161.41.17:5443']
-        proxy['http'] = ['162.223.94.164:80', '100.19.135.109:80', '5.161.41.17:80']
+        proxy['https'] = ['https://10.10.1.10:1080']
+        proxy['http'] = ['http://10.10.1.10:3128']
         for ip in ip_table.values.tolist():
             if ip[1] in [443, 4849, 5443, 5989, 5990, 6443, 6771, 7443, 7677]:
-                proxy['https'] = '{}:{}'.format(ip[0], ip[1])
+                proxy['https'] = 'https://{}:{}'.format(ip[0], ip[1])
             elif ip in [80, 280, 777, 832, 1001, 1183, 2688, 8080, 8088, 8008]:
-                proxy['http'] = '{}:{}'.format(ip[0], ip[1])
+                proxy['http'] = 'http://{}:{}'.format(ip[0], ip[1])
 
     def get_html(self, url: str, session: req.sessions.Session):
         """
