@@ -21,6 +21,10 @@ class Parser:
 
     @staticmethod
     def get_proxy_addresses():
+        """
+        Method to get free proxy list from web
+        :return: None
+        """
         global proxy
         ip_table = pd.DataFrame()
         html = req.get('https://free-proxy-list.net/', verify=False)
