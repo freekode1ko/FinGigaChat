@@ -316,5 +316,6 @@ def collect_research() -> None:
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
+    crawler.Parser().get_proxy_addresses()
     main()
     collect_research()
