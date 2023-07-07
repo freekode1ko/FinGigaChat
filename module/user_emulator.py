@@ -36,7 +36,8 @@ class ResearchParser:
         """
         time.sleep(random.uniform(start, end))
 
-    def __popup_worker_eco(self, table: wb.remote.webelement.WebElement, driver: wb.firefox.webdriver.WebDriver):
+    def __popup_worker_eco(self, table: wb.remote.webelement.WebElement,
+                           driver: wb.firefox.webdriver.WebDriver) -> list:
         """
         Get review text from popup menu after a click
         :param table: HTML element to click
@@ -62,7 +63,7 @@ class ResearchParser:
 
     def __popup_worker_money(self, table: wb.remote.webelement.WebElement,
                              driver: wb.firefox.webdriver.WebDriver,
-                             text_filter: tuple):
+                             text_filter: tuple) -> list:
         """
         Get review with filter text from popup menu after a click
         :param table: HTML element to click
@@ -87,7 +88,7 @@ class ResearchParser:
             review_page.click()
         return [table.text, output.replace('>', '')]
 
-    def auth(self, driver: wb.firefox.webdriver.WebDriver):
+    def auth(self, driver: wb.firefox.webdriver.WebDriver) -> wb.firefox.webdriver.WebDriver:
         """
         Authorize in sberbank research platform
         :param driver: Browser session where to work
@@ -109,7 +110,7 @@ class ResearchParser:
 
         return driver
 
-    def get_everyday_reviews(self, driver: wb.firefox.webdriver.WebDriver, url: str):
+    def get_everyday_reviews(self, driver: wb.firefox.webdriver.WebDriver, url: str) -> list[list]:
         """
         Get last everyday economical reviews
         :param driver: Browser session where to work
@@ -132,7 +133,7 @@ class ResearchParser:
             reviews.append([*self.__popup_worker_eco(i, driver), dates[row_numb].text])
         return reviews
 
-    def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
+    def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str) -> list[list]:
         """
         Get review from global every month economic review
         :param driver: Browser session where to work
@@ -153,7 +154,7 @@ class ResearchParser:
         return review
 
     def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str, title: str = 'FX & Ставки',
-                           text_filter: tuple = (['Процентные ставки', 'Прогноз'])):
+                           text_filter: tuple = (['Процентные ставки', 'Прогноз'])) -> list[list]:
         """
         Get last everyday money reviews
         :param title: Name of browser tab (Page name)
@@ -180,7 +181,7 @@ class ResearchParser:
         return reviews
 
     def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str,
-                         review_filter: str = 'Денежный рынок. Еженедельный обзор'):
+                         review_filter: str = 'Денежный рынок. Еженедельный обзор') -> list[list]:
         """
         Get review from global every month money review
         :param driver: Browser session where to work

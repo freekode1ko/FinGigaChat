@@ -21,6 +21,7 @@ user_agents = \
         'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 '
         'Safari/605.1.15',
     ]
+
 list_of_companies = \
     [
         ['831', 'Полиметалл',

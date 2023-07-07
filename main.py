@@ -13,7 +13,7 @@ import warnings
 import time
 
 
-def table_collector(session: req.sessions.Session) -> list:
+def table_collector(session: req.sessions.Session) -> list[list]:
     path_to_source = 'Sources/ТЗ.xlsx'
     transformer_obj = dt.Transformer()
     parser_obj = crawler.Parser()
@@ -63,7 +63,7 @@ def economic_block(table_eco: list, page_eco: str):
     return eco_frst_third, world_bet, rus_infl
 
 
-def exchange_block(table_exchange: list, exchange_page: str, session: req.sessions.Session):
+def exchange_block(table_exchange: list, exchange_page: str, session: req.sessions.Session) -> list[list]:
     exchange_kot = []
     parser_obj = crawler.Parser()
     if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
@@ -144,7 +144,7 @@ def metal_block(table_metals: list, page_metals: str, session: req.sessions.Sess
     return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
 
-def main():
+def main() -> None:
     session = req.Session()
     all_tables = table_collector(session)
     print('All collected')
@@ -215,10 +215,10 @@ def main():
     exchange_writer.close()
     metal_writer.close()
 
-    collect_research()
+    return None
 
 
-def collect_research():
+def collect_research() -> None:
     user_object = ue.ResearchParser()
     guest_group = 'group/guest'
     economy_url = '{}{}/econ?countryIsoCode=RUS'.format(rebase, guest_group)
@@ -316,4 +316,6 @@ def collect_research():
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
+    crawler.Parser().get_proxy_addresses()
     main()
+    collect_research()
