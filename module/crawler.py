@@ -1,3 +1,5 @@
+import requests.exceptions
+
 from config import user_agents
 import requests as req
 import pandas as pd
@@ -33,19 +35,23 @@ class Parser:
         :return: None
         """
         global proxy
-        ip_table = pd.DataFrame()
-        html = req.get('https://free-proxy-list.net/', verify=False)
+        try:
+            ip_table = pd.DataFrame()
+            html = req.get('https://free-proxy-list.net/', verify=False)
 
-        for table in pd.read_html(html.text):
-            if 'IP Address' in table.keys():
-                ip_table = table
-        proxy['https'] = ['https://10.10.1.10:1080']
-        proxy['http'] = ['http://10.10.1.10:3128']
-        for ip in ip_table.values.tolist():
-            if ip[1] in [443, 4849, 5443, 5989, 5990, 6443, 6771, 1080, 7677]:
-                proxy['https'] = 'https://{}:{}'.format(ip[0], ip[1])
-            elif ip in [80, 280, 777, 3128, 1001, 1183, 2688, 8080, 8088, 8008]:
-                proxy['http'] = 'http://{}:{}'.format(ip[0], ip[1])
+            for table in pd.read_html(html.text):
+                if 'IP Address' in table.keys():
+                    ip_table = table
+            proxy['https'] = ['https://10.10.1.10:1080']
+            proxy['http'] = ['http://10.10.1.10:3128']
+            for ip in ip_table.values.tolist():
+                if ip[1] in [443, 4849, 5443, 5989, 5990, 6443, 6771, 1080, 7677]:
+                    proxy['https'] = 'https://{}:{}'.format(ip[0], ip[1])
+                elif ip in [80, 280, 777, 3128, 1001, 1183, 2688, 8080, 8088, 8008]:
+                    proxy['http'] = 'http://{}:{}'.format(ip[0], ip[1])
+        except req.exceptions.MissingSchema:
+            proxy['https'] = ['https://10.10.1.10:1080']
+            proxy['http'] = ['http://10.10.1.10:3128']
 
     def get_html(self, url: str, session: req.sessions.Session):
         """
