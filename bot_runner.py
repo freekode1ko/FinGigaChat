@@ -227,35 +227,35 @@ async def draw_all_tables(message: types.Message):
     import datetime
     curdatetime = datetime.datetime.now()
 
-    title = 'Доходности ОФЗ. \nДанные на {}'.format(curdatetime)
+    title = 'Доходности ОФЗ.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '1_TEST')
-    transformer.render_mpl_table(bond_ru, '1_TEST', header_columns=0, col_width=2.13)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(bond_ru, '1_TEST', header_columns=0, col_width=2.13, title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
-    title = 'Ключевые ставки ЦБ мира. \nДанные на {}'.format(curdatetime)
+    title = 'Ключевые ставки ЦБ мира.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '2_TEST')
-    transformer.render_mpl_table(world_bet, '2_TEST', header_columns=0, col_width=2)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(world_bet, '2_TEST', header_columns=0, col_width=2, title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
-    title = 'Ежемесячная инфляция в России. \nДанные на {}'.format(curdatetime)
+    title = 'Ежемесячная инфляция в России.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '3_TEST')
-    transformer.render_mpl_table(rus_infl, '3_TEST', header_columns=0, col_width=2)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(rus_infl, '3_TEST', header_columns=0, col_width=2, title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
-    title = 'Текущие курсы валют. \nДанные на {}'.format(curdatetime)
+    title = 'Текущие курсы валют'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '4_TEST')
-    transformer.render_mpl_table(exc, '4_TEST', header_columns=0, col_width=2)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(exc, '4_TEST', header_columns=0, col_width=2, title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
-    title = 'Цены на ключевые сырьевые товары. \nДанные на {}'.format(curdatetime)
+    title = 'Цены на ключевые сырьевые товары.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '5_TEST')
-    transformer.render_mpl_table(metal, '5_TEST', header_columns=0, col_width=3.1)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(metal, '5_TEST', header_columns=0, col_width=3.1, title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
     '''
     # METALS
     await message.answer("METALS")

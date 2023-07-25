@@ -60,18 +60,30 @@ class Transformer:
 
     @staticmethod
     def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
-                         # header_color='#40466e', row_colors=['#f1f1f2', 'w'], edge_color='w',
-                         header_color='#000000', row_colors=['#000000', '#0E0E0E'], edge_color='w',
-                         bbox=[-0.17, -0.145, 1.3, 1.32], header_columns=0,
-                         ax=None, **kwargs):
+                         header_color='#000000', row_colors=['#030303', '#0E0E0E'],
+                         edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.15],  # bbox=[-0.17, -0.145, 1.3, 1.15],
+                         header_columns=0, title=None, ax=None, **kwargs):
         data = data.fillna('-')
+        if title is None:
+            title = name
+
+        # titles = [title]*len(data.columns.tolist())
+        # orig_columns = data.columns.tolist()
+        # columns = [(titles[i], orig_columns[i]) for i in range(0, len(titles))]
+        # data = pd.DataFrame(data=data.values.tolist(),
+        #                    columns=pd.MultiIndex.from_tuples(columns, names=['title', 'columns']))
+
         if ax is None:
             size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
             fig, ax = plt.subplots(figsize=size)
+            fig.facecolor = 'black'
+            # rect = patches.Rectangle((-100, -100), 70, 70, linewidth=1, edgecolor='r', facecolor='black', )
+            # ax.add_patch(rect)
+            ax.set_title(title, color='black')
             ax.axis('off')
 
         mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
-                             cellLoc='center',  **kwargs)
+                             cellLoc='center', **kwargs)
         mpl_table.auto_set_font_size(False)
         mpl_table.set_fontsize(font_size)
 
@@ -85,7 +97,7 @@ class Transformer:
             else:
                 cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                 cell.get_text().set_color('white')
-        # save png and return it to user
 
+        # save png and return it to user
         png_path = '{}/img/{}_table.png'.format('/Users/18933996/Desktop/Chat_bot/FinGigaChat/sources', name)
         plt.savefig(png_path, transparent=True)
