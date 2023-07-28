@@ -33,9 +33,9 @@ list_of_companies = \
         ['714', 'Северсталь', 'https://severstal.com/rus/ir/indicators-reporting/operational-results/']
     ]
 
-chat_base_url = 'url'
-research_base_url = 'url'
-path_to_source = '/Desktop/Chat_bot/FinGigaChat/sources'
-api_token = ''
-user_cred = ('login', 'password')
-research_cred = ('login', 'password')
+chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
+research_base_url = 'https://research.sberbank-cib.com/'
+path_to_source = '/FinGigaChat/sources'
+api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
+user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')
+research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')

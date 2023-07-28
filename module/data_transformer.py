@@ -17,7 +17,7 @@ class Transformer:
         return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
 
     @staticmethod
-    def get_table_from_html(euro_standart: bool, html: str) -> list[pd.DataFrame]:
+    def get_table_from_html(euro_standart: bool, html: str):
         """
         Take all tables from html code
         :param euro_standart: Bool value for separators of decimals and thousands

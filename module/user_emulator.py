@@ -110,7 +110,7 @@ class ResearchParser:
 
         return driver
 
-    def get_everyday_reviews(self, driver: wb.firefox.webdriver.WebDriver, url: str) -> list[list]:
+    def get_everyday_reviews(self, driver: wb.firefox.webdriver.WebDriver, url: str):
         """
         Get last everyday economical reviews
         :param driver: Browser session where to work
@@ -133,7 +133,7 @@ class ResearchParser:
             reviews.append([*self.__popup_worker_eco(i, driver), dates[row_numb].text])
         return reviews
 
-    def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str) -> list[list]:
+    def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
         """
         Get review from global every month economic review
         :param driver: Browser session where to work
@@ -154,7 +154,7 @@ class ResearchParser:
         return review
 
     def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str, title: str = 'FX & Ставки',
-                           text_filter: tuple = (['Процентные ставки', 'Прогноз'])) -> list[list]:
+                           text_filter: tuple = (['Процентные ставки', 'Прогноз'])):
         """
         Get last everyday money reviews
         :param title: Name of browser tab (Page name)
@@ -181,7 +181,7 @@ class ResearchParser:
         return reviews
 
     def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str,
-                         review_filter: str = 'Денежный рынок. Еженедельный обзор') -> list[list]:
+                         review_filter: str = 'Денежный рынок. Еженедельный обзор'):
         """
         Get review from global every month money review
         :param driver: Browser session where to work
