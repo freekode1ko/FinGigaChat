@@ -15,7 +15,7 @@ class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
         user_object = ue.ResearchParser()
-        path_to_source = 'Sources/ТЗ.xlsx'
+        path_to_source = '/fingigachat/sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
         rebase = config.research_base_url
         list_of_companies = config.list_of_companies
@@ -27,7 +27,7 @@ class Main:
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
 
-    def table_collector(self, session: req.sessions.Session) -> list[list]:
+    def table_collector(self, session: req.sessions.Session):
         all_tables = []
         urls = self.transformer_obj.load_urls_as_list(self.path_to_source, 'Источник')
         df_urls = pd.DataFrame(urls).dropna().drop_duplicates()
@@ -73,7 +73,7 @@ class Main:
             rus_infl = pd.concat([rus_infl, table_eco[3]])
         return eco_frst_third, world_bet, rus_infl
 
-    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session) -> list[list]:
+    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session):
         exchange_kot = []
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
             if {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
