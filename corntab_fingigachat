@@ -1,0 +1,1 @@
+15 * * * * /usr/bin/flock -w 0 /var/tmp/tp.lockfile /usr/local/bin/python3 /fingigachat/main.py >> /var/log/fingigachat.log 2>&1
