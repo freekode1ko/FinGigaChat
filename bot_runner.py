@@ -1,14 +1,15 @@
 import time
-
 from aiogram import Bot, Dispatcher, executor, types
 import module.data_transformer as dt
 import module.gigachat as gig
+#from googletrans import Translator
 import pandas as pd
 import warnings
 import config
 
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
+#model = EasyNMT("opus-mt")
 token = ''
 chat = ''
 
@@ -106,15 +107,21 @@ async def button_polymetal(message: types.Message):
 async def bonds_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
-    columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
+    columns = ['Название', 'Доходность', 'Изм, %']
     bonds = bonds[columns].dropna(axis=0)
-    bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')]
+    bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
+    bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения'})
+    years = ['1 год', '2 года', '3 года', '5 лет',
+             '7 лет', '10 лет', '15 лет', '20 лет']
+    for num, name in enumerate(bond_ru['Cрок до погашения'].values):
+        bond_ru['Cрок до погашения'].values[num] = years[num]
 
     # df transformation
     transformer = dt.Transformer()
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'bonds')
-    transformer.save_df_as_png(df=bond_ru, column_width=[0.11] * len(bond_ru.columns),
-                               figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
+    # transformer.save_df_as_png(df=bond_ru, column_width=[0.11] * len(bond_ru.columns),
+    #                           figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
+    transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5, title='Доходности ОФЗ.')
     photo = open(png_path, 'rb')
     day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
@@ -135,13 +142,40 @@ async def economy_info(message: types.Message):
     world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': 'Страна',
                                                                                           'Last': 'Ставка',
                                                                                           'Previous': 'Предыдущая'})
+    countries = {
+        'Japan': 'Япония',
+        'Switzerland': 'Швейцария',
+        'South Korea': 'Южная Корея',
+        'Singapore': 'Сингапур',
+        'China': 'Китай',
+        'Euro Area': 'Еврозона',
+        'Australia': 'Австралия',
+        'Canada': 'Канада',
+        'United Kingdom': 'Великобритания',
+        'United States': 'США',
+        'Indonesia': 'Индонезия',
+        'Saudi Arabia': 'Саудовская Аравия',
+        'India': 'Индия',
+        'Russia': 'Россия',
+        'South Africa': 'ЮАР',
+        'Mexico': 'Мексика',
+        'Brazil': 'Бразилия',
+        'Turkey': 'Турция',
+        'Argentina': 'Аргентина'
+    }
     world_bet = world_bet[['Страна', 'Ставка', 'Предыдущая']]
+    for num, country in enumerate(world_bet['Страна'].values):
+        world_bet.Страна[world_bet.Страна == country] = countries[country]
+    #world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"), axis=1)
 
     # df transformation
     transformer = dt.Transformer()
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'world_bet')
-    transformer.save_df_as_png(df=world_bet, column_width=[0.25] * len(world_bet.columns),
-                               figure_size=(8, 6), path_to_source=path_to_source, name='world_bet')
+    # transformer.save_df_as_png(df=world_bet, column_width=[0.25] * len(world_bet.columns),
+    #                           figure_size=(8, 6), path_to_source=path_to_source, name='world_bet')
+    world_bet = world_bet.round(2)
+    transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0,
+                                 col_width=2.2, title='Ключевые ставки ЦБ мира.')
     photo = open(png_path, 'rb')
     day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
@@ -150,9 +184,19 @@ async def economy_info(message: types.Message):
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
     await __sent_photo_and_msg(message, photo, day, month, title)
-
-    transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
-                               figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
+    # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
+    #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
+    month_dict = {
+        1: "Январь", 2: "Февраль", 3: "Март",
+        4: "Апрель", 5: "Май", 6: "Июнь",
+        7: "Июль", 8: "Август", 9: "Сентябрь",
+        10: "Октябрь", 11: "Ноябрь", 12: "Декабрь"
+    }
+    for num, date in enumerate(rus_infl['Дата'].values):
+        cell = str(date).split('.')
+        rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
+    transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0,
+                                 col_width=2, title='Ежемесячная инфляция в России.')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
     photo = open(png_path, 'rb')
     title = 'Инфляция в России'
@@ -169,8 +213,16 @@ async def exchange_info(message: types.Message):
 
     # df transformation
     transformer = dt.Transformer()
-    transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
-                               figure_size=(5, 2), path_to_source=path_to_source, name='exc')
+    for num, currency in enumerate(exc['Валюта'].values):
+        if currency.lower() == 'usdollar':
+            exc['Валюта'].values[num] = 'Индекс DXY'
+        else:
+            cur = currency.upper().split('-')
+            exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
+
+    transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2, title='Текущие курсы валют')
+    # transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
+    #                           figure_size=(5, 2), path_to_source=path_to_source, name='exc')
     day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     photo = open(png_path, 'rb')
@@ -188,8 +240,10 @@ async def metal_info(message: types.Message):
     metal = metal[['Metals', 'Price', 'Day', 'Weekly', 'Monthly', 'YoY']]
     metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Day': 'Δ День',
                                    'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
-    transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
-                               figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
+    transformer.render_mpl_table(metal.round(2), 'metal', header_columns=0,
+                                 col_width=3.1, title='Цены на ключевые сырьевые товары.')
+    # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
+    #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
     day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
     photo = open(png_path, 'rb')
