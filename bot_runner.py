@@ -1,15 +1,16 @@
 import time
+import re
 from aiogram import Bot, Dispatcher, executor, types
 import module.data_transformer as dt
 import module.gigachat as gig
-#from googletrans import Translator
+# from googletrans import Translator
 import pandas as pd
 import warnings
 import config
 
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
-#model = EasyNMT("opus-mt")
+# model = EasyNMT("opus-mt")
 token = ''
 chat = ''
 
@@ -166,7 +167,7 @@ async def economy_info(message: types.Message):
     world_bet = world_bet[['Страна', 'Ставка', 'Предыдущая']]
     for num, country in enumerate(world_bet['Страна'].values):
         world_bet.Страна[world_bet.Страна == country] = countries[country]
-    #world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"), axis=1)
+    # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"), axis=1)
 
     # df transformation
     transformer = dt.Transformer()
@@ -219,6 +220,8 @@ async def exchange_info(message: types.Message):
         else:
             cur = currency.upper().split('-')
             exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
+    exc.loc[2.5] = [' ', ' ']
+    exc = exc.sort_index().reset_index(drop=True)
 
     transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2, title='Текущие курсы валют')
     # transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
@@ -240,19 +243,63 @@ async def metal_info(message: types.Message):
     metal = metal[['Metals', 'Price', 'Day', 'Weekly', 'Monthly', 'YoY']]
     metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Day': 'Δ День',
                                    'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
-    transformer.render_mpl_table(metal.round(2), 'metal', header_columns=0,
+
+    order = {'Медь': ['Медь, $/т', '0'],
+             'Aluminum USD/T': ['Алюминий, $/т', '1'],
+             'Nickel USD/T': ['Никель, $/т', '2'],
+             'Lead USD/T': ['Cвинец, $/т', '3'],
+             'Zinc USD/T': ['Цинк, $/т', '4'],
+             'Lithium CNY/T': ['Литий, CNH/т', '9'],
+             'Cobalt USD/T': ['Кобальт, $/т', '10'],
+             'Железорудное сырье': ['ЖРС (Китай), $/т', '11'],
+             'кокс. уголь': ['Кокс. уголь (Au), $/т', '14']
+             }
+    metal['ind'] = None
+    for num, commodity in enumerate(metal['Сырье'].values):
+        if commodity in order:
+            metal.Сырье[metal.Сырье == commodity] = '<>'.join(order[commodity])
+        else:
+            metal.drop(num, inplace=True)
+    metal[['Сырье', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
+    metal.set_index('ind', drop=True, inplace=True)
+    metal.sort_index(inplace=True)
+
+    for key in metal.columns[1:]:
+        metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
+        metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
+        metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
+        metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
+        # metal[key] = metal[key].apply(lambda x: str(x).replace(".00", ""))
+        metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
+
+        metal[key] = metal[key].astype('float')
+        metal[key] = metal[key].round(1)
+        metal[key] = metal[key].apply(lambda x: str(x).replace("nan", "-"))
+
+    transformer.render_mpl_table(metal.round(1), 'metal', header_columns=0,
                                  col_width=3.1, title='Цены на ключевые сырьевые товары.')
+
     # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
-    day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
+    day = ''  # analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
     await __sent_photo_and_msg(message, photo, day)
 
 
+def __replacer(data: str, change):
+    list_of_data = data.split(change)
+    print(data, len(list_of_data))
+    if len(list_of_data) > 1:
+        return '{}{}'.format(list_of_data[0], '.'.join(list_of_data[1:]))
+    else:
+        return data
+
+
 async def draw_all_tables(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    '''
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
     columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
     bonds = bonds[columns].dropna(axis=0)
@@ -283,33 +330,39 @@ async def draw_all_tables(message: types.Message):
 
     title = 'Доходности ОФЗ.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '1_TEST')
-    transformer.render_mpl_table(bond_ru, '1_TEST', header_columns=0, col_width=2.13, title=title)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(bond_ru, '1_TEST', header_columns=0, col_width=2.13,
+                                 title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
     await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
     title = 'Ключевые ставки ЦБ мира.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '2_TEST')
-    transformer.render_mpl_table(world_bet, '2_TEST', header_columns=0, col_width=2, title=title)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(world_bet, '2_TEST', header_columns=0, col_width=2,
+                                 title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
     await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
     title = 'Ежемесячная инфляция в России.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '3_TEST')
-    transformer.render_mpl_table(rus_infl, '3_TEST', header_columns=0, col_width=2, title=title)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(rus_infl, '3_TEST', header_columns=0, col_width=2,
+                                 title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
     await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
     title = 'Текущие курсы валют'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '4_TEST')
-    transformer.render_mpl_table(exc, '4_TEST', header_columns=0, col_width=2, title=title)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(exc, '4_TEST', header_columns=0, col_width=2,
+                                 title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
     await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
 
     title = 'Цены на ключевые сырьевые товары.'
     png_path = '{}/img/{}_table.png'.format(path_to_source, '5_TEST')
-    transformer.render_mpl_table(metal, '5_TEST', header_columns=0, col_width=3.1, title=title)  # [i*0.2 for i in columns_width])
+    transformer.render_mpl_table(metal, '5_TEST', header_columns=0, col_width=3.1,
+                                 title=title)  # [i*0.2 for i in columns_width])
     photo = open(png_path, 'rb')
     await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
+    '''
     '''
     # METALS
     await message.answer("METALS")
