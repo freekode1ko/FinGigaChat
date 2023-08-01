@@ -2,12 +2,13 @@ from aiogram import Bot, Dispatcher, executor, types
 import module.data_transformer as dt
 import module.gigachat as gig
 import pandas as pd
+import datetime
 import warnings
 import config
-import locale
 import re
 
 path_to_source = config.path_to_source
+curdatetime = datetime.datetime.now()
 API_TOKEN = config.api_token
 token = ''
 chat = ''
@@ -27,15 +28,20 @@ summ_prompt = 'Сократи текст, оставь только ключев
 
 async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048):
     text_group = []
+    # import dateutil.parser as dparser
+    # date = dparser.parse(date, fuzzy=True)
+    print(date)
     # await message.answer('Краткое содержание:')
     giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
         for summ_part in text_group:
-            await message.answer('{} - {}\n\n{}\n\n{}'.format(name, date, summ_part, date))
+            await message.answer('<b>{}</b> - {}\n\n{}\n\n<i>{}</i>'.format(name, date, summ_part, date),
+                                 parse_mode="HTML")
     else:
-        await message.answer('{} - {}\n\n{}\n\n{}'.format(name, date, giga_ans, date))
+        await message.answer('<b>{}</b> - {}\n\n{}\n\n<i>{}</i>'.format(name, date, giga_ans, date),
+                             parse_mode="HTML")
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
@@ -127,7 +133,7 @@ async def bonds_info(message: types.Message):
 
     title = 'Государственные ценные бумаги'
     # await message.answer('Да да - Вот оно: \n')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -182,7 +188,7 @@ async def economy_info(message: types.Message):
     await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
     # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
     month_dict = {
@@ -198,8 +204,8 @@ async def economy_info(message: types.Message):
                                  col_width=2, title='Ежемесячная инфляция в России.')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
     photo = open(png_path, 'rb')
-    title = 'Инфляция в России'
-    await bot.send_photo(message.chat.id, photo, caption=title)
+    #title = 'Инфляция в России'
+    await bot.send_photo(message.chat.id, photo, caption='Данные на {}'.format(curdatetime))
 
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
@@ -228,9 +234,9 @@ async def exchange_info(message: types.Message):
     day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     photo = open(png_path, 'rb')
-    title = 'Курсы валют'
+    # title = 'Курсы валют'
     # await message.answer('Да да - Вот оно:\n')
-    await __sent_photo_and_msg(message, photo, day, month, title)
+    await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
@@ -282,10 +288,11 @@ async def metal_info(message: types.Message):
     # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
-    day = ''  # analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
+    day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
+    print(day)
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
-    await __sent_photo_and_msg(message, photo, day)
+    await __sent_photo_and_msg(message, photo, day, title='Данные на {}'.format(curdatetime))
 
 
 def __replacer(data: str, change):
