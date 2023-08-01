@@ -1,16 +1,14 @@
-import time
-import re
 from aiogram import Bot, Dispatcher, executor, types
 import module.data_transformer as dt
 import module.gigachat as gig
-# from googletrans import Translator
 import pandas as pd
 import warnings
 import config
+import locale
+import re
 
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
-# model = EasyNMT("opus-mt")
 token = ''
 chat = ''
 
@@ -223,7 +221,8 @@ async def exchange_info(message: types.Message):
     exc.loc[2.5] = [' ', ' ']
     exc = exc.sort_index().reset_index(drop=True)
 
-    transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2, title='Текущие курсы валют')
+    transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0,
+                                 col_width=2, title='Текущие курсы валют')
     # transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='exc')
     day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
@@ -263,7 +262,8 @@ async def metal_info(message: types.Message):
     metal[['Сырье', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
     metal.set_index('ind', drop=True, inplace=True)
     metal.sort_index(inplace=True)
-
+    # locale.setlocale(locale.LC_NUMERIC, 'English')
+    # TODO: Fix bug with delete splitter ',' for thousands
     for key in metal.columns[1:]:
         metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
         metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
@@ -276,7 +276,7 @@ async def metal_info(message: types.Message):
         metal[key] = metal[key].round(1)
         metal[key] = metal[key].apply(lambda x: str(x).replace("nan", "-"))
 
-    transformer.render_mpl_table(metal.round(1), 'metal', header_columns=0,
+    transformer.render_mpl_table(metal, 'metal', header_columns=0,
                                  col_width=3.1, title='Цены на ключевые сырьевые товары.')
 
     # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
@@ -299,6 +299,8 @@ def __replacer(data: str, change):
 
 async def draw_all_tables(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    await message.answer('Deprecated method: \nЭтот метод более не активен. '
+                         '\nЧат переведен на новый формат отображения данных')
     '''
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
     columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
@@ -400,7 +402,6 @@ async def draw_all_tables(message: types.Message):
     bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')]
     await message.answer(bond_ru.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
     '''
-
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
