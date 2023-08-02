@@ -31,21 +31,28 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     # import dateutil.parser as dparser
     # date = dparser.parse(date, fuzzy=True)
     print(date)
-    # await message.answer('Краткое содержание:')
-    giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
+
+    # uncommet me if need summory
+    # ****************************
+    # giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
+    # ****************************
+    #giga_ans = text.replace('\n', '\n\n')
+    #giga_ans = text.replace('>', '\n\n')
+
+    giga_ans = text.replace('>', '')
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
         for summ_part in text_group:
-            await message.answer('<b>{}</b> - {}\n\n{}\n\n<i>{}</i>'.format(name, date, summ_part, date),
+            await message.answer('<b>{}</b> - {}\n{}\n<i>{}</i>'.format(name, date, summ_part, date),
                                  parse_mode="HTML")
     else:
-        await message.answer('<b>{}</b> - {}\n\n{}\n\n<i>{}</i>'.format(name, date, giga_ans, date),
+        await message.answer('<b>{}</b> - {}\n{}\n<i>{}</i>'.format(name, date, giga_ans, date),
                              parse_mode="HTML")
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
-    batch_size = 2048
+    batch_size = 3500
     if day:
         for day_rev in day:
             print(day_rev[0], day_rev[2])
@@ -184,13 +191,13 @@ async def economy_info(message: types.Message):
     photo = open(png_path, 'rb')
     day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
-
-    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
     await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
     # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
+
+
     month_dict = {
         1: "Январь", 2: "Февраль", 3: "Март",
         4: "Апрель", 5: "Май", 6: "Июнь",
@@ -206,6 +213,8 @@ async def economy_info(message: types.Message):
     photo = open(png_path, 'rb')
     #title = 'Инфляция в России'
     await bot.send_photo(message.chat.id, photo, caption='Данные на {}'.format(curdatetime))
+
+    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
 
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
@@ -289,7 +298,6 @@ async def metal_info(message: types.Message):
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
     day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
-    print(day)
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
     await __sent_photo_and_msg(message, photo, day, title='Данные на {}'.format(curdatetime))
@@ -306,8 +314,9 @@ def __replacer(data: str, change):
 
 async def draw_all_tables(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
-    await message.answer('Deprecated method: \nЭтот метод более не активен. '
-                         '\nЧат переведен на новый формат отображения данных')
+    # await message.answer('Deprecated method: \nЭтот метод более не активен. '
+    #                      '\nЧат переведен на новый формат отображения данных')
+    await message.answer('')
     '''
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
     columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']

@@ -15,7 +15,7 @@ class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
         user_object = ue.ResearchParser()
-        path_to_source = '/fingigachat/sources/ТЗ.xlsx'
+        path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
         rebase = config.research_base_url
         list_of_companies = config.list_of_companies
@@ -161,8 +161,12 @@ class Main:
                 temp_table['Metals'] = 'Железорудное сырье'
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
-                metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                        *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
+                try:
+                    metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
+                                            *temp_table['%'].tolist()[1:], str(temp_table['Date'][0]).split()[0]])
+                except ValueError:
+                    metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
+                                            *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
     def main(self) -> None:

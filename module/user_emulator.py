@@ -53,7 +53,7 @@ class ResearchParser:
         rows = review_page.find_elements('tag name', 'p')
         review = ''
         for row in rows:
-            review += row.text
+            review += '\n\n' + row.text
         try:
             review_page.send_keys(Keys.ESCAPE)
         except selenium.common.exceptions.ElementNotInteractableException:
@@ -80,7 +80,7 @@ class ResearchParser:
             if (text_filter[0] not in row.text) \
                     and (text_filter[1] not in row.text) \
                     and ('@sber' not in row.text):
-                output += ''.join(row.text)
+                output += '\n\n' + ''.join(row.text)
         try:
             review_page.send_keys(Keys.ESCAPE)
         except selenium.common.exceptions.ElementNotInteractableException:
