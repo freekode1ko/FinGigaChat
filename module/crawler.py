@@ -77,6 +77,9 @@ class Parser:
                       'Connection': 'keep-alive',
                       'Accept-Encoding': 'gzip,deflate'}
             req_page = session.get(url, verify=False, headers=header)
+            if 'ddos-guard' in req_page.text.lower():
+                print('DDOS Guard found - trying to surpass metal gear...')
+                raise req.exceptions.ConnectionError
 
         except req.exceptions.ConnectionError:
             session = req.Session()

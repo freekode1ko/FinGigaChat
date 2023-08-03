@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, executor, types
 import module.data_transformer as dt
 import module.gigachat as gig
 import pandas as pd
+import numpy as np
 import datetime
 import warnings
 import config
@@ -36,8 +37,8 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     # ****************************
     # giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
     # ****************************
-    #giga_ans = text.replace('\n', '\n\n')
-    #giga_ans = text.replace('>', '\n\n')
+    # giga_ans = text.replace('\n', '\n\n')
+    # giga_ans = text.replace('>', '\n\n')
 
     giga_ans = text.replace('>', '')
     if len(giga_ans) > batch_size:
@@ -55,13 +56,17 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
     batch_size = 3500
     if day:
         for day_rev in day:
-            print(day_rev[0], day_rev[2])
+            day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
+            day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
+            # print(day_rev[0], day_rev[2])
             # await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
-            await __text_splitter(message, day_rev[1], day_rev[0], day_rev[2], batch_size)
+            await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     if month:
         for month_rev in month:
+            month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
+            month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
             # await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
-            await __text_splitter(message, month_rev[1], month_rev[0], month_rev[2], batch_size)
+            await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
     # await message.answer(title)
     await bot.send_photo(message.chat.id, photo, caption=title)
 
@@ -78,9 +83,11 @@ async def __read_tables_from_companies(message: types.Message, companies: dict):
         if str(company_id) in key:
             png_path = '{}/img/{}_table.png'.format(path_to_source, key)
             title = '{}'.format(key.split('_')[1])
-            transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
-                                       column_width=[0.15] * len(companies[key].columns),
-                                       figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
+            # transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
+            #                            column_width=[0.15] * len(companies[key].columns),
+            #                            figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
+            transformer.render_mpl_table(companies[key].drop('Unnamed: 0', axis=1), key,
+                                         header_columns=0, col_width=5)
             photo = open(png_path, 'rb')
             await __sent_photo_and_msg(message, photo, title=title)
 
@@ -140,7 +147,7 @@ async def bonds_info(message: types.Message):
     # print(month)
     title = 'Государственные ценные бумаги'
     # await message.answer('Да да - Вот оно: \n')
-    await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
+    await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, curdatetime))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -193,10 +200,9 @@ async def economy_info(message: types.Message):
     month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
-    await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
+    await __sent_photo_and_msg(message, photo, [day[0]], month, title='{}\nДанные на {}'.format(title, curdatetime))
     # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
-
 
     month_dict = {
         1: "Январь", 2: "Февраль", 3: "Март",
@@ -211,11 +217,27 @@ async def economy_info(message: types.Message):
                                  col_width=2, title='Ежемесячная инфляция в России.')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
     photo = open(png_path, 'rb')
-    #title = 'Инфляция в России'
-    await bot.send_photo(message.chat.id, photo, caption='Данные на {}'.format(curdatetime))
+    title = 'Инфляция в России'
+    await bot.send_photo(message.chat.id, photo, caption='{}\nДанные на {}'.format(title, curdatetime))
 
-    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], '{}%'.format(str(i[1]).replace('%', ''))) for i in stat.head(3).values]))
+    keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
+    keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
+    keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
+    spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
 
+    title = 'Динамика и прогноз основных макроэкономических показателей'
+    for key_eco in spld_keys_eco:
+        key_eco = key_eco[key_eco['Экономические показатели'].notna()]
+        key_eco.reset_index(inplace=True, drop=True)
+        block = key_eco['Экономические показатели'][0]
+        key_eco = key_eco.iloc[1:]
+        transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
+        png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+        photo = open(png_path, 'rb')
+        await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, curdatetime))
+
+    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], '{}%'.format(str(i[1]).replace('%', '')))
+                                               for i in stat.head(3).values]))
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -247,6 +269,14 @@ async def exchange_info(message: types.Message):
     # await message.answer('Да да - Вот оно:\n')
     await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
 
+    fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
+    title = 'Прогноз валютных курсов'
+    transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
+                                 col_width=3.1, title=title)
+    png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
+    photo = open(png_path, 'rb')
+    await __sent_photo_and_msg(message, photo, title='{}\nДанные на {}'.format(title, curdatetime))
+
 
 # ['Металлы', 'сырьевые товары', 'commodities']
 @dp.message_handler(commands=['commodities'])
@@ -254,9 +284,9 @@ async def metal_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     transformer = dt.Transformer()
     metal = pd.read_excel('{}/tables/metal.xlsx'.format(path_to_source))
-    metal = metal[['Metals', 'Price', 'Day', 'Weekly', 'Monthly', 'YoY']]
-    metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Day': 'Δ День',
-                                   'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
+    metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
+    metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
+                                   'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
 
     order = {'Медь': ['Медь, $/т', '0'],
              'Aluminum USD/T': ['Алюминий, $/т', '1'],
@@ -278,20 +308,20 @@ async def metal_info(message: types.Message):
     metal.set_index('ind', drop=True, inplace=True)
     metal.sort_index(inplace=True)
     for key in metal.columns[1:]:
-
         metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
         metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
         metal[key] = metal[key].apply(lambda x: __replacer(x))
-        # metal[key] = metal[key].apply(lambda x: ''.join(str(x).split('.', 1)))
         metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
         metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
-        # metal[key] = metal[key].apply(lambda x: str(x).replace(".00", ""))
+
         metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
         metal[key] = metal[key].astype('float')
         metal[key] = metal[key].round()
         metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
-        metal[key] = metal[key].apply(lambda x: str(x).replace("nan", "-"))
+        metal[key] = metal[key].apply(lambda x: '{}%'.format(x)
+                                                if x != 'nan' and key != 'Цена'
+                                                else str(x).replace("nan", "-"))
 
     transformer.render_mpl_table(metal, 'metal', header_columns=0,
                                  col_width=3.1, title='Цены на ключевые сырьевые товары.')
@@ -322,6 +352,7 @@ def __replacer(data: str):
         else:
             return '{}{}.{}'.format(*data_list)
     return data
+
 
 async def draw_all_tables(message: types.Message):
     import numpy as np
@@ -456,6 +487,7 @@ async def draw_all_tables(message: types.Message):
     bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')]
     await message.answer(bond_ru.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
     '''
+
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):

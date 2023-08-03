@@ -128,14 +128,14 @@ class Main:
 
         elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
             if 'Metals' in table_metals[3].columns:
-                temp = table_metals[3].loc[table_metals[3]['Metals'].isin(['Gold USD/t.oz', 'Silver USD/t.oz',
-                                                                           'Platinum USD/t.oz', 'Lithium CNY/T'])]
+                temp = table_metals[3].loc[table_metals[3]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz',
+                                                                           'Platinum USD/t,oz', 'Lithium CNY/T'])]
                 metals_kot.append(temp)
 
             elif 'Industrial' in table_metals[3].columns:
                 temp = table_metals[3].loc[table_metals[3]['Industrial'].isin(['Aluminum USD/T', 'Nickel USD/T',
                                                                                'Lead USD/T', 'Zinc USD/T',
-                                                                               'Palladium USD/t.oz', 'Cobalt USD/T',
+                                                                               'Palladium USD/t,oz', 'Cobalt USD/T',
                                                                                'Iron Ore 62% fe USD/T'])]
                 metals_kot.append(temp.rename(columns={'Industrial': 'Metals'}))
 
