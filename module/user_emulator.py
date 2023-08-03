@@ -69,18 +69,28 @@ class ResearchParser:
         :param table: HTML element to click
         :param text_filter: Keywords for searching in review text
         :param driver: Browser session where to work
-        :return: Review name and review without '>' symbol
+        :return: Review name and review without d'>' symbol
         """
         table.click()
         self.__sleep_some_time(2, 3)
         review_page = driver.find_element(By.XPATH, self.base_popup_xpath)
         rows = review_page.find_elements('tag name', 'p')
         output = ''
+        start_bool = False
         for row in rows:
-            if (text_filter[0] not in row.text) \
-                    and (text_filter[1] not in row.text) \
-                    and ('@sber' not in row.text):
+            if text_filter[0] in row.text:
                 output += '\n\n' + ''.join(row.text)
+                start_bool = True
+            elif start_bool and (text_filter[1] not in row.text):
+                output += '\n\n' + ''.join(row.text)
+            else:
+                start_bool = False
+
+        # for row in rows:
+        #    if (text_filter[0] not in row.text) \
+        #            and (text_filter[1] not in row.text) \
+        #            and ('@sber' not in row.text):
+        #        output += '\n\n' + ''.join(row.text)
         try:
             review_page.send_keys(Keys.ESCAPE)
         except selenium.common.exceptions.ElementNotInteractableException:

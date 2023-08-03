@@ -8,7 +8,7 @@ import config
 import re
 
 path_to_source = config.path_to_source
-curdatetime = datetime.datetime.now()
+curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 API_TOKEN = config.api_token
 token = ''
 chat = ''
@@ -61,7 +61,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
     if month:
         for month_rev in month:
             # await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
-            await __text_splitter(message, month_rev[1], day_rev[0], day_rev[2], batch_size)
+            await __text_splitter(message, month_rev[1], month_rev[0], month_rev[2], batch_size)
     # await message.answer(title)
     await bot.send_photo(message.chat.id, photo, caption=title)
 
@@ -137,7 +137,7 @@ async def bonds_info(message: types.Message):
     photo = open(png_path, 'rb')
     day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
-
+    # print(month)
     title = 'Государственные ценные бумаги'
     # await message.answer('Да да - Вот оно: \n')
     await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
@@ -214,11 +214,11 @@ async def economy_info(message: types.Message):
     #title = 'Инфляция в России'
     await bot.send_photo(message.chat.id, photo, caption='Данные на {}'.format(curdatetime))
 
-    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], i[1]) for i in stat.head(3).values]))
+    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], '{}%'.format(str(i[1]).replace('%', ''))) for i in stat.head(3).values]))
 
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
-@dp.message_handler(commands=['exchange'])
+@dp.message_handler(commands=['fx'])
 async def exchange_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
@@ -233,7 +233,7 @@ async def exchange_info(message: types.Message):
         else:
             cur = currency.upper().split('-')
             exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
-    exc.loc[2.5] = [' ', ' ']
+    # exc.loc[2.5] = [' ', ' ']
     exc = exc.sort_index().reset_index(drop=True)
 
     transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0,
@@ -249,7 +249,7 @@ async def exchange_info(message: types.Message):
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
-@dp.message_handler(commands=['metal'])
+@dp.message_handler(commands=['commodities'])
 async def metal_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     transformer = dt.Transformer()
@@ -277,18 +277,20 @@ async def metal_info(message: types.Message):
     metal[['Сырье', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
     metal.set_index('ind', drop=True, inplace=True)
     metal.sort_index(inplace=True)
-    # locale.setlocale(locale.LC_NUMERIC, 'English')
-    # TODO: Fix bug with delete splitter ',' for thousands
     for key in metal.columns[1:]:
+
         metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
         metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
+        metal[key] = metal[key].apply(lambda x: __replacer(x))
+        # metal[key] = metal[key].apply(lambda x: ''.join(str(x).split('.', 1)))
         metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
         metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
         # metal[key] = metal[key].apply(lambda x: str(x).replace(".00", ""))
         metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
         metal[key] = metal[key].astype('float')
-        metal[key] = metal[key].round(1)
+        metal[key] = metal[key].round()
+        metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
         metal[key] = metal[key].apply(lambda x: str(x).replace("nan", "-"))
 
     transformer.render_mpl_table(metal, 'metal', header_columns=0,
@@ -298,25 +300,61 @@ async def metal_info(message: types.Message):
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
     day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
+    com_text_day = list(filter(None, day[0][1].split('\n')))
+    day = [[day[0][0], '\n\n'.join(com_text_day[:3]), day[0][2]]]
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
-    await __sent_photo_and_msg(message, photo, day, title='Данные на {}'.format(curdatetime))
+    title = ' Сырьевые товары'
+    await __sent_photo_and_msg(message, photo, day, title='{}\nДанные на {}'.format(title, curdatetime))
 
 
-def __replacer(data: str, change):
-    list_of_data = data.split(change)
-    print(data, len(list_of_data))
-    if len(list_of_data) > 1:
-        return '{}{}'.format(list_of_data[0], '.'.join(list_of_data[1:]))
-    else:
-        return data
+def __replacer(data: str):
+    """
+    if '.' > 1 and first object in data_list == 0 => '{}.{}{}'(*data_list)
 
+    :param data: value from cell
+    :return: formated data
+    """
+    data_list = data.split('.')
+    if len(data_list) > 2:
+        if data_list[0] == '0':
+            return '{}.{}{}'.format(*data_list)
+        else:
+            return '{}{}.{}'.format(*data_list)
+    return data
 
 async def draw_all_tables(message: types.Message):
+    import numpy as np
     print('{} - {}'.format(message.from_user.full_name, message.text))
     # await message.answer('Deprecated method: \nЭтот метод более не активен. '
     #                      '\nЧат переведен на новый формат отображения данных')
-    await message.answer('')
+    # await message.answer('')
+    transformer = dt.Transformer()
+
+    fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
+    keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
+    keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
+    keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
+    spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
+    # print(spld_keys_eco[0][' '][0])
+    title = 'Прогноз валютных курсов'
+    transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
+                                 col_width=3.1, title=title)
+    png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
+    photo = open(png_path, 'rb')
+    await __sent_photo_and_msg(message, photo, title='{}\nДанные на {}'.format(title, curdatetime))
+
+    title = 'Динамика и прогноз основных макроэкономических показателей'
+    for key_eco in spld_keys_eco:
+        key_eco = key_eco[key_eco['Экономические показатели'].notna()]
+        key_eco.reset_index(inplace=True, drop=True)
+        block = key_eco['Экономические показатели'][0]
+        key_eco = key_eco.iloc[1:]
+        transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0,
+                                     col_width=6, title=title)
+        png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+        photo = open(png_path, 'rb')
+        await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, curdatetime))
     '''
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
     columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
@@ -426,8 +464,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = '{} {}'.format(prompt, message.text)
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
-    msg = msg.replace('/metal', '')
-    msg = msg.replace('/exchange', '')
+    msg = msg.replace('/commodities', '')
+    msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
 
     if message.text.lower() in bonds_aliases:

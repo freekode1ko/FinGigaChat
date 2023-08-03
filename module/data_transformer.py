@@ -61,7 +61,7 @@ class Transformer:
     @staticmethod
     def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
                          header_color='#000000', row_colors=['#030303', '#0E0E0E'],
-                         edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.15],  # bbox=[-0.17, -0.145, 1.3, 1.15],
+                         edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
                          header_columns=0, title=None, ax=None, **kwargs):
         data = data.fillna('-')
         if title is None:
@@ -79,7 +79,7 @@ class Transformer:
             fig.facecolor = 'black'
             # rect = patches.Rectangle((-100, -100), 70, 70, linewidth=1, edgecolor='r', facecolor='black', )
             # ax.add_patch(rect)
-            ax.set_title(title, color='black')
+            # ax.set_title(title, color='black')
             ax.axis('off')
 
         mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
