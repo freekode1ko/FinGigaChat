@@ -265,9 +265,9 @@ async def exchange_info(message: types.Message):
     day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
     month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     photo = open(png_path, 'rb')
-    # title = 'Курсы валют'
+    title = 'Курсы валют'
     # await message.answer('Да да - Вот оно:\n')
-    await __sent_photo_and_msg(message, photo, day, month, title='Данные на {}'.format(curdatetime))
+    await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, curdatetime))
 
     fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
     title = 'Прогноз валютных курсов'
