@@ -55,14 +55,14 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
     batch_size = 3500
     if day:
-        for day_rev in day:
+        for day_rev in day[::-1]:
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             # print(day_rev[0], day_rev[2])
             # await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     if month:
-        for month_rev in month:
+        for month_rev in month[::-1]:
             month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
             month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
             # await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
@@ -219,7 +219,12 @@ async def economy_info(message: types.Message):
     photo = open(png_path, 'rb')
     title = 'Инфляция в России'
     await bot.send_photo(message.chat.id, photo, caption='{}\nДанные на {}'.format(title, curdatetime))
+    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], '{}%'.format(str(i[1]).replace('%', '')))
+                                               for i in stat.head(3).values]))
 
+@dp.message_handler(commands=['view'])
+async def data_mart(message: types.Message):
+    transformer = dt.Transformer()
     keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
     keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
     keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
@@ -235,9 +240,6 @@ async def economy_info(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
         photo = open(png_path, 'rb')
         await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, curdatetime))
-
-    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], '{}%'.format(str(i[1]).replace('%', '')))
-                                               for i in stat.head(3).values]))
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -293,11 +295,16 @@ async def metal_info(message: types.Message):
              'Nickel USD/T': ['Никель, $/т', '2'],
              'Lead USD/T': ['Cвинец, $/т', '3'],
              'Zinc USD/T': ['Цинк, $/т', '4'],
+             'Gold USD/t,oz': ['Золото, $/унц', '5'],
+             'Silver USD/t,oz': ['Cеребро, $/унц', '6'],
+             'Palladium USD/t,oz': ['Палладий, $/унц', '7'],
+             'Platinum USD/t,oz': ['Платина, $/унц', '8'],
              'Lithium CNY/T': ['Литий, CNH/т', '9'],
              'Cobalt USD/T': ['Кобальт, $/т', '10'],
              'Железорудное сырье': ['ЖРС (Китай), $/т', '11'],
              'кокс. уголь': ['Кокс. уголь (Au), $/т', '14']
              }
+
     metal['ind'] = None
     for num, commodity in enumerate(metal['Сырье'].values):
         if commodity in order:
@@ -313,7 +320,6 @@ async def metal_info(message: types.Message):
         metal[key] = metal[key].apply(lambda x: __replacer(x))
         metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
         metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
-
         metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
         metal[key] = metal[key].astype('float')
@@ -322,7 +328,9 @@ async def metal_info(message: types.Message):
         metal[key] = metal[key].apply(lambda x: '{}%'.format(x)
                                                 if x != 'nan' and key != 'Цена'
                                                 else str(x).replace("nan", "-"))
-
+    # print(metal)
+    metal.index = metal.index.astype('int')
+    metal.sort_index(inplace=True)
     transformer.render_mpl_table(metal, 'metal', header_columns=0,
                                  col_width=3.1, title='Цены на ключевые сырьевые товары.')
 

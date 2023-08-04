@@ -61,6 +61,37 @@ class ResearchParser:
             review_page.click()
         return [table.text, review]
 
+    def __popup_worker_eco_month(self, driver: wb.firefox.webdriver.WebDriver, url: str,
+                         review_filter: str = 'Экономика России. Ежемесячный обзор'):
+        """
+        Get review from global every month money review
+        :param driver: Browser session where to work
+        :param review_filter: Find specific review
+        :param url: URL with reviews
+        :return: list with review info
+        """
+        review = []
+        driver.get(url)
+        assert 'Экономика' in driver.title
+        self.__sleep_some_time(1.5, 2.5)
+        driver.find_element('id', self.tabs_eco['all']).click()
+        self.__sleep_some_time(2, 3)
+
+        search = driver.find_element('id', '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_'
+                                           'INSTANCE_btxt3yIWPKYW_publication-search-input')
+        search.click()
+        search.send_keys(review_filter, Keys.ENTER)
+        self.__sleep_some_time(2.5, 3.2)
+        try:
+            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
+            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[4]')
+        except selenium.common.exceptions.NoSuchElementException:
+            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[1]/div/a')
+            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[4]')
+
+        review.append([*self.__popup_worker_eco(table, driver), date.text])
+        return review
+
     def __popup_worker_money(self, table: wb.remote.webelement.WebElement,
                              driver: wb.firefox.webdriver.WebDriver,
                              text_filter: tuple) -> list:
@@ -152,15 +183,25 @@ class ResearchParser:
         """
         review = []
         driver.get(url)
+        review_filter = 'Экономика России. Ежемесячный обзор'
         assert 'Экономика' in driver.title
         self.__sleep_some_time(1.5, 2.5)
-        driver.find_element('id', self.tabs_eco['reviews']).click()
+        driver.find_element('id', self.tabs_money['all']).click()
         self.__sleep_some_time(2, 3)
 
-        table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
-        date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[5]')
-        review.append([*self.__popup_worker_eco(table, driver), date.text])
+        search = driver.find_element('id', '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet'
+                                           '_INSTANCE_btxt3yIWPKYW_publication-search-input')
+        search.click()
+        search.send_keys(review_filter, Keys.ENTER)
+        self.__sleep_some_time(2.5, 3.2)
+        try:
+            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
+            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[5]')
+        except selenium.common.exceptions.NoSuchElementException:
+            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[1]/div/a')
+            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[5]')
 
+        review.append([*self.__popup_worker_eco(table, driver), date.text])
         return review
 
     def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str, title: str = 'FX & Ставки',
