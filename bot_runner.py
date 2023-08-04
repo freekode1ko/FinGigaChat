@@ -31,7 +31,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     text_group = []
     # import dateutil.parser as dparser
     # date = dparser.parse(date, fuzzy=True)
-    print(date)
+    # print(date)
 
     # uncommet me if need summory
     # ****************************
@@ -54,18 +54,15 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
     batch_size = 3500
-    if day:
+    if day:  # Публикация дня
         for day_rev in day[::-1]:
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
-            # print(day_rev[0], day_rev[2])
-            # await message.answer('Публикация дня: {}, от: {}'.format(day_rev[0], day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
-    if month:
+    if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
             month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
             month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
-            # await message.answer('Публикация месяца: {}, от: {}'.format(month_rev[0], month_rev[2]))
             await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
     # await message.answer(title)
     await bot.send_photo(message.chat.id, photo, caption=title)
