@@ -10,6 +10,7 @@ from lxml import html
 import pandas as pd
 import warnings
 import config
+import time
 
 
 class Main:
@@ -366,7 +367,14 @@ class Main:
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    runner = Main()
-    runner.parser_obj.get_proxy_addresses()
-    runner.main()
-    runner.collect_research()
+    while True:
+        runner = Main()
+        runner.parser_obj.get_proxy_addresses()
+        runner.main()
+        runner.collect_research()
+        i = 0
+        print('Wait 30 minuts befor recollect data...')
+        while i<=30:
+               i += 1
+               time.sleep(60)
+               print('In waiting. \n{}/30 minuts'.format(30-i))
