@@ -143,8 +143,10 @@ async def bonds_info(message: types.Message):
     #                           figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
     transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5, title='Доходности ОФЗ.')
     photo = open(png_path, 'rb')
-    day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
-    month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
+    day = pd.read_sql_query('select * from "report_bon_day"', con=engine).values.tolist()
+    month = pd.read_sql_query('select * from "report_bon_mon"', con=engine).values.tolist()
+    # day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    # month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     # print(month)
     title = 'Государственные ценные бумаги'
     # await message.answer('Да да - Вот оно: \n')
@@ -203,8 +205,10 @@ async def economy_info(message: types.Message):
     transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0,
                                  col_width=2.2, title='Ключевые ставки ЦБ мира.')
     photo = open(png_path, 'rb')
-    day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
-    month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
+    day = pd.read_sql_query('select * from "report_eco_day"', con=engine).values.tolist()
+    month = pd.read_sql_query('select * from "report_eco_mon"', con=engine).values.tolist()
+    # day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    # month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
     await __sent_photo_and_msg(message, photo, [day[0]], month, title='{}\nДанные на {}'.format(title, curdatetime))
@@ -273,8 +277,10 @@ async def exchange_info(message: types.Message):
                                  col_width=2, title='Текущие курсы валют')
     # transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='exc')
-    day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
-    month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
+    day = pd.read_sql_query('select * from "report_exc_day"', con=engine).values.tolist()
+    month = pd.read_sql_query('select * from "report_exc_mon"', con=engine).values.tolist()
+    # day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
+    # month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     photo = open(png_path, 'rb')
     title = 'Курсы валют'
     # await message.answer('Да да - Вот оно:\n')
@@ -353,7 +359,8 @@ async def metal_info(message: types.Message):
     # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
-    day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
+    day = pd.read_sql_query('select * from "report_met_day"', con=engine).T.values.tolist()
+    # day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
     com_text_day = list(filter(None, day[0][1].split('\n')))
     day = [[day[0][0], '\n\n'.join(com_text_day[:3]), day[0][2]]]
     photo = open(png_path, 'rb')

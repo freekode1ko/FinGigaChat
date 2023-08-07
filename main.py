@@ -263,6 +263,7 @@ class Main:
         return None
 
     def collect_research(self) -> None:
+        engine = create_engine(self.psql_engine)
         guest_group = 'group/guest'
         economy_url = '{}{}/econ?countryIsoCode=RUS'.format(self.rebase, guest_group)
         money_url = '{}{}/money'.format(self.rebase, guest_group)
@@ -332,17 +333,24 @@ class Main:
         text_writer = pd.ExcelWriter('sources/tables/text.xlsx')
         pd.DataFrame(actual_reviews).to_excel(text_writer, sheet_name='Экономика. День')
         pd.DataFrame(global_eco_review).to_excel(text_writer, sheet_name='Экономика. Месяц')
+        pd.DataFrame(actual_reviews).to_sql('report_eco_day', if_exists='replace',index=False, con=engine)
+        pd.DataFrame(global_eco_review).to_sql('report_eco_mon', if_exists='replace', index=False, con=engine)
         print('ECO block is saved')
 
         pd.DataFrame(every_money).to_excel(text_writer, sheet_name='Облиигации. День')
         pd.DataFrame(global_money_review).to_excel(text_writer, sheet_name='Облиигации. Месяц')
+        pd.DataFrame(every_money).to_sql('report_bon_day',if_exists='replace', index=False, con=engine)
+        pd.DataFrame(global_money_review).to_sql('report_bon_mon', if_exists='replace',index=False, con=engine)
         print('BONDS block is saved')
 
         pd.DataFrame(every_kurs).to_excel(text_writer, sheet_name='Курсы. День')
         pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_excel(text_writer, sheet_name='Курсы. Месяц')
+        pd.DataFrame(every_kurs).to_sql('report_exc_day', if_exists='replace', index=False, con=engine)
+        pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_sql('report_exc_mon', if_exists='replace', index=False, con=engine)
         print('EXCHANGE block is saved')
 
         pd.DataFrame(every_metals[0]).to_excel(text_writer, sheet_name='Металлы. День')
+        pd.DataFrame(every_metals[0]).to_sql('report_met_day', if_exists='replace', index=False, con=engine)
         print('METAL block is saved')
         text_writer.close()
 
