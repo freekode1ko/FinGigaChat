@@ -4,6 +4,7 @@ import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from selenium import webdriver
+from sqlalchemy import create_engine
 import requests as req
 from lxml import html
 import pandas as pd
@@ -18,9 +19,11 @@ class Main:
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
         rebase = config.research_base_url
+        psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
 
         self.rebase = rebase
+        self.psql_engine = psql_engine
         self.parser_obj = parser_obj
         self.user_object = user_object
         self.path_to_source = path_to_source
@@ -172,6 +175,7 @@ class Main:
     def main(self) -> None:
         session = req.Session()
         all_tables = self.table_collector(session)
+        engine = create_engine(self.psql_engine)
         print('All collected')
         all_tables.append(
             ['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
@@ -222,20 +226,34 @@ class Main:
         for table in metals_kot:
             big_table = pd.concat([big_table, table], ignore_index=True)
         big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)
+
         big_table.to_excel(metal_writer, sheet_name='Металы')
+        # Write to metals DB
+        big_table.to_sql('metals', if_exists='replace', index=False, con=engine)
 
         exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-        pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
-            .drop_duplicates(subset=['Валюта'], ignore_index=True) \
-            .to_excel(exchange_writer, sheet_name='Курсы валют')
+        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
+            .drop_duplicates(subset=['Валюта'], ignore_index=True)
+        fx_df.to_excel(exchange_writer, sheet_name='Курсы валют')
+        # Write to fx DB
+        fx_df.to_sql('exc', if_exists='replace', index=False, con=engine)
 
         eco_writer = pd.ExcelWriter('sources/tables/eco.xlsx')
-        pd.DataFrame(eco_frst_third).to_excel(eco_writer, sheet_name='Ставка')
+        eco_stake = pd.DataFrame(eco_frst_third)
+        eco_stake.to_excel(eco_writer, sheet_name='Ставка')
         world_bet.to_excel(eco_writer, sheet_name='Ключевые ставки ЦБ мира')
         rus_infl.to_excel(eco_writer, sheet_name='Инфляция в России')
+        #write to eco_stake DB
+        eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=engine)
+        #write to eco_global_stake DB
+        world_bet.to_sql('eco_global_stake', if_exists='replace', index=False, con=engine)
+        #write to eco_rus_influence DB
+        rus_infl.to_sql('eco_rus_influence', if_exists='replace', index=False, con=engine)
 
         bonds_writer = pd.ExcelWriter('sources/tables/bonds.xlsx')
         bonds_kot.to_excel(bonds_writer, sheet_name='Блок котировки')
+        #write to bonds DB
+        bonds_kot.to_sql('bonds', if_exists='replace', index=False, con=engine)
 
         bonds_writer.close()
         eco_writer.close()
@@ -251,11 +269,12 @@ class Main:
         metal_url = '{}{}/comm'.format(self.rebase, guest_group)
         company_url = '{}{}/companies?companyId='.format(self.rebase, guest_group)
         print('Start to parce research...')
+        firefox_options = webdriver.FirefoxOptions()
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        #options = Options()
+        #options.headless = True
 
-        options = Options()
-        options.headless = True
-
-        driver = webdriver.Firefox(options=options)
+        #driver = webdriver.Firefox(options=options)
         authed_user = self.user_object.auth(driver)
         print('Auth... OK')
 

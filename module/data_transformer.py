@@ -99,5 +99,5 @@ class Transformer:
                 cell.get_text().set_color('white')
 
         # save png and return it to user
-        png_path = '{}/img/{}_table.png'.format('/Users/18933996/Desktop/Chat_bot/FinGigaChat/sources', name)
+        png_path = '{}/img/{}_table.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)

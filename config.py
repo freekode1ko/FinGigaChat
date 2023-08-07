@@ -35,7 +35,8 @@ list_of_companies = \
 
 chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
-path_to_source = '/FinGigaChat/sources'
+path_to_source = './sources'
 api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
+psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'

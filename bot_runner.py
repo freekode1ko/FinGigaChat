@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, executor, types
+from sqlalchemy import create_engine
 import module.data_transformer as dt
 import module.gigachat as gig
 import pandas as pd
@@ -11,6 +12,7 @@ import re
 path_to_source = config.path_to_source
 curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 API_TOKEN = config.api_token
+psql_engine = config.psql_engine
 token = ''
 chat = ''
 
@@ -54,17 +56,17 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
     batch_size = 3500
-    if day:  # Публикация дня
-        for day_rev in day[::-1]:
-            day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
-            day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
-            await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
             month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
             month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
             await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
     # await message.answer(title)
+    if day:  # Публикация дня
+        for day_rev in day[::-1]:
+            day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
+            day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
+            await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     await bot.send_photo(message.chat.id, photo, caption=title)
 
 
@@ -122,8 +124,10 @@ async def button_polymetal(message: types.Message):
 @dp.message_handler(commands=['bonds'])
 async def bonds_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
-    bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
+    # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
     columns = ['Название', 'Доходность', 'Изм, %']
+    engine = create_engine(psql_engine)
+    bonds = pd.read_sql_query('select * from "bonds"', con=engine)
     bonds = bonds[columns].dropna(axis=0)
     bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
     bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения'})
@@ -151,13 +155,19 @@ async def bonds_info(message: types.Message):
 @dp.message_handler(commands=['eco'])
 async def economy_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
-    eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
-                        sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
-    stat = eco['Ставка'].drop('Unnamed: 0', axis=1)
-    rus_infl = eco['Инфляция в России'][['Дата', 'Инфляция, % г/г']]
-    world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': 'Страна',
-                                                                                          'Last': 'Ставка',
-                                                                                          'Previous': 'Предыдущая'})
+    engine = create_engine(psql_engine)
+    #eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
+    #                    sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
+    world_bet = pd.read_sql_query('select * from "eco_global_stake"',con=engine)
+    #stat = eco['Ставка'].drop('Unnamed: 0', axis=1)
+    stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
+    #rus_infl = eco['Инфляция в России'][[]]
+    rus_infl = pd.read_sql_query('select * from "eco_rus_influence"', con=engine)
+    rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
+    #world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
+    #                                                                                      'Last': '',
+    #                                                                                      'Previous': ''})
+    world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка', 'Previous': 'Предыдущая'})
     countries = {
         'Japan': 'Япония',
         'Switzerland': 'Швейцария',
@@ -243,8 +253,10 @@ async def data_mart(message: types.Message):
 async def exchange_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
-    exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
-    exc = exc.drop('Unnamed: 0', axis=1)
+    engine = create_engine(psql_engine)
+    exc = pd.read_sql_query('select * from exc',con = engine)
+    #exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
+    #exc = exc.drop('Unnamed: 0', axis=1)
 
     # df transformation
     transformer = dt.Transformer()
@@ -282,7 +294,9 @@ async def exchange_info(message: types.Message):
 async def metal_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     transformer = dt.Transformer()
-    metal = pd.read_excel('{}/tables/metal.xlsx'.format(path_to_source))
+    #metal = pd.read_excel('{}/tables/metal.xlsx'.format(path_to_source))
+    engine = create_engine(psql_engine)
+    metal = pd.read_sql_query('select * from metals', con=engine)
     metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
     metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
                                    'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
@@ -311,14 +325,19 @@ async def metal_info(message: types.Message):
     metal[['Сырье', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
     metal.set_index('ind', drop=True, inplace=True)
     metal.sort_index(inplace=True)
+    #print(metal)
+    metal = metal.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
     for key in metal.columns[1:]:
-        metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
+        # metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
         metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
         metal[key] = metal[key].apply(lambda x: __replacer(x))
         metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
         metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
         metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
+        metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan)
+                                                if str(x) == 'None'
+                                                else '{}'.format(x))
         metal[key] = metal[key].astype('float')
         metal[key] = metal[key].round()
         metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
@@ -360,6 +379,12 @@ def __replacer(data: str):
 
 
 async def draw_all_tables(message: types.Message):
+    from sqlalchemy import create_engine
+    engine = create_engine('postgresql://bot:12345@0.0.0.0:5432/users')
+    df_from_db = pd.read_sql_query('select * from "users"', con = engine)
+    print(df_from_db)
+
+    '''
     import numpy as np
     print('{} - {}'.format(message.from_user.full_name, message.text))
     # await message.answer('Deprecated method: \nЭтот метод более не активен. '
@@ -391,6 +416,7 @@ async def draw_all_tables(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
         photo = open(png_path, 'rb')
         await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, curdatetime))
+    '''
     '''
     bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
     columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
