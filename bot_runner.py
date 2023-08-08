@@ -10,7 +10,7 @@ import config
 import re
 
 path_to_source = config.path_to_source
-curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+# curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 API_TOKEN = config.api_token
 psql_engine = config.psql_engine
 token = ''
@@ -28,6 +28,11 @@ summ_prompt = 'Сократи текст, оставь только ключев
               'кратко указывай источник данных, убери из текста сравнительные обороты, вводные фразы, авторские ' \
               'мнения и другую не ключевую информацию. Вот текст:'
 
+
+def read_curdatetime():
+    with open('sources/tables/time.txt', 'r') as f:
+        curdatetime = f.read()
+    return curdatetime
 
 async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048):
     text_group = []
@@ -150,7 +155,7 @@ async def bonds_info(message: types.Message):
     # print(month)
     title = 'Государственные ценные бумаги'
     # await message.answer('Да да - Вот оно: \n')
-    await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, curdatetime))
+    await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, read_curdatetime()))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -211,6 +216,7 @@ async def economy_info(message: types.Message):
     # month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
+    curdatetime = read_curdatetime()
     await __sent_photo_and_msg(message, photo, [day[0]], month, title='{}\nДанные на {}'.format(title, curdatetime))
     # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
@@ -250,7 +256,7 @@ async def data_mart(message: types.Message):
         transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
         photo = open(png_path, 'rb')
-        await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, curdatetime))
+        await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, read_curdatetime()))
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -284,6 +290,7 @@ async def exchange_info(message: types.Message):
     photo = open(png_path, 'rb')
     title = 'Курсы валют'
     # await message.answer('Да да - Вот оно:\n')
+    curdatetime = read_curdatetime()
     await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, curdatetime))
 
     fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
@@ -367,7 +374,7 @@ async def metal_info(message: types.Message):
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
     title = ' Сырьевые товары'
-    await __sent_photo_and_msg(message, photo, day, title='{}\nДанные на {}'.format(title, curdatetime))
+    await __sent_photo_and_msg(message, photo, day, title='{}\nДанные на {}'.format(title, read_curdatetime()))
 
 
 def __replacer(data: str):

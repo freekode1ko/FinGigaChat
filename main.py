@@ -11,6 +11,7 @@ import pandas as pd
 import warnings
 import config
 import time
+import datetime
 
 
 class Main:
@@ -373,6 +374,8 @@ if __name__ == '__main__':
         runner.main()
         runner.collect_research()
         i = 0
+        with open('sources/tables/time.txt', 'w') as f:
+            f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
         print('Wait 30 minuts befor recollect data...')
         while i<=30:
                i += 1
