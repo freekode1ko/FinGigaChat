@@ -222,7 +222,7 @@ class Main:
 
         metal_writer = pd.ExcelWriter('sources/tables/metal.xlsx')
         big_table = pd.DataFrame(columns=['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date'])
-        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Day', 'Weekly', 'Date'])
+        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Weekly', 'Date'])
         U7N23_df = pd.DataFrame(U7N23, columns=['Metals', 'Price'])
         for table in metals_kot:
             big_table = pd.concat([big_table, table], ignore_index=True)
