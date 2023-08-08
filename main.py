@@ -162,7 +162,7 @@ class Main:
                 temp_table = pd.concat([table_metals[3].head(1), day_table, week_table, month_table, year_table],
                                        ignore_index=True)
 
-                temp_table['Metals'] = 'Железорудное сырье'
+                temp_table['Metals'] = 'Эн. уголь'
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 try:
