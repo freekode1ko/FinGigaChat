@@ -151,16 +151,16 @@ class Main:
         elif table_metals[0] == 'Металлы' and page_metals == 'coal-(api2)-cif-ara-futures-historical-data':
             if 'Price' in table_metals[3].columns:
                 table_metals[3]['Date'] = table_metals[3]['Date'].astype('datetime64[ns]')
-                day_day = table_metals[3]['Date'][0] - relativedelta(days=1)
+                # day_day = table_metals[3]['Date'][0] - relativedelta(days=1)
                 week_day = table_metals[3]['Date'][0] - relativedelta(weeks=1)
                 month_day = table_metals[3]['Date'][0] - relativedelta(months=1)
                 year_day = table_metals[3]['Date'][0] - relativedelta(years=1)
 
-                day_table = table_metals[3].loc[table_metals[3]['Date'] == str(day_day).split()[0]]
+                # day_table = table_metals[3].loc[table_metals[3]['Date'] == str(day_day).split()[0]]
                 week_table = table_metals[3].loc[table_metals[3]['Date'] == str(week_day).split()[0]]
                 month_table = table_metals[3].loc[table_metals[3]['Date'] == str(month_day).split()[0]]
                 year_table = table_metals[3].loc[table_metals[3]['Date'] == str(year_day).split()[0]]
-                temp_table = pd.concat([table_metals[3].head(1), day_table, week_table, month_table, year_table],
+                temp_table = pd.concat([table_metals[3].head(1), week_table, month_table, year_table],
                                        ignore_index=True)
 
                 temp_table['Metals'] = 'Эн. уголь'
@@ -223,7 +223,7 @@ class Main:
 
         metal_writer = pd.ExcelWriter('sources/tables/metal.xlsx')
         big_table = pd.DataFrame(columns=['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date'])
-        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Day', 'Weekly', 'Date'])
+        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Weekly', 'Date'])
         U7N23_df = pd.DataFrame(U7N23, columns=['Metals', 'Price'])
         for table in metals_kot:
             big_table = pd.concat([big_table, table], ignore_index=True)
