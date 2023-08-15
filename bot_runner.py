@@ -74,7 +74,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
-    await bot.send_photo(message.chat.id, photo, caption=title)
+    await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML')
 
 
 async def __read_tables_from_companies(message: types.Message, companies: dict):
@@ -235,7 +235,7 @@ async def economy_info(message: types.Message):
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
     photo = open(png_path, 'rb')
     title = 'Инфляция в России'
-    await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime))
+    await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime), parse_mode='HTML')
     # сообщение с текущими ставками
     stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
     rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
