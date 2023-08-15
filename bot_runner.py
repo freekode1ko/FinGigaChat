@@ -297,10 +297,10 @@ async def exchange_info(message: types.Message):
     curdatetime = read_curdatetime()
     await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
 
-    fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
+    fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(columns={'базовый сценарий':' '})
     title = 'Прогноз валютных курсов'
     transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
-                                 col_width=3.1, title=title)
+                                 col_width=1.5, title=title)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
     photo = open(png_path, 'rb')
     await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, curdatetime))
