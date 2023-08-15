@@ -372,7 +372,7 @@ if __name__ == '__main__':
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
         runner.main()
-        runner.collect_research()
+        # runner.collect_research()
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
             f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
