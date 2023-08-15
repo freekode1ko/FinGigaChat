@@ -166,8 +166,6 @@ async def economy_info(message: types.Message):
     #eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
     #                    sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
     world_bet = pd.read_sql_query('select * from "eco_global_stake"',con=engine)
-    #stat = eco['Ставка'].drop('Unnamed: 0', axis=1)
-    stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
     #rus_infl = eco['Инфляция в России'][[]]
     rus_infl = pd.read_sql_query('select * from "eco_rus_influence"', con=engine)
     rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -236,8 +234,11 @@ async def economy_info(message: types.Message):
     photo = open(png_path, 'rb')
     title = 'Инфляция в России'
     await bot.send_photo(message.chat.id, photo, caption='{}\nДанные на {}'.format(title, curdatetime))
-    await message.answer('{}\n{}\n{}'.format(*['{}: {}'.format(i[0], '{}%'.format(str(i[1]).replace('%', '')))
-                                               for i in stat.head(3).values]))
+    # сообщение с текущими ставками
+    stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
+    rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
+    rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
+    await message.answer(rates_message, parse_mode='HTML')
 
 @dp.message_handler(commands=['view'])
 async def data_mart(message: types.Message):
