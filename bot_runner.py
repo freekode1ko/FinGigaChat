@@ -174,7 +174,7 @@ async def economy_info(message: types.Message):
     #world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
     #                                                                                      'Last': '',
     #                                                                                      'Previous': ''})
-    world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка', 'Previous': 'Предыдущая'})
+    world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
     countries = {
         'Japan': 'Япония',
         'Switzerland': 'Швейцария',
