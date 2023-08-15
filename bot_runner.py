@@ -27,6 +27,8 @@ analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), shee
 summ_prompt = 'Сократи текст, оставь только ключевую информацию с числовыми показателями и прогнозами на будущее, ' \
               'кратко указывай источник данных, убери из текста сравнительные обороты, вводные фразы, авторские ' \
               'мнения и другую не ключевую информацию. Вот текст:'
+sample_of_img_title = '<b>{}</b>\nДанные на <i>{}</i>'
+sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 
 
 def read_curdatetime():
@@ -155,7 +157,7 @@ async def bonds_info(message: types.Message):
     # print(month)
     title = 'Государственные ценные бумаги'
     # await message.answer('Да да - Вот оно: \n')
-    await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, read_curdatetime()))
+    await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, read_curdatetime()))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -215,7 +217,7 @@ async def economy_info(message: types.Message):
     # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
     curdatetime = read_curdatetime()
-    await __sent_photo_and_msg(message, photo, [day[0]], month, title='{}\nДанные на {}'.format(title, curdatetime))
+    await __sent_photo_and_msg(message, photo, [day[0]], month, title=sample_of_img_title.format(title, curdatetime))
     # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
 
@@ -233,7 +235,7 @@ async def economy_info(message: types.Message):
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
     photo = open(png_path, 'rb')
     title = 'Инфляция в России'
-    await bot.send_photo(message.chat.id, photo, caption='{}\nДанные на {}'.format(title, curdatetime))
+    await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime))
     # сообщение с текущими ставками
     stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
     rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
@@ -257,7 +259,7 @@ async def data_mart(message: types.Message):
         transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
         photo = open(png_path, 'rb')
-        await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, read_curdatetime()))
+        await __sent_photo_and_msg(message, photo, title=sample_of_img_title_view.format(title, block, read_curdatetime()))
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -292,7 +294,7 @@ async def exchange_info(message: types.Message):
     title = 'Курсы валют'
     # await message.answer('Да да - Вот оно:\n')
     curdatetime = read_curdatetime()
-    await __sent_photo_and_msg(message, photo, day, month, title='{}\nДанные на {}'.format(title, curdatetime))
+    await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
 
     fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
     title = 'Прогноз валютных курсов'
@@ -300,7 +302,7 @@ async def exchange_info(message: types.Message):
                                  col_width=3.1, title=title)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
     photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, title='{}\nДанные на {}'.format(title, curdatetime))
+    await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, curdatetime))
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
@@ -375,7 +377,7 @@ async def metal_info(message: types.Message):
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
     title = ' Сырьевые товары'
-    await __sent_photo_and_msg(message, photo, day, title='{}\nДанные на {}'.format(title, read_curdatetime()))
+    await __sent_photo_and_msg(message, photo, day, title=sample_of_img_title.format(title, read_curdatetime()))
 
 
 def __replacer(data: str):
