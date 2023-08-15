@@ -132,12 +132,12 @@ async def button_polymetal(message: types.Message):
 async def bonds_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
-    columns = ['Название', 'Доходность, %', 'Изм, %']
+    columns = ['Название', 'Доходность', 'Изм, %']
     engine = create_engine(psql_engine)
     bonds = pd.read_sql_query('select * from "bonds"', con=engine)
     bonds = bonds[columns].dropna(axis=0)
     bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
-    bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения'})
+    bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения', 'Доходность': 'Доходность, %'})
     years = ['1 год', '2 года', '3 года', '5 лет',
              '7 лет', '10 лет', '15 лет', '20 лет']
     for num, name in enumerate(bond_ru['Cрок до погашения'].values):
