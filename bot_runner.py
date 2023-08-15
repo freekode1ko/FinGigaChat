@@ -132,7 +132,7 @@ async def button_polymetal(message: types.Message):
 async def bonds_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
-    columns = ['Название', 'Доходность', 'Изм, %']
+    columns = ['Название', 'Доходность, %', 'Изм, %']
     engine = create_engine(psql_engine)
     bonds = pd.read_sql_query('select * from "bonds"', con=engine)
     bonds = bonds[columns].dropna(axis=0)
@@ -155,7 +155,7 @@ async def bonds_info(message: types.Message):
     # day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
     # month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
     # print(month)
-    title = 'Государственные ценные бумаги'
+    title = 'ОФЗ'
     # await message.answer('Да да - Вот оно: \n')
     await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, read_curdatetime()))
 
@@ -196,7 +196,7 @@ async def economy_info(message: types.Message):
         'Turkey': 'Турция',
         'Argentina': 'Аргентина'
     }
-    world_bet = world_bet[['Страна', 'Ставка', 'Предыдущая']]
+    world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
     for num, country in enumerate(world_bet['Страна'].values):
         world_bet.Страна[world_bet.Страна == country] = countries[country]
     # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"), axis=1)
