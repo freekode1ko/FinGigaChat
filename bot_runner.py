@@ -54,10 +54,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
         for summ_part in text_group:
-            await message.answer('<b>{}</b>{}\n\n<i>{}</i>'.format(name, date, summ_part, date),
+            await message.answer('<b>{}</b>{}\n\n<i>{}</i>'.format(name, summ_part, date),
                                  parse_mode="HTML")
     else:
-        await message.answer('<b>{}</b>{}\n\n<i>{}</i>'.format(name, date, giga_ans, date),
+        await message.answer('<b>{}</b>{}\n\n<i>{}</i>'.format(name, giga_ans, date),
                              parse_mode="HTML")
 
 
