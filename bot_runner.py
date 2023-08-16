@@ -49,7 +49,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     # giga_ans = text.replace('\n', '\n\n')
     # giga_ans = text.replace('>', '\n\n')
 
-    giga_ans = text.replace('>', '')
+    giga_ans = text.replace('>', '').replace('> ','')
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
@@ -268,7 +268,6 @@ async def exchange_info(message: types.Message):
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
     engine = create_engine(psql_engine)
     exc = pd.read_sql_query('select * from exc',con = engine)
-    print(exc)
     exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
     #exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
     #exc = exc.drop('Unnamed: 0', axis=1)
