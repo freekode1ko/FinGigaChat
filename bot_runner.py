@@ -49,7 +49,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     # giga_ans = text.replace('\n', '\n\n')
     # giga_ans = text.replace('>', '\n\n')
 
-    giga_ans = text.replace('>', '').replace('> ','')
+    giga_ans = text.replace('> ', '').replace('>','')
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
