@@ -91,7 +91,7 @@ class Main:
             tree = html.fromstring(page_html)
 
             # USDOLLAR
-            object_xpath = '//*[@id="__next"]/div[2]/div[2]/div/div[1]/div/div[1]/div[3]/div/div[1]/div[1]'
+            object_xpath = '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]'
             price = tree.xpath('{}/text()'.format(object_xpath))
             # usd-cny
             if not price:
