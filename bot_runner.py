@@ -345,7 +345,7 @@ async def metal_info(message: types.Message):
     metal.set_index('ind', drop=True, inplace=True)
     metal.sort_index(inplace=True)
     metal = metal.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
-    for key in metal.columns[1:]:
+    for key in metal.columns[2:]:
         # metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
         metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
         metal[key] = metal[key].apply(lambda x: __replacer(x))
@@ -366,7 +366,7 @@ async def metal_info(message: types.Message):
     metal.index = metal.index.astype('int')
     metal.sort_index(inplace=True)
     transformer.render_mpl_table(metal, 'metal', header_columns=0,
-                                 col_width=3.1, title='Цены на ключевые сырьевые товары.')
+                                 col_width=1.5, title='Цены на ключевые сырьевые товары.')
 
     # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
