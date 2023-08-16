@@ -268,7 +268,8 @@ async def exchange_info(message: types.Message):
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
     engine = create_engine(psql_engine)
     exc = pd.read_sql_query('select * from exc',con = engine)
-    exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2))
+    print(exc)
+    exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
     #exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
     #exc = exc.drop('Unnamed: 0', axis=1)
 
