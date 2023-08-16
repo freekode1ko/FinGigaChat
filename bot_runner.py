@@ -318,32 +318,32 @@ async def metal_info(message: types.Message):
     metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
                                    'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
 
-    order = {'Медь': ['Медь, $/т', '0'],
-             'Aluminum USD/T': ['Алюминий, $/т', '1'],
-             'Nickel USD/T': ['Никель, $/т', '2'],
-             'Lead USD/T': ['Cвинец, $/т', '3'],
-             'Zinc USD/T': ['Цинк, $/т', '4'],
-             'Gold USD/t,oz': ['Золото, $/унц', '5'],
-             'Silver USD/t,oz': ['Cеребро, $/унц', '6'],
-             'Palladium USD/t,oz': ['Палладий, $/унц', '7'],
-             'Platinum USD/t,oz': ['Платина, $/унц', '8'],
-             'Lithium CNY/T': ['Литий, CNH/т', '9'],
-             'Cobalt USD/T': ['Кобальт, $/т', '10'],
-             'Iron Ore 62% fe USD/T': ['ЖРС (Китай), $/т', '11'],
-             'Эн. уголь': ['Эн. уголь (Au), $/т', '12'],
-             'кокс. уголь': ['Кокс. уголь (Au), $/т', '13']
+    order = {'Медь': ['Медь', '$/т', '0'],
+             'Aluminum USD/T': ['Алюминий', '$/т', '1'],
+             'Nickel USD/T': ['Никель', '$/т', '2'],
+             'Lead USD/T': ['Cвинец', '$/т', '3'],
+             'Zinc USD/T': ['Цинк', '$/т', '4'],
+             'Gold USD/t,oz': ['Золото', '$/унц', '5'],
+             'Silver USD/t,oz': ['Cеребро', '$/унц', '6'],
+             'Palladium USD/t,oz': ['Палладий', '$/унц', '7'],
+             'Platinum USD/t,oz': ['Платина', '$/унц', '8'],
+             'Lithium CNY/T': ['Литий', 'CNH/т', '9'],
+             'Cobalt USD/T': ['Кобальт', '$/т', '10'],
+             'Iron Ore 62% fe USD/T': ['ЖРС (Китай)', '$/т', '11'],
+             'Эн. уголь': ['Эн. уголь\n(Au)', '$/т', '12'],
+             'кокс. уголь': ['Кокс. уголь\n(Au)', '$/т', '13']
              }
 
     metal['ind'] = None
+    metal.insert(1, 'Ед. изм.', None)
     for num, commodity in enumerate(metal['Сырье'].values):
         if commodity in order:
             metal.Сырье[metal.Сырье == commodity] = '<>'.join(order[commodity])
         else:
             metal.drop(num, inplace=True)
-    metal[['Сырье', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
+    metal[['Сырье', 'Ед. изм.', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
     metal.set_index('ind', drop=True, inplace=True)
     metal.sort_index(inplace=True)
-    #print(metal)
     metal = metal.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
     for key in metal.columns[1:]:
         # metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
