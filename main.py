@@ -3,7 +3,6 @@ import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
 from sqlalchemy import create_engine
 import requests as req
 from lxml import html
@@ -271,6 +270,7 @@ class Main:
         And get page html with fin data about companies from CIB Research
         :return: dict with data reviews, dict with html page
         """
+
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
@@ -353,8 +353,41 @@ class Main:
 
         print('SAVE REVIEWS...ok')
 
-    # def process_companies_data(self, pages_html):
-    #     pass
+    def process_companies_data(self, company_pages_html) -> None:
+        """
+        Process and save fin mark of the companies.
+        :param company_pages_html: html page with fin mark from CIB Research
+        """
+        # TODO: изменить сохранение ?
+
+        list_of_companies_df = pd.DataFrame(self.list_of_companies, columns=['ID', 'Name', 'URL'])
+        comp_size = len(self.list_of_companies)
+        page_tables = []
+
+        for comp_num, company in enumerate(company_pages_html):
+            print('{}/{}'.format(comp_num + 1, comp_size))
+            page_html = company_pages_html.get(company)
+            tables = self.transformer_obj.get_table_from_html(True, page_html)
+            pd.set_option('display.max_columns', None)
+            tables[0]["group_no"] = tables[0].isnull().all(axis=1).cumsum()
+            tables = tables[0].dropna(subset='Unnamed: 1')
+            tables_names = tables['Unnamed: 0'].dropna().tolist()
+
+            for i in range(0, len(tables_names)):
+                df = tables[tables['group_no'] == i]
+                df.reset_index(inplace=True)
+                df = df.drop(['Unnamed: 0', 'index', 'group_no'], axis=1)
+                df = df.drop(index=df.index[0], axis=0)
+                df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
+                page_tables.append([tables_names[i], company, df])
+
+            companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
+            list_of_companies_df.to_excel(companies_writer, sheet_name='head')
+            for df in page_tables:
+                df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
+            print('companies block is saved')
+            companies_writer.close()
+
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
@@ -364,9 +397,10 @@ if __name__ == '__main__':
         runner.main()
 
         # collect and save research data
+        # TODO: situation when research is stop
         reviews_dict, companies_pages_html_dict = runner.collect_research()
         runner.save_reviews(reviews_dict)
-        # runner.process_companies_data(companies_pages_html_dict)
+        runner.process_companies_data(companies_pages_html_dict)
 
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
