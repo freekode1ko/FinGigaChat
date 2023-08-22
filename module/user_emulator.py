@@ -82,9 +82,7 @@ class ResearchParser:
         Authorization in Sberbank CIB Research
         """
 
-        print('start')
         self.driver.get(self.home_page)
-        print('home')
         login_field = self.driver.find_element('xpath', "//input[@type='text']")
         password_field = self.driver.find_element('xpath', "//input[@type='password']")
 
@@ -92,7 +90,6 @@ class ResearchParser:
         login_field.send_keys(login)
         password_field.send_keys(password)
         password_field.send_keys(Keys.ENTER)
-        print('login')
         # TODO: check that I go into research
         time.sleep(3)
 

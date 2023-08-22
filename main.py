@@ -273,11 +273,11 @@ class Main:
         """
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-        print('driver')
 
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
-        print('start research')
+        print('research start')
+
         # economy
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
@@ -305,6 +305,7 @@ class Main:
         commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
                                                 name_of_review='Сырьевые рынки', type_of_review='commodity')
         print('commodity...ok')
+
         exchange_month = exchange_month_uan + exchange_month_soft
         reviews = {
             'Economy day': eco_day,
@@ -360,7 +361,7 @@ if __name__ == '__main__':
     while True:
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
-        # runner.main()
+        runner.main()
 
         # collect and save research data
         reviews_dict, companies_pages_html_dict = runner.collect_research()

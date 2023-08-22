@@ -54,10 +54,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
         for summ_part in text_group:
-            await message.answer('<b>{}</b>{}\n\n<i>{}</i>'.format(name, summ_part, date),
+            await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, date),
                                  parse_mode="HTML")
     else:
-        await message.answer('<b>{}</b>{}\n\n<i>{}</i>'.format(name, giga_ans, date),
+        await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, date),
                              parse_mode="HTML")
 
 
@@ -373,8 +373,8 @@ async def metal_info(message: types.Message):
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
     day = pd.read_sql_query('select * from "report_met_day"', con=engine).T.values.tolist()
     # day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
-    com_text_day = list(filter(None, day[0][1].split('\n')))
-    day = [[f"{day[0][0]}\n\n", '\n\n'.join(com_text_day[:3]), day[0][2]]]
+    # com_text_day = list(filter(None, day[0][1].split('\n')))
+    # day = [[f"{day[0][0]}\n\n", '\n\n'.join(com_text_day[:3]), day[0][2]]]
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
     title = ' Сырьевые товары'
