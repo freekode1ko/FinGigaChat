@@ -272,10 +272,15 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
-        options = Options()
-        options.add_argument('--disable-blink-features=AutomationControlled')
-
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
+        try:
+            options = Options()
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
+        except:
+            driver.quit()
+            options = Options()
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
 
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
@@ -326,7 +331,8 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        authed_user.close_driver()
+        # authed_user.close_driver()
+        driver.close()
 
         return reviews, companies_pages_html
 
@@ -468,7 +474,7 @@ if __name__ == '__main__':
     while True:
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
-        runner.main()
+        # runner.main()
 
         # collect and save research data
         runner.collect_research()
