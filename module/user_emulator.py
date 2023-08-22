@@ -21,14 +21,12 @@ class ResearchParser:
     Class for parse pages from CIB Research
     """
 
-    def __init__(self):
+    def __init__(self, driver):
         home_page = 'https://research.sberbank-cib.com'
         login = config.research_cred[0]
         password = config.research_cred[1]
 
-        firefox_options = wb.FirefoxOptions()
-        self.driver = wb.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-
+        self.driver = driver
         self.home_page = home_page
         self.auth(login, password)
 

@@ -271,8 +271,11 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
+        firefox_options = webdriver.FirefoxOptions()
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
         economy, money, comm = 'econ', 'money', 'comm'
-        authed_user = ue.ResearchParser()
+        authed_user = ue.ResearchParser(driver)
 
         # economy
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
@@ -304,6 +307,7 @@ class Main:
         exchange_month = exchange_month_uan + exchange_month_soft
         reviews = {
             'Economy day': eco_day,
+            'Economy month': eco_month,
             'Economy month': eco_month,
             'Bonds day': bonds_day,
             'Bonds month': bonds_month,
