@@ -11,7 +11,7 @@ import warnings
 import config
 import time
 import datetime
-from typing import List
+from typing import List, Tuple, Dict
 
 
 class Main:
@@ -322,7 +322,7 @@ class Main:
 
         return reviews, companies_pages_html
 
-    def save_reviews(self, reviews_to_save:  dict[str, List[tuple]]) -> None:
+    def save_reviews(self, reviews_to_save:  Dict[str, List[Tuple]]) -> None:
         """
         Save all reviews into the database.
         :param reviews_to_save: dict of list of the reviews
