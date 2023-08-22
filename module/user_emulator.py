@@ -93,6 +93,7 @@ class ResearchParser:
         login_field.send_keys(login)
         password_field.send_keys(password)
         password_field.send_keys(Keys.ENTER)
+        print('login')
         # TODO: check that I go into research
         time.sleep(3)
 

@@ -271,7 +271,7 @@ class Main:
         And get page html with fin data about companies from CIB Research
         :return: dict with data reviews, dict with html page
         """
-
+        print('driver')
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
