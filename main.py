@@ -272,12 +272,8 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
-        options = Options()
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
-        driver.quit()
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
-
+        firefox_options = webdriver.FirefoxOptions()
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
@@ -328,7 +324,6 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        # authed_user.close_driver()
         driver.close()
 
         return reviews, companies_pages_html
