@@ -8,6 +8,7 @@ import re
 import config
 import random
 import time
+from typing import List
 
 
 class ResearchError(Exception):
@@ -61,7 +62,7 @@ class ResearchParser:
         return match.group(0)
 
     @staticmethod
-    def process_commodity_text(text_rows: list[str]) -> str:
+    def process_commodity_text(text_rows: List[str]) -> str:
         """
         Get necessary part of the commodity review.
         :param text_rows: rows of text of money review
@@ -112,7 +113,7 @@ class ResearchParser:
         else:
             return li_element
 
-    def find_reviews_by_name(self, name: str, count: int) -> list:
+    def find_reviews_by_name(self, name: str, count: int) -> List:
         """
         Find reviews elements by review's name.
         :param name: name of the review for filter
@@ -189,7 +190,7 @@ class ResearchParser:
         return date, text
 
     def get_reviews(self, url_part: str, tab: str, title: str, name_of_review: str = '',
-                    count_of_review: int = 1, type_of_review: str = '') -> list[tuple]:
+                    count_of_review: int = 1, type_of_review: str = '') -> List[tuple]:
         """
         Get data of reviews from CIB Research
         :param url_part: link for page where locate the reviews
