@@ -3,6 +3,7 @@ import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 from sqlalchemy import create_engine
 import requests as req
 from lxml import html
@@ -271,8 +272,10 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
-        firefox_options = webdriver.FirefoxOptions()
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        options = Options()
+        options.add_argument('--disable-blink-features=AutomationControlled')
+
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
 
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
@@ -322,6 +325,7 @@ class Main:
             page_html = authed_user.get_company_html_page(url_part=company[0])
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
+
         authed_user.close_driver()
 
         return reviews, companies_pages_html
