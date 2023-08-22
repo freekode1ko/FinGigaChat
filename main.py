@@ -277,7 +277,7 @@ class Main:
 
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
-
+        print('start research')
         # economy
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
@@ -360,7 +360,7 @@ if __name__ == '__main__':
     while True:
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
-        runner.main()
+        # runner.main()
 
         # collect and save research data
         reviews_dict, companies_pages_html_dict = runner.collect_research()
