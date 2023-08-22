@@ -17,17 +17,17 @@ from typing import List, Tuple, Dict
 class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
-        user_object = ue.ResearchParser()
+        # user_object = ue.ResearchParser()
+        # rebase = config.research_base_url
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
-        rebase = config.research_base_url
         psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
 
-        self.rebase = rebase
+        # self.rebase = rebase
+        # self.user_object = user_object
         self.psql_engine = psql_engine
         self.parser_obj = parser_obj
-        self.user_object = user_object
         self.path_to_source = path_to_source
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
