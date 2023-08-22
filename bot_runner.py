@@ -212,12 +212,9 @@ async def economy_info(message: types.Message):
     photo = open(png_path, 'rb')
     day = pd.read_sql_query('select * from "report_eco_day"', con=engine).values.tolist()
     month = pd.read_sql_query('select * from "report_eco_mon"', con=engine).values.tolist()
-    # day = analysis_text['Экономика. День'].drop('Unnamed: 0', axis=1).values.tolist()
-    # month = analysis_text['Экономика. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
-    # await message.answer()
     title = 'Ключевые ставки ЦБ мира'
     curdatetime = read_curdatetime()
-    await __sent_photo_and_msg(message, photo, [day[0]], month, title=sample_of_img_title.format(title, curdatetime))
+    await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
     # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
     #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
 
@@ -311,7 +308,6 @@ async def exchange_info(message: types.Message):
 async def metal_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     transformer = dt.Transformer()
-    #metal = pd.read_excel('{}/tables/metal.xlsx'.format(path_to_source))
     engine = create_engine(psql_engine)
     metal = pd.read_sql_query('select * from metals', con=engine)
     metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
@@ -362,7 +358,7 @@ async def metal_info(message: types.Message):
         metal[key] = metal[key].apply(lambda x: '{}%'.format(x)
                                                 if x != 'nan' and key != 'Цена'
                                                 else str(x).replace("nan", "-"))
-    # print(metal)
+
     metal.index = metal.index.astype('int')
     metal.sort_index(inplace=True)
     transformer.render_mpl_table(metal, 'metal', header_columns=0,
@@ -372,9 +368,6 @@ async def metal_info(message: types.Message):
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
     day = pd.read_sql_query('select * from "report_met_day"', con=engine).values.tolist()
-    # day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
-    # com_text_day = list(filter(None, day[0][1].split('\n')))
-    # day = [[f"{day[0][0]}\n\n", '\n\n'.join(com_text_day[:3]), day[0][2]]]
     photo = open(png_path, 'rb')
     # await message.answer('Да да - Вот оно:')
     title = ' Сырьевые товары'

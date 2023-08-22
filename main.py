@@ -361,7 +361,7 @@ if __name__ == '__main__':
     while True:
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
-        # runner.main()
+        runner.main()
 
         # collect and save research data
         reviews_dict, companies_pages_html_dict = runner.collect_research()
