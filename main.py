@@ -272,15 +272,12 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
-        try:
-            options = Options()
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
-        except:
-            driver.quit()
-            options = Options()
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
+        options = Options()
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
+        driver.quit()
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=options)
+
 
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
@@ -374,8 +371,8 @@ class Main:
         metal_url = '{}{}/comm'.format(self.rebase, guest_group)
         company_url = '{}{}/companies?companyId='.format(self.rebase, guest_group)
         print('Start to parce research...')
-        firefox_options = webdriver.FirefoxOptions()
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        # firefox_options = webdriver.FirefoxOptions()
+        # driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
         #options = Options()
         #options.headless = True
 
