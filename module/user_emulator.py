@@ -91,7 +91,7 @@ class ResearchParser:
         password_field.send_keys(password)
         password_field.send_keys(Keys.ENTER)
         # TODO: check that I go into research
-        time.sleep(3)
+        time.sleep(5)
 
     def find_tab(self, tab: str):
         """
