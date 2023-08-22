@@ -171,15 +171,14 @@ class ResearchParser:
         # get text
         rows = self.driver.find_elements('tag name', 'p')
         text_rows = [row.text.replace('> ', '') for row in rows if row.text.strip() != '' and '@sber' not in row.text]
-        match type_of_review:
-            case 'commodity':
-                text = self.process_commodity_text(text_rows)
-            case 'bonds':
-                text = self.process_bonds_exchange_text(text_rows, start='Процентные ставки')
-            case 'exchange':
-                text = self.process_bonds_exchange_text(text_rows, start='Валютный рынок', end='Процентные ставки')
-            case _:
-                text = '\n\n'.join(text_rows)
+        if type_of_review == 'commodity':
+            text = self.process_commodity_text(text_rows)
+        elif type_of_review == 'bonds':
+            text = self.process_bonds_exchange_text(text_rows, start='Процентные ставки')
+        elif type_of_review == 'exchange':
+            text = self.process_bonds_exchange_text(text_rows, start='Валютный рынок', end='Процентные ставки')
+        else:
+            text = '\n\n'.join(text_rows)
 
         # close review page
         try:
