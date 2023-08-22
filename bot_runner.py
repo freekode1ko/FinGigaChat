@@ -371,7 +371,7 @@ async def metal_info(message: types.Message):
     # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
     #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
-    day = pd.read_sql_query('select * from "report_met_day"', con=engine).T.values.tolist()
+    day = pd.read_sql_query('select * from "report_met_day"', con=engine).values.tolist()
     # day = analysis_text['Металлы. День'].drop('Unnamed: 0', axis=1).T.values.tolist()
     # com_text_day = list(filter(None, day[0][1].split('\n')))
     # day = [[f"{day[0][0]}\n\n", '\n\n'.join(com_text_day[:3]), day[0][2]]]
