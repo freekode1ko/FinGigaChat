@@ -77,8 +77,8 @@ class ResearchParser:
 
         return '\n\n'.join(new_text_rows)
 
-    def close_driver(self) -> None:
-        self.driver.close()
+    # def close_driver(self) -> None:
+    #     self.driver.close()
 
     def auth(self, login, password) -> None:
         """
