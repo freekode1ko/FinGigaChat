@@ -18,15 +18,15 @@ from typing import List, Tuple, Dict
 class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
-        user_object = ue.ResearchParser()
-        rebase = config.research_base_url
+        # user_object = ue.ResearchParser()
+        # rebase = config.research_base_url
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
         psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
 
-        self.rebase = rebase
-        self.user_object = user_object
+        # self.rebase = rebase
+        # self.user_object = user_object
         self.psql_engine = psql_engine
         self.parser_obj = parser_obj
         self.path_to_source = path_to_source
