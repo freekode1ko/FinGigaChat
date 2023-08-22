@@ -219,7 +219,7 @@ class ResearchParser:
         for review_element in reviews_elements:
             title = review_element.text
             date, text = self.get_date_and_text_of_review(review_element, type_of_review)
-            reviews_data.append((title, date, text))
+            reviews_data.append((title, text, date))
 
         return reviews_data
 
