@@ -80,6 +80,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
 async def __read_tables_from_companies(message: types.Message, companies: dict):
     company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
     company_name = company[0][2]
+    print(company_name)
     company_url = company[0][3]
     transformer = dt.Transformer()
     await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url))
