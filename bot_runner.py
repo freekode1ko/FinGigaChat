@@ -79,21 +79,21 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
 
 async def __read_tables_from_companies(message: types.Message, companies: dict):
     company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
-    company_id = company[0][1]
+    company_name = company[0][2]
     company_url = company[0][3]
     transformer = dt.Transformer()
     await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url))
     await message.answer('Табличные данные по показателям:')
 
     for key in companies.keys():
-        if str(company_id) in key:
+        if str(company_name) in key:
             png_path = '{}/img/{}_table.png'.format(path_to_source, key)
             title = '{}'.format(key.split('_')[1])
             # transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
             #                            column_width=[0.15] * len(companies[key].columns),
             #                            figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
             transformer.render_mpl_table(companies[key].drop('Unnamed: 0', axis=1), key,
-                                         header_columns=0, col_width=5)
+                                         header_columns=0, col_width=2)
             photo = open(png_path, 'rb')
             await __sent_photo_and_msg(message, photo, title=title)
 
