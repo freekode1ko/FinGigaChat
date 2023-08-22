@@ -280,41 +280,40 @@ class Main:
 
         # economy
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        # eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-        #                                     name_of_review='Экономика России. Ежемесячный обзор')
-        # print('economy...ok')
-        #
-        # # bonds
-        # bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-        #                                     name_of_review='Валютный рынок и процентные ставки', type_of_review='bonds',
-        #                                     count_of_review=2)
-        #
-        # bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
-        #                                       name_of_review='Денежный рынок. Еженедельный обзор')
-        # print('bonds...ok')
-        # # exchange
-        # exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-        #                                        name_of_review='Валютный рынок и процентные ставки',
-        #                                        type_of_review='exchange', count_of_review=2)
-        # exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-        #                                              name_of_review='Ежемесячный обзор по юаню')
-        # exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-        #                                               name_of_review='Ежемесячный дайджест по мягким валютам')
-        # print('exchange...ok')
-        # # commodity
-        # commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
-        #                                         name_of_review='Сырьевые рынки', type_of_review='commodity')
-        # print('commodity...ok')
-        # exchange_month = exchange_month_uan + exchange_month_soft
+        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                            name_of_review='Экономика России. Ежемесячный обзор')
+        print('economy...ok')
+
+        # bonds
+        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                            name_of_review='Валютный рынок и процентные ставки', type_of_review='bonds',
+                                            count_of_review=2)
+
+        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
+                                              name_of_review='Денежный рынок. Еженедельный обзор')
+        print('bonds...ok')
+        # exchange
+        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                               name_of_review='Валютный рынок и процентные ставки',
+                                               type_of_review='exchange', count_of_review=2)
+        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                     name_of_review='Ежемесячный обзор по юаню')
+        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                      name_of_review='Ежемесячный дайджест по мягким валютам')
+        print('exchange...ok')
+        # commodity
+        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
+                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        print('commodity...ok')
+        exchange_month = exchange_month_uan + exchange_month_soft
         reviews = {
             'Economy day': eco_day,
-            # 'Economy month': eco_month,
-            # 'Economy month': eco_month,
-            # 'Bonds day': bonds_day,
-            # 'Bonds month': bonds_month,
-            # 'Exchange day': exchange_day,
-            # 'Exchange month': exchange_month,
-            # 'Commodity day': commodity_day
+            'Economy month': eco_month,
+            'Bonds day': bonds_day,
+            'Bonds month': bonds_month,
+            'Exchange day': exchange_day,
+            'Exchange month': exchange_month,
+            'Commodity day': commodity_day
         }
 
         # companies
@@ -356,13 +355,12 @@ class Main:
     # def process_companies_data(self, pages_html):
     #     pass
 
-
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     while True:
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
-        # runner.main()
+        runner.main()
 
         # collect and save research data
         reviews_dict, companies_pages_html_dict = runner.collect_research()
