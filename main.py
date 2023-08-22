@@ -18,7 +18,7 @@ from typing import List, Tuple, Dict
 class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
-        user_object = ue.ResearchParser()
+        # user_object = ue.ResearchParser()
         rebase = config.research_base_url
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
@@ -26,7 +26,7 @@ class Main:
         list_of_companies = config.list_of_companies
 
         self.rebase = rebase
-        self.user_object = user_object
+        # self.user_object = user_object
         self.psql_engine = psql_engine
         self.parser_obj = parser_obj
         self.path_to_source = path_to_source
@@ -367,11 +367,13 @@ class Main:
         print('Start to parce research...')
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        driver.get('https://www.google.com/?hl=RU')
+        print('!!!')
         #options = Options()
         #options.headless = True
 
         #driver = webdriver.Firefox(options=options)
-        authed_user = self.user_object.auth(driver)
+        # authed_user = self.user_object.auth(driver)
         print('Auth... OK')
 
         ''' MAIN BLOCK '''
