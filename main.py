@@ -1,4 +1,3 @@
-from selenium.webdriver.firefox.options import Options
 from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
@@ -264,7 +263,95 @@ class Main:
 
         return None
 
-    def collect_research(self) -> None:
+    def collect_research(self) -> (dict, dict):
+        """
+        Collect all type of reviews from CIB Research
+        And get page html with fin data about companies from CIB Research
+        :return: dict with data reviews, dict with html page
+        """
+
+        economy, money, comm = 'econ', 'money', 'comm'
+        authed_user = ue.ResearchParser()
+
+        # economy
+        eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
+        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                            name_of_review='Экономика России. Ежемесячный обзор')
+        print('economy...ok')
+
+        # bonds
+        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                            name_of_review='Валютный рынок и процентные ставки', type_of_review='bonds',
+                                            count_of_review=2)
+
+        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
+                                              name_of_review='Денежный рынок. Еженедельный обзор')
+        print('bonds...ok')
+        # exchange
+        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                               name_of_review='Валютный рынок и процентные ставки',
+                                               type_of_review='exchange', count_of_review=2)
+        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                     name_of_review='Ежемесячный обзор по юаню')
+        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                      name_of_review='Ежемесячный дайджест по мягким валютам')
+        print('exchange...ok')
+        # commodity
+        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
+                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        print('commodity...ok')
+        exchange_month = exchange_month_uan + exchange_month_soft
+        reviews = {
+            'Economy day': eco_day,
+            'Economy month': eco_month,
+            'Bonds day': bonds_day,
+            'Bonds month': bonds_month,
+            'Exchange day': exchange_day,
+            'Exchange month': exchange_month,
+            'Commodity day': commodity_day
+        }
+
+        # companies
+        companies_pages_html = dict()
+        for company in self.list_of_companies:
+            page_html = authed_user.get_company_html_page(url_part=company[0])
+            companies_pages_html[company[1]] = page_html
+        print('companies page...ok')
+        authed_user.close_driver()
+
+        return reviews, companies_pages_html
+
+    def save_reviews(self, reviews_to_save:  dict[str, list[tuple]]) -> None:
+        """
+        Save all reviews into the database.
+        :param reviews_to_save: dict of list of the reviews
+        """
+        # TODO: мб сделать одну таблицу для обзоров ?
+
+        engine = create_engine(self.psql_engine)
+        table_name_for_review = {
+            'Economy day': 'report_eco_day',
+            'Economy month': 'report_eco_mon',
+            'Bonds day': 'report_bon_day',
+            'Bonds month': 'report_bon_mon',
+            'Exchange day': 'report_exc_day',
+            'Exchange month': 'report_exc_mon',
+            'Commodity day': 'report_met_day'
+        }
+
+        for review_name in table_name_for_review:
+            table_name = table_name_for_review.get(review_name)
+            reviews_list = reviews_to_save.get(review_name)
+            pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
+
+        print('SAVE REVIEWS...ok')
+
+    # def process_companies_data(self, pages_html):
+    #     pass
+
+    ''' COLLECT RESEARCH OLD '''
+    """
+    def collect_research_old(self) -> None:
         engine = create_engine(self.psql_engine)
         guest_group = 'group/guest'
         economy_url = '{}{}/econ?countryIsoCode=RUS'.format(self.rebase, guest_group)
@@ -364,6 +451,7 @@ class Main:
         companies_writer.close()
 
         return None
+"""
 
 
 if __name__ == '__main__':
@@ -372,12 +460,18 @@ if __name__ == '__main__':
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
         runner.main()
-        # runner.collect_research()
+
+        # collect and save research data
+        runner.collect_research()
+        reviews_dict, companies_pages_html_dict = runner.collect_research()
+        runner.save_reviews(reviews_dict)
+        # runner.process_companies_data(companies_pages_html_dict)
+
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
             f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
         print('Wait 30 minuts befor recollect data...')
-        while i<=30:
+        while i <= 30:
                i += 1
                time.sleep(60)
                print('In waiting. \n{}/30 minuts'.format(30-i))
