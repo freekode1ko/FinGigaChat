@@ -77,15 +77,14 @@ class ResearchParser:
 
         return '\n\n'.join(new_text_rows)
 
-    # def close_driver(self) -> None:
-    #     self.driver.close()
-
     def auth(self, login, password) -> None:
         """
         Authorization in Sberbank CIB Research
         """
 
+        print('start')
         self.driver.get(self.home_page)
+        print('home')
         login_field = self.driver.find_element('xpath', "//input[@type='text']")
         password_field = self.driver.find_element('xpath', "//input[@type='password']")
 
