@@ -264,34 +264,31 @@ class Main:
 
         return None
 
-    def collect_research(self) -> (dict, dict):
+    def collect_research(self, driver) -> (dict, dict):
         """
         Collect all type of reviews from CIB Research
         And get page html with fin data about companies from CIB Research
         :return: dict with data reviews, dict with html page
         """
 
-        firefox_options = webdriver.FirefoxOptions()
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-
+        print('research start')
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
-        print('research start')
 
         # economy
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                            name_of_review='Экономика России. Ежемесячный обзор')
+                                                name_of_review='Экономика России. Ежемесячный обзор')
         print('economy...ok')
 
         # bonds
         bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-                                            name_of_review='Валютный рынок и процентные ставки', type_of_review='bonds',
-                                            count_of_review=2)
-
+                                            name_of_review='Валютный рынок и процентные ставки',
+                                            type_of_review='bonds', count_of_review=2)
         bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
                                               name_of_review='Денежный рынок. Еженедельный обзор')
         print('bonds...ok')
+
         # exchange
         exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
                                                name_of_review='Валютный рынок и процентные ставки',
@@ -301,6 +298,7 @@ class Main:
         exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                                       name_of_review='Ежемесячный дайджест по мягким валютам')
         print('exchange...ok')
+
         # commodity
         commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
                                                 name_of_review='Сырьевые рынки', type_of_review='commodity')
@@ -323,8 +321,6 @@ class Main:
             page_html = authed_user.get_company_html_page(url_part=company[0])
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
-
-        driver.close()
 
         return reviews, companies_pages_html
 
@@ -397,19 +393,26 @@ if __name__ == '__main__':
         runner.main()
 
         # collect and save research data
-        # TODO: situation when research is stop
-        reviews_dict, companies_pages_html_dict = runner.collect_research()
-        runner.save_reviews(reviews_dict)
-        runner.process_companies_data(companies_pages_html_dict)
+        firefox_options = webdriver.FirefoxOptions()
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        try:
+            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+            runner.save_reviews(reviews_dict)
+            runner.process_companies_data(companies_pages_html_dict)
+        except Exception as e:
+            print(f'Some error with Research, check: {e}')
+        finally:
+            driver.close()
 
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
             f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
         print('Wait 30 minuts befor recollect data...')
+
         while i <= 30:
-               i += 1
-               time.sleep(60)
-               print('In waiting. \n{}/30 minuts'.format(30-i))
+            i += 1
+            time.sleep(60)
+            print('In waiting. \n{}/30 minuts'.format(30-i))
 
 
 ''' COLLECT RESEARCH OLD '''
