@@ -2,11 +2,23 @@ import imaplib
 import email
 from email.header import decode_header
 import os
+import shutil
 
 
 class ImapError(Exception):
     pass
 
+
+def clear_dir(dir_path) -> None:
+    for filename in os.listdir(dir_path):
+        file_path = os.path.join(dir_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 class ImapParse:
     """
@@ -66,10 +78,23 @@ class ImapParse:
             for part in self.msg.walk():
                 content_disposition = str(part.get("Content-Disposition"))
                 if "attachment" in content_disposition:
-                    filename = part.get_filename()
+                    filename, encoding = decode_header(part.get_filename())[0]
+                    if encoding is not None:
+                        filename = filename.decode(encoding)
                     if filename and os.path.isdir(folder_name):
                         filepath = os.path.join(folder_name, filename)
+                        clear_dir(folder_name)
                         open(filepath, "wb").write(part.get_payload(decode=True))
-                        # TODO: if more than one file
                         return filepath
+
         raise ImapError('Some error occurred while getting payload.')
+
+    def get_subject(self):
+        """
+        Get subject of the newest message
+        :return: subject of the message
+        """
+        subject, encoding = decode_header(self.msg["Subject"])[0]
+        if isinstance(subject, bytes):
+            subject = subject.decode(encoding)
+        return subject
