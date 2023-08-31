@@ -68,7 +68,6 @@ def get_filename(dir_path):
 
 def work_with_article() -> bool:
     """Parse mail"""
-    # TODO: timer
     # definition instance of ImapParse class
     imap_obj = ImapParse()
     # get connection and log in
