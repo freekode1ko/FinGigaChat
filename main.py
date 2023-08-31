@@ -2,12 +2,28 @@ from module.mail_parse import ImapParse
 from module.process_article import ArticleProcess
 from config import mail_username, mail_password, mail_imap_server
 import os
-
+import threading, time
+import datetime as dt
 
 CLIENT_FOLDER_DIR = "articles/client"
 COMMODITY_FOLDER_DIR = "articles/commodity"
-# TODO: timer
+HOUR_TO_PARSE = dt.timedelta(hours=22, minutes=24)
 
+
+def timer_parse() -> bool:
+    count_of_attempt = 5
+    for attempt in range(count_of_attempt):
+        flag = work_with_article()
+        if flag:
+            print('GET ARTICLES')
+            time.sleep(60)  # if pipe too fast
+            return flag
+        else:
+            print('wait 3 min')
+            time.sleep(1*60)
+
+    print('DID NOT GET ARTICLES')
+    return True
 
 def parse_mail(imap_obj, type_of_article, folder_name):
     """
@@ -50,16 +66,16 @@ def get_filename(dir_path):
     return filename
 
 
-def main():
-
+def work_with_article() -> bool:
     """Parse mail"""
-    # TODO: timer, check for delete, check for path
+    # TODO: timer
     # definition instance of ImapParse class
     imap_obj = ImapParse()
     # get connection and log in
     imap_obj.get_connection(mail_username, mail_password, mail_imap_server)
     # check for parse
-    if check_new_mail(imap_obj, 'client', CLIENT_FOLDER_DIR) and check_new_mail(imap_obj, 'commodity', COMMODITY_FOLDER_DIR):
+    if check_new_mail(imap_obj, 'client', CLIENT_FOLDER_DIR) and check_new_mail(imap_obj, 'commodity',
+                                                                                COMMODITY_FOLDER_DIR):
         # get articles
         client_filepath = parse_mail(imap_obj, 'client', CLIENT_FOLDER_DIR)
         commodity_filepath = parse_mail(imap_obj, 'commodity', COMMODITY_FOLDER_DIR)
@@ -67,13 +83,34 @@ def main():
         imap_obj.close_connection()
         # process articles
         article_process_obj = ArticleProcess()
-        article_process_obj.set_df_article(client_filepath, commodity_filepath)
-        article_process_obj.process_articles()
+        article_process_obj.delete_old_article()
+        # client
+        df_client = article_process_obj.load_client_file(client_filepath)
+        df_client = article_process_obj.throw_the_models('client', df_client)
+        # commodity
+        df_commodity = article_process_obj.load_commodity_file(commodity_filepath)
+        df_commodity = article_process_obj.throw_the_models('commodity', df_commodity)
+        # merge df
+        article_process_obj.merge_client_commodity_article(df_client, df_commodity)
         article_process_obj.save_tables()
+        return True
     else:
         imap_obj.close_connection()
         print('I did nothing')
+        return False
 
 
 if __name__ == '__main__':
-    main()
+    while True:
+        current_time = dt.datetime.now().time()
+        current_time_timedelta = dt.timedelta(hours=current_time.hour, minutes=current_time.minute)
+        delta_time = (HOUR_TO_PARSE - current_time_timedelta).seconds
+        print('begin wait in ', current_time_timedelta)
+        print('time to wait', delta_time / 3600)
+        time.sleep(delta_time)
+        print('begin in ', current_time)
+        flag = timer_parse()
+        if flag:
+            print('WAIT NEXT DAY')
+
+

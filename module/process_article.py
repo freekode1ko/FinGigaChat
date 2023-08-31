@@ -1,9 +1,11 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
 import os
+import datetime as dt
 
 # TODO: решить какой минимальный коэффициент
 MIN_RELEVANT_VALUE = 60
+TIME_LIVE_ARTICLE = 7
 
 
 class ArticleError(Exception):
@@ -13,48 +15,68 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        psql_engine = 'postgresql+psycopg2://postgres:lolakibaba1997@localhost:5432/tg_parse'
+        psql_engine = 'postgresql+psycopg2://postgres:lolakiboba1993@localhost:5432/postgres'
         self.engine = create_engine(psql_engine)
-
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
-    def load_article_files(client_filepath: str, commodity_filepath: str) -> pd.DataFrame:
+    def load_client_file(client_filepath: str) -> pd.DataFrame:
         """
-        Load client and commodity articles files, join it and delete duplicates.
+        Load and process client articles file.
         :param client_filepath: file path to Excel file with clients articles
+        :return: dataframe of articles
+        """
+        new_name_client_columns = {'url': 'link', 'title': 'title', 'date': 'date','New Topic Confidence': 'coef',
+                                   'text': 'text', 'text_Summary': 'text_sum', 'Company_name': 'client'}
+        df_client = pd.read_excel(client_filepath, index_col=False).rename(columns=new_name_client_columns)
+        df_client = df_client[['link', 'title', 'date', 'text', 'text_sum', 'client']][df_client.coef > MIN_RELEVANT_VALUE]
+
+        return df_client
+
+    @staticmethod
+    def load_commodity_file(commodity_filepath: str) -> pd.DataFrame:
+        """
+        Load commodity articles file.
         :param commodity_filepath: file path to Excel file with clients articles
         :return: dataframe of articles
         """
-        # load client file
-        new_name_client_columns = {'url': 'link', 'ЗАГОЛОВОК НОВОСТИ': 'title', 'date': 'date',
-                                   'text': 'text', 'text_sum': 'text_sum', 'client': 'client',
-                                   'coef': 'coef'}
-        df_client = pd.read_excel(client_filepath, index_col=False).rename(columns=new_name_client_columns)
-        df_client = df_client[['link', 'title', 'date', 'text', 'text_sum', 'client']][
-            df_client.coef > MIN_RELEVANT_VALUE]
 
-        # load commodity file
-        new_name_commodity_columns = {'url': 'link', 'ЗАГОЛОВОК НОВОСТИ': 'title', 'date': 'date',
-                                      'text': 'text', 'client': 'client', 'commodity': 'commodity'}
+        new_name_commodity_columns = {'url': 'link', 'title': 'title', 'date': 'date',
+                                      'text': 'text', 'Металл': 'commodity'}
         df_commodity = pd.read_excel(commodity_filepath, index_col=False).rename(columns=new_name_commodity_columns)
-        df_commodity = df_commodity[['link', 'title', 'date', 'text', 'client', 'commodity']]
+        df_commodity = df_commodity[['link', 'title', 'date', 'text', 'commodity']]
 
-        # join tables [['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity']]
-        df_article = pd.concat([df_client, df_commodity], ignore_index=True)
-        # drop duplicates and save last
-        df_article.drop_duplicates(subset='link', keep='last', ignore_index=True, inplace=True)
+        return df_commodity
 
-        return df_article
+    def delete_old_article(self):
+        with self.engine.connect() as conn:
+            dt_now = dt.datetime.now()
+            conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            conn.commit()
 
-    def set_df_article(self, client_filepath: str, commodity_filepath: str):
-        self.df_article = ArticleProcess.load_article_files(client_filepath, commodity_filepath)
+    def throw_the_models(self, name: str, df_subject: pd.DataFrame) -> pd.DataFrame:
+        # TODO: написать модуль для пайплайна по моделям
+        df_subject[f'{name}_score'] = None
+        return df_subject
 
-    def process_articles(self):
-        # sorted
-        # TODO: pipe for models ? + client and commodity score
-        self.df_article['client_score'] = None
-        self.df_article['commodity_score'] = None
+    def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
+        """
+        Merge df of client and commodity and drop duplicates
+        And set it in self.df_article.
+        :param df_client: df with client article
+        :param df_commodity: df with commodity article
+        """
+        # find common link in client and commodity article, and take client from these article
+        df_link_client = df_client[['link', 'client']][df_client['link'].isin(df_commodity['link'])]
+        # make df bases on common links, which contains client and commodity name
+        df_client_commodity = df_commodity.merge(df_link_client, on='link')
+        # remove from df_client and df_commodity common links
+        df_commodity = df_commodity[~df_commodity['link'].isin(df_link_client['link'])]
+        df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
+        # concat all df in one, so there are no duplicates and contain all data
+        df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
+        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity',
+                                      'client_score', 'commodity_score']]
 
     def save_tables(self) -> None:
         """
