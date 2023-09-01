@@ -2,7 +2,7 @@ from module.mail_parse import ImapParse
 from module.process_article import ArticleProcess
 from config import mail_username, mail_password, mail_imap_server
 import os
-import threading, time
+import time
 import datetime as dt
 
 CLIENT_FOLDER_DIR = "articles/client"

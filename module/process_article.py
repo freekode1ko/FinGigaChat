@@ -2,8 +2,9 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 import os
 import datetime as dt
+from config import psql_engine
 
-# TODO: решить какой минимальный коэффициент
+# TODO: решить какой минимальный коэффициент, и время жизни новости
 MIN_RELEVANT_VALUE = 60
 TIME_LIVE_ARTICLE = 7
 
@@ -15,7 +16,6 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        psql_engine = 'postgresql+psycopg2://postgres:lolakiboba1993@localhost:5432/postgres'
         self.engine = create_engine(psql_engine)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
@@ -30,6 +30,7 @@ class ArticleProcess:
                                    'text': 'text', 'text_Summary': 'text_sum', 'Company_name': 'client'}
         df_client = pd.read_excel(client_filepath, index_col=False).rename(columns=new_name_client_columns)
         df_client = df_client[['link', 'title', 'date', 'text', 'text_sum', 'client']][df_client.coef > MIN_RELEVANT_VALUE]
+        df_client.client = df_client.client.str.lower()
 
         return df_client
 
@@ -45,6 +46,7 @@ class ArticleProcess:
                                       'text': 'text', 'Металл': 'commodity'}
         df_commodity = pd.read_excel(commodity_filepath, index_col=False).rename(columns=new_name_commodity_columns)
         df_commodity = df_commodity[['link', 'title', 'date', 'text', 'commodity']]
+        df_commodity.commodity = df_commodity.commodity.str.lower()
 
         return df_commodity
 
