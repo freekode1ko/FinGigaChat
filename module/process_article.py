@@ -20,16 +20,24 @@ class ArticleProcess:
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
+    def get_filename(dir_path):
+        list_of_files = [filename for filename in os.listdir(dir_path)]
+        filename = '' if not list_of_files else list_of_files[0]
+        return filename
+
+    @staticmethod
     def load_client_file(client_filepath: str) -> pd.DataFrame:
         """
         Load and process client articles file.
         :param client_filepath: file path to Excel file with clients articles
         :return: dataframe of articles
         """
-        new_name_client_columns = {'url': 'link', 'title': 'title', 'date': 'date','New Topic Confidence': 'coef',
-                                   'text': 'text', 'text_Summary': 'text_sum', 'Company_name': 'client'}
-        df_client = pd.read_excel(client_filepath, index_col=False).rename(columns=new_name_client_columns)
+        new_name_client_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
+                                   'text': 'text', 'text Summary': 'text_sum', 'Company_name': 'client'}
+        df_client = pd.read_csv(client_filepath, index_col=False).rename(columns=new_name_client_columns)
         df_client = df_client[['link', 'title', 'date', 'text', 'text_sum', 'client']][df_client.coef > MIN_RELEVANT_VALUE]
+        df_client['date'] = df_client['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
+        df_client['title'] = df_client['title'].apply(lambda x: None if x == '0' else x)
         df_client.client = df_client.client.str.lower()
 
         return df_client
@@ -44,8 +52,10 @@ class ArticleProcess:
 
         new_name_commodity_columns = {'url': 'link', 'title': 'title', 'date': 'date',
                                       'text': 'text', 'Металл': 'commodity'}
-        df_commodity = pd.read_excel(commodity_filepath, index_col=False).rename(columns=new_name_commodity_columns)
+        df_commodity = pd.read_csv(commodity_filepath, index_col=False).rename(columns=new_name_commodity_columns)
         df_commodity = df_commodity[['link', 'title', 'date', 'text', 'commodity']]
+        df_commodity['date'] = df_commodity['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
+        df_commodity['title'] = df_commodity['title'].apply(lambda x: None if x == '0' else x)
         df_commodity.commodity = df_commodity.commodity.str.lower()
 
         return df_commodity
@@ -57,7 +67,6 @@ class ArticleProcess:
             conn.commit()
 
     def throw_the_models(self, name: str, df_subject: pd.DataFrame) -> pd.DataFrame:
-        # TODO: написать модуль для пайплайна по моделям
         df_subject[f'{name}_score'] = None
         return df_subject
 
@@ -87,7 +96,6 @@ class ArticleProcess:
         """
 
         # make article table and save it in database
-        # TODO: title can have "0" value
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
 

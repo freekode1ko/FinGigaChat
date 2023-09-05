@@ -61,7 +61,6 @@ class ImapParse:
         :param index_of_new_msg: index of the newest message
         :return: a message object
         """
-        # TODO: get msg date for checking  date, encoding = decode_header(msg["Date"])[0]
         status_msg, msg = self.imap.fetch(str(index_of_new_msg), "(RFC822)")
         if status_msg == 'OK':
             return email.message_from_bytes(msg[0][1])
