@@ -55,10 +55,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
             text_group.append(text[batch:batch + batch_size])
         for summ_part in text_group:
             await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, date),
-                                 parse_mode="HTML")
+                                 parse_mode="HTML", protect_content=True)
     else:
         await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, date),
-                             parse_mode="HTML")
+                             parse_mode="HTML", protect_content=True)
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
@@ -74,7 +74,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
-    await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML')
+    await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
 
 
 async def __read_tables_from_companies(message: types.Message, companies: dict):
@@ -83,8 +83,8 @@ async def __read_tables_from_companies(message: types.Message, companies: dict):
     print(company_name)
     company_url = company[0][3]
     transformer = dt.Transformer()
-    await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url))
-    await message.answer('Табличные данные по показателям:')
+    await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url), protect_content=True)
+    await message.answer('Табличные данные по показателям:', protect_content=True)
 
     for key in companies.keys():
         if str(company_name) in key:
@@ -108,7 +108,7 @@ async def start_handler(message: types.Message):
     print('{}...{} - {}({})'.format(token[:10], token[-10:],
                                     message.from_user.full_name,
                                     message.from_user.username))
-    await message.reply("Давай я спрошу GigaChat за тебя")
+    await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
 
 
 @dp.message_handler(commands=['companies'])
@@ -117,7 +117,7 @@ async def company_info(message: types.Message):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
     keyboard.add(*buttons)
-    await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard)
+    await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard, protect_content=True)
 
 
 @dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
@@ -233,12 +233,13 @@ async def economy_info(message: types.Message):
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
     photo = open(png_path, 'rb')
     title = 'Инфляция в России'
-    await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime), parse_mode='HTML')
+    await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime),
+                         parse_mode='HTML', protect_content=True)
     # сообщение с текущими ставками
     stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
     rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
     rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
-    await message.answer(rates_message, parse_mode='HTML')
+    await message.answer(rates_message, parse_mode='HTML', protect_content=True)
 
 @dp.message_handler(commands=['view'])
 async def data_mart(message: types.Message):
@@ -542,6 +543,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
+    print(message.from_user.as_json())
     print('{} - {}'.format(message.from_user.full_name, msg))
 
     if message.text.lower() in bonds_aliases:
@@ -572,7 +574,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             giga_answer = chat.ask_giga_chat(msg, token)
             giga_js = giga_answer.json()
         if not return_ans:
-            await message.answer(giga_js)
+            await message.answer(giga_js, protect_content=True)
         else:
             return giga_js
         print('{} - {}'.format('GigaChat_say', giga_js))
