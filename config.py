@@ -35,6 +35,7 @@ list_of_companies = \
 
 chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
+data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')

@@ -11,6 +11,7 @@ import warnings
 import config
 import time
 import datetime
+import re
 from typing import List, Tuple, Dict
 
 
@@ -23,6 +24,7 @@ class Main:
         transformer_obj = dt.Transformer()
         psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
+        data_market_base_url =  config.data_market_base_url
 
         # self.rebase = rebase
         # self.user_object = user_object
@@ -31,6 +33,7 @@ class Main:
         self.path_to_source = path_to_source
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
+        self.data_market_base_url = data_market_base_url
 
     def table_collector(self, session: req.sessions.Session):
         all_tables = []
@@ -49,6 +52,19 @@ class Main:
                 print(url[2])
                 print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
+
+    def graph_collector(self, url, session: req.sessions.Session):
+        name = url.split('/')[-1]
+        euro_standart, page_html = self.parser_obj.get_html(url, session)
+        auth = re.findall(r"TESecurify = ('.+');", page_html)
+        graph_url = '{}chart?s=lmahds03:com&' \
+                    'span=5y&' \
+                    'securify=new&' \
+                    'url=/commodity/{}&' \
+                    'AUTH={}&' \
+                    'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+        data = req.get(graph_url, verify=False)
+        self.transformer_obj.five_year_graph(data, name)
 
     @staticmethod
     def bond_block(table_bonds: list) -> pd.DataFrame:
@@ -245,16 +261,16 @@ class Main:
         eco_stake.to_excel(eco_writer, sheet_name='Ставка')
         world_bet.to_excel(eco_writer, sheet_name='Ключевые ставки ЦБ мира')
         rus_infl.to_excel(eco_writer, sheet_name='Инфляция в России')
-        #write to eco_stake DB
+        # write to eco_stake DB
         eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=engine)
-        #write to eco_global_stake DB
+        # write to eco_global_stake DB
         world_bet.to_sql('eco_global_stake', if_exists='replace', index=False, con=engine)
-        #write to eco_rus_influence DB
+        # write to eco_rus_influence DB
         rus_infl.to_sql('eco_rus_influence', if_exists='replace', index=False, con=engine)
 
         bonds_writer = pd.ExcelWriter('sources/tables/bonds.xlsx')
         bonds_kot.to_excel(bonds_writer, sheet_name='Блок котировки')
-        #write to bonds DB
+        # write to bonds DB
         bonds_kot.to_sql('bonds', if_exists='replace', index=False, con=engine)
 
         bonds_writer.close()
@@ -407,12 +423,12 @@ if __name__ == '__main__':
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
             f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Wait 30 minuts befor recollect data...')
+        print('Wait 3 hours before recollect data...')
 
-        while i <= 30:
+        while i <= 3:
             i += 1
-            time.sleep(60)
-            print('In waiting. \n{}/30 minuts'.format(30-i))
+            time.sleep(3600)
+            print('In waiting. \n{}/3 hours'.format(3-i))
 
 
 ''' COLLECT RESEARCH OLD '''
