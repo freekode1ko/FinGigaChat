@@ -19,11 +19,11 @@ class ArticleProcess:
         self.engine = create_engine(psql_engine)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
-    @staticmethod
-    def get_filename(dir_path):
-        list_of_files = [filename for filename in os.listdir(dir_path)]
-        filename = '' if not list_of_files else list_of_files[0]
-        return filename
+    # @staticmethod
+    # def get_filename(dir_path):
+    #     list_of_files = [filename for filename in os.listdir(dir_path)]
+    #     filename = '' if not list_of_files else list_of_files[0]
+    #     return filename
 
     @staticmethod
     def load_client_file(client_filepath: str) -> pd.DataFrame:
@@ -95,12 +95,18 @@ class ArticleProcess:
         And call make_save method for relation table.
         """
 
+        # filter dubl news if they in DB and in new df
+        links_value = ", ".join([f"'{link}'" for link in self.df_article["link"].values.tolist()])
+        query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
+        links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
+        if not links_of_old_article.empty:
+            self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
+
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
 
         # add ids to df_article from article table from db
-        links_value = ", ".join([f"'{link}'" for link in self.df_article["link"].values.tolist()])
         query_ids = f"SELECT id, link FROM article WHERE link IN ({links_value})"
         ids = pd.read_sql(query_ids, con=self.engine)
 
@@ -112,7 +118,7 @@ class ArticleProcess:
         self.make_save_relation_article_table('commodity')
 
     def make_save_relation_article_table(self, name: str) -> None:
-        """"
+        """
         Make relation table and save it to database.
         :param name: name (client or commodity)
         """

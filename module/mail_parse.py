@@ -1,6 +1,7 @@
 import imaplib
 import email
 from email.header import decode_header
+from email.utils import parsedate_to_datetime
 import os
 import shutil
 
@@ -19,6 +20,7 @@ def clear_dir(dir_path) -> None:
                 shutil.rmtree(file_path)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 
 class ImapParse:
     """
@@ -88,12 +90,22 @@ class ImapParse:
 
         raise ImapError('Some error occurred while getting payload.')
 
-    def get_subject(self):
+    # def get_subject(self):
+    #     """
+    #     Get subject of the newest message
+    #     :return: subject of the message
+    #     """
+    #     subject, encoding = decode_header(self.msg["Subject"])[0]
+    #     if isinstance(subject, bytes):
+    #         subject = subject.decode(encoding)
+    #     return subject
+
+    def get_date(self):
         """
-        Get subject of the newest message
+        Get date of the newest message
         :return: subject of the message
         """
-        subject, encoding = decode_header(self.msg["Subject"])[0]
-        if isinstance(subject, bytes):
-            subject = subject.decode(encoding)
-        return subject
+        date, encoding = decode_header(self.msg["Date"])[0]
+        if isinstance(date, bytes):
+            date = date.decode(encoding)
+        return parsedate_to_datetime(date).date()

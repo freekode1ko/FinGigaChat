@@ -7,7 +7,7 @@ import time
 
 CLIENT_FOLDER_DIR = "articles/client"
 COMMODITY_FOLDER_DIR = "articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=11, minutes=5)
+HOUR_TO_PARSE = dt.timedelta(hours=12, minutes=58)
 
 
 def imap_func(type_of_article, folder_name):
@@ -21,20 +21,18 @@ def imap_func(type_of_article, folder_name):
     imap_obj = ImapParse()
     # get connection and log in
     imap_obj.get_connection(mail_username, mail_password, mail_imap_server)
-    # get old filename
-    old_filename = ArticleProcess.get_filename(folder_name)
     # find index of the newest messages
     index_of_new_message = imap_obj.get_index_of_new_msg(type_of_article)
     # get message by index
     imap_obj.msg = imap_obj.get_msg(index_of_new_message)
-    # get subject of msg
-    subject = imap_obj.get_subject()
+    # get date of msg
+    date_msg = imap_obj.get_date()
 
-    if subject == old_filename.split('.')[0]:
-        filepath = None
-    else:
+    if date_msg == dt.datetime.now().date():
         # get and download attachments
         filepath = imap_obj.get_and_download_attachment(folder_name)
+    else:
+        filepath = None
 
     # close connection and log out
     imap_obj.close_connection()
@@ -64,7 +62,7 @@ def daily_func():
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = None
 
-    count_of_attempt = 6
+    count_of_attempt = 5
     for attempt in range(count_of_attempt):
 
         if not client_flag:
