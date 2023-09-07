@@ -549,9 +549,15 @@ async def user_in_whitelist(user: str):
 async def user_to_whitelist(message: types.Message):
     # TODO: Write user into database
     user = message.from_user.as_json()
+    print(user)
     user_df = pd.read_json(json.loads(user))
-    engine = create_engine(psql_engine)
-    user_df.to_sql('whitelist', if_exists='append', index=False, con=engine)
+    print(user_df)
+    try:
+        engine = create_engine(psql_engine)
+        user_df.to_sql('whitelist', if_exists='append', index=False, con=engine)
+        await message.answer('Welcome a board captain!', protect_content=True)
+    except Exception as e:
+        await message.answer('Somthing went wrong: {}'.format(e), protect_content=True)
 
 
 @dp.message_handler()
