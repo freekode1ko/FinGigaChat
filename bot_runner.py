@@ -538,23 +538,31 @@ async def draw_all_tables(message: types.Message):
 
 
 async def user_in_whitelist(user: str):
+    # TODO: Read df from database as WhiteList and search ID in it. If found -> True, else -> False
     user_json = json.loads(user)
+    user_id = user_json['id']
     engine = create_engine(psql_engine)
     whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
     print(whitelist)
-    # TODO: Read df from database as WhiteList and search ID in it. If found -> True, else -> False
+    if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
+        return True
+    else:
+        return False
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
-    # TODO: Write user into database
-    user = message.from_user.as_json()
-    print(user)
-    user_df = pd.read_json(json.loads(user))
-    print(user_df)
+    user_raw = json.loads(message.from_user.as_json())
+    user_id = user_raw['id']
+    user_username = user_raw['username']
+    user_fname = user_raw['first_name']
+    user_lname = user_raw['last_name']
+    user_lang = user_raw['language_code']
+    user = pd.DataFrame([[user_id, user_username, user_fname, user_lname, user_lang]],
+                        columns=['user_id', 'user_username', 'user_first_name', 'user_last_name', 'user_lang'])
     try:
         engine = create_engine(psql_engine)
-        user_df.to_sql('whitelist', if_exists='append', index=False, con=engine)
+        user.to_sql('whitelist', if_exists='append', index=False, con=engine)
         await message.answer('Welcome a board captain!', protect_content=True)
     except Exception as e:
         await message.answer('Somthing went wrong: {}'.format(e), protect_content=True)
@@ -569,7 +577,10 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
-    user_in_whitelist(message.from_user.as_json())
+    if await user_in_whitelist(message.from_user.as_json()):
+        await message.answer('You are in club', protect_content=True)
+    else:
+        await message.answer('You are NOT in club, get lost!', protect_content=True)
     print('{} - {}'.format(message.from_user.full_name, msg))
 
     if message.text.lower() in bonds_aliases:
