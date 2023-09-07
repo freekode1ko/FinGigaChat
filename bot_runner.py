@@ -538,12 +538,10 @@ async def draw_all_tables(message: types.Message):
 
 
 async def user_in_whitelist(user: str):
-    # TODO: Read df from database as WhiteList and search ID in it. If found -> True, else -> False
     user_json = json.loads(user)
     user_id = user_json['id']
     engine = create_engine(psql_engine)
     whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
-    print(whitelist)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
         return True
     else:
@@ -555,17 +553,16 @@ async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
     user_id = user_raw['id']
     user_username = user_raw['username']
-    user_fname = user_raw['first_name']
-    user_lname = user_raw['last_name']
     user_lang = user_raw['language_code']
-    user = pd.DataFrame([[user_id, user_username, user_fname, user_lname, user_lang]],
-                        columns=['user_id', 'user_username', 'user_first_name', 'user_last_name', 'user_lang'])
+    user = pd.DataFrame([[user_id, user_username, user_lang]],
+                        columns=['user_id', 'user_username', 'user_lang'])
     try:
         engine = create_engine(psql_engine)
         user.to_sql('whitelist', if_exists='append', index=False, con=engine)
         await message.answer('Welcome a board captain!', protect_content=True)
     except Exception as e:
-        await message.answer('Somthing went wrong: {}'.format(e), protect_content=True)
+        await message.answer('Somthing went wrong', protect_content=True)
+        print('Somthing went wrong: {}'.format(e))
 
 
 @dp.message_handler()
@@ -580,7 +577,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     if await user_in_whitelist(message.from_user.as_json()):
         await message.answer('You are in club', protect_content=True)
     else:
-        await message.answer('You are NOT in club, get lost!', protect_content=True)
+        await message.answer('You are NOT in club, get lost!\nhttps://www.youtube.com/watch?v=IjGEox6UOTs',
+                             protect_content=True)
     print('{} - {}'.format(message.from_user.full_name, msg))
 
     if message.text.lower() in bonds_aliases:
