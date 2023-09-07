@@ -131,6 +131,7 @@ class ArticleProcess:
         #  if many client in one cell
         df_article_subject[name] = df_article_subject[name].str.split(';')
         df_article_subject = df_article_subject.explode(name)
+        df_article_subject[name] = df_article_subject[name].apply(lambda x: x.strip())
 
         # make relation df between client id and article id
         df_relation_subject_article = df_article_subject.merge(subject, on=name)[[f'{name}_id', 'article_id',
