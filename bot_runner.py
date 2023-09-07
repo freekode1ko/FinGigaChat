@@ -1,3 +1,5 @@
+import json
+
 from aiogram import Bot, Dispatcher, executor, types
 from sqlalchemy import create_engine
 import module.data_transformer as dt
@@ -7,6 +9,7 @@ import numpy as np
 import datetime
 import warnings
 import config
+import ast
 import re
 
 path_to_source = config.path_to_source
@@ -534,6 +537,23 @@ async def draw_all_tables(message: types.Message):
     '''
 
 
+async def user_in_whitelist(user: str):
+    user_json = json.loads(user)
+    engine = create_engine(psql_engine)
+    whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
+    print(whitelist)
+    # TODO: Read df from database as WhiteList and search ID in it. If found -> True, else -> False
+
+
+@dp.message_handler(commands=['addmetowhitelist'])
+async def user_to_whitelist(message: types.Message):
+    # TODO: Write user into database
+    user = message.from_user.as_json()
+    user_df = pd.read_json(json.loads(user))
+    engine = create_engine(psql_engine)
+    user_df.to_sql('whitelist', if_exists='append', index=False, con=engine)
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     global chat
@@ -543,7 +563,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
-    print(message.from_user.as_json())
+    user_in_whitelist(message.from_user.as_json())
     print('{} - {}'.format(message.from_user.full_name, msg))
 
     if message.text.lower() in bonds_aliases:
