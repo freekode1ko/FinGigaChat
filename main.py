@@ -46,7 +46,7 @@ def imap_func(type_of_article, folder_name):
 def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
-    if filepath is not None:
+    if filepath:
         df = ap_obj.load_client_file(filepath) if type_of_article == 'client' else ap_obj.load_commodity_file(filepath)
         df = ap_obj.throw_the_models(type_of_article, df)
         df.to_csv(filepath, index=False)

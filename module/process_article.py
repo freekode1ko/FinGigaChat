@@ -21,11 +21,11 @@ class ArticleProcess:
         self.engine = create_engine(psql_engine)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
-    # @staticmethod
-    # def get_filename(dir_path):
-    #     list_of_files = [filename for filename in os.listdir(dir_path)]
-    #     filename = '' if not list_of_files else list_of_files[0]
-    #     return filename
+    @staticmethod
+    def get_filename(dir_path):
+        list_of_files = [filename for filename in os.listdir(dir_path)]
+        filename = '' if not list_of_files else list_of_files[0]
+        return filename
 
     @staticmethod
     def load_client_file(client_filepath: str) -> pd.DataFrame:
@@ -96,7 +96,7 @@ class ArticleProcess:
         Save article, get ids for original df from db,
         And call make_save method for relation table.
         """
-
+        # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
         links_value = ", ".join([f"'{link}'" for link in self.df_article["link"].values.tolist()])
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'

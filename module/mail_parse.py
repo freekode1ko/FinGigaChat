@@ -5,6 +5,8 @@ import email
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 
+from module.process_article import ArticleProcess
+
 
 class ImapError(Exception):
     pass
@@ -75,6 +77,8 @@ class ImapParse:
         :return: filename from email message
         """
 
+        old_filename = ArticleProcess.get_filename(folder_name)
+
         if self.msg.is_multipart():
             for part in self.msg.walk():
                 content_disposition = str(part.get("Content-Disposition"))
@@ -82,11 +86,13 @@ class ImapParse:
                     filename, encoding = decode_header(part.get_filename())[0]
                     if encoding is not None:
                         filename = filename.decode(encoding)
-                    if filename and os.path.isdir(folder_name):
+                    if filename and filename != old_filename:
                         filepath = os.path.join(folder_name, filename)
                         clear_dir(folder_name)
                         open(filepath, "wb").write(part.get_payload(decode=True))
                         return filepath
+                    else:
+                        return ''
 
         raise ImapError('Some error occurred while getting payload.')
 
@@ -103,7 +109,7 @@ class ImapParse:
     def get_date(self):
         """
         Get date of the newest message
-        :return: subject of the message
+        :return: date of the message
         """
         date, encoding = decode_header(self.msg["Date"])[0]
         if isinstance(date, bytes):
