@@ -1,11 +1,13 @@
-import pandas as pd
-from sqlalchemy import create_engine, text
 import os
 import datetime as dt
+
+import pandas as pd
+from sqlalchemy import create_engine, text
+
 from config import psql_engine
 
 # TODO: решить какой минимальный коэффициент, и время жизни новости
-MIN_RELEVANT_VALUE = 60
+MIN_RELEVANT_VALUE = 70
 TIME_LIVE_ARTICLE = 7
 
 

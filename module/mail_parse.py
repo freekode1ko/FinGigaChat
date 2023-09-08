@@ -1,9 +1,9 @@
+import os
+import shutil
 import imaplib
 import email
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
-import os
-import shutil
 
 
 class ImapError(Exception):

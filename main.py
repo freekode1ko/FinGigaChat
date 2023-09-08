@@ -1,13 +1,15 @@
-from module.mail_parse import ImapParse
-from module.process_article import ArticleProcess
-from config import mail_username, mail_password, mail_imap_server
-import pandas as pd
 import datetime as dt
 import time
 
+import pandas as pd
+
+from module.process_article import ArticleProcess
+from module.mail_parse import ImapParse
+from config import mail_username, mail_password, mail_imap_server
+
 CLIENT_FOLDER_DIR = "articles/client"
 COMMODITY_FOLDER_DIR = "articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=12, minutes=58)
+HOUR_TO_PARSE = dt.timedelta(hours=10, minutes=7)
 
 
 def imap_func(type_of_article, folder_name):
@@ -107,3 +109,4 @@ if __name__ == '__main__':
         print('time to wait', delta_time / 60)
         time.sleep(delta_time)
         daily_func()
+        print('Wait next day')
