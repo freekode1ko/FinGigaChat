@@ -84,7 +84,7 @@ def daily_func():
         pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_score']))
 
     df_commodity = pd.read_csv(commodity_filepath, index_col=False) if commodity_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'commodity', 'commodity_score']))
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_score']))
 
     if client_flag or commodity_flag:
         ap_obj.merge_client_commodity_article(df_client, df_commodity)

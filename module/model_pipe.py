@@ -1,21 +1,33 @@
 import re
 from re import search
-import numpy as np
 import pickle
 
 import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from config import summarization_prompt
+from module.gigachat import GigaChat
+
+BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
+MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
+STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
+COMMODITY_RATING_FILE_PATH = 'data/commodity_rating_system.xlsx'
+ALTERNATIVE_NAME_FILE = 'data/{}_with_alternative_names.xlsx'
+
 
 def clean_data(text: str) -> str:
-    '''Принимает на вход строку - отдает строку, очищенную от символов, кроме букв, стоп слов, и лемматизированную'''
-    #  очистка от лишних символов + нижний регистр
+    """
+    Takes string, - erase symbols excluding letters from it, lemmatize, stop-words cleaning and lower case casting.
+    :param text: str. String to clean.
+    :return: str. Current cleaned string.
+    """
+    #  cleaning from symbols excluding letters and casting to lower case
     text = re.sub('[^\w\s]', '', text)
     text = re.sub('[-+?\d+]', '', text)
     text = text.strip()
     text = text.lower()
-    #  лемматизация
+    #  lemmatization
     morph = pymorphy2.MorphAnalyzer()
     lemma = []
     text = re.split('\n | ', text)
@@ -25,84 +37,84 @@ def clean_data(text: str) -> str:
         lemma.append(word.normal_form)
     temp = '\n'.join(map(str, lemma))
     text = temp.split('\n')
-    # очистка от стоп слов
-    stop_words = []
-    with open('data/stop_words_list.txt', 'r', encoding='utf-8') as file:
+    # stop words cleaning
+    with open(STOP_WORDS_FILE_PATH, 'r', encoding='utf-8') as file:
         stop_words = list(map(str.rstrip, file.readlines()))
     text = [token for token in text if token not in stop_words and token != " "]
     text = ' '.join(text)
     return text
 
 
-def find_clients(text: str, clients: pd.DataFrame) -> str:
-    '''Принимает на вход новость, отдает лист с названиями компаний - клиентов. Названия компа``ний клиентов
-    (по крайней мере на данном этапе) читаются из Excel таблицы, в которой одной строке соответствуют несколько
-    разных названий одной и той же компании. Итоговая метка названия добавляется из колонки "Клиент"'''
-    # ищем исходные названия и названия в верхнем регистре в необработнанных данных
+def find_names(text: str, table: pd.DataFrame) -> str:
+    """
+    Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
+    :param text: str. Current string in which we search for names.
+    :param table: Pandas DF. Pandas DF with columns with names needed to be found. In one row all names - alternatives.
+    :return: str. String with found names separated with ; symbol.
+    """
+    # search for names in normal case and upper case.
     answer = []
-    for i in range(len(clients)):
-        for j in range(len(clients.loc[i])):
-            if clients.loc[i][j] != np.nan:
-                if search(f'({str(clients.loc[i][j])}|{str(clients.loc[i][j]).upper()})', text):
-                    answer += [clients.loc[i][0]]
+    for i in range(len(table)):
+        for j in range(len(table.loc[i])):
+            if type(table.loc[i][j]) == str:
+                if search(f'({str(table.loc[i][j])}|{str(table.loc[i][j]).upper()})', text):
+                    answer += [table.loc[i][0]]
                     break
+
     return ';'.join(answer).lower()
 
 
-def find_commodity(text: str, s) -> str:
-    '''Принимает на вход новость, отдает лист с названиями commodity'''
-    commodity_items = []
-    with open('data/commodity_list.txt', 'r', encoding='utf-8') as file:
-        commodity_items = list(map(str.rstrip, file.readlines()))
-    found = []
-    for item in commodity_items:
-        if search(item.lower(), text):
-            found += [item]
-    return ';'.join(found).lower()
-
-
 def rate_clients(df: pd.DataFrame) -> pd.DataFrame:
-    '''Принимает на вход Pandas Dataframe (df). Добавляет столбец 'clients_labels' с найденными метками классов
-    по системе ранжирования новостей по компаниям - клиентам'''
-    # читаем бинарную модель разделения на релевантные/нерелевантные новости
-    binary_model = pickle.load(open('model/binary_classification_best.pkl', 'rb'))
-    # читаем модель мультиклассовой классификации
-    multiclass_model = pickle.load(open('model/multiclass_classification_best.pkl', 'rb'))
-    # предсказываем релевантность и нерелевантность новостей, создаем столбец с меткой релевантности (1), нерелевантности (0)
+    """
+    Takes Pandas DF with current news batch and makes predictions over them.
+    :param df: Pandas DF. Pandas DF with current news batch.
+    :return: Pandas DF. Current news batch DF with added column 'client_labels'
+    """
+    # read binary classification model (relevant or not)
+    binary_model = pickle.load(open(BINARY_CLASSIFICATION_MODEL_PATH, 'rb'))
+    # read multiclass classification model
+    multiclass_model = pickle.load(open(MULTY_CLASSIFICATION_MODEL_PATH, 'rb'))
+    # predict relevance and adding a column with relevance label (1 or 0)
     df['relevance'] = binary_model.predict(df['cleaned_data'])
-    # предсказываем метку класса классификаци для новостей
+    # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
-    # оставляем метки только для тех новостей, где были найдены названия клиентов и предсказана релевантность 1
-    df['client_labels'] = df.apply(
-        lambda x: [x['client_labels']] if ((len(x['client']) > 0) & (x['relevance'] == 1)) else [], axis=1)
-    # удаляем столбец relevance
+    # using relevance label condition
+    df['client_labels'] = df.apply(lambda x: str(x['client_labels']) if ((len(x['client']) > 0) & (x['relevance'] == 1)) else '0', axis=1)
+    # delete relevance column
     df = df.drop(columns=['relevance'])
     return df
 
 
 def rate_commodity(df: pd.DataFrame) -> pd.DataFrame:
-    '''Принимает на вход Pandas Dataframe (df). Добавляет столбец 'commodity_labels' с найденными метками классов по системе ранжирования commodity'''
-    # читаем систему оценивания commodity
-    rating_data = pd.read_excel('data/commodity_rating_system.xlsx')
+    """
+    Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
+    :param df: Pandas DF. Pandas DF with current news batch.
+    :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
+    """
+    # read commodity rating system
+    rating_data = pd.read_excel(COMMODITY_RATING_FILE_PATH)
     rating_data['keys'] = rating_data['keys'].str.lower()
     rating_data['keys'] = rating_data['keys'].map(lambda x: re.split(',', x))
-    # создаем новый столбец для меток
+    # adding new column
     df['commodity_labels'] = ''
-    # перебираем индексы строк новостей и сами новости
+    # iterating through news
     for j, article in enumerate(df['cleaned_data']):
-        # заведем массив для ответа
+        # temp list for answer
         temp_ans = []
-        # проверяем, что новость содержит commodity
+        # condition that current row contains any commodity found
         if len(df['commodity'][j]) != 0:
-            # перебираем номер списка ключевых слов и сам список ключевых слов
+            # iterating through rows in rating system
             for i, keys in enumerate(rating_data['keys']):
-                # перебираем ключевые слова
+                # iterating throw keywords
                 for key in keys:
-                    # добавляем метку при нахождении ключевого слова
+                    # adding label
                     if search(key, str(article)):
-                        temp_ans += [rating_data['label'][i]]
-                        break
-        df['commodity_labels'][j] = temp_ans
+                        if (str(key)) != '':
+                            temp_ans += [rating_data['label'][i]]
+                            break
+        if len(temp_ans) == 0:
+            temp_ans = [str(0)]
+        df['commodity_labels'][j] = ';'.join(str(x) for x in temp_ans)
     return df
 
 
@@ -113,12 +125,31 @@ def union_name(p_row: str, r_row: str) -> str:
     :param r_row: row with names from models (regular exception)
     return: str with union names from the all rows
     """
-
     p_set = set(p_row.split(';')) if p_row else set()
     r_set = set(r_row.split(';')) if r_row else set()
     common_set = p_set.union(r_set)
 
     return ';'.join(common_set)
+
+
+def summarization_by_giga(giga_chat: GigaChat, token: str,  text: str) -> str:
+    """
+    Make summary of article text by GigaChat.
+    :param giga_chat: instance of GigaChat.
+    :param token: token of GigaChat chat.
+    :param text: text of article for summarization.
+    :return: summarization text.
+    """
+
+    query = f'{summarization_prompt}: {text}'
+    giga_json_answer = giga_chat.ask_giga_chat(query, token)
+    try:
+        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
+    except Exception as e:
+        print(e)
+        giga_answer = ''
+
+    return giga_answer
 
 
 def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
@@ -132,24 +163,25 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
     # read file with subject name
-    subject_names = pd.read_excel(f'data/{type_of_article}_with_alternative_names.xlsx')
+    subject_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article))
 
-    # TODO: мб как то сделать менее различными?
-    # find subject name in text and make rating
+    # find subject name in text and union with polyanalyst names
+    df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names))
+    df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']), axis=1)
+
     if type_of_article == 'client':
-        df['found_client'] = df['text'].map(lambda x: find_clients(x, subject_names))
-        df['client'] = df.apply(lambda row: union_name(row['client'], row['found_client']), axis=1)
         df = rate_clients(df)
     else:
-        df['found_commodity'] = df['cleaned_data'].map(lambda x: find_commodity(x, subject_names))
-        df['commodity'] = df.apply(lambda row: union_name(row['commodity'], row['found_commodity']), axis=1)
         df = rate_commodity(df)
+        giga_chat = GigaChat()
+        token = giga_chat.get_user_token()
+        df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
 
     # sum cluster labels
-    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(x))
+    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # delete unnecessary columns
-    df.drop(columns=['cleaned_data', f'{type_of_article}_labels'], inplace=True)
+    df.drop(columns=['cleaned_data', f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
 
     return df
 

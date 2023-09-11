@@ -48,7 +48,7 @@ class ArticleProcess:
         df_subject = df_subject[columns]
         df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
-        df_subject.commodity = df_subject.commodity.str.lower()
+        df_subject[type_of_article] = df_subject[type_of_article].str.lower()
 
         return df_subject
 
