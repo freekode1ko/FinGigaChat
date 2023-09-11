@@ -96,15 +96,16 @@ class ImapParse:
 
         raise ImapError('Some error occurred while getting payload.')
 
-    # def get_subject(self):
-    #     """
-    #     Get subject of the newest message
-    #     :return: subject of the message
-    #     """
-    #     subject, encoding = decode_header(self.msg["Subject"])[0]
-    #     if isinstance(subject, bytes):
-    #         subject = subject.decode(encoding)
-    #     return subject
+    # no where use
+    def get_subject(self):
+        """
+        Get subject of the newest message
+        :return: subject of the message
+        """
+        subject, encoding = decode_header(self.msg["Subject"])[0]
+        if isinstance(subject, bytes):
+            subject = subject.decode(encoding)
+        return subject
 
     def get_date(self):
         """

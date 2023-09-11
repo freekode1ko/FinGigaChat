@@ -5,6 +5,7 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 
 from config import psql_engine
+from module.model_pipe import deduplicate, model_func
 
 # TODO: решить какой минимальный коэффициент, и время жизни новости
 MIN_RELEVANT_VALUE = 70
@@ -28,49 +29,46 @@ class ArticleProcess:
         return filename
 
     @staticmethod
-    def load_client_file(client_filepath: str) -> pd.DataFrame:
+    def load_file(filepath: str, type_of_article: str) -> pd.DataFrame:
         """
-        Load and process client articles file.
-        :param client_filepath: file path to Excel file with clients articles
+        Load and process articles file.
+        :param filepath: file path to Excel file with articles
+        :param type_of_article: type of article (client or commodity)
         :return: dataframe of articles
         """
-        new_name_client_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
-                                   'text': 'text', 'text Summary': 'text_sum', 'Company_name': 'client'}
-        df_client = pd.read_csv(client_filepath, index_col=False).rename(columns=new_name_client_columns)
-        df_client = df_client[['link', 'title', 'date', 'text', 'text_sum', 'client']][df_client.coef > MIN_RELEVANT_VALUE]
-        df_client['date'] = df_client['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
-        df_client['title'] = df_client['title'].apply(lambda x: None if x == '0' else x)
-        df_client.client = df_client.client.str.lower()
+        if type_of_article == 'client':
+            new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
+                                'text': 'text', 'text Summary': 'text_sum', 'Company_name': 'client'}
+            columns = ['link', 'title', 'date', 'text', 'text_sum', 'client']
+        else:
+            new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'text': 'text', 'Металл': 'commodity'}
+            columns = ['link', 'title', 'date', 'text', 'commodity']
 
-        return df_client
+        df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
+        df_subject = df_subject[columns]
+        df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
+        df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
+        df_subject.commodity = df_subject.commodity.str.lower()
+
+        return df_subject
 
     @staticmethod
-    def load_commodity_file(commodity_filepath: str) -> pd.DataFrame:
-        """
-        Load commodity articles file.
-        :param commodity_filepath: file path to Excel file with clients articles
-        :return: dataframe of articles
-        """
+    def throw_the_models(df_subject: pd.DataFrame,  name: str,) -> pd.DataFrame:
 
-        new_name_commodity_columns = {'url': 'link', 'title': 'title', 'date': 'date',
-                                      'text': 'text', 'Металл': 'commodity'}
-        df_commodity = pd.read_csv(commodity_filepath, index_col=False).rename(columns=new_name_commodity_columns)
-        df_commodity = df_commodity[['link', 'title', 'date', 'text', 'commodity']]
-        df_commodity['date'] = df_commodity['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
-        df_commodity['title'] = df_commodity['title'].apply(lambda x: None if x == '0' else x)
-        df_commodity.commodity = df_commodity.commodity.str.lower()
+        df_subject = model_func(df_subject, name)
+        # df_subject[f'{name}_score'] = None
+        return df_subject
 
-        return df_commodity
+    def drop_duplicate(self):
+        """ Call func to delete similar articles """
+        old_articles = pd.read_sql('SELECT text from article', con=self.engine)
+        self.df_article = deduplicate(self.df_article, old_articles)
 
     def delete_old_article(self):
         with self.engine.connect() as conn:
             dt_now = dt.datetime.now()
             conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
             conn.commit()
-
-    def throw_the_models(self, name: str, df_subject: pd.DataFrame) -> pd.DataFrame:
-        df_subject[f'{name}_score'] = None
-        return df_subject
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """

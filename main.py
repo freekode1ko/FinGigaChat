@@ -47,8 +47,8 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
     if filepath:
-        df = ap_obj.load_client_file(filepath) if type_of_article == 'client' else ap_obj.load_commodity_file(filepath)
-        df = ap_obj.throw_the_models(type_of_article, df)
+        df = ap_obj.load_file(filepath, type_of_article)
+        df = ap_obj.throw_the_models(df, type_of_article)
         df.to_csv(filepath, index=False)
         return True, filepath
     else:
@@ -88,6 +88,7 @@ def daily_func():
 
     if client_flag or commodity_flag:
         ap_obj.merge_client_commodity_article(df_client, df_commodity)
+        ap_obj.drop_duplicate()
         ap_obj.save_tables()
         if client_flag and commodity_flag:
             print('PROCESSED ARTICLES')
