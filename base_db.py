@@ -151,12 +151,12 @@ def main():
         conn.commit()
 
     # insert client names in client table
-    df_client = pd.read_csv('data/client_name.csv', index_col=False)
+    df_client = pd.read_csv('data/name/client_name.csv', index_col=False)
     df_client.name = df_client.name.str.lower()
     df_client.to_sql('client', con=engine, if_exists='append', index=False)
 
     # insert commodity names in commodity table
-    df_commodity = pd.read_csv('data/commodity_name.csv', index_col=False)
+    df_commodity = pd.read_csv('data/name/commodity_name.csv', index_col=False)
     df_commodity.name = df_commodity.name.str.lower()
     df_commodity.to_sql('commodity', con=engine, if_exists='append', index=False)
 
