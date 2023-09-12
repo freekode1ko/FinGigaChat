@@ -1,5 +1,6 @@
 import datetime as dt
 import time
+import warnings
 
 import pandas as pd
 
@@ -7,9 +8,9 @@ from module.process_article import ArticleProcess
 from module.mail_parse import ImapParse
 from config import mail_username, mail_password, mail_imap_server
 
-CLIENT_FOLDER_DIR = "articles/client"
-COMMODITY_FOLDER_DIR = "articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=10, minutes=7)
+CLIENT_FOLDER_DIR = "data/articles/client"
+COMMODITY_FOLDER_DIR = "data/articles/commodity"
+HOUR_TO_PARSE = dt.timedelta(hours=15, minutes=50)
 
 
 def imap_func(type_of_article, folder_name):
@@ -46,9 +47,12 @@ def imap_func(type_of_article, folder_name):
 def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
-    if filepath is not None:
-        df = ap_obj.load_client_file(filepath) if type_of_article == 'client' else ap_obj.load_commodity_file(filepath)
-        df = ap_obj.throw_the_models(type_of_article, df)
+    if filepath:
+        df = ap_obj.load_file(filepath, type_of_article)
+        if not df.empty:
+            df = ap_obj.throw_the_models(df, type_of_article)
+        else:
+            df[['text_sum', f'{type_of_article}_score']] = None
         df.to_csv(filepath, index=False)
         return True, filepath
     else:
@@ -84,10 +88,11 @@ def daily_func():
         pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_score']))
 
     df_commodity = pd.read_csv(commodity_filepath, index_col=False) if commodity_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'commodity', 'commodity_score']))
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_score']))
 
     if client_flag or commodity_flag:
         ap_obj.merge_client_commodity_article(df_client, df_commodity)
+        ap_obj.drop_duplicate()
         ap_obj.save_tables()
         if client_flag and commodity_flag:
             print('PROCESSED ARTICLES')
@@ -102,6 +107,7 @@ def daily_func():
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings('ignore')
     while True:
         current_time = dt.datetime.now().time()
         current_time_timedelta = dt.timedelta(hours=current_time.hour, minutes=current_time.minute)

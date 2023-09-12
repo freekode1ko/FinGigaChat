@@ -6,7 +6,6 @@ from config import psql_engine
 
 
 def main():
-
     # query to make client table
     query_client = ('CREATE TABLE IF NOT EXISTS public.client '
                     '('
@@ -74,6 +73,69 @@ def main():
                                 ')'
                                 'TABLESPACE pg_default;')
 
+    # create chat
+    query_chat = ('CREATE TABLE IF NOT EXISTS public.chat'
+                  '('
+                  'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                  'name text NOT NULL,'
+                  'type text NOT NULL,'
+                  'CONSTRAINT chat_pkey PRIMARY KEY (id)'
+                  ')'
+                  'TABLESPACE pg_default;')
+
+    # create message
+    query_message = ('CREATE TABLE IF NOT EXISTS public.message'
+                     '('
+                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                     'chat_id integer NOT NULL, '
+                     'link text, '
+                     'date timestamp without time zone NOT NULL,'
+                     'text text NOT NULL, '
+                     'text_sum text, '
+                     'CONSTRAINT message_pkey PRIMARY KEY (id),'
+                     'CONSTRAINT chat_id FOREIGN KEY (chat_id)'
+                     '  REFERENCES public.client (id) MATCH SIMPLE'
+                     '  ON UPDATE CASCADE'
+                     '  ON DELETE CASCADE'
+                     ')'
+                     'TABLESPACE pg_default;')
+
+    # create relation_client_message
+    query_relation_client_msg = ('CREATE TABLE IF NOT EXISTS public.relation_client_message'
+                                 '('
+                                 'client_id integer NOT NULL,'
+                                 'message_id integer NOT NULL,'
+                                 'client_score integer,'
+                                 'CONSTRAINT relation_client_message_pkey PRIMARY KEY (client_id, message_id), '
+                                 'CONSTRAINT client_id FOREIGN KEY (client_id)'
+                                 '  REFERENCES public.client (id) MATCH SIMPLE'
+                                 '  ON UPDATE CASCADE'
+                                 '  ON DELETE CASCADE,'
+                                 'CONSTRAINT message_id FOREIGN KEY (message_id)'
+                                 '  REFERENCES public.message (id) MATCH SIMPLE'
+                                 '  ON UPDATE CASCADE'
+                                 '  ON DELETE CASCADE'
+                                 ')'
+                                 'TABLESPACE pg_default;')
+
+    # create relation_commodity_message
+    query_relation_commodity_msg = ('CREATE TABLE IF NOT EXISTS public.relation_commodity_message'
+                                    '('
+                                    'commodity_id integer NOT NULL,'
+                                    'message_id integer NOT NULL,'
+                                    'commodity_score integer, '
+                                    'CONSTRAINT relation_commodity_message_pkey PRIMARY KEY (commodity_id, message_id),'
+                                    'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
+                                    '   REFERENCES public.commodity (id) MATCH SIMPLE'
+                                    '   ON UPDATE CASCADE'
+                                    '   ON DELETE CASCADE, '
+                                    'CONSTRAINT message_id FOREIGN KEY (message_id)'
+                                    '   REFERENCES public.message (id) MATCH SIMPLE'
+                                    '   ON UPDATE CASCADE'
+                                    '   ON DELETE CASCADE'
+                                    ')'
+                                    'TABLESPACE pg_default;')
+
     # create tables
     engine = create_engine(psql_engine)
     with engine.connect() as conn:
@@ -82,6 +144,10 @@ def main():
         conn.execute(text(query_article))
         conn.execute(text(query_relation_client))
         conn.execute(text(query_relation_commodity))
+        conn.execute(text(query_chat))
+        conn.execute(text(query_message))
+        conn.execute(text(query_relation_client_msg))
+        conn.execute(text(query_relation_commodity_msg))
         conn.commit()
 
     # insert client names in client table
