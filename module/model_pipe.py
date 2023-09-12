@@ -15,6 +15,12 @@ STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/commodity_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/{}_with_alternative_names.xlsx'
 
+BAD_GIGA_ANSWERS = ['Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
+                    'Как у нейросетевой языковой модели у меня не может быть настроения, но почему-то я совсем не хочу '
+                    'говорить на эту тему.',
+                    'Не люблю менять тему разговора, но вот сейчас тот самый случай.',
+                    'Спасибо за информацию! Я передам ее дальше.']
+
 
 def clean_data(text: str) -> str:
     """
@@ -125,14 +131,14 @@ def union_name(p_row: str, r_row: str) -> str:
     :param r_row: row with names from models (regular exception)
     return: str with union names from the all rows
     """
-    p_set = set(p_row.split(';')) if p_row else set()
-    r_set = set(r_row.split(';')) if r_row else set()
+    p_set = set(el.strip() for el in p_row.split(';')) if p_row else set()
+    r_set = set(el.strip() for el in r_row.split(';')) if r_row else set()
     common_set = p_set.union(r_set)
 
     return ';'.join(common_set)
 
 
-def summarization_by_giga(giga_chat: GigaChat, token: str,  text: str) -> str:
+def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
     """
     Make summary of article text by GigaChat.
     :param giga_chat: instance of GigaChat.
@@ -145,11 +151,23 @@ def summarization_by_giga(giga_chat: GigaChat, token: str,  text: str) -> str:
     giga_json_answer = giga_chat.ask_giga_chat(query, token)
     try:
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
+        if giga_answer in BAD_GIGA_ANSWERS:
+            giga_answer = ''
     except Exception as e:
         print(e)
         giga_answer = ''
 
     return giga_answer
+
+
+def change_bad_summary(row: pd.Series) -> str:
+    """ Change summary if it is not exist """
+    if row['text_sum']:
+        return row['text_sum']
+    elif row['title']:
+        return row['title']
+    else:
+        return 'Ссылка на новость'
 
 
 def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
@@ -165,20 +183,24 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     # read file with subject name
     subject_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article))
 
-    # find subject name in text and union with polyanalyst names
-    df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names))
-    df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']), axis=1)
-
-    if type_of_article == 'client':
-        df = rate_clients(df)
-    else:
-        df = rate_commodity(df)
+    # make_summarization
+    if type_of_article == 'commodity':
         giga_chat = GigaChat()
         token = giga_chat.get_user_token()
         df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
+        df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
+
+    # find subject name in text and union with polyanalyst names
+    df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names))
+    df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
+                                   axis=1)
+
+    # make rating for article
+    df = rate_clients(df) if type_of_article == 'client' else rate_commodity(df)
 
     # sum cluster labels
-    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
+        lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # delete unnecessary columns
     df.drop(columns=['cleaned_data', f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
@@ -186,7 +208,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     return df
 
 
-def deduplicate(new_articles: pd.DataFrame, old_articles: pd.DataFrame, threshold: float = 0.3) -> pd.DataFrame:
+def deduplicate(new_articles: pd.DataFrame, old_articles: pd.DataFrame, threshold: float = 0.4) -> pd.DataFrame:
     """
     Delete similar articles
     :param new_articles: df with new article

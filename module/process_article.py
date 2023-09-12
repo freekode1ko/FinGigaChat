@@ -7,8 +7,7 @@ from sqlalchemy import create_engine, text
 from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
-# TODO: решить какой минимальный коэффициент, и время жизни новости
-MIN_RELEVANT_VALUE = 70
+
 TIME_LIVE_ARTICLE = 7
 
 
@@ -38,7 +37,7 @@ class ArticleProcess:
         """
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
-                                'text': 'text', 'text Summary': 'text_sum', 'Company_name': 'client'}
+                                'text': 'text', 'text Summary Summary': 'text_sum', 'Company_name': 'client'}
             columns = ['link', 'title', 'date', 'text', 'text_sum', 'client']
         else:
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'text': 'text', 'Металл': 'commodity'}
@@ -62,7 +61,9 @@ class ArticleProcess:
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         old_articles = pd.read_sql('SELECT text from article', con=self.engine)
+        print('before deduplicate = ', len(self.df_article))
         self.df_article = deduplicate(self.df_article, old_articles)
+        print('after deduplicate = ', len(self.df_article))
 
     def delete_old_article(self):
         with self.engine.connect() as conn:
@@ -78,7 +79,7 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
-        df_link_client = df_client[['link', 'client']][df_client['link'].isin(df_commodity['link'])]
+        df_link_client = df_client[['link', 'client', 'client_score']][df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
         # remove from df_client and df_commodity common links
@@ -131,7 +132,6 @@ class ArticleProcess:
         #  if many client in one cell
         df_article_subject[name] = df_article_subject[name].str.split(';')
         df_article_subject = df_article_subject.explode(name)
-        df_article_subject[name] = df_article_subject[name].apply(lambda x: x.strip())
 
         # make relation df between client id and article id
         df_relation_subject_article = df_article_subject.merge(subject, on=name)[[f'{name}_id', 'article_id',

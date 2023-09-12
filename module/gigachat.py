@@ -35,6 +35,7 @@ class GigaChat:
             ],
             "model": "GigaChat:latest",
             "profanity_check": False,
+            "repetition_penalty": 1,
             "temperature": 0.1
         })
         headers = {
