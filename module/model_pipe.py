@@ -13,7 +13,7 @@ BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
 MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/commodity_rating_system.xlsx'
-ALTERNATIVE_NAME_FILE = 'data/{}_with_alternative_names.xlsx'
+ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
 BAD_GIGA_ANSWERS = ['Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
                     'Как у нейросетевой языковой модели у меня не может быть настроения, но почему-то я совсем не хочу '
