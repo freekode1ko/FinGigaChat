@@ -9,6 +9,26 @@ CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 
 
+def make_alternative_tables(engine, subject, filepath):
+    """ Make values for table with alternative names """
+
+    df_alternative_names = pd.read_excel(filepath, index_col=False)
+    df_alternative_names = df_alternative_names.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
+    df_subject = pd.read_sql(f'SELECT id, name FROM {subject}', con=engine)
+    names_list = []
+
+    for alternative_names in df_alternative_names.values.tolist():
+        main_name = alternative_names[0]
+        names = ';'.join([name.replace("'", "''") for name in alternative_names if pd.notna(name)])
+        subject_id = df_subject['id'][df_subject['name'] == main_name].values[0]
+        names_list.append(f"({subject_id}, '{names}')")
+
+    values = ", ".join(names_list)
+    query_insert = f'INSERT INTO public.{subject}_alternative ({subject}_id, other_names) VALUES {values}'
+
+    return query_insert
+
+
 def main():
     # query to make client table
     query_client = ('CREATE TABLE IF NOT EXISTS public.client '
@@ -170,18 +190,14 @@ def main():
 
     # create tables
     engine = create_engine(psql_engine)
+    queries = [query_client, query_commodity, query_article,
+               query_relation_client, query_relation_commodity,
+               query_client_alternative, query_commodity_alternative,
+               query_chat, query_message, query_relation_client_msg, query_relation_commodity_msg]
+
     with engine.connect() as conn:
-        conn.execute(text(query_client))
-        conn.execute(text(query_commodity))
-        conn.execute(text(query_article))
-        conn.execute(text(query_relation_client))
-        conn.execute(text(query_relation_commodity))
-        conn.execute(text(query_client_alternative))
-        conn.execute(text(query_commodity_alternative))
-        conn.execute(text(query_chat))
-        conn.execute(text(query_message))
-        conn.execute(text(query_relation_client_msg))
-        conn.execute(text(query_relation_commodity_msg))
+        for query in queries:
+            conn.execute(text(query))
         conn.commit()
 
     # insert client names in client table
@@ -194,37 +210,15 @@ def main():
     df_commodity.name = df_commodity.name.str.lower()
     df_commodity.to_sql('commodity', con=engine, if_exists='append', index=False)
 
-    # insert alternative client names in client_alternative table
-    df_alternative_client_names = pd.read_excel(CLIENT_ALTERNATIVE_NAME_PATH, index_col=False)
-    df_clients = pd.read_sql('SELECT id, name FROM client', con=engine)
-    client_names_list = []
+    # make query to insert alternative client names in client_alternative table
+    query_alternative_client_insert = make_alternative_tables(engine, 'client', CLIENT_ALTERNATIVE_NAME_PATH)
 
-    for client_names in df_alternative_client_names.values.tolist():
-        main_name = client_names[0].lower().strip()
-        names = ';'.join([name.strip().replace("'", "''") for name in client_names if pd.notna(name)])
-        client_id = df_clients['id'][df_clients['name'] == main_name].values[0]
-        client_names_list.append(f"({client_id}, '{names}')")
-
-    client_values = ", ".join(client_names_list)
-    query_client_insert = f'INSERT INTO public.client_alternative (client_id, other_names) VALUES {client_values}'
-
-    # insert alternative commodity names in commodity_alternative table
-    df_alternative_commodity_names = pd.read_excel(COMMODITY_ALTERNATIVE_NAME_PATH, index_col=False)
-    df_commodity = pd.read_sql('SELECT id, name FROM commodity', con=engine)
-    commodity_names_list = []
-
-    for commodity_names in df_alternative_commodity_names.values.tolist():
-        main_name = commodity_names[0].lower().strip()
-        names = ';'.join([name.strip().replace("'", "''") for name in commodity_names if pd.notna(name)])
-        commodity_id = df_commodity['id'][df_commodity['name'] == main_name].values[0]
-        commodity_names_list.append(f"({commodity_id}, '{names}')")
-
-    commodity_values = ", ".join(commodity_names_list)
-    query_commodity_insert = f'INSERT INTO public.commodity_alternative (commodity_id, other_names) VALUES {commodity_values}'
+    # make query to insert alternative alternative commodity names in commodity_alternative table
+    query_alternative_commodity_insert = make_alternative_tables(engine, 'commodity', COMMODITY_ALTERNATIVE_NAME_PATH)
 
     with engine.connect() as conn:
-        conn.execute(text(query_client_insert))
-        conn.execute(text(query_commodity_insert))
+        conn.execute(text(query_alternative_client_insert))
+        conn.execute(text(query_alternative_commodity_insert))
         conn.commit()
 
 
