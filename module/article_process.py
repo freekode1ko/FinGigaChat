@@ -8,7 +8,7 @@ from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
 
-TIME_LIVE_ARTICLE = 7
+TIME_LIVE_ARTICLE = 5
 
 
 class ArticleError(Exception):
@@ -115,10 +115,10 @@ class ArticleProcess:
         self.df_article = self.df_article.merge(pd.DataFrame(ids), on='link')
 
         # make relation tables between articles and client and commodity
-        self.make_save_relation_article_table('client')
-        self.make_save_relation_article_table('commodity')
+        self._make_save_relation_article_table('client')
+        self._make_save_relation_article_table('commodity')
 
-    def make_save_relation_article_table(self, name: str) -> None:
+    def _make_save_relation_article_table(self, name: str) -> None:
         """
         Make relation table and save it to database.
         :param name: name (client or commodity)
@@ -139,3 +139,86 @@ class ArticleProcess:
 
         # save relation df to database
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
+
+    def _find_subject_id(self, message: str, subject: str):
+        """
+        Find id of client or commodity by user message
+        :param message: user massage
+        :param subject: client or commodity
+        :return: id of client(commodity) or False if user message not about client or commodity
+        """
+
+        message_text = message.lower().strip()
+        df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
+        df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
+
+        for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
+            if message_text in names:
+                return subject_id
+        return False
+
+    def _get_article(self, subject_id: int, subject: str):
+        """
+        Get sorted sum article by subject id.
+        :param subject_id: id of client or commodity
+        :param subject: client or commodity
+        :return: name of client(commodity) and sorted sum article
+        """
+        with self.engine.connect() as conn:
+            query_article_data = (f'SELECT relation.article_id, relation.{subject}_score, '
+                                  f'article_.date, article_.link, article_.text_sum '
+                                  f'FROM relation_{subject}_article AS relation '
+                                  f'INNER JOIN ('
+                                  f'SELECT id, date, link, text_sum '
+                                  f'FROM article '
+                                  f') AS article_ '
+                                  f'ON article_.id = relation.article_id '
+                                  f'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
+                                  f'ORDER BY date DESC, relation.{subject}_score DESC '
+                                  f'LIMIT 5')
+
+            article_data = [item[3:] for item in conn.execute(text(query_article_data))]
+            name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
+            return name, article_data
+
+    @staticmethod
+    def make_format_msg(subject_name, articles):
+        """
+        Make format to message.
+        :param subject_name: name of client(commodity)
+        :param articles: article data about client(commodity)
+        :return: formatted text
+        """
+        marker = '&#128204;'
+
+        for index, article_data in enumerate(articles):
+            link, text_sum = article_data[0], article_data[1]
+            text_sum = ' '.join(text_sum.split())  # TODO: убрать разделение, когда полианалист удалит лишние пробелы
+            link_phrase = f'<a href="{link}">Ссылка на источник.</a>'
+            # link_phrase = hlink('Ссылка на источник.', link)
+            articles[index] = f'{marker} {text_sum} {link_phrase}'
+
+        all_articles = '\n\n'.join(articles)
+        format_msg = f'<b>{subject_name.capitalize()}</b>\n\n{all_articles}'
+
+        return format_msg
+
+    def process_user_alias(self, message: str):
+        """ Process user alias and return reply for it """
+
+        client_id = self._find_subject_id(message, 'client')
+        if client_id:
+            subject_name, articles = self._get_article(client_id, 'client')
+        else:
+            commodity_id = self._find_subject_id(message, 'commodity')
+            if commodity_id:
+                subject_name, articles = self._get_article(commodity_id, 'commodity')
+            else:
+                print('user do not want articles')
+                return False
+
+        if subject_name and not articles:
+            return 'Пока нет новостей на эту тему'
+
+        reply_msg = self.make_format_msg(subject_name, articles)
+        return reply_msg

@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from module.process_article import ArticleProcess
+from module.article_process import ArticleProcess
 from module.mail_parse import ImapParse
 from config import mail_username, mail_password, mail_imap_server
 

@@ -5,7 +5,7 @@ import email
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 
-from module.process_article import ArticleProcess
+from module.article_process import ArticleProcess
 
 
 class ImapError(Exception):
