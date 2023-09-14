@@ -13,6 +13,7 @@ BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
 MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
+CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
 BAD_GIGA_ANSWERS = ['Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
@@ -51,26 +52,28 @@ def clean_data(text: str) -> str:
     return text
 
 
-def find_names(text: str, table: pd.DataFrame) -> str:
+def find_names(text: str, table: pd.DataFrame, clean: bool) -> str:
     """
     Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
     :param text: str. Current string in which we search for names.
-    :param table: Pandas DF. Pandas DF with columns with names needed to be found. In one row all names - alternatives.
+    :param table: Pandas DF. Pandas DF with columns with names neeeded to be found. In one row all names - alternatives.
+    :param clean: bool. Flag shows whether search applies to original or cleaned text.
     :return: str. String with found names separated with ; symbol.
     """
     # search for names in normal case and upper case.
+    if clean:
+        text = clean_data(text)
     answer = []
     for i in range(len(table)):
         for j in range(len(table.loc[i])):
             if type(table.loc[i][j]) == str:
                 if search(f'({str(table.loc[i][j])}|{str(table.loc[i][j]).upper()})', text):
-                    answer += [table.loc[i][0]]
+                    answer += [table.loc[i][0].lower()]
                     break
+    return ';'.join(answer)
 
-    return ';'.join(answer).lower()
 
-
-def rate_clients(df: pd.DataFrame) -> pd.DataFrame:
+def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
     :param df: Pandas DF. Pandas DF with current news batch.
@@ -85,9 +88,27 @@ def rate_clients(df: pd.DataFrame) -> pd.DataFrame:
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
     # using relevance label condition
-    df['client_labels'] = df.apply(lambda x: str(x['client_labels']) if ((len(x['client']) > 0) & (x['relevance'] == 1)) else '0', axis=1)
+    df['client_labels'] = df.apply(
+        lambda x: [str(x['client_labels'])] if ((len(x['client']) > 0) & (x['relevance'] == 1)) else [], axis=1)
     # delete relevance column
     df = df.drop(columns=['relevance'])
+    # add regular expression labels
+    # read range system
+    range_system_companies = pd.read_excel(CLIENT_RATING_FILE_PATH)
+    range_system_companies['key words'] = range_system_companies['key words'].map(lambda x: re.split(',', x))
+    # iterating throug news
+    for i, article in enumerate(df['cleaned_data']):
+        # iterating through lists of keywords:
+        for j, list_of_key_words in enumerate(range_system_companies['key words']):
+            # iterating through keywords in a list
+            for key_word in list_of_key_words:
+                if re.search(key_word, article):
+                    label = str(range_system_companies['label'][j])
+                    if label not in df['client_labels'][i]:
+                        df['client_labels'][i] += [label]
+        if len(df['client_labels'][i]) == 0:
+            df['client_labels'][i] = ['0']
+        df['client_labels'][i] = ';'.join(sorted(df['client_labels'][i]))
     return df
 
 
@@ -179,6 +200,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     """
     # add column with clean text
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
+    clean_flag = False
 
     # read file with subject name
     subject_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article))
@@ -189,51 +211,61 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         token = giga_chat.get_user_token()
         df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
         df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
+        clean_flag = True
 
     # find subject name in text and union with polyanalyst names
-    df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names))
+    df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names, clean_flag))
     df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
                                    axis=1)
 
     # make rating for article
-    df = rate_clients(df) if type_of_article == 'client' else rate_commodity(df)
+    df = rate_client(df) if type_of_article == 'client' else rate_commodity(df)
 
     # sum cluster labels
     df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
         lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # delete unnecessary columns
-    df.drop(columns=['cleaned_data', f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
+    df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
 
     return df
 
 
-def deduplicate(new_articles: pd.DataFrame, old_articles: pd.DataFrame, threshold: float = 0.4) -> pd.DataFrame:
+def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.45) -> pd.DataFrame:
     """
     Delete similar articles
-    :param new_articles: df with new article
-    :param old_articles: df with article from database
+    :param df: df with new article
+    :param df_previous: df with article from database
     :param threshold: limit value for deduplicate
     :return: df without duplicates article
     """
-
-    df_concat = pd.DataFrame(pd.concat([old_articles['text'], new_articles['text']], keys=['df_previous', 'df']),
-                             columns=['text']).reset_index(drop=True)
-
+    # make clean data for previous dataframe
+    df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
+    # concat two columns with news from both DFs.
+    df_concat = pd.DataFrame(pd.concat([df_previous['cleaned_data'], df['cleaned_data']], keys=['df_previous', 'df']),
+                             columns=['cleaned_data'])
+    df_concat = df_concat.reset_index(drop=True)
+    # vectorize news in new DF.
     vectorizer = TfidfVectorizer()
-    X_tf_idf = vectorizer.fit_transform(df_concat['text'])
+    X_tf_idf = vectorizer.fit_transform(df_concat['cleaned_data'])
     X_tf_idf = X_tf_idf.toarray()
-
-    new_articles['unique'] = None
-
-    for actual_pos in range(len(old_articles['text']), len(df_concat['text'])):
+    # adding a column with unique/not unique label for all news.
+    df['unique'] = ''
+    # iterating over current news batch
+    for actual_pos in range(len(df_previous['cleaned_data']), len(df_concat['cleaned_data'])):
         flag_unique = True
         for previous_pos in range(actual_pos):
-            if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > threshold:
+            # if found two close news - adding not unique label
+            # modify threshold for comparing news in one batch and from the different ones
+            current_threshold = threshold
+            if previous_pos < len(df_previous['cleaned_data']):
+                current_threshold += 0.2
+            if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:
                 flag_unique = False
                 break
-        new_articles['unique'][actual_pos - len(old_articles['text'])] = flag_unique
-
-    result = new_articles.drop(new_articles[new_articles.unique == False].index).reset_index(drop=True)
-    result = result.drop(columns=['unique'])
-    return result
+        df['unique'][actual_pos - len(df_previous['cleaned_data'])] = flag_unique
+    # delete duplicates from current batch
+    df = df.drop(df[df.unique == False].index)
+    df = df.reset_index(drop=True)
+    df = df.drop(columns=['unique', 'cleaned_data'])
+    return df

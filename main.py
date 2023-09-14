@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from module.process_article import ArticleProcess
+from module.article_process import ArticleProcess
 from module.mail_parse import ImapParse
 from config import mail_username, mail_password, mail_imap_server
 
@@ -46,7 +46,7 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
         if not df.empty:
             df = ap_obj.throw_the_models(df, type_of_article)
         else:
-            df[['text_sum', f'{type_of_article}_score']] = None
+            df[['text_sum', f'{type_of_article}_score', 'cleaned_data']] = None
         df.to_csv(filepath, index=False)
         return True, filepath
     else:
@@ -79,10 +79,12 @@ def daily_func():
             time.sleep(10 * 60)
 
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_score']))
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client',
+                                  'client_score', 'cleaned_data']))
 
     df_commodity = pd.read_csv(commodity_filepath, index_col=False) if commodity_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_score']))
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity',
+                                  'commodity_score', 'cleaned_data']))
 
     if client_flag or commodity_flag:
         ap_obj.merge_client_commodity_article(df_client, df_commodity)
