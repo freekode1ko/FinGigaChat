@@ -53,9 +53,8 @@ class ArticleProcess:
 
     @staticmethod
     def throw_the_models(df_subject: pd.DataFrame,  name: str,) -> pd.DataFrame:
-
+        """ Call model pipe func """
         df_subject = model_func(df_subject, name)
-        # df_subject[f'{name}_score'] = None
         return df_subject
 
     def drop_duplicate(self):
@@ -88,7 +87,7 @@ class ArticleProcess:
         # concat all df in one, so there are no duplicates and contain all data
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
         self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity',
-                                      'client_score', 'commodity_score']]
+                                      'client_score', 'commodity_score', 'cleaned_data']]
 
     def save_tables(self) -> None:
         """

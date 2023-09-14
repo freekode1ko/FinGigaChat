@@ -1,7 +1,6 @@
 import json
 import requests as req
-from config import chat_base_url
-from config import user_cred
+from config import chat_base_url, user_cred
 
 
 class GigaChat:
