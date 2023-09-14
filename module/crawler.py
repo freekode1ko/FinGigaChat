@@ -66,13 +66,14 @@ class Parser:
         :return: html code from page as string
         """
         euro_standard = False
-        http = random.choice(proxy['http'])
+        # http = random.choice(proxy['http'])
         https = random.choice(proxy['https'])
-        if type(http) == list:
-            http = http[0]
+        # if type(http) == list:
+        #     http = http[0]
         if type(https) == list:
             https = https[0]
-        proxies = {'http': http, 'https': https}
+        # proxies = {'http': http, 'https': https}
+        proxies = {'https': https}
 
         if '.ru' in url:
             euro_standard = True
@@ -81,7 +82,7 @@ class Parser:
             header = {'User-Agent': random.choice(self.user_agents),
                       'Connection': 'keep-alive',
                       'Accept-Encoding': 'gzip,deflate'}
-            req_page = session.get(url, verify=False, headers=header)
+            req_page = session.get(url, verify=False, headers=header, proxies=proxies)
             if 'ddos-guard' in req_page.text.lower():
                 print('DDOS Guard found - trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
