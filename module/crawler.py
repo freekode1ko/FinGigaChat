@@ -35,6 +35,10 @@ class Parser:
         :return: None
         """
         global proxy
+        proxy['https'] = ['http://freekodeko:3710952468@135.125.212.24:10033']
+        proxy['https'] = ['http://freekodeko:3710952468@141.95.93.35:10111']
+        proxy['https'] = ['http://freekodeko:3710952468@54.37.194.34:10525']
+        '''
         try:
             ip_table = pd.DataFrame()
             html = req.get('https://free-proxy-list.net/', verify=False)
@@ -52,6 +56,7 @@ class Parser:
         except req.exceptions.MissingSchema:
             proxy['https'] = ['https://190.61.88.147:8080']
             proxy['http'] = ['http://185.218.125.70:80']
+        '''
 
     def get_html(self, url: str, session: req.sessions.Session):
         """
