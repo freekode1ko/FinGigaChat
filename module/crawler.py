@@ -35,9 +35,10 @@ class Parser:
         :return: None
         """
         global proxy
-        proxy['https'] = ['http://freekodeko:3710952468@135.125.212.24:10033']
-        proxy['https'] = ['http://freekodeko:3710952468@141.95.93.35:10111']
-        proxy['https'] = ['http://freekodeko:3710952468@54.37.194.34:10525']
+        proxy['https'] = ['socks5://193.23.50.38:10222']
+        proxy['https'] = ['socks5://135.125.212.24:10034']
+        proxy['https'] = ['socks5://141.95.93.35:10112']
+        proxy['https'] = ['socks5://193.23.50.38:10222']
         '''
         try:
             ip_table = pd.DataFrame()
@@ -83,6 +84,7 @@ class Parser:
                       'Connection': 'keep-alive',
                       'Accept-Encoding': 'gzip,deflate'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
+            print(url, ' - with proxy')
             if 'ddos-guard' in req_page.text.lower():
                 print('DDOS Guard found - trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
@@ -92,7 +94,11 @@ class Parser:
             header = {'User-Agent': random.choice(self.user_agents),
                       'Connection': 'keep-alive',
                       'Accept-Encoding': 'gzip,deflate'}
-            req_page = session.get(url, verify=False, headers=header, proxies=proxies)
+            req_page = session.get(url, verify=False, headers=header)
+            print(url, ' - with OUT proxy')
+        except Exception as ex:
+            html = ''
+            print('During collecting data from: {}, except error: {}'.format(url, ex))
         html = req_page.text
 
         return euro_standard, html
