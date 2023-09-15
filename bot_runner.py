@@ -1,9 +1,11 @@
 import json
 
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.utils.exceptions import MessageIsTooLong
 from sqlalchemy import create_engine
 import module.data_transformer as dt
 import module.gigachat as gig
+from module.article_process import ArticleProcess
 import pandas as pd
 import numpy as np
 import datetime
@@ -412,141 +414,6 @@ async def draw_all_tables(message: types.Message):
     df_from_db = pd.read_sql_query('select * from "users"', con = engine)
     print(df_from_db)
 
-    '''
-    import numpy as np
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    # await message.answer('Deprecated method: \nЭтот метод более не активен. '
-    #                      '\nЧат переведен на новый формат отображения данных')
-    # await message.answer('')
-    transformer = dt.Transformer()
-
-    fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source))
-    keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
-    keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
-    keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
-    spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
-    # print(spld_keys_eco[0][' '][0])
-    title = 'Прогноз валютных курсов'
-    transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
-                                 col_width=3.1, title=title)
-    png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
-    photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, title='{}\nДанные на {}'.format(title, curdatetime))
-
-    title = 'Динамика и прогноз основных макроэкономических показателей'
-    for key_eco in spld_keys_eco:
-        key_eco = key_eco[key_eco['Экономические показатели'].notna()]
-        key_eco.reset_index(inplace=True, drop=True)
-        block = key_eco['Экономические показатели'][0]
-        key_eco = key_eco.iloc[1:]
-        transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0,
-                                     col_width=6, title=title)
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
-        photo = open(png_path, 'rb')
-        await __sent_photo_and_msg(message, photo, title='{}. {}.\nДанные на {}'.format(title, block, curdatetime))
-    '''
-    '''
-    bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
-    columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
-    bonds = bonds[columns].dropna(axis=0)
-    bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')]
-
-    metal = pd.read_excel('{}/tables/metal.xlsx'.format(path_to_source))
-    metal = metal[['Metals', 'Price', 'Day', 'Weekly', 'Monthly', 'YoY']]
-    metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Day': 'Δ День',
-                                   'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
-
-    exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
-    exc = exc.drop('Unnamed: 0', axis=1)
-
-    eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
-                        sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
-    stat = eco['Ставка'].drop('Unnamed: 0', axis=1)
-    rus_infl = eco['Инфляция в России'][['Дата', 'Инфляция, % г/г']]
-    world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': 'Страна',
-                                                                                          'Last': 'Ставка',
-                                                                                          'Previous': 'Предыдущая'})
-    world_bet = world_bet[['Страна', 'Ставка', 'Предыдущая']]
-
-    day = ''
-    month = ''
-    transformer = dt.Transformer()
-    import datetime
-    curdatetime = datetime.datetime.now()
-
-    title = 'Доходности ОФЗ.'
-    png_path = '{}/img/{}_table.png'.format(path_to_source, '1_TEST')
-    transformer.render_mpl_table(bond_ru, '1_TEST', header_columns=0, col_width=2.13,
-                                 title=title)  # [i*0.2 for i in columns_width])
-    photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
-
-    title = 'Ключевые ставки ЦБ мира.'
-    png_path = '{}/img/{}_table.png'.format(path_to_source, '2_TEST')
-    transformer.render_mpl_table(world_bet, '2_TEST', header_columns=0, col_width=2,
-                                 title=title)  # [i*0.2 for i in columns_width])
-    photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
-
-    title = 'Ежемесячная инфляция в России.'
-    png_path = '{}/img/{}_table.png'.format(path_to_source, '3_TEST')
-    transformer.render_mpl_table(rus_infl, '3_TEST', header_columns=0, col_width=2,
-                                 title=title)  # [i*0.2 for i in columns_width])
-    photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
-
-    title = 'Текущие курсы валют'
-    png_path = '{}/img/{}_table.png'.format(path_to_source, '4_TEST')
-    transformer.render_mpl_table(exc, '4_TEST', header_columns=0, col_width=2,
-                                 title=title)  # [i*0.2 for i in columns_width])
-    photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
-
-    title = 'Цены на ключевые сырьевые товары.'
-    png_path = '{}/img/{}_table.png'.format(path_to_source, '5_TEST')
-    transformer.render_mpl_table(metal, '5_TEST', header_columns=0, col_width=3.1,
-                                 title=title)  # [i*0.2 for i in columns_width])
-    photo = open(png_path, 'rb')
-    await __sent_photo_and_msg(message, photo, day, month, 'Данные на {}'.format(curdatetime))
-    '''
-    '''
-    # METALS
-    await message.answer("METALS")
-    metal = pd.read_excel('{}/tables/metal.xlsx'.format(path_to_source))
-    metal = metal[['Metals', 'Price', 'Day', 'Weekly', 'Monthly', 'YoY']]
-    metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Day': 'Δ День',
-                                   'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
-    await message.answer(metal.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
-
-    # EXCHANGE
-    await message.answer("EXCHANGE")
-    exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
-    exc = exc.drop('Unnamed: 0', axis=1)
-    await message.answer(exc.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
-
-    # ECONOMY
-    await message.answer("ECONOMY")
-    eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
-                        sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
-    stat = eco['Ставка'].drop('Unnamed: 0', axis=1)
-    rus_infl = eco['Инфляция в России'][['Дата', 'Инфляция, % г/г']]
-    world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': 'Страна',
-                                                                                          'Last': 'Ставка',
-                                                                                          'Previous': 'Предыдущая'})
-    world_bet = world_bet[['Страна', 'Ставка', 'Предыдущая']]
-    await message.answer(stat.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
-    await message.answer(rus_infl.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
-    await message.answer(world_bet.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
-
-    # BONDS
-    await message.answer("BONDS")
-    bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
-    columns = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
-    bonds = bonds[columns].dropna(axis=0)
-    bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')]
-    await message.answer(bond_ru.to_markdown(tablefmt="grid", index=False))#.to_string(index=False))
-    '''
-
 
 async def user_in_whitelist(user: str):
     user_json = json.loads(user)
@@ -578,6 +445,16 @@ async def user_to_whitelist(message: types.Message):
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
+
+    reply_msg = ArticleProcess().process_user_alias(message.text)
+    if reply_msg:
+        try:
+            await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+        except MessageIsTooLong:
+            articles = reply_msg.split('\n\n')
+            for article in articles:
+                await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+
     global chat
     global token
     msg = '{} {}'.format(prompt, message.text)
