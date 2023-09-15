@@ -14,6 +14,8 @@ pyvenv.cfg
 
 # Tables and png
 sources/
+*.xlsx
+*.csv
 *.png
 *.xml
 
