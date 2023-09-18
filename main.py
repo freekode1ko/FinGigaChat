@@ -34,6 +34,8 @@ class Main:
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
         self.data_market_base_url = data_market_base_url
+        self.commodities = transformer_obj.url_updater()
+        self.metals_wire_table = None
 
     def table_collector(self, session: req.sessions.Session):
         all_tables = []
