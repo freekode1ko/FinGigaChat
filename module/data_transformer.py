@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import six
-
+import datetime
+import config
 
 class Transformer:
     @staticmethod
@@ -104,16 +105,57 @@ class Transformer:
 
     @staticmethod
     def five_year_graph(data, name):
-        df = pd.DataFrame(data.json()['series'][0]['data'])
-        labels = df['date'].str.split('T')
-        fig, ax = plt.subplots()
-        fig.canvas.draw()
-
-        ax.set_xticklabels([i[0] for i in labels])
-        for tick in ax.get_xticklabels():
-            tick.set_rotation(45)
-        plt.plot(df['x'], df['y'])
-
+        if type(data).__name__ == 'DataFrame':
+            Transformer.__draw_plot(data)
+        else:
+            df = pd.DataFrame(data.json()['series'][0]['data'])
+            Transformer.__draw_plot(df)
+        name = name.replace('/','_')
+        name = name.replace(' ','_')
         # save png and return it to user
         png_path = '{}/img/{}_graph.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)
+
+    @staticmethod
+    def unix_to_default(timestamp):
+        """
+        Transform unix-time to world-time
+        """
+        
+        date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
+        formatted_date = date_time.strftime('%Y-%m-%dT%H:%M:%S')
+
+        return formatted_date
+    
+    @staticmethod
+    def default_to_unix():
+        """
+        Transform world-time to unix-time
+        """
+
+        now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
+        unix_timestamp = int(date_time.timestamp())
+        
+        return str(unix_timestamp)
+    
+    @staticmethod
+    def url_updater():
+        """
+        Create urls to charts 
+        """
+        unix_timestamp = Transformer.default_to_unix()
+
+        charts_links = config.charts_links
+        commodities = config.dict_of_commodities
+
+        for commodity in commodities:
+            if len(commodities[commodity]['links']) == 1 :
+                name = commodities[commodity]['links'][0]
+                commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
+                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
+            else:
+                name = commodities[commodity]['links'][0]
+                commodities[commodity]['links'][0] = charts_links['investing_link'].replace('name_name', name)
+
+        return commodities

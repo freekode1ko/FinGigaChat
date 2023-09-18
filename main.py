@@ -13,7 +13,7 @@ import time
 import datetime
 import re
 from typing import List, Tuple, Dict
-
+import json
 
 class Main:
     def __init__(self):
@@ -53,18 +53,67 @@ class Main:
                 print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
 
-    def graph_collector(self, url, session: req.sessions.Session):
-        name = url.split('/')[-1]
-        euro_standart, page_html = self.parser_obj.get_html(url, session)
-        auth = re.findall(r"TESecurify = ('.+');", page_html)
-        graph_url = '{}chart?s=lmahds03:com&' \
-                    'span=5y&' \
-                    'securify=new&' \
-                    'url=/commodity/{}&' \
-                    'AUTH={}&' \
-                    'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
-        data = req.get(graph_url, verify=False)
-        self.transformer_obj.five_year_graph(data, name)
+    def graph_collector(self, url, session: req.sessions.Session, driver, name=''):
+        if 'api.investing' in url:
+            InvAPI_obj = ue.InvestingAPIParser(driver)
+            data = InvAPI_obj.get_graph_investing(url)
+
+            self.transformer_obj.five_year_graph(data, name)
+
+        elif 'metals-wire' in url:
+            euro_standart, page_html = self.parser_obj.get_html(url, session)
+            page_html = json.loads(page_html)
+            data = pd.DataFrame()
+            for day in page_html:
+                day['x'] = day['time']
+                day['date'] = dt.Transformer.unix_to_default(day['time'])
+                row = {'date':day['date'],'x':day['x'],'y':day['close']}
+                data = pd.concat([data, pd.DataFrame(row, index=[0])], ignore_index=True)
+
+            self.transformer_obj.five_year_graph(data, name)
+
+        else:
+            name = url.split('/')[-1]
+            euro_standart, page_html = self.parser_obj.get_html(url, session)
+            auth = re.findall(r"TESecurify = ('.+');", page_html)
+            graph_url = '{}chart?s=lmahds03:com&' \
+                        'span=5y&' \
+                        'securify=new&' \
+                        'url=/commodity/{}&' \
+                        'AUTH={}&' \
+                        'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+            data = req.get(graph_url, verify=False)
+
+            self.transformer_obj.five_year_graph(data, name)
+
+    def get_metals_wire_table_data(self, driver):
+        metals_wire_parser_obj = ue.MetalsWireParser(driver)
+        self.metals_wire_table = metals_wire_parser_obj.get_table_data()
+
+    def commodities_plot_collect(self, session: req.sessions.Session, driver):
+        self.get_metals_wire_table_data(driver)
+        commodity_table = pd.DataFrame()
+        for commodity in self.commodities:
+            link = self.commodities[commodity]['links'][0]
+            name = self.commodities[commodity]['naming']
+            self.graph_collector(link,session,driver,name)
+
+            if len(self.commodities[commodity]['links'])>1:
+                url = self.commodities[commodity]['links'][1]
+                InvAPI_obj = ue.InvestingAPIParser(driver)
+                streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
+                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':streaming_price}
+                commodity_table = pd.concat([commodity_table, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+            else:
+                to_take = self.commodities[commodity]['to_take']+1
+                table = self.metals_wire_table
+                row_index = table.index[table['Resource'] == name][0]
+                dict_row = {}
+                for key in table.iloc[row_index][:to_take].keys():
+                    dict_row[key] = table.iloc[row_index][:to_take][key]
+                commodity_table = pd.concat([commodity_table, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+            
+        commodity_table.to_csv('sources/tables/commodities.csv',sep=';')
 
     @staticmethod
     def bond_block(table_bonds: list) -> pd.DataFrame:
@@ -429,6 +478,10 @@ if __name__ == '__main__':
             i += 1
             time.sleep(3600)
             print('In waiting. \n{}/3 hours'.format(3-i))
+
+        # collect and plot charts
+        session = req.Session()
+        runner.commodities_plot_collect(session,driver)
 
 
 ''' COLLECT RESEARCH OLD '''
