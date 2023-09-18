@@ -235,9 +235,9 @@ dict_of_commodities = \
             'measurables': '$/т',
             'naming': 'Ammonia, CFR Tampa'  
         },
-        # # газа нет
-        # 'Газ': {
-        #     'links': ['https://www.profinance.ru/charts/ttfusd1000/lc17'],
-        #     'measurables': '$/тыс м3'  
-        # },
+        'Газ': {
+            'links': ['https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
+            'measurables': '$/тыс м3',
+            'naming': 'Gas'   
+        }
     }

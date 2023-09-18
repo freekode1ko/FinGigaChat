@@ -150,12 +150,12 @@ class Transformer:
         commodities = config.dict_of_commodities
 
         for commodity in commodities:
-            if len(commodities[commodity]['links']) == 1 :
+            if len(commodities[commodity]['links']) > 1:
+                name = commodities[commodity]['links'][0]
+                commodities[commodity]['links'][0] = charts_links['investing_link'].replace('name_name', name)
+            elif commodities[commodity]['naming'] != 'Gas':
                 name = commodities[commodity]['links'][0]
                 commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
                 commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
-            else:
-                name = commodities[commodity]['links'][0]
-                commodities[commodity]['links'][0] = charts_links['investing_link'].replace('name_name', name)
 
         return commodities

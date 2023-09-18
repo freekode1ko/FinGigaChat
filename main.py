@@ -73,7 +73,11 @@ class Main:
                 data = pd.concat([data, pd.DataFrame(row, index=[0])], ignore_index=True)
 
             self.transformer_obj.five_year_graph(data, name)
-
+            
+        elif 'profinance' in url:
+            response = session.get(url)
+            with open(f'./sources/img/{name}.png', 'wb') as f:
+                f.write(response.content)
         else:
             name = url.split('/')[-1]
             euro_standart, page_html = self.parser_obj.get_html(url, session)
