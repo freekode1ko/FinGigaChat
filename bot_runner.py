@@ -28,7 +28,7 @@ bonds_aliases = ['облигации', 'бонды', 'офз']
 eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
 exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 metal_aliases = ['металлы', 'сырьевые товары', 'commodities']
-#analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
+# analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
 summ_prompt = 'Сократи текст, оставь только ключевую информацию с числовыми показателями и прогнозами на будущее, ' \
               'кратко указывай источник данных, убери из текста сравнительные обороты, вводные фразы, авторские ' \
               'мнения и другую не ключевую информацию. Вот текст:'
@@ -500,10 +500,6 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     else:
         await message.answer('You are NOT in club, get lost!\nhttps://www.youtube.com/watch?v=IjGEox6UOTs',
                              protect_content=True)
-
-
-
-
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
