@@ -1,6 +1,8 @@
 from pandas.plotting import table
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+import six
 
 
 class Transformer:
@@ -15,7 +17,7 @@ class Transformer:
         return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
 
     @staticmethod
-    def get_table_from_html(euro_standart: bool, html: str) -> list[pd.DataFrame]:
+    def get_table_from_html(euro_standart: bool, html: str):
         """
         Take all tables from html code
         :param euro_standart: Bool value for separators of decimals and thousands
@@ -54,4 +56,64 @@ class Transformer:
 
         # save png and return it to user
         png_path = '{}/img/{}_table.png'.format(path_to_source, name)
+        plt.savefig(png_path, transparent=True)
+
+    @staticmethod
+    def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
+                         header_color='#000000', row_colors=['#030303', '#0E0E0E'],
+                         edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
+                         header_columns=0, title=None, ax=None, **kwargs):
+        data = data.fillna('-')
+        if title is None:
+            title = name
+
+        # titles = [title]*len(data.columns.tolist())
+        # orig_columns = data.columns.tolist()
+        # columns = [(titles[i], orig_columns[i]) for i in range(0, len(titles))]
+        # data = pd.DataFrame(data=data.values.tolist(),
+        #                    columns=pd.MultiIndex.from_tuples(columns, names=['title', 'columns']))
+
+        if ax is None:
+            size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+            fig, ax = plt.subplots(figsize=size)
+            fig.facecolor = 'black'
+            # rect = patches.Rectangle((-100, -100), 70, 70, linewidth=1, edgecolor='r', facecolor='black', )
+            # ax.add_patch(rect)
+            # ax.set_title(title, color='black')
+            ax.axis('off')
+
+        mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
+                             cellLoc='center', **kwargs)
+        mpl_table.auto_set_font_size(False)
+        mpl_table.set_fontsize(font_size)
+
+        for k, cell in six.iteritems(mpl_table._cells):
+            cell.set_edgecolor(edge_color)
+            if k[0] == 0 or k[1] < header_columns:
+                cell.set_text_props(weight='bold', color='w')
+                cell.set_facecolor(header_color)
+                cell.get_text().set_color('white')
+
+            else:
+                cell.set_facecolor(row_colors[k[0] % len(row_colors)])
+                cell.get_text().set_color('white')
+
+        # save png and return it to user
+        png_path = '{}/img/{}_table.png'.format('./sources', name)
+        plt.savefig(png_path, transparent=True)
+
+    @staticmethod
+    def five_year_graph(data, name):
+        df = pd.DataFrame(data.json()['series'][0]['data'])
+        labels = df['date'].str.split('T')
+        fig, ax = plt.subplots()
+        fig.canvas.draw()
+
+        ax.set_xticklabels([i[0] for i in labels])
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(45)
+        plt.plot(df['x'], df['y'])
+
+        # save png and return it to user
+        png_path = '{}/img/{}_graph.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)
