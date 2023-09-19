@@ -99,5 +99,21 @@ class Transformer:
                 cell.get_text().set_color('white')
 
         # save png and return it to user
-        png_path = '{}/img/{}_table.png'.format('/Users/18933996/Desktop/Chat_bot/FinGigaChat/sources', name)
+        png_path = '{}/img/{}_table.png'.format('./sources', name)
+        plt.savefig(png_path, transparent=True)
+
+    @staticmethod
+    def five_year_graph(data, name):
+        df = pd.DataFrame(data.json()['series'][0]['data'])
+        labels = df['date'].str.split('T')
+        fig, ax = plt.subplots()
+        fig.canvas.draw()
+
+        ax.set_xticklabels([i[0] for i in labels])
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(45)
+        plt.plot(df['x'], df['y'])
+
+        # save png and return it to user
+        png_path = '{}/img/{}_graph.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)

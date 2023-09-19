@@ -35,7 +35,29 @@ list_of_companies = \
 
 chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
-path_to_source = '/FinGigaChat/sources'
+data_market_base_url = 'https://markets.tradingeconomics.com/'
+path_to_source = './sources'
 api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
+psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
+
+mail_username = "ai-helper@mail.ru"
+mail_password = "ExamKejCpmcpr8kM5emw"
+mail_imap_server = "imap.mail.ru"
+summarization_prompt = (
+    'Ты - суммаризатор новостной ленты.'
+    'На вход тебе будут подаваться новости.'
+    'Твоя задача - суммаризировать новость.'
+    ''
+    'Формат ответа:'
+    '- суммаризация не должна быть слишком длинной;'
+    '- тезисы должны быть лаконичными;'
+    '- основная мысль не должна искажаться;'
+    '- любые факты, которых не было в оригинальной статье, недопустимы;'
+    '- нельзя использовать вводные слова, только текст суммаризации.'
+    ''
+    'ВАЖНО! Игнорировать формат ответа нельзя! Все условия должны соответствовать формату ответа!'
+    ''
+    'Вот текст:'
+)

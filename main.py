@@ -1,31 +1,39 @@
-from selenium.webdriver.firefox.options import Options
 from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from selenium import webdriver
+from sqlalchemy import create_engine
 import requests as req
 from lxml import html
 import pandas as pd
 import warnings
 import config
+import time
+import datetime
+import re
+from typing import List, Tuple, Dict
 
 
 class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
-        user_object = ue.ResearchParser()
+        # user_object = ue.ResearchParser()
+        # rebase = config.research_base_url
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
-        rebase = config.research_base_url
+        psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
+        data_market_base_url =  config.data_market_base_url
 
-        self.rebase = rebase
+        # self.rebase = rebase
+        # self.user_object = user_object
+        self.psql_engine = psql_engine
         self.parser_obj = parser_obj
-        self.user_object = user_object
         self.path_to_source = path_to_source
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
+        self.data_market_base_url = data_market_base_url
 
     def table_collector(self, session: req.sessions.Session):
         all_tables = []
@@ -44,6 +52,19 @@ class Main:
                 print(url[2])
                 print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
+
+    def graph_collector(self, url, session: req.sessions.Session):
+        name = url.split('/')[-1]
+        euro_standart, page_html = self.parser_obj.get_html(url, session)
+        auth = re.findall(r"TESecurify = ('.+');", page_html)
+        graph_url = '{}chart?s=lmahds03:com&' \
+                    'span=5y&' \
+                    'securify=new&' \
+                    'url=/commodity/{}&' \
+                    'AUTH={}&' \
+                    'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+        data = req.get(graph_url, verify=False)
+        self.transformer_obj.five_year_graph(data, name)
 
     @staticmethod
     def bond_block(table_bonds: list) -> pd.DataFrame:
@@ -86,7 +107,7 @@ class Main:
             tree = html.fromstring(page_html)
 
             # USDOLLAR
-            object_xpath = '//*[@id="__next"]/div[2]/div[2]/div/div[1]/div/div[1]/div[3]/div/div[1]/div[1]'
+            object_xpath = '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]'
             price = tree.xpath('{}/text()'.format(object_xpath))
             # usd-cny
             if not price:
@@ -146,19 +167,19 @@ class Main:
         elif table_metals[0] == 'Металлы' and page_metals == 'coal-(api2)-cif-ara-futures-historical-data':
             if 'Price' in table_metals[3].columns:
                 table_metals[3]['Date'] = table_metals[3]['Date'].astype('datetime64[ns]')
-                day_day = table_metals[3]['Date'][0] - relativedelta(days=1)
+                # day_day = table_metals[3]['Date'][0] - relativedelta(days=1)
                 week_day = table_metals[3]['Date'][0] - relativedelta(weeks=1)
                 month_day = table_metals[3]['Date'][0] - relativedelta(months=1)
                 year_day = table_metals[3]['Date'][0] - relativedelta(years=1)
 
-                day_table = table_metals[3].loc[table_metals[3]['Date'] == str(day_day).split()[0]]
+                # day_table = table_metals[3].loc[table_metals[3]['Date'] == str(day_day).split()[0]]
                 week_table = table_metals[3].loc[table_metals[3]['Date'] == str(week_day).split()[0]]
                 month_table = table_metals[3].loc[table_metals[3]['Date'] == str(month_day).split()[0]]
                 year_table = table_metals[3].loc[table_metals[3]['Date'] == str(year_day).split()[0]]
-                temp_table = pd.concat([table_metals[3].head(1), day_table, week_table, month_table, year_table],
+                temp_table = pd.concat([table_metals[3].head(1), week_table, month_table, year_table],
                                        ignore_index=True)
 
-                temp_table['Metals'] = 'Железорудное сырье'
+                temp_table['Metals'] = 'Эн. уголь'
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 try:
@@ -172,6 +193,7 @@ class Main:
     def main(self) -> None:
         session = req.Session()
         all_tables = self.table_collector(session)
+        engine = create_engine(self.psql_engine)
         print('All collected')
         all_tables.append(
             ['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
@@ -217,25 +239,39 @@ class Main:
 
         metal_writer = pd.ExcelWriter('sources/tables/metal.xlsx')
         big_table = pd.DataFrame(columns=['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date'])
-        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Day', 'Weekly', 'Date'])
+        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Weekly', 'Date'])
         U7N23_df = pd.DataFrame(U7N23, columns=['Metals', 'Price'])
         for table in metals_kot:
             big_table = pd.concat([big_table, table], ignore_index=True)
         big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)
+
         big_table.to_excel(metal_writer, sheet_name='Металы')
+        # Write to metals DB
+        big_table.to_sql('metals', if_exists='replace', index=False, con=engine)
 
         exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-        pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
-            .drop_duplicates(subset=['Валюта'], ignore_index=True) \
-            .to_excel(exchange_writer, sheet_name='Курсы валют')
+        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
+            .drop_duplicates(subset=['Валюта'], ignore_index=True)
+        fx_df.to_excel(exchange_writer, sheet_name='Курсы валют')
+        # Write to fx DB
+        fx_df.to_sql('exc', if_exists='replace', index=False, con=engine)
 
         eco_writer = pd.ExcelWriter('sources/tables/eco.xlsx')
-        pd.DataFrame(eco_frst_third).to_excel(eco_writer, sheet_name='Ставка')
+        eco_stake = pd.DataFrame(eco_frst_third)
+        eco_stake.to_excel(eco_writer, sheet_name='Ставка')
         world_bet.to_excel(eco_writer, sheet_name='Ключевые ставки ЦБ мира')
         rus_infl.to_excel(eco_writer, sheet_name='Инфляция в России')
+        # write to eco_stake DB
+        eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=engine)
+        # write to eco_global_stake DB
+        world_bet.to_sql('eco_global_stake', if_exists='replace', index=False, con=engine)
+        # write to eco_rus_influence DB
+        rus_infl.to_sql('eco_rus_influence', if_exists='replace', index=False, con=engine)
 
         bonds_writer = pd.ExcelWriter('sources/tables/bonds.xlsx')
         bonds_kot.to_excel(bonds_writer, sheet_name='Блок котировки')
+        # write to bonds DB
+        bonds_kot.to_sql('bonds', if_exists='replace', index=False, con=engine)
 
         bonds_writer.close()
         eco_writer.close()
@@ -244,56 +280,105 @@ class Main:
 
         return None
 
-    def collect_research(self) -> None:
-        guest_group = 'group/guest'
-        economy_url = '{}{}/econ?countryIsoCode=RUS'.format(self.rebase, guest_group)
-        money_url = '{}{}/money'.format(self.rebase, guest_group)
-        metal_url = '{}{}/comm'.format(self.rebase, guest_group)
-        company_url = '{}{}/companies?companyId='.format(self.rebase, guest_group)
-        print('Start to parce research...')
+    def collect_research(self, driver) -> (dict, dict):
+        """
+        Collect all type of reviews from CIB Research
+        And get page html with fin data about companies from CIB Research
+        :return: dict with data reviews, dict with html page
+        """
 
-        options = Options()
-        options.headless = True
+        print('research start')
+        economy, money, comm = 'econ', 'money', 'comm'
+        authed_user = ue.ResearchParser(driver)
 
-        driver = webdriver.Firefox(options=options)
-        authed_user = self.user_object.auth(driver)
-        print('Auth... OK')
+        # economy
+        eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
+        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                name_of_review='Экономика России. Ежемесячный обзор')
+        print('economy...ok')
 
-        ''' MAIN BLOCK '''
+        # bonds
+        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                            name_of_review='Валютный рынок и процентные ставки',
+                                            type_of_review='bonds', count_of_review=2)
+        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
+                                              name_of_review='Денежный рынок. Еженедельный обзор')
+        print('bonds...ok')
 
-        # ECONOMY
-        actual_reviews = self.user_object.get_everyday_reviews(authed_user, economy_url)
-        global_eco_review = self.user_object.get_eco_review(authed_user, economy_url)
-        print('ECONOMY... OK')
+        # exchange
+        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                               name_of_review='Валютный рынок и процентные ставки',
+                                               type_of_review='exchange', count_of_review=2)
+        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                     name_of_review='Ежемесячный обзор по юаню')
+        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                      name_of_review='Ежемесячный дайджест по мягким валютам')
+        print('exchange...ok')
 
-        # BONDS
-        every_money = self.user_object.get_everyday_money(authed_user, money_url)
-        global_money_review = self.user_object.get_money_review(authed_user, money_url)
-        print('BONDS... OK')
+        # commodity
+        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
+                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        print('commodity...ok')
 
-        # EXCHANGE
-        every_kurs = self.user_object.get_everyday_money(authed_user, money_url,
-                                                         text_filter=('Валютный рынок:', 'Прогноз.'))
-        global_kurs_review_uan = self.user_object.get_money_review(authed_user, money_url, 'Ежемесячный обзор по юаню')
-        global_kurs_review_soft = self.user_object.get_money_review(authed_user, money_url,
-                                                                    'Ежемесячный обзор по мягким валютам')
-        print('EXCHANGE... OK')
+        exchange_month = exchange_month_uan + exchange_month_soft
+        reviews = {
+            'Economy day': eco_day,
+            'Economy month': eco_month,
+            'Bonds day': bonds_day,
+            'Bonds month': bonds_month,
+            'Exchange day': exchange_day,
+            'Exchange month': exchange_month,
+            'Commodity day': commodity_day
+        }
 
-        # METALS
-        every_metals = self.user_object.get_everyday_money(authed_user, metal_url, 'Сырьевые товары', ('>', '>'))
-        print('METALS... OK')
+        # companies
+        companies_pages_html = dict()
+        for company in self.list_of_companies:
+            page_html = authed_user.get_company_html_page(url_part=company[0])
+            companies_pages_html[company[1]] = page_html
+        print('companies page...ok')
 
-        ''' COMPANIES '''
+        return reviews, companies_pages_html
+
+    def save_reviews(self, reviews_to_save:  Dict[str, List[Tuple]]) -> None:
+        """
+        Save all reviews into the database.
+        :param reviews_to_save: dict of list of the reviews
+        """
+        # TODO: мб сделать одну таблицу для обзоров ?
+
+        engine = create_engine(self.psql_engine)
+        table_name_for_review = {
+            'Economy day': 'report_eco_day',
+            'Economy month': 'report_eco_mon',
+            'Bonds day': 'report_bon_day',
+            'Bonds month': 'report_bon_mon',
+            'Exchange day': 'report_exc_day',
+            'Exchange month': 'report_exc_mon',
+            'Commodity day': 'report_met_day'
+        }
+
+        for review_name in table_name_for_review:
+            table_name = table_name_for_review.get(review_name)
+            reviews_list = reviews_to_save.get(review_name)
+            pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
+
+        print('SAVE REVIEWS...ok')
+
+    def process_companies_data(self, company_pages_html) -> None:
+        """
+        Process and save fin mark of the companies.
+        :param company_pages_html: html page with fin mark from CIB Research
+        """
+        # TODO: изменить сохранение ?
 
         list_of_companies_df = pd.DataFrame(self.list_of_companies, columns=['ID', 'Name', 'URL'])
         comp_size = len(self.list_of_companies)
         page_tables = []
 
-        for comp_num, company in enumerate(self.list_of_companies):
+        for comp_num, company in enumerate(company_pages_html):
             print('{}/{}'.format(comp_num + 1, comp_size))
-            authed_user.get('{}{}'.format(company_url, company[0]))
-            page_html = authed_user.page_source
-
+            page_html = company_pages_html.get(company)
             tables = self.transformer_obj.get_table_from_html(True, page_html)
             pd.set_option('display.max_columns', None)
             tables[0]["group_no"] = tables[0].isnull().all(axis=1).cumsum()
@@ -306,40 +391,41 @@ class Main:
                 df = df.drop(['Unnamed: 0', 'index', 'group_no'], axis=1)
                 df = df.drop(index=df.index[0], axis=0)
                 df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
-                page_tables.append([tables_names[i], company[0], df])
-            print('OK\n')
-        driver.close()
+                page_tables.append([tables_names[i], company, df])
 
-        text_writer = pd.ExcelWriter('sources/tables/text.xlsx')
-        pd.DataFrame(actual_reviews).to_excel(text_writer, sheet_name='Экономика. День')
-        pd.DataFrame(global_eco_review).to_excel(text_writer, sheet_name='Экономика. Месяц')
-        print('ECO block is saved')
-
-        pd.DataFrame(every_money).to_excel(text_writer, sheet_name='Облиигации. День')
-        pd.DataFrame(global_money_review).to_excel(text_writer, sheet_name='Облиигации. Месяц')
-        print('BONDS block is saved')
-
-        pd.DataFrame(every_kurs).to_excel(text_writer, sheet_name='Курсы. День')
-        pd.DataFrame(global_kurs_review_uan + global_kurs_review_soft).to_excel(text_writer, sheet_name='Курсы. Месяц')
-        print('EXCHANGE block is saved')
-
-        pd.DataFrame(every_metals[0]).to_excel(text_writer, sheet_name='Металлы. День')
-        print('METAL block is saved')
-        text_writer.close()
-
-        companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
-        list_of_companies_df.to_excel(companies_writer, sheet_name='head')
-        for df in page_tables:
-            df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
-        print('companies block is saved')
-        companies_writer.close()
-
-        return None
+            companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
+            list_of_companies_df.to_excel(companies_writer, sheet_name='head')
+            for df in page_tables:
+                df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
+            print('companies block is saved')
+            companies_writer.close()
 
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    runner = Main()
-    runner.parser_obj.get_proxy_addresses()
-    runner.main()
-    runner.collect_research()
+    while True:
+        runner = Main()
+        runner.parser_obj.get_proxy_addresses()
+        runner.main()
+
+        # collect and save research data
+        firefox_options = webdriver.FirefoxOptions()
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        try:
+            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+            runner.save_reviews(reviews_dict)
+            runner.process_companies_data(companies_pages_html_dict)
+        except Exception as e:
+            print(f'Some error with Research, check: {e}')
+        finally:
+            driver.close()
+
+        i = 0
+        with open('sources/tables/time.txt', 'w') as f:
+            f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
+        print('Wait 3 hours before recollect data...')
+
+        while i <= 3:
+            i += 1
+            time.sleep(3600)
+            print('In waiting. \n{}/3 hours'.format(3-i))
