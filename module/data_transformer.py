@@ -103,13 +103,24 @@ class Transformer:
         png_path = '{}/img/{}_table.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)
 
+    def __draw_plot(df):
+        labels = df['date'].str.split('T')
+        fig, ax = plt.subplots()
+        fig.canvas.draw()
+
+        ax.set_xticklabels([i[0] for i in labels])
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(45)
+        plt.plot(df['x'], df['y'])
+
     @staticmethod
     def five_year_graph(data, name):
-        if type(data).__name__ == 'DataFrame':
+        if isinstance(data,pd.DataFrame):
             Transformer.__draw_plot(data)
         else:
             df = pd.DataFrame(data.json()['series'][0]['data'])
             Transformer.__draw_plot(df)
+            
         name = name.replace('/','_')
         name = name.replace(' ','_')
         # save png and return it to user

@@ -4,6 +4,7 @@ import selenium
 import selenium.webdriver as wb
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 import re
 import config
 import random
@@ -12,9 +13,8 @@ from typing import List
 import pandas as pd
 import datetime
 import json
-from . import data_transformer as dt
+from module import data_transformer as Transformer
 from bs4 import BeautifulSoup
-
 
 class ResearchError(Exception):
     """ Base class for Research exception """
@@ -249,18 +249,18 @@ class InvestingAPIParser:
     def get_graph_investing(self, url: str):
         """
         Get plot data of investing.com api
+        :param url: investing.com api url
+        :return: price chart df
         """
         
         self.driver.get(url)
-        page_html = self.driver.page_source
         data = self.driver.find_element(By.TAG_NAME,
                                          'pre').text
         json_obj = json.loads(data)
-        json_obj['data']
 
         df = pd.DataFrame()
         for day in json_obj['data']:
-            date = dt.Transformer.unix_to_default(day[0])
+            date = Transformer.Transformer.unix_to_default(day[0])
             x = day[0]
             y = day[1]
             row = {'date':date,'x':x,'y':y}
@@ -271,8 +271,11 @@ class InvestingAPIParser:
     def get_streaming_chart_investing(self, url: str):
         """
         Get streaming chart data of investing.com
+        :param url: rows of text of money review
+        :return: price chart df
         """
-        url = url+'-streaming-chart'
+
+        url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID,'last_last').text
 
@@ -292,6 +295,7 @@ class MetalsWireParser:
     def get_table_data(self):
         """
         Get table data of MetalsWire
+        :return: commodities price chart df
         """
         self.driver.get(self.table_link)
         time.sleep(5)
