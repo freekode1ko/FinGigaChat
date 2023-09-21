@@ -2,7 +2,7 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
-from models.commodity_pricing import CommodityPricing
+from sql_model.commodity_pricing import CommodityPricing
 from selenium import webdriver
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
