@@ -5,8 +5,10 @@ import numpy as np
 import six
 import datetime
 import config
+import copy
 
 class Transformer:
+
     @staticmethod
     def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
         """
@@ -103,6 +105,15 @@ class Transformer:
         png_path = '{}/img/{}_table.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)
 
+    # def __draw_plot(df, name):
+    #     labels = df['date'].str.split('T')
+    #     fig, ax = plt.subplots()
+    #     fig.canvas.draw()
+
+    #     ax.set_xticklabels([i[0] for i in labels])
+    #     for tick in ax.get_xticklabels():
+    #         tick.set_rotation(45)
+    #     plt.plot(df['x'], df['y'])
     def __draw_plot(df, name):
         labels = []
         xticks = []
@@ -189,10 +200,10 @@ class Transformer:
         """
         Create urls to charts 
         """
+        
         unix_timestamp = Transformer.default_to_unix()
-
-        charts_links = config.charts_links
-        commodities = config.dict_of_commodities
+        charts_links = copy.deepcopy(config.charts_links)
+        commodities = copy.deepcopy(config.dict_of_commodities)
 
         for commodity in commodities:
             if len(commodities[commodity]['links']) > 1:
