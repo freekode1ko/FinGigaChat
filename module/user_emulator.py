@@ -254,8 +254,8 @@ class InvestingAPIParser:
         """
         
         self.driver.get(url)
-        data = self.driver.find_element(By.TAG_NAME,
-                                         'pre').text
+        data = self.driver.find_element(By.ID,
+                                         'json').text
         json_obj = json.loads(data)
 
         df = pd.DataFrame()

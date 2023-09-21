@@ -171,27 +171,21 @@ class Main:
         engine = create_engine(self.psql_engine)
         Session = sessionmaker(bind=engine)
         session = Session()
+        q = session.query(CommodityPricing)
 
-        commodity_pricing_old = pd.read_sql_query("select id from commodity_pricing", con=engine)
-
-        if len(commodity_pricing_old['id'].values) == 27:
+        if q.count() == 27:
             for i, row in df_combined.iterrows():
-                commodity_price_obj = CommodityPricing(id = int(commodity_pricing_old['id'].values[i]),
-                                                    commodity_id=int(row['commodity_id']),
-                                                    subname=row['subname'],
-                                                    unit=row['unit'],
-                                                    price=row['price'],
-                                                    m_delta=row['m_delta'],
-                                                    y_delta=row['y_delta'],
-                                                    cons=row['cons'])
-                session.merge(commodity_price_obj, load=True)
+
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                    update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
+                
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
                                                     commodity_id=int(row['commodity_id']),
                                                     subname=row['subname'],
-                                                    unit=row['unit'],
+                                                    unit=row['unit'], 
                                                     price=row['price'],
                                                     m_delta=row['m_delta'],
                                                     y_delta=row['y_delta'],
