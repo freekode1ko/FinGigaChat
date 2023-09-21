@@ -173,7 +173,7 @@ class Main:
         session = Session()
 
         commodity_pricing_old = pd.read_sql_query("select id from commodity_pricing", con=engine)
-        print(len(commodity_pricing_old['id'].values))
+
         if len(commodity_pricing_old['id'].values) == 27:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(id = int(commodity_pricing_old['id'].values[i]),
