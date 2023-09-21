@@ -102,7 +102,7 @@ class Main:
     def commodities_plot_collect(self, session: req.sessions.Session, driver):
         self.get_metals_wire_table_data(driver)
         commodity_pricing = pd.DataFrame()
-        
+
         for commodity in self.commodities:
             link = self.commodities[commodity]['links'][0]
             name = self.commodities[commodity]['naming']
@@ -171,16 +171,32 @@ class Main:
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        for i,key in df_combined.iterrows():
-            commodity_price_obj = CommodityPricing(commodity_id=int(df_combined.iloc[i]['commodity_id']),
-                                                subname=df_combined.iloc[i]['subname'],
-                                                unit=df_combined.iloc[i]['unit'], 
-                                                price=df_combined.iloc[i]['price'],
-                                                m_delta=df_combined.iloc[i]['m_delta'],
-                                                y_delta=df_combined.iloc[i]['y_delta'],
-                                                cons=df_combined.iloc[i]['cons'])
-            session.merge(commodity_price_obj)
-            session.commit()
+        commodity_pricing_old = pd.read_sql_query("select id from commodity_pricing", con=engine)
+        print(len(commodity_pricing_old['id'].values))
+        if len(commodity_pricing_old['id'].values) == 27:
+            for i, row in df_combined.iterrows():
+                commodity_price_obj = CommodityPricing(id = int(commodity_pricing_old['id'].values[i]),
+                                                    commodity_id=int(row['commodity_id']),
+                                                    subname=row['subname'],
+                                                    unit=row['unit'], 
+                                                    price=row['price'],
+                                                    m_delta=row['m_delta'],
+                                                    y_delta=row['y_delta'],
+                                                    cons=row['cons'])
+                session.merge(commodity_price_obj, load=True)
+                session.commit()
+        else:
+            for i, row in df_combined.iterrows():
+                commodity_price_obj = CommodityPricing(
+                                                    commodity_id=int(row['commodity_id']),
+                                                    subname=row['subname'],
+                                                    unit=row['unit'], 
+                                                    price=row['price'],
+                                                    m_delta=row['m_delta'],
+                                                    y_delta=row['y_delta'],
+                                                    cons=row['cons'])
+                session.merge(commodity_price_obj, load=True)
+                session.commit()
 
         session.close()
 
