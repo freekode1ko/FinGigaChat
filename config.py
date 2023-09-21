@@ -37,9 +37,12 @@ chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
-api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
+# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
+api_token = '6450117814:AAGZ4e0NqRD0ZYJQRWODEqNY8H1LbV3Y99Q'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
+# psql_engine = 'postgresql://admin:root@localhost:5432/postgres'
+
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
 mail_username = "ai-helper@mail.ru"
@@ -76,168 +79,196 @@ dict_of_commodities = \
             'links': ['CO1'],
             'to_take':4,
             'measurables': '$/бар',
-            'naming': 'Brent'
+            'naming': 'Brent',
+            'alias':'Нефть'
         },
         'Нефть WTI': {
             'links': ['USCRWTIC'],
             'to_take':3,
             'measurables': '$/бар',
-            'naming': 'WTI'
+            'naming': 'WTI',
+            'alias':'Нефть'
         },
         'Нефть Urals': {
             'links': ['1168084',
                   'https://www.investing.com/commodities/crude-oil-urals-spot-futures'],
             'to_take':1,
             'measurables': '$/бар',
-            'naming': 'Urals'
+            'naming': 'Urals',
+            'alias':'Нефть'
         },
         'СПГ Япония/ Корея': {
             'links': ['JKL1'],
             'to_take':1,
             'measurables': '$/MMBTU',
-            'naming': 'LNG Japan/Korea' 
+            'naming': 'LNG Japan/Korea' ,
+            'alias':'СПГ'
         },
         'Золото': {
             'links': ['XAU'],
             'to_take':4,
             'measurables': '$/унц',
-            'naming': 'Gold spot'  
+            'naming': 'Gold spot',
+            'alias':''
         },
         'Медь': {
             'links': ['LMCADY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Copper LME spot price'  
+            'naming': 'Copper LME spot price',
+            'alias':''  
         },
         'Алюминий': {
             'links': ['AHDY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Aluminium LME spot'  
+            'naming': 'Aluminium LME spot',
+            'alias':''  
         },
         'Никель': {
             'links': ['LMNIDY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Nickel LME spot'  
+            'naming': 'Nickel LME spot',
+            'alias':''  
         },
         'Палладий': {
             'links': ['PALL'],
             'to_take':4,
             'measurables': '$/унц',
-            'naming': 'Palladium LME spot'  
+            'naming': 'Palladium LME spot',
+            'alias':''  
         },
         'Платина': {
             'links': ['PLAT'],
             'to_take':4,
             'measurables': '$/унц',
-            'naming': 'Platinum LME spot'  
+            'naming': 'Platinum LME spot',
+            'alias':''  
         },
         'Цинк': {
             'links': ['LMZSDY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Zinc LME spot'  
+            'naming': 'Zinc LME spot',
+            'alias':''  
         },
         'Свинец': {
             'links': ['LMPBDY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Lead LME spot'  
+            'naming': 'Lead LME spot',
+            'alias':''  
         },
         'Серебро': {
             'links': ['SILV'],
             'to_take':4,
             'measurables': '$/унц',
-            'naming': 'Silver spot'  
+            'naming': 'Silver spot',
+            'alias':''  
         },
         'Кобальт': {
             'links': ['LMCODY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Cobalt LME spot'  
+            'naming': 'Cobalt LME spot',
+            'alias':''  
         },
         'ЖРС': {
             'links': ['MB020424'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Iron ore 62% Fe CFR China'  
+            'naming': 'Iron ore 62% Fe CFR China',
+            'alias':''  
         },
         'Олово': {
             'links': ['LMSNDY'],
             'to_take':4,
             'measurables': '$/т',
-            'naming': 'Tin LME spot'  
+            'naming': 'Tin LME spot',
+            'alias':''  
         },
         'Уран': {
             'links': ['UXA1'],
             'to_take':3,
             'measurables': '$/фунт',
-            'naming': 'Generic 1st UxC Uranium Price'  
+            'naming': 'Generic 1st UxC Uranium Price',
+            'alias':''  
         },
         'Уголь Европа CIF ARA': {
             'links': ['CIFARA'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': '6,000kcal, CIF ARA'  
+            'naming': '6,000kcal, CIF ARA',
+            'alias':'Уголь'  
         },
         'Коксующийся уголь': {
             'links': ['AUHCC1D'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'HCC FOB Australia'  
+            'naming': 'HCC FOB Australia',
+            'alias':''  
         },
         'Рулон г/к FOB Черное море': {
             'links': ['RUHRC2'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'HRC FOB Black Sea'  
+            'naming': 'HRC FOB Black Sea',
+            'alias':'Сталь'  
         },
         'Чугун FOB Черное море': {
             'links': ['RUPIGIRON1'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'Pig Iron, FOB Black Sea'  
+            'naming': 'Pig Iron, FOB Black Sea',
+            'alias':'Сталь'  
         },
         'Арматура РФ': {
             'links': ['RUREBAR1'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'Rebar, Russia domestic'  
+            'naming': 'Rebar, Russia domestic',
+            'alias':'Сталь'  
         },
         'Лом РФ': {
             'links': ['RUSCRAP2'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'Scrap Russia domestic'  
+            'naming': 'Scrap Russia domestic',
+            'alias':'Сталь'  
         },
         'Cляб FOB Черное море': {
             'links': ['RUSLAB'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'Scrap FOB Black Sea'  
+            'naming': 'Scrap FOB Black Sea',
+            'alias':'Сталь'  
         },
         'Электроэнергия в РФ (Европа)': {
             'links': ['RUelectricityEurope'],
             'to_take':3,
             'measurables': 'руб/MWh',
-            'naming': 'Electricity price Russia - Europe'  
+            'naming': 'Electricity price Russia - Europe',
+            'alias':'Электроэнергия'  
         },
         'Электроэнергия в РФ (Сибирь)': {
             'links': ['RUelectricitySiberia'],
             'to_take':3,
             'measurables': 'руб/MWh',
-            'naming': 'Electricity price Russia - Siberia'  
+            'naming': 'Electricity price Russia - Siberia',
+            'alias':'Электроэнергия'  
         },
         'Аммиак': {
             'links': ['AR96530000'],
             'to_take':3,
             'measurables': '$/т',
-            'naming': 'Ammonia, CFR Tampa'  
+            'naming': 'Ammonia, CFR Tampa',
+            'alias':''  
         },
         'Газ': {
             'links': ['https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
             'measurables': '$/тыс м3',
-            'naming': 'Gas'   
-        }
+            'naming': 'Gas',
+            'alias':''   
+        },
     }
