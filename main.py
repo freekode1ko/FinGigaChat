@@ -2,11 +2,14 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
+from models.commodity_pricing import CommodityPricing
 from selenium import webdriver
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import requests as req
 from lxml import html
 import pandas as pd
+import numpy as np
 import warnings
 import config
 import time
@@ -98,28 +101,88 @@ class Main:
 
     def commodities_plot_collect(self, session: req.sessions.Session, driver):
         self.get_metals_wire_table_data(driver)
-        commodity_table = pd.DataFrame()
+        commodity_pricing = pd.DataFrame()
+        
         for commodity in self.commodities:
             link = self.commodities[commodity]['links'][0]
             name = self.commodities[commodity]['naming']
-            self.graph_collector(link,session,driver,name)
+            print(commodity)
+            self.graph_collector(link,session,driver,commodity)
 
             if len(self.commodities[commodity]['links'])>1:
                 url = self.commodities[commodity]['links'][1]
                 InvAPI_obj = ue.InvestingAPIParser(driver)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
-                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':streaming_price}
-                commodity_table = pd.concat([commodity_table, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-            else:
+                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price),1)}
+
+                if self.commodities[commodity]['alias'] != '':
+                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                else:
+                    dict_row['alias'] = commodity.lower().strip()
+
+                dict_row['unit'] = self.commodities[commodity]['measurables']
+                dict_row['Resource'] = commodity
+
+                commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+
+            elif self.commodities[commodity]['naming']!='Gas':
                 to_take = self.commodities[commodity]['to_take']+1
                 table = self.metals_wire_table
                 row_index = table.index[table['Resource'] == name][0]
                 dict_row = {}
                 for key in table.iloc[row_index][:to_take].keys():
                     dict_row[key] = table.iloc[row_index][:to_take][key]
-                commodity_table = pd.concat([commodity_table, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+
+                for key in dict_row:
+                    if key not in ['Resource']:
+                        if dict_row[key].strip() != '':
+                            num = round(float(dict_row[key].strip().split('%')[0]),1)
+                            dict_row[key] = num
+                        else:
+                            dict_row[key] = np.nan
+                    
+                if self.commodities[commodity]['alias'] != '':
+                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                else:
+                    dict_row['alias'] = commodity.lower().strip()
+
+                dict_row['unit'] = self.commodities[commodity]['measurables']
+                dict_row['Resource'] = commodity
+
+                commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+        
+        engine = create_engine(self.psql_engine)
+        commodity = pd.read_sql_query("select * from commodity", con=engine)
+
+        commodity_ids = pd.DataFrame()
+
+        for i,row in commodity_pricing.iterrows():
+            commodity_id = commodity[commodity['name'] == row['alias']]['id']
             
-        commodity_table.to_csv('sources/tables/commodities.csv',sep=';')
+            dict_row = {'commodity_id':commodity_id.values[0]}
+            commodity_ids = pd.concat([commodity_ids, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+
+        df_combined = pd.concat([commodity_pricing, commodity_ids], axis=1)
+        df_combined = df_combined.rename(columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta',"Cons-s'23":'cons'})
+        df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
+        df_combined = df_combined.drop(columns=['alias'])
+
+        engine = create_engine(self.psql_engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        for i,key in df_combined.iterrows():
+            commodity_price_obj = CommodityPricing(commodity_id=int(df_combined.iloc[i]['commodity_id']),
+                                                subname=df_combined.iloc[i]['subname'],
+                                                unit=df_combined.iloc[i]['unit'], 
+                                                price=df_combined.iloc[i]['price'],
+                                                m_delta=df_combined.iloc[i]['m_delta'],
+                                                y_delta=df_combined.iloc[i]['y_delta'],
+                                                cons=df_combined.iloc[i]['cons'])
+            session.merge(commodity_price_obj)
+            session.commit()
+
+        session.close()
 
     @staticmethod
     def bond_block(table_bonds: list) -> pd.DataFrame:

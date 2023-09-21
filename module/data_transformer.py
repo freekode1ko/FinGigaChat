@@ -103,29 +103,63 @@ class Transformer:
         png_path = '{}/img/{}_table.png'.format('./sources', name)
         plt.savefig(png_path, transparent=True)
 
-    def __draw_plot(df):
-        labels = df['date'].str.split('T')
+    def __draw_plot(df, name):
+        labels = []
+        xticks = []
+        for i,date in enumerate(df['date']):
+            date_obj_year = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S').year
+            if date_obj_year not in labels:
+                labels.append(date_obj_year)
+                xticks.append(df.iloc[i]['x'])
+
+        while len(labels)>5:
+            del labels[0]
+            del xticks[0]
+    
+        first = df.loc[df['x'] == xticks[0], 'x'].index[0]
         fig, ax = plt.subplots()
         fig.canvas.draw()
 
-        ax.set_xticklabels([i[0] for i in labels])
-        for tick in ax.get_xticklabels():
-            tick.set_rotation(45)
-        plt.plot(df['x'], df['y'])
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        plt.xticks(xticks)
+        ax.set_xticklabels(labels)
+        ax.yaxis.set_tick_params(length=0)
+
+        color = (30/255, 212/255, 132/255)
+        ax.plot(df['x'][first:], df['y'][first:], color=color)
+        ax.yaxis.tick_right()
+
+        plt.xlim(df['x'].iloc[first],df['x'].iloc[-1])
+
+        y = df['y'].iloc[-1]
+        ax.axhline(y=y, color=color, linestyle='dotted')
+
+        x = df['x'].iloc[-1]
+        delta_x = (x/100)
+        y = round(y, 1)
+        delta_y = (y/100)*5
+        x_name = df['x'].iloc[first]
+        y_name = df['y'][first:].max()
+
+        ax.text(x_name, y_name, name, fontsize=14)
+        ax.text(x-delta_x, y+delta_y, y,fontsize=12, weight='bold')
+        ax.plot(x, y, 'o', markersize=6, color=color)
 
     @staticmethod
     def five_year_graph(data, name):
         if isinstance(data,pd.DataFrame):
-            Transformer.__draw_plot(data)
+            Transformer.__draw_plot(data, name)
         else:
             df = pd.DataFrame(data.json()['series'][0]['data'])
-            Transformer.__draw_plot(df)
-            
+            Transformer.__draw_plot(df, name)
+
         name = name.replace('/','_')
         name = name.replace(' ','_')
         # save png and return it to user
         png_path = '{}/img/{}_graph.png'.format('./sources', name)
-        plt.savefig(png_path, transparent=True)
+        plt.savefig(png_path, transparent=False)
 
     @staticmethod
     def unix_to_default(timestamp):
