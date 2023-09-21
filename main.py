@@ -37,7 +37,7 @@ class Main:
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
         self.data_market_base_url = data_market_base_url
-        self.commodities = transformer_obj.url_updater()
+        self.commodities = None
         self.metals_wire_table = None
 
     def table_collector(self, session: req.sessions.Session):
@@ -101,6 +101,7 @@ class Main:
 
     def commodities_plot_collect(self, session: req.sessions.Session, driver):
         self.get_metals_wire_table_data(driver)
+        self.commodities = self.transformer_obj.url_updater()
         commodity_pricing = pd.DataFrame()
 
         for commodity in self.commodities:
@@ -545,6 +546,7 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
         try:
             reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
             runner.save_reviews(reviews_dict)
@@ -553,6 +555,21 @@ if __name__ == '__main__':
             print(f'Some error with Research, check: {e}')
         finally:
             driver.close()
+
+        # collect and save commodity charts and a table
+        firefox_options = webdriver.FirefoxOptions()
+        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
+        firefox_options.add_argument(f'user-agent={user_agent}')
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
+        try:
+            session = req.Session()
+            runner.commodities_plot_collect(session,driver)
+        except Exception as e:
+            print(f'Some error with commodity parsing, check: {e}')
+        finally:
+            driver.close()
+
 
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
@@ -564,9 +581,7 @@ if __name__ == '__main__':
             time.sleep(3600)
             print('In waiting. \n{}/3 hours'.format(3-i))
 
-        # collect and plot charts
-        session = req.Session()
-        runner.commodities_plot_collect(session,driver)
+        
 
 
 ''' COLLECT RESEARCH OLD '''
