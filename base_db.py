@@ -190,39 +190,39 @@ def main():
 
     # create tables
     engine = create_engine(psql_engine)
-    #queries = [query_client, query_commodity, query_article,
-    #           query_relation_client, query_relation_commodity,
-    #           query_client_alternative, query_commodity_alternative,
-    #           query_chat, query_message, query_relation_client_msg, query_relation_commodity_msg]
-    print('HI!')
-    df = pd.read_sql('SELECT * FROM commodity', con=engine)
-    print(psql_engine)
-    print(df)
-    #with engine.connect() as conn:
-    #    for query in queries:
-    #        conn.execute(text(query))
-    #    conn.commit()
+    queries = [query_client, query_commodity, query_article,
+               query_relation_client, query_relation_commodity,
+               query_client_alternative, query_commodity_alternative,
+               query_chat, query_message, query_relation_client_msg, query_relation_commodity_msg]
+    # print('HI!')
+    # df = pd.read_sql('SELECT * FROM commodity', con=engine)
+    # print(psql_engine)
+    # print(df)
+    with engine.connect() as conn:
+        for query in queries:
+            conn.execute(text(query))
+        conn.commit()
 
     # insert client names in client table
-    #df_client = pd.read_csv(CLIENT_NAME_PATH, index_col=False)
-    #df_client.name = df_client.name.str.lower()
-    #df_client.to_sql('client', con=engine, if_exists='append', index=False)
+    df_client = pd.read_csv(CLIENT_NAME_PATH, index_col=False)
+    df_client.name = df_client.name.str.lower()
+    df_client.to_sql('client', con=engine, if_exists='append', index=False)
     
     # insert commodity names in commodity table
-    #df_commodity = pd.read_csv(COMMODITY_NAME_PATH, index_col=False)
-    #df_commodity.name = df_commodity.name.str.lower()
-    #df_commodity.to_sql('commodity', con=engine, if_exists='append', index=False)
+    df_commodity = pd.read_csv(COMMODITY_NAME_PATH, index_col=False)
+    df_commodity.name = df_commodity.name.str.lower()
+    df_commodity.to_sql('commodity', con=engine, if_exists='append', index=False)
 
     # make query to insert alternative client names in client_alternative table
-    #query_alternative_client_insert = make_alternative_tables(engine, 'client', CLIENT_ALTERNATIVE_NAME_PATH)
+    query_alternative_client_insert = make_alternative_tables(engine, 'client', CLIENT_ALTERNATIVE_NAME_PATH)
 
     # make query to insert alternative commodity names in commodity_alternative table
-    #query_alternative_commodity_insert = make_alternative_tables(engine, 'commodity', COMMODITY_ALTERNATIVE_NAME_PATH)
+    query_alternative_commodity_insert = make_alternative_tables(engine, 'commodity', COMMODITY_ALTERNATIVE_NAME_PATH)
 
-    #with engine.connect() as conn:
-    #    conn.execute(text(query_alternative_client_insert))
-    #    conn.execute(text(query_alternative_commodity_insert))
-    #    conn.commit()
+    with engine.connect() as conn:
+        conn.execute(text(query_alternative_client_insert))
+        conn.execute(text(query_alternative_commodity_insert))
+        conn.commit()
 
 
 if __name__ == '__main__':
