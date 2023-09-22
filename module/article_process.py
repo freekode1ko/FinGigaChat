@@ -188,12 +188,12 @@ class ArticleProcess:
         :param subject_id: id of commodity
         :return: list(dict) data about commodity pricing
         """
-        pricing_dict_key = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
+        pricing_keys = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
 
         with self.engine.connect() as conn:
             query_com_pricing = f'SELECT * FROM commodity_pricing WHERE commodity_id={subject_id}'
             com_data = conn.execute(text(query_com_pricing)).fetchall()
-        all_commodity_data = [{key: value for key, value in zip(pricing_dict_key, com[2:])} for com in com_data]
+        all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
         return all_commodity_data
 
     @staticmethod
