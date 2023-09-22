@@ -5,8 +5,10 @@ import numpy as np
 import six
 import datetime
 import config
+import copy
 
 class Transformer:
+
     @staticmethod
     def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
         """
@@ -189,10 +191,10 @@ class Transformer:
         """
         Create urls to charts 
         """
+        
         unix_timestamp = Transformer.default_to_unix()
-
-        charts_links = config.charts_links
-        commodities = config.dict_of_commodities
+        charts_links = copy.deepcopy(config.charts_links)
+        commodities = copy.deepcopy(config.dict_of_commodities)
 
         for commodity in commodities:
             if len(commodities[commodity]['links']) > 1:

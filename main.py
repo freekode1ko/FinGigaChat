@@ -37,7 +37,7 @@ class Main:
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
         self.data_market_base_url = data_market_base_url
-        self.commodities = transformer_obj.url_updater()
+        self.commodities = self.transformer_obj.url_updater()
         self.metals_wire_table = None
 
     def table_collector(self, session: req.sessions.Session):
@@ -79,7 +79,7 @@ class Main:
 
         elif 'profinance' in url:
             response = session.get(url)
-            with open(f'./sources/img/{name}.png', 'wb') as f:
+            with open(f'./sources/img/{name}_graph.png', 'wb') as f:
                 f.write(response.content)
         else:
             name = url.split('/')[-1]
@@ -170,27 +170,21 @@ class Main:
         engine = create_engine(self.psql_engine)
         Session = sessionmaker(bind=engine)
         session = Session()
+        q = session.query(CommodityPricing)
 
-        commodity_pricing_old = pd.read_sql_query("select id from commodity_pricing", con=engine)
-        print(len(commodity_pricing_old['id'].values))
-        if len(commodity_pricing_old['id'].values) == 27:
+        if q.count() == 27:
             for i, row in df_combined.iterrows():
-                commodity_price_obj = CommodityPricing(id = int(commodity_pricing_old['id'].values[i]),
-                                                    commodity_id=int(row['commodity_id']),
-                                                    subname=row['subname'],
-                                                    unit=row['unit'],
-                                                    price=row['price'],
-                                                    m_delta=row['m_delta'],
-                                                    y_delta=row['y_delta'],
-                                                    cons=row['cons'])
-                session.merge(commodity_price_obj, load=True)
+
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                    update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
+                
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
                                                     commodity_id=int(row['commodity_id']),
                                                     subname=row['subname'],
-                                                    unit=row['unit'],
+                                                    unit=row['unit'], 
                                                     price=row['price'],
                                                     m_delta=row['m_delta'],
                                                     y_delta=row['y_delta'],
@@ -545,6 +539,7 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
         try:
             reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
             runner.save_reviews(reviews_dict)
@@ -553,6 +548,21 @@ if __name__ == '__main__':
             print(f'Some error with Research, check: {e}')
         finally:
             driver.close()
+
+        # collect and save commodity charts and a table
+        firefox_options = webdriver.FirefoxOptions()
+        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
+        firefox_options.add_argument(f'user-agent={user_agent}')
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
+        try:
+            session = req.Session()
+            runner.commodities_plot_collect(session,driver)
+        except Exception as e:
+            print(f'Some error with commodity parsing, check: {e}')
+        finally:
+            driver.close()
+
 
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
@@ -564,6 +574,3 @@ if __name__ == '__main__':
             time.sleep(3600)
             print('In waiting. \n{}/3 hours'.format(3-i))
 
-        # collect and plot charts
-        session = req.Session()
-        runner.commodities_plot_collect(session,driver)
