@@ -188,7 +188,8 @@ def change_bad_summary(row: pd.Series) -> str:
     elif row['title']:
         return row['title']
     else:
-        return 'Ссылка на новость'
+        first_sentence = row['text'][:row['text'].find('.')+1]
+        return first_sentence
 
 
 def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
@@ -239,6 +240,7 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     :param threshold: limit value for deduplicate
     :return: df without duplicates article
     """
+    # TODO: учитывать кол-во найденных клиентов при удалении новости - удалять где меньше клиентов
     # make clean data for previous dataframe
     df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
     # concat two columns with news from both DFs.

@@ -177,8 +177,9 @@ class ArticleProcess:
                                   f'ORDER BY date DESC, relation.{subject}_score DESC '
                                   f'LIMIT 5')
 
-            article_data = [item[3:] for item in conn.execute(text(query_article_data))]
+            article_data = [item[2:] for item in conn.execute(text(query_article_data))]
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
+
             return name, article_data
 
     def _get_commodity_pricing(self, subject_id):
@@ -197,7 +198,7 @@ class ArticleProcess:
 
     @staticmethod
     def _make_place_number(number):
-        return '{0:,}'.format(round(number)).replace(',', ' ') if number else number
+        return '{0:,}'.format(round(number, 1)).replace(',', ' ') if number else number
 
     @staticmethod
     def make_format_msg(subject_name, articles, com_data):
@@ -213,10 +214,11 @@ class ArticleProcess:
         com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
 
         for index, article_data in enumerate(articles):
-            link, text_sum = article_data[0], article_data[1]
-            text_sum = ' '.join(text_sum.split())  # TODO: убрать разделение, когда полианалист удалит лишние пробелы
-            link_phrase = f'<a href="{link}">Ссылка на источник.</a>'
-            articles[index] = f'{marker} {text_sum} {link_phrase}'
+            date, link, text_sum = article_data[0], article_data[1], article_data[2]
+            date = date.strftime('%d.%m.%Y')
+            link_phrase = f'<a href="{link}">Источник</a>'
+            text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
+            articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
 
         all_articles = '\n\n'.join(articles)
         format_msg = f'<b>{subject_name.capitalize()}</b>\n\n{all_articles}'
