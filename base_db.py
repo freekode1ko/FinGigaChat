@@ -248,6 +248,11 @@ query_commodity_pricing = ('CREATE TABLE IF NOT EXISTS public.commodity_pricing'
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
+query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
+                                   "values ((SELECT id FROM public.commodity WHERE name = 'олово'), 'олово')")
+query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
+                                   "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), 'электроэнергия')")
+
 
 if __name__ == '__main__':
     main_engine = create_engine(psql_engine)
@@ -261,3 +266,6 @@ if __name__ == '__main__':
     # update_database(main_engine, query_delete_dupl)
     # insert new com: olovo
     # update_database(main_engine, query_commodity_olovo)
+    # insert alternative name for new com
+    update_database(main_engine, query_new_alternative_com_electro)
+    update_database(main_engine, query_new_alternative_com_olovo)
