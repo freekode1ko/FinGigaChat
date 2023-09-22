@@ -262,7 +262,7 @@ class InvestingAPIParser:
         for day in json_obj['data']:
             date = Transformer.Transformer.unix_to_default(day[0])
             x = day[0]
-            y = day[1]
+            y = day[4]
             row = {'date':date,'x':x,'y':y}
             df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
 

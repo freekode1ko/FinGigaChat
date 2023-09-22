@@ -3,6 +3,7 @@ import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
 from sql_model.commodity_pricing import CommodityPricing
+from sql_model.commodity import Commodity
 from selenium import webdriver
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -191,6 +192,18 @@ class Main:
                                                     cons=row['cons'])
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
+
+            q_gas = session.query(Commodity).filter(Commodity.name=='газ')
+            commodity_price_obj = CommodityPricing(
+                                                    commodity_id=q_gas[0].id,
+                                                    subname='Газ',
+                                                    unit=np.nan, 
+                                                    price=np.nan,
+                                                    m_delta=np.nan,
+                                                    y_delta=np.nan,
+                                                    cons=np.nan)
+            session.merge(commodity_price_obj, load=True)
+            session.commit()
 
         session.close()
 
