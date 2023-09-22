@@ -1,5 +1,6 @@
 import os
 import datetime as dt
+import numpy as np
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -156,12 +157,12 @@ class ArticleProcess:
                 return subject_id
         return False
 
-    def _get_article(self, subject_id: int, subject: str):
+    def _get_articles(self, subject_id: int, subject: str):
         """
         Get sorted sum article by subject id.
         :param subject_id: id of client or commodity
         :param subject: client or commodity
-        :return: name of client(commodity) and sorted sum article
+        :return: name of client(commodity) and sorted sum articles
         """
         with self.engine.connect() as conn:
             query_article_data = (f'SELECT relation.article_id, relation.{subject}_score, '
@@ -176,48 +177,90 @@ class ArticleProcess:
                                   f'ORDER BY date DESC, relation.{subject}_score DESC '
                                   f'LIMIT 5')
 
-            article_data = [item[3:] for item in conn.execute(text(query_article_data))]
+            article_data = [item[2:] for item in conn.execute(text(query_article_data))]
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
+
             return name, article_data
 
+    def _get_commodity_pricing(self, subject_id):
+        """
+        Get pricing about commodity from db.
+        :param subject_id: id of commodity
+        :return: list(dict) data about commodity pricing
+        """
+        pricing_keys = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
+
+        with self.engine.connect() as conn:
+            query_com_pricing = f'SELECT * FROM commodity_pricing WHERE commodity_id={subject_id}'
+            com_data = conn.execute(text(query_com_pricing)).fetchall()
+        all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
+        return all_commodity_data
+
     @staticmethod
-    def make_format_msg(subject_name, articles):
+    def _make_place_number(number):
+        return '{0:,}'.format(round(number, 1)).replace(',', ' ') if number else number
+
+    @staticmethod
+    def make_format_msg(subject_name, articles, com_data):
         """
         Make format to message.
         :param subject_name: name of client(commodity)
         :param articles: article data about client(commodity)
+        :param com_data: data about commodity pricing
         :return: formatted text
         """
         marker = '&#128204;'
+        # TODO: 23 (year) автоматически обновлять ?
+        com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
 
         for index, article_data in enumerate(articles):
-            link, text_sum = article_data[0], article_data[1]
-            text_sum = ' '.join(text_sum.split())  # TODO: убрать разделение, когда полианалист удалит лишние пробелы
-            link_phrase = f'<a href="{link}">Ссылка на источник.</a>'
-            # link_phrase = hlink('Ссылка на источник.', link)
-            articles[index] = f'{marker} {text_sum} {link_phrase}'
+            date, link, text_sum = article_data[0], article_data[1], article_data[2]
+            date = date.strftime('%d.%m.%Y')
+            link_phrase = f'<a href="{link}">Источник</a>'
+            text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
+            articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
 
         all_articles = '\n\n'.join(articles)
         format_msg = f'<b>{subject_name.capitalize()}</b>\n\n{all_articles}'
 
-        return format_msg
+        img_name_list = []
+        if com_data:
+            for com in com_data:
+                # get img_name
+                img_name_list.append(com["subname"].replace(' ', '_').replace('/', '_'))
+                # make place between digit
+                com["price"] = ArticleProcess._make_place_number(com["price"]) if not np.isnan(com['price']) else None
+                com["cons"] = ArticleProcess._make_place_number(com["cons"]) if not np.isnan(com["cons"]) else None
+                # create rows with commodity pricing
+                subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
+                price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com["price"] else None
+                m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
+                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                cons = f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com["cons"] else None
+                # join rows
+                row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
+                com_format = '\n'.join(row_list)
+                format_msg += f'\n\n{com_format}'
+
+        return format_msg, img_name_list
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
-
+        com_data, img_name_list = None, []
         client_id = self._find_subject_id(message, 'client')
         if client_id:
-            subject_name, articles = self._get_article(client_id, 'client')
+            subject_name, articles = self._get_articles(client_id, 'client')
         else:
             commodity_id = self._find_subject_id(message, 'commodity')
             if commodity_id:
-                subject_name, articles = self._get_article(commodity_id, 'commodity')
+                subject_name, articles = self._get_articles(commodity_id, 'commodity')
+                com_data = self._get_commodity_pricing(commodity_id)
             else:
                 print('user do not want articles')
-                return False
+                return False, img_name_list
 
         if subject_name and not articles:
-            return 'Пока нет новостей на эту тему'
+            return 'Пока нет новостей на эту тему', img_name_list
 
-        reply_msg = self.make_format_msg(subject_name, articles)
-        return reply_msg
+        reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
+        return reply_msg, img_name_list
