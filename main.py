@@ -18,6 +18,7 @@ import re
 from typing import List, Tuple, Dict
 import json
 
+
 class Main:
     def __init__(self):
         parser_obj = crawler.Parser()
@@ -27,7 +28,7 @@ class Main:
         transformer_obj = dt.Transformer()
         psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
-        data_market_base_url =  config.data_market_base_url
+        data_market_base_url = config.data_market_base_url
 
         # self.rebase = rebase
         # self.user_object = user_object
@@ -72,7 +73,7 @@ class Main:
             for day in page_html:
                 day['x'] = day['time']
                 day['date'] = dt.Transformer.unix_to_default(day['time'])
-                row = {'date':day['date'],'x':day['x'],'y':day['close']}
+                row = {'date': day['date'], 'x': day['x'], 'y': day['close']}
                 data = pd.concat([data, pd.DataFrame(row, index=[0])], ignore_index=True)
 
             self.transformer_obj.five_year_graph(data, name)
@@ -107,13 +108,13 @@ class Main:
             link = self.commodities[commodity]['links'][0]
             name = self.commodities[commodity]['naming']
             print(commodity)
-            self.graph_collector(link,session,driver,commodity)
+            self.graph_collector(link, session, driver, commodity)
 
-            if len(self.commodities[commodity]['links'])>1:
+            if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
                 InvAPI_obj = ue.InvestingAPIParser(driver)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
-                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price),1)}
+                dict_row = {'Resource': self.commodities[commodity]['naming'], 'SPOT': round(float(streaming_price), 1)}
 
                 if self.commodities[commodity]['alias'] != '':
                     dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
@@ -125,8 +126,8 @@ class Main:
 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
-            elif self.commodities[commodity]['naming']!='Gas':
-                to_take = self.commodities[commodity]['to_take']+1
+            elif self.commodities[commodity]['naming'] != 'Gas':
+                to_take = self.commodities[commodity]['to_take'] + 1
                 table = self.metals_wire_table
                 row_index = table.index[table['Resource'] == name][0]
                 dict_row = {}
@@ -136,7 +137,7 @@ class Main:
                 for key in dict_row:
                     if key not in ['Resource']:
                         if dict_row[key].strip() != '':
-                            num = round(float(dict_row[key].strip().split('%')[0]),1)
+                            num = round(float(dict_row[key].strip().split('%')[0]), 1)
                             dict_row[key] = num
                         else:
                             dict_row[key] = np.nan
@@ -156,14 +157,16 @@ class Main:
 
         commodity_ids = pd.DataFrame()
 
-        for i,row in commodity_pricing.iterrows():
+        for i, row in commodity_pricing.iterrows():
             commodity_id = commodity[commodity['name'] == row['alias']]['id']
 
-            dict_row = {'commodity_id':commodity_id.values[0]}
+            dict_row = {'commodity_id': commodity_id.values[0]}
             commodity_ids = pd.concat([commodity_ids, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
         df_combined = pd.concat([commodity_pricing, commodity_ids], axis=1)
-        df_combined = df_combined.rename(columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta',"Cons-s'23":'cons'})
+        df_combined = df_combined.rename(
+            columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta',
+                     "Cons-s'23": 'cons'})
         df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
         df_combined = df_combined.drop(columns=['alias'])
 
@@ -174,21 +177,21 @@ class Main:
 
         if q.count() == 27:
             for i, row in df_combined.iterrows():
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
+                    update(
+                    {"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
 
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
-                    update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
-                
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
-                                                    commodity_id=int(row['commodity_id']),
-                                                    subname=row['subname'],
-                                                    unit=row['unit'], 
-                                                    price=row['price'],
-                                                    m_delta=row['m_delta'],
-                                                    y_delta=row['y_delta'],
-                                                    cons=row['cons'])
+                    commodity_id=int(row['commodity_id']),
+                    subname=row['subname'],
+                    unit=row['unit'],
+                    price=row['price'],
+                    m_delta=row['m_delta'],
+                    y_delta=row['y_delta'],
+                    cons=row['cons'])
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
@@ -422,7 +425,7 @@ class Main:
         # economy
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                                name_of_review='Экономика России. Ежемесячный обзор')
+                                            name_of_review='Экономика России. Ежемесячный обзор')
         print('economy...ok')
 
         # bonds
@@ -468,7 +471,7 @@ class Main:
 
         return reviews, companies_pages_html
 
-    def save_reviews(self, reviews_to_save:  Dict[str, List[Tuple]]) -> None:
+    def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
         Save all reviews into the database.
         :param reviews_to_save: dict of list of the reviews
@@ -546,25 +549,25 @@ if __name__ == '__main__':
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             print(f'Some error with Research, check: {e}')
-        #finally:
+        # finally:
         #    driver.close()
 
         # collect and save commodity charts and a table
-        #firefox_options = webdriver.FirefoxOptions()
-        # user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
+        # firefox_options = webdriver.FirefoxOptions()
+        # user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' \
+        #              'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15
         # firefox_options.add_argument(f'user-agent={user_agent}')
-        #driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-        #print('driver started')
+        # driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        # print('driver started')
         try:
             session = req.Session()
             # print('session started')
-            runner.commodities_plot_collect(session,driver)
+            runner.commodities_plot_collect(session, driver)
             # print('com writed')
         except Exception as e:
             print(f'Some error with commodity parsing, check: {e}')
         finally:
             driver.close()
-
 
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
@@ -574,5 +577,4 @@ if __name__ == '__main__':
         while i <= 3:
             i += 1
             time.sleep(3600)
-            print('In waiting. \n{}/3 hours'.format(3-i))
-
+            print('In waiting. \n{}/3 hours'.format(3 - i))
