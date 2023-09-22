@@ -546,18 +546,20 @@ if __name__ == '__main__':
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             print(f'Some error with Research, check: {e}')
-        finally:
-            driver.close()
+        #finally:
+        #    driver.close()
 
         # collect and save commodity charts and a table
-        firefox_options = webdriver.FirefoxOptions()
-        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
-        firefox_options.add_argument(f'user-agent={user_agent}')
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-
+        #firefox_options = webdriver.FirefoxOptions()
+        # user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
+        # firefox_options.add_argument(f'user-agent={user_agent}')
+        #driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        #print('driver started')
         try:
             session = req.Session()
+            # print('session started')
             runner.commodities_plot_collect(session,driver)
+            # print('com writed')
         except Exception as e:
             print(f'Some error with commodity parsing, check: {e}')
         finally:
