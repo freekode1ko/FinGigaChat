@@ -37,11 +37,9 @@ chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
-# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
-api_token = '6450117814:AAGZ4e0NqRD0ZYJQRWODEqNY8H1LbV3Y99Q'
+api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
-# psql_engine = 'postgresql://admin:root@localhost:5432/postgres'
 
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 

@@ -37,7 +37,7 @@ class Main:
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
         self.data_market_base_url = data_market_base_url
-        self.commodities = None
+        self.commodities = self.transformer_obj.url_updater()
         self.metals_wire_table = None
 
     def table_collector(self, session: req.sessions.Session):
@@ -101,7 +101,6 @@ class Main:
 
     def commodities_plot_collect(self, session: req.sessions.Session, driver):
         self.get_metals_wire_table_data(driver)
-        self.commodities = self.transformer_obj.url_updater()
         commodity_pricing = pd.DataFrame()
 
         for commodity in self.commodities:
