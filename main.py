@@ -2,18 +2,21 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
+from sql_model.commodity_pricing import CommodityPricing
 from selenium import webdriver
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import requests as req
 from lxml import html
 import pandas as pd
+import numpy as np
 import warnings
 import config
 import time
 import datetime
 import re
 from typing import List, Tuple, Dict
-
+import json
 
 class Main:
     def __init__(self):
@@ -34,6 +37,8 @@ class Main:
         self.transformer_obj = transformer_obj
         self.list_of_companies = list_of_companies
         self.data_market_base_url = data_market_base_url
+        self.commodities = self.transformer_obj.url_updater()
+        self.metals_wire_table = None
 
     def table_collector(self, session: req.sessions.Session):
         all_tables = []
@@ -53,18 +58,141 @@ class Main:
                 print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
 
-    def graph_collector(self, url, session: req.sessions.Session):
-        name = url.split('/')[-1]
-        euro_standart, page_html = self.parser_obj.get_html(url, session)
-        auth = re.findall(r"TESecurify = ('.+');", page_html)
-        graph_url = '{}chart?s=lmahds03:com&' \
-                    'span=5y&' \
-                    'securify=new&' \
-                    'url=/commodity/{}&' \
-                    'AUTH={}&' \
-                    'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
-        data = req.get(graph_url, verify=False)
-        self.transformer_obj.five_year_graph(data, name)
+    def graph_collector(self, url, session: req.sessions.Session, driver, name=''):
+        if 'api.investing' in url:
+            InvAPI_obj = ue.InvestingAPIParser(driver)
+            data = InvAPI_obj.get_graph_investing(url)
+
+            self.transformer_obj.five_year_graph(data, name)
+
+        elif 'metals-wire' in url:
+            euro_standart, page_html = self.parser_obj.get_html(url, session)
+            page_html = json.loads(page_html)
+            data = pd.DataFrame()
+            for day in page_html:
+                day['x'] = day['time']
+                day['date'] = dt.Transformer.unix_to_default(day['time'])
+                row = {'date':day['date'],'x':day['x'],'y':day['close']}
+                data = pd.concat([data, pd.DataFrame(row, index=[0])], ignore_index=True)
+
+            self.transformer_obj.five_year_graph(data, name)
+
+        elif 'profinance' in url:
+            response = session.get(url)
+            with open(f'./sources/img/{name}_graph.png', 'wb') as f:
+                f.write(response.content)
+        else:
+            name = url.split('/')[-1]
+            euro_standart, page_html = self.parser_obj.get_html(url, session)
+            auth = re.findall(r"TESecurify = ('.+');", page_html)
+            graph_url = '{}chart?s=lmahds03:com&' \
+                        'span=5y&' \
+                        'securify=new&' \
+                        'url=/commodity/{}&' \
+                        'AUTH={}&' \
+                        'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+            data = req.get(graph_url, verify=False)
+
+            self.transformer_obj.five_year_graph(data, name)
+
+    def get_metals_wire_table_data(self, driver):
+        metals_wire_parser_obj = ue.MetalsWireParser(driver)
+        self.metals_wire_table = metals_wire_parser_obj.get_table_data()
+
+    def commodities_plot_collect(self, session: req.sessions.Session, driver):
+        self.get_metals_wire_table_data(driver)
+        commodity_pricing = pd.DataFrame()
+
+        for commodity in self.commodities:
+            link = self.commodities[commodity]['links'][0]
+            name = self.commodities[commodity]['naming']
+            print(commodity)
+            self.graph_collector(link,session,driver,commodity)
+
+            if len(self.commodities[commodity]['links'])>1:
+                url = self.commodities[commodity]['links'][1]
+                InvAPI_obj = ue.InvestingAPIParser(driver)
+                streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
+                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price),1)}
+
+                if self.commodities[commodity]['alias'] != '':
+                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                else:
+                    dict_row['alias'] = commodity.lower().strip()
+
+                dict_row['unit'] = self.commodities[commodity]['measurables']
+                dict_row['Resource'] = commodity
+
+                commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+
+            elif self.commodities[commodity]['naming']!='Gas':
+                to_take = self.commodities[commodity]['to_take']+1
+                table = self.metals_wire_table
+                row_index = table.index[table['Resource'] == name][0]
+                dict_row = {}
+                for key in table.iloc[row_index][:to_take].keys():
+                    dict_row[key] = table.iloc[row_index][:to_take][key]
+
+                for key in dict_row:
+                    if key not in ['Resource']:
+                        if dict_row[key].strip() != '':
+                            num = round(float(dict_row[key].strip().split('%')[0]),1)
+                            dict_row[key] = num
+                        else:
+                            dict_row[key] = np.nan
+
+                if self.commodities[commodity]['alias'] != '':
+                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                else:
+                    dict_row['alias'] = commodity.lower().strip()
+
+                dict_row['unit'] = self.commodities[commodity]['measurables']
+                dict_row['Resource'] = commodity
+
+                commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+
+        engine = create_engine(self.psql_engine)
+        commodity = pd.read_sql_query("select * from commodity", con=engine)
+
+        commodity_ids = pd.DataFrame()
+
+        for i,row in commodity_pricing.iterrows():
+            commodity_id = commodity[commodity['name'] == row['alias']]['id']
+
+            dict_row = {'commodity_id':commodity_id.values[0]}
+            commodity_ids = pd.concat([commodity_ids, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
+
+        df_combined = pd.concat([commodity_pricing, commodity_ids], axis=1)
+        df_combined = df_combined.rename(columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta',"Cons-s'23":'cons'})
+        df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
+        df_combined = df_combined.drop(columns=['alias'])
+
+        engine = create_engine(self.psql_engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        q = session.query(CommodityPricing)
+
+        if q.count() == 27:
+            for i, row in df_combined.iterrows():
+
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                    update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
+                
+                session.commit()
+        else:
+            for i, row in df_combined.iterrows():
+                commodity_price_obj = CommodityPricing(
+                                                    commodity_id=int(row['commodity_id']),
+                                                    subname=row['subname'],
+                                                    unit=row['unit'], 
+                                                    price=row['price'],
+                                                    m_delta=row['m_delta'],
+                                                    y_delta=row['y_delta'],
+                                                    cons=row['cons'])
+                session.merge(commodity_price_obj, load=True)
+                session.commit()
+
+        session.close()
 
     @staticmethod
     def bond_block(table_bonds: list) -> pd.DataFrame:
@@ -411,14 +539,32 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
         try:
             reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             print(f'Some error with Research, check: {e}')
+        #finally:
+        #    driver.close()
+
+        # collect and save commodity charts and a table
+        #firefox_options = webdriver.FirefoxOptions()
+        # user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
+        # firefox_options.add_argument(f'user-agent={user_agent}')
+        #driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        #print('driver started')
+        try:
+            session = req.Session()
+            # print('session started')
+            runner.commodities_plot_collect(session,driver)
+            # print('com writed')
+        except Exception as e:
+            print(f'Some error with commodity parsing, check: {e}')
         finally:
             driver.close()
+
 
         i = 0
         with open('sources/tables/time.txt', 'w') as f:
@@ -429,3 +575,4 @@ if __name__ == '__main__':
             i += 1
             time.sleep(3600)
             print('In waiting. \n{}/3 hours'.format(3-i))
+

@@ -4,12 +4,17 @@ import selenium
 import selenium.webdriver as wb
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 import re
 import config
 import random
 import time
 from typing import List
-
+import pandas as pd
+import datetime
+import json
+from module import data_transformer as Transformer
+from bs4 import BeautifulSoup
 
 class ResearchError(Exception):
     """ Base class for Research exception """
@@ -233,6 +238,81 @@ class ResearchParser:
 
         return page_html
 
+class InvestingAPIParser:
+    """
+    Class for InvestingAPI parsing
+    """
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def get_graph_investing(self, url: str):
+        """
+        Get plot data of investing.com api
+        :param url: investing.com api url
+        :return: price chart df
+        """
+        
+        self.driver.get(url)
+        data = self.driver.find_element(By.ID,
+                                         'json').text
+        json_obj = json.loads(data)
+
+        df = pd.DataFrame()
+        for day in json_obj['data']:
+            date = Transformer.Transformer.unix_to_default(day[0])
+            x = day[0]
+            y = day[1]
+            row = {'date':date,'x':x,'y':y}
+            df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
+
+        return df
+    
+    def get_streaming_chart_investing(self, url: str):
+        """
+        Get streaming chart data of investing.com
+        :param url: rows of text of money review
+        :return: price chart df
+        """
+
+        url = f'{url}-streaming-chart'
+        self.driver.get(url)
+        data = self.driver.find_element(By.ID,'last_last').text
+
+        return data
+
+class MetalsWireParser:
+    """
+    Class for MetalsWire table data parsing
+    """
+
+    def __init__(self, driver): 
+        table_link = config.table_link
+
+        self.driver = driver 
+        self.table_link = table_link
+
+    def get_table_data(self):
+        """
+        Get table data of MetalsWire
+        :return: commodities price chart df
+        """
+        self.driver.get(self.table_link)
+        time.sleep(5)
+        page_html = self.driver.page_source
+        soup = BeautifulSoup(page_html, "html.parser")
+
+        elems = soup.find(class_='table__container').find_all(class_='sticky-col')
+        df = pd.DataFrame()
+        for elem in elems:
+            if elem.find('div'):
+                row_data = []
+                for col in elem.parent:
+                    row_data.append(col.text)
+                row = {'Resource':row_data[0].strip(),'SPOT':row_data[4],'1M diff.':row_data[7],'YTD diff.': row_data[8],"Cons-s'23": row_data[12]}
+                df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
+          
+        return df  
 
 '''
     OLD VERSION 
