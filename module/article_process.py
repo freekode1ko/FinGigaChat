@@ -230,7 +230,6 @@ class ArticleProcess:
                 com["price"] = ArticleProcess._make_place_number(com["price"]) if not np.isnan(com['price']) else None
                 com["cons"] = ArticleProcess._make_place_number(com["cons"]) if not np.isnan(com["cons"]) else None
                 # create rows with commodity pricing
-                print(com['price'], ' ', type(com['price']))
                 subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
                 price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com["price"] else None
                 m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
@@ -245,7 +244,7 @@ class ArticleProcess:
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
-        com_data = None
+        com_data, img_name_list = None, []
         client_id = self._find_subject_id(message, 'client')
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
@@ -256,10 +255,10 @@ class ArticleProcess:
                 com_data = self._get_commodity_pricing(commodity_id)
             else:
                 print('user do not want articles')
-                return False
+                return False, img_name_list
 
         if subject_name and not articles:
-            return 'Пока нет новостей на эту тему'
+            return 'Пока нет новостей на эту тему', img_name_list
 
         reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
         return reply_msg, img_name_list

@@ -461,7 +461,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             articles = reply_msg.split('\n\n')
             for article in articles:
                 await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-            return None
+        return None
 
     global chat
     global token
