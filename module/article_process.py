@@ -212,16 +212,17 @@ class ArticleProcess:
         marker = '&#128204;'
         # TODO: 23 (year) автоматически обновлять ?
         com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
+        format_msg = f'<b>{subject_name.capitalize()}</b>'
 
-        for index, article_data in enumerate(articles):
-            date, link, text_sum = article_data[0], article_data[1], article_data[2]
-            date = date.strftime('%d.%m.%Y')
-            link_phrase = f'<a href="{link}">Источник</a>'
-            text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
-            articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
-
-        all_articles = '\n\n'.join(articles)
-        format_msg = f'<b>{subject_name.capitalize()}</b>\n\n{all_articles}'
+        if articles:
+            for index, article_data in enumerate(articles):
+                date, link, text_sum = article_data[0], article_data[1], article_data[2]
+                date = date.strftime('%d.%m.%Y')
+                link_phrase = f'<a href="{link}">Источник</a>'
+                text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
+                articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
+            all_articles = '\n\n'.join(articles)
+            format_msg += f'\n\n{all_articles}'
 
         img_name_list = []
         if com_data:
@@ -246,7 +247,7 @@ class ArticleProcess:
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
-        com_data, img_name_list = None, []
+        com_data, reply_msg, img_name_list = None, '', []
         client_id = self._find_subject_id(message, 'client')
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
@@ -259,8 +260,9 @@ class ArticleProcess:
                 print('user do not want articles')
                 return False, img_name_list
 
-        if subject_name and not articles:
+        reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
+
+        if subject_name and not articles and not reply_msg:
             return 'Пока нет новостей на эту тему', img_name_list
 
-        reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
         return reply_msg, img_name_list

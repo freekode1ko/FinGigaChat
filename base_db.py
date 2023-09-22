@@ -260,4 +260,4 @@ if __name__ == '__main__':
     # delete duplicate commodity
     # update_database(main_engine, query_delete_dupl)
     # insert new com: olovo
-    update_database(main_engine, query_commodity_olovo)
+    # update_database(main_engine, query_commodity_olovo)
