@@ -454,7 +454,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             media = types.MediaGroup()
             for name in img_name_list:
                 media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
-            await bot.send_media_group(message.chat.id, media=media)
+            await bot.send_media_group(message.chat.id, media=media, protect_content=True)
         try:
             await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
         except MessageIsTooLong:
