@@ -34,6 +34,7 @@ summ_prompt = 'Сократи текст, оставь только ключев
               'мнения и другую не ключевую информацию. Вот текст:'
 sample_of_img_title = '<b>{}</b>\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
+PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 
 def read_curdatetime():
@@ -446,15 +447,21 @@ async def user_to_whitelist(message: types.Message):
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
 
-    reply_msg = ArticleProcess().process_user_alias(message.text)
+    reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
     if reply_msg:
+        if img_name_list:
+            await types.ChatActions.upload_photo()
+            media = types.MediaGroup()
+            for name in img_name_list:
+                media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
+            await bot.send_media_group(message.chat.id, media=media)
         try:
             await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
         except MessageIsTooLong:
             articles = reply_msg.split('\n\n')
             for article in articles:
                 await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-        return None
+            return None
 
     global chat
     global token
