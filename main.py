@@ -574,7 +574,3 @@ if __name__ == '__main__':
             time.sleep(3600)
             print('In waiting. \n{}/3 hours'.format(3-i))
 
-        # collect and plot charts
-        session = req.Session()
-        runner.commodities_plot_collect(session,driver)
-
