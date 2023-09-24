@@ -168,8 +168,7 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
     :return: summarization text.
     """
 
-    query = f'{summarization_prompt}: {text}'
-    giga_json_answer = giga_chat.ask_giga_chat(query, token)
+    giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
     try:
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
         if giga_answer in BAD_GIGA_ANSWERS:
