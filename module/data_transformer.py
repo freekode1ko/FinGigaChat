@@ -159,8 +159,10 @@ class Transformer:
 
         name = name.replace('/','_')
         name = name.replace(' ','_')
+        name = name.split(',')  
+        name =f'{name[0]}_graph.png'
         # save png and return it to user
-        png_path = '{}/img/{}_graph.png'.format('./sources', name)
+        png_path = '{}/img/{}'.format('./sources', name)
         plt.savefig(png_path, transparent=False)
 
     @staticmethod
