@@ -80,7 +80,11 @@ class Main:
 
         elif 'profinance' in url:
             response = session.get(url)
-            with open(f'./sources/img/{name}_graph.png', 'wb') as f:
+            name = name.replace('/','_')
+            name = name.replace(' ','_')
+            name = name.split(',')  
+            name =f'{name[0]}_graph.png'
+            with open(f'./sources/img/{name}', 'wb') as f:
                 f.write(response.content)
         else:
             name = url.split('/')[-1]
