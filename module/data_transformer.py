@@ -6,6 +6,7 @@ import six
 import datetime
 import config
 import copy
+import matplotlib.ticker as ticker
 
 class Transformer:
 
@@ -143,6 +144,15 @@ class Transformer:
             else:
                 xticks_new.append(xtick)
                 xticks_new.append((xticks[i]-xticks[i-1])/2 + xtick)
+
+        minor_locator = ticker.AutoMinorLocator(n=2)
+        plt.gca().yaxis.set_minor_locator(minor_locator)
+        plt.gca().tick_params(which='minor', length=4, color='black', width=1)
+        def format_yticks(value, pos):
+            return '{:,.0f}'.format(value).replace(',', ' ')
+
+        formatter = ticker.FuncFormatter(format_yticks)
+        ax.yaxis.set_major_formatter(formatter)
 
         plt.xticks(xticks_new)
         ax.set_xticklabels(labels_new)
