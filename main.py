@@ -112,6 +112,8 @@ class Main:
             link = self.commodities[commodity]['links'][0]
             name = self.commodities[commodity]['naming']
             print(commodity)
+            print(self.commodities[commodity]['links'][0])
+            
             self.graph_collector(link,session,driver,commodity)
 
             if len(self.commodities[commodity]['links'])>1:
@@ -119,15 +121,10 @@ class Main:
                 InvAPI_obj = ue.InvestingAPIParser(driver)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
                 dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price),1)}
-
-                if self.commodities[commodity]['alias'] != '':
-                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
-                else:
-                    dict_row['alias'] = commodity.lower().strip()
-
+                
+                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
                 dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity
-
+                dict_row['Resource'] = commodity.split(',')[0] 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
             elif self.commodities[commodity]['naming']!='Gas':
@@ -145,20 +142,16 @@ class Main:
                             dict_row[key] = num
                         else:
                             dict_row[key] = np.nan
-
-                if self.commodities[commodity]['alias'] != '':
-                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
-                else:
-                    dict_row['alias'] = commodity.lower().strip()
+                    
+                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
 
                 dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity
+                dict_row['Resource'] = commodity.split(',')[0]
 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-
+        
         engine = create_engine(self.psql_engine)
         commodity = pd.read_sql_query("select * from commodity", con=engine)
-
         commodity_ids = pd.DataFrame()
 
         for i,row in commodity_pricing.iterrows():
@@ -177,7 +170,7 @@ class Main:
         session = Session()
         q = session.query(CommodityPricing)
 
-        if q.count() == 27:
+        if q.count() == 28:
             for i, row in df_combined.iterrows():
 
                 session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
@@ -208,6 +201,7 @@ class Main:
                                                     cons=np.nan)
             session.merge(commodity_price_obj, load=True)
             session.commit()
+            
 
         session.close()
 
