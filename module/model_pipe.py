@@ -9,8 +9,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from config import summarization_prompt
 from module.gigachat import GigaChat
 
-BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
-MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
+CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
@@ -80,9 +81,9 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     :return: Pandas DF. Current news batch DF with added column 'client_labels'
     """
     # read binary classification model (relevant or not)
-    binary_model = pickle.load(open(BINARY_CLASSIFICATION_MODEL_PATH, 'rb'))
+    binary_model = pickle.load(open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb'))
     # read multiclass classification model
-    multiclass_model = pickle.load(open(MULTY_CLASSIFICATION_MODEL_PATH, 'rb'))
+    multiclass_model = pickle.load(open(CLIENT_MULTY_CLASSIFICATION_MODEL_PATH, 'rb'))
     # predict relevance and adding a column with relevance label (1 or 0)
     df['relevance'] = binary_model.predict(df['cleaned_data'])
     # predict label from multiclass classification
@@ -112,10 +113,11 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def rate_commodity(df: pd.DataFrame) -> pd.DataFrame:
+def rate_commodity(df: pd.DataFrame, use_relevance_model: bool) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
     :param df: Pandas DF. Pandas DF with current news batch.
+    :param use_relevance_model : bool. Flag shows whether binary relevance model should be applied.
     :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
     """
     # read commodity rating system
@@ -142,6 +144,22 @@ def rate_commodity(df: pd.DataFrame) -> pd.DataFrame:
         if len(temp_ans) == 0:
             temp_ans = [str(0)]
         df['commodity_labels'][j] = ';'.join(str(x) for x in temp_ans)
+    if use_relevance_model:
+        # load binary relevance model
+        binary_model = pickle.load(open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb'))
+        # make predictions
+        probs = binary_model.predict_proba(df['cleaned_data'])
+        res = []
+        for pair in probs:
+            if (pair[1]) > 0.25:
+                res.append(1)
+            else:
+                res.append(0)
+        df['relevance'] = res
+        # apply model results
+        df['commodity_labels'] = df.apply(lambda x: x['commodity_labels'] if (x['relevance'] == 1) else '0', axis=1)
+        # delete relevance column
+        df = df.drop(columns=['relevance'])
     return df
 
 
@@ -187,7 +205,7 @@ def change_bad_summary(row: pd.Series) -> str:
     elif row['title']:
         return row['title']
     else:
-        first_sentence = row['text'][:row['text'].find('.')+1]
+        first_sentence = row['text'][:row['text'].find('.') + 1]
         return first_sentence
 
 
@@ -219,7 +237,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
                                    axis=1)
 
     # make rating for article
-    df = rate_client(df) if type_of_article == 'client' else rate_commodity(df)
+    df = rate_client(df) if type_of_article == 'client' else rate_commodity(df, True)
 
     # sum cluster labels
     df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
