@@ -92,7 +92,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', mon
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
 
-
+''' deprecated
 async def __read_tables_from_companies(message: types.Message, companies: dict):
     company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
     company_name = company[0][2]
@@ -113,6 +113,7 @@ async def __read_tables_from_companies(message: types.Message, companies: dict):
                                          header_columns=0, col_width=2)
             photo = open(png_path, 'rb')
             await __sent_photo_and_msg(message, photo, title=title)
+'''
 
 
 @dp.message_handler(commands=['start'])
@@ -127,7 +128,7 @@ async def start_handler(message: types.Message):
                                         message.from_user.username))
         await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
 
-
+''' deprecated
 @dp.message_handler(commands=['companies'])
 async def company_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -138,7 +139,6 @@ async def company_info(message: types.Message):
         await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard,
                             protect_content=True)
 
-
 @dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
                                                              'полюс', 'русал', 'северсталь'])
 async def button_polymetal(message: types.Message):
@@ -146,6 +146,7 @@ async def button_polymetal(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source), sheet_name=None)
         await __read_tables_from_companies(message, companies)
+'''
 
 
 # ['облигации', 'бонды', 'офз']
