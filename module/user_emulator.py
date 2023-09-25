@@ -281,6 +281,7 @@ class InvestingAPIParser:
 
         return data
 
+
 class MetalsWireParser:
     """
     Class for MetalsWire table data parsing
