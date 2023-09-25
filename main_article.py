@@ -10,7 +10,7 @@ from config import mail_username, mail_password, mail_imap_server
 
 CLIENT_FOLDER_DIR = "data/articles/client"
 COMMODITY_FOLDER_DIR = "data/articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=20)
+HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 
 def imap_func(type_of_article, folder_name):
@@ -72,7 +72,7 @@ def daily_func():
             commodity_flag, commodity_filepath = model_func(ap_obj, 'commodity', COMMODITY_FOLDER_DIR)
 
         if client_flag and commodity_flag:
-            print('GOT ARTICLES')
+            print('GOT ARTICLES - ', dt.datetime.now().date())
             break
         else:
             print('wait 10 min')

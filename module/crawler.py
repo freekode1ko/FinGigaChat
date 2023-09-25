@@ -89,13 +89,13 @@ class Parser:
                 print('DDOS Guard found - trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
 
-        except req.exceptions.ConnectionError:
+        except req.exceptions.ConnectionError as ex:
             session = req.Session()
             header = {'User-Agent': random.choice(self.user_agents),
                       'Connection': 'keep-alive',
                       'Accept-Encoding': 'gzip,deflate'}
             req_page = session.get(url, verify=False, headers=header)
-            print(url, ' - with OUT proxy')
+            print(url, ' - with OUT proxy ', ex)
         except Exception as ex:
             html = ''
             print('During collecting data from: {}, except error: {}'.format(url, ex))
