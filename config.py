@@ -108,91 +108,96 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Gold spot',
-            'alias': ''
+            'alias':'золото'
+
         },
         'Медь LME спот, $/т': {
             'links': ['LMCADY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Copper LME spot price',
-            'alias': ''
+            'alias':'медь'  
+
         },
         'Алюминий LME спот, $/т': {
             'links': ['AHDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Aluminium LME spot',
-            'alias': ''
+            'alias':'алюминий'  
+
         },
         'Никель LME спот, $/т': {
             'links': ['LMNIDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Nickel LME spot',
-            'alias': ''
+            'alias':'никель'  
+
         },
         'Палладий LME спот, $/унц': {
             'links': ['PALL'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Palladium LME spot',
-            'alias': ''
+            'alias':'палладий'  
         },
         'Платина LME спот, $/унц': {
             'links': ['PLAT'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Platinum LME spot',
-            'alias': ''
+            'alias':'платина'  
         },
         'Цинк LME спот, $/т': {
             'links': ['LMZSDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Zinc LME spot',
-            'alias': ''
+            'alias':'цинк'  
+
         },
         'Свинец LME спот, $/т': {
             'links': ['LMPBDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Lead LME spot',
-            'alias': ''
+            'alias':'свинец'  
         },
         'Серебро спот, $/унц': {
             'links': ['SILV'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Silver spot',
-            'alias': ''
+            'alias':'серебро'  
         },
         'Кобальт LME спот, $/т': {
             'links': ['LMCODY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Cobalt LME spot',
-            'alias': ''
+            'alias':'кобальт'  
         },
         'Железная руда 62% Fe CFR Китай, $/т': {
             'links': ['MB020424'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Iron ore 62% Fe CFR China',
-            'alias': ''
+            'alias':'жрс'  
         },
         'Олово LME spot, $/т': {
             'links': ['LMSNDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Tin LME spot',
-            'alias': ''
+            'alias':'олово'  
         },
         'Уран Generic 1st UxC, $/фунт': {
             'links': ['UXA1'],
             'to_take': 3,
             'measurables': '$/фунт',
             'naming': 'Generic 1st UxC Uranium Price',
-            'alias': ''
+            'alias':'уран'  
         },
         'Энергетический уголь 6 000kcal, CIF ARA, $/т': {
             'links': ['CIFARA'],
@@ -206,7 +211,7 @@ dict_of_commodities = \
             'to_take': 3,
             'measurables': '$/т',
             'naming': 'HCC FOB Australia',
-            'alias': ''
+            'alias':'коксующийся уголь'  
         },
         'Рулон г/к FOB Черное море, $/т': {
             'links': ['RUHRC2'],
@@ -262,13 +267,13 @@ dict_of_commodities = \
             'to_take': 3,
             'measurables': '$/т',
             'naming': 'Ammonia, CFR Tampa',
-            'alias': ''
+            'alias':'аммиак'  
         },
         'Газ, Natural Gas, $/тыс м3': {
             'links': [
                 'https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
             'measurables': '$/тыс м3',
             'naming': 'Gas',
-            'alias': ''
+            'alias':'газ'   
         },
     }

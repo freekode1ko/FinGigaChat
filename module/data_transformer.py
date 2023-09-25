@@ -108,6 +108,7 @@ class Transformer:
     def __draw_plot(df, name):
         labels = []
         xticks = []
+        print(df)
         for i,date in enumerate(df['date']):
             date_obj_year = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S').year
             if date_obj_year not in labels:
@@ -125,8 +126,26 @@ class Transformer:
         for spine in ax.spines.values():
             spine.set_visible(False)
 
-        plt.xticks(xticks)
-        ax.set_xticklabels(labels)
+        labels_new = []
+        for i, label in enumerate(labels):
+            if i!= len(labels)-1:
+                labels_new.append(label)
+                labels_new.append('')
+            else:
+                labels_new.append(label)
+                labels_new.append('')
+
+        xticks_new = []
+        for i, xtick in enumerate(xticks):
+            if i!= len(labels)-1:
+                xticks_new.append(xtick)
+                xticks_new.append((xticks[i+1]-xticks[i])/2 + xtick)
+            else:
+                xticks_new.append(xtick)
+                xticks_new.append((xticks[i]-xticks[i-1])/2 + xtick)
+
+        plt.xticks(xticks_new)
+        ax.set_xticklabels(labels_new)
         ax.yaxis.set_tick_params(length=0)
 
         color = (30/255, 212/255, 132/255)
@@ -145,8 +164,8 @@ class Transformer:
         x_name = df['x'].iloc[first]
         y_name = df['y'][first:].max()
 
-        ax.text(x_name, y_name, name, fontsize=14)
-        ax.text(x-delta_x, y+delta_y, y,fontsize=12, weight='bold')
+        ax.text(x_name, y_name, name, fontsize=12)
+        ax.text(x-delta_x, y+delta_y, y,fontsize=10, weight='bold')
         ax.plot(x, y, 'o', markersize=6, color=color)
 
     @staticmethod
