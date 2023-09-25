@@ -45,6 +45,7 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
+
 def read_curdatetime():
     with open('sources/tables/time.txt', 'r') as f:
         curdatetime = f.read()
@@ -134,7 +135,8 @@ async def company_info(message: types.Message):
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
         buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
         keyboard.add(*buttons)
-        await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard, protect_content=True)
+        await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard,
+                            protect_content=True)
 
 
 @dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
@@ -177,7 +179,8 @@ async def bonds_info(message: types.Message):
         # print(month)
         title = 'ОФЗ'
         # await message.answer('Да да - Вот оно: \n')
-        await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, read_curdatetime()))
+        await __sent_photo_and_msg(message, photo, day, month,
+                                   title=sample_of_img_title.format(title, read_curdatetime()))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -186,13 +189,13 @@ async def economy_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         engine = create_engine(psql_engine)
-        #eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
+        # eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
         #                    sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
-        world_bet = pd.read_sql_query('select * from "eco_global_stake"',con=engine)
-        #rus_infl = eco['Инфляция в России'][[]]
+        world_bet = pd.read_sql_query('select * from "eco_global_stake"', con=engine)
+        # rus_infl = eco['Инфляция в России'][[]]
         rus_infl = pd.read_sql_query('select * from "eco_rus_influence"', con=engine)
         rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
-        #world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
+        # world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
         #                                                                                      'Last': '',
         #                                                                                      'Previous': ''})
         world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
@@ -220,7 +223,8 @@ async def economy_info(message: types.Message):
         world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
         for num, country in enumerate(world_bet['Страна'].values):
             world_bet.Страна[world_bet.Страна == country] = countries[country]
-        # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"), axis=1)
+        # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"),
+        # axis=1)
 
         # df transformation
         transformer = dt.Transformer()
@@ -280,7 +284,8 @@ async def data_mart(message: types.Message):
             transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
             png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
             photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo, title=sample_of_img_title_view.format(title, block, read_curdatetime()))
+            await __sent_photo_and_msg(message, photo,
+                                       title=sample_of_img_title_view.format(title, block, read_curdatetime()))
 
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
@@ -290,10 +295,10 @@ async def exchange_info(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
         engine = create_engine(psql_engine)
-        exc = pd.read_sql_query('select * from exc',con = engine)
+        exc = pd.read_sql_query('select * from exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
-        #exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
-        #exc = exc.drop('Unnamed: 0', axis=1)
+        # exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
+        # exc = exc.drop('Unnamed: 0', axis=1)
 
         # df transformation
         transformer = dt.Transformer()
@@ -320,7 +325,8 @@ async def exchange_info(message: types.Message):
         curdatetime = read_curdatetime()
         await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
 
-        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(columns={'базовый сценарий':' '})
+        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(
+            columns={'базовый сценарий': ' '})
         title = 'Прогноз валютных курсов'
         transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
                                      col_width=1.5, title=title)
@@ -377,14 +383,14 @@ async def metal_info(message: types.Message):
             metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
             metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan)
-                                                    if str(x) == 'None'
-                                                    else '{}'.format(x))
+            if str(x) == 'None'
+            else '{}'.format(x))
             metal[key] = metal[key].astype('float')
             metal[key] = metal[key].round()
             metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
             metal[key] = metal[key].apply(lambda x: '{}%'.format(x)
-                                                    if x != 'nan' and key != 'Цена'
-                                                    else str(x).replace("nan", "-"))
+            if x != 'nan' and key != 'Цена'
+            else str(x).replace("nan", "-"))
 
         metal.index = metal.index.astype('int')
         metal.sort_index(inplace=True)
@@ -420,7 +426,7 @@ def __replacer(data: str):
 async def draw_all_tables(message: types.Message):
     from sqlalchemy import create_engine
     engine = create_engine('postgresql://bot:12345@0.0.0.0:5432/users')
-    df_from_db = pd.read_sql_query('select * from "users"', con = engine)
+    df_from_db = pd.read_sql_query('select * from "users"', con=engine)
     print(df_from_db)
 
 
@@ -454,7 +460,6 @@ async def user_to_whitelist(message: types.Message):
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
-
     reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
     if reply_msg:
         if img_name_list:
@@ -518,6 +523,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     else:
         await message.answer('You are NOT in club, get lost!\nhttps://www.youtube.com/watch?v=IjGEox6UOTs',
                              protect_content=True)
+
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
