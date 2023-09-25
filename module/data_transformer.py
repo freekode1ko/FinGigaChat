@@ -109,7 +109,6 @@ class Transformer:
     def __draw_plot(df, name):
         labels = []
         xticks = []
-        print(df)
         for i,date in enumerate(df['date']):
             date_obj_year = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S').year
             if date_obj_year not in labels:

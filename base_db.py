@@ -253,6 +253,9 @@ query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (co
 query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
                                    "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), 'электроэнергия')")
 
+gas_name = 'группа "газ"'
+query_update_gas_client_name = (f"UPDATE client_alternative SET other_names=('{gas_name};горьковский автомобильный завод;группа газ') "
+                                f"WHERE other_names='газ;группа «газ»;горьковский автомобильный завод';")
 
 if __name__ == '__main__':
     main_engine = create_engine(psql_engine)
@@ -260,7 +263,7 @@ if __name__ == '__main__':
     # main(main_engine)
     # # create commodity_pricing
     # update_database(main_engine, query_commodity_pricing)
-    #  # add energy in commodity
+    # # add energy in commodity
     # update_database(main_engine, query_commodity_energy)
     # # delete duplicate commodity
     # update_database(main_engine, query_delete_dupl)
@@ -269,3 +272,5 @@ if __name__ == '__main__':
     # # insert alternative name for new com
     # update_database(main_engine, query_new_alternative_com_electro)
     # update_database(main_engine, query_new_alternative_com_olovo)
+    # update gas client name
+    update_database(main_engine, query_update_gas_client_name)
