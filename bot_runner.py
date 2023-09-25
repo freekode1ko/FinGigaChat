@@ -24,16 +24,23 @@ chat = ''
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-bonds_aliases = ['облигации', 'бонды', 'офз']
-eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
-exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
-metal_aliases = ['металлы', 'сырьевые товары', 'commodities']
+bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
+eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика', 'макро',
+               'макроэкономика', 'ключевая ставка', 'кс', 'ставка цб', 'ruonia', 'lpr', 'инфляция']
+exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро', 'fx', 'валютный рынок',
+                    'валюта', 'курс доллара', 'курс евро', 'курс юаня', 'курс рубля', 'доллар к рублю',
+                    'прогноз валютных курсов', 'прогнозы курса', 'прогнозы курса рубля', 'прогнозы курса доллара',
+                    'прогнозы курса юаня', 'мягкие валюты', 'рупии', 'лиры', 'тенге']
+metal_aliases = ['металлы', 'сырьевые товары', 'commodities', 'сырьевые рынки', 'сырье', 'цены на commodities',
+                 'ценны на металлы']
+view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'денежное предложение', 'проценстная ставка по кредитам',
+                'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
+                'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
+
 # analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
-summ_prompt = 'Сократи текст, оставь только ключевую информацию с числовыми показателями и прогнозами на будущее, ' \
-              'кратко указывай источник данных, убери из текста сравнительные обороты, вводные фразы, авторские ' \
-              'мнения и другую не ключевую информацию. Вот текст:'
 sample_of_img_title = '<b>{}</b>\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
+PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 
 def read_curdatetime():
@@ -48,7 +55,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     # date = dparser.parse(date, fuzzy=True)
     # print(date)
 
-    # uncommet me if need summory
+    # uncommet me if need summory #TODO: исправить порядок парметров и промпт
     # ****************************
     # giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
     # ****************************
@@ -446,8 +453,14 @@ async def user_to_whitelist(message: types.Message):
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
 
-    reply_msg = ArticleProcess().process_user_alias(message.text)
+    reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
     if reply_msg:
+        if img_name_list:
+            await types.ChatActions.upload_photo()
+            media = types.MediaGroup()
+            for name in img_name_list:
+                media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
+            await bot.send_media_group(message.chat.id, media=media, protect_content=True)
         try:
             await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
         except MessageIsTooLong:
@@ -473,11 +486,13 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             await metal_info(message)
         elif message.text.lower() in exchange_aliases:
             await exchange_info(message)
+        elif message.text.lower() in view_aliases:
+            await data_mart(message)
         elif message.text.lower() in ['test']:
             await draw_all_tables(message)
         else:
             try:
-                giga_answer = chat.ask_giga_chat(msg, token)
+                giga_answer = chat.ask_giga_chat(token=token, text=msg)
                 giga_js = giga_answer.json()['choices'][0]['message']['content']
 
             except AttributeError:
@@ -486,11 +501,11 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
                                                              message.from_user.full_name,
                                                              message.from_user.username))
-                giga_answer = chat.ask_giga_chat(msg, token)
+                giga_answer = chat.ask_giga_chat(token=token, text=msg)
                 giga_js = giga_answer.json()['choices'][0]['message']['content']
 
             except KeyError:
-                giga_answer = chat.ask_giga_chat(msg, token)
+                giga_answer = chat.ask_giga_chat(token=token, text=msg)
                 giga_js = giga_answer.json()
             if not return_ans:
                 await message.answer('{}\n\n{}'.format(giga_js, 'This content generated by GigaChat'), protect_content=True)

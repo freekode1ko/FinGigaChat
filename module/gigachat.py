@@ -18,24 +18,29 @@ class GigaChat:
 
         return token
 
-    def ask_giga_chat(self, question: str, token: str) -> req.models.Response:
+    def ask_giga_chat(self, token: str, text: str, prompt: str = '') -> req.models.Response:
         """
-        Send text to GigaChat
-        :param question: Text to ask GigaChat
+        Make summarization or make answer by GigaChat
+        :param prompt: system prompt to GigaChat
+        :param text: text
         :param token: User token
         :return: GigaChat answer as object requests.models.Response
         """
         payload = json.dumps({
             "messages": [
                 {
+                    "role": "system",
+                    "content": prompt
+                },
+                {
                     "role": "user",
-                    "content": "{}".format(question)
+                    "content": text
                 }
             ],
             "model": "GigaChat:latest",
             "profanity_check": False,
-            "repetition_penalty": 1,
-            "temperature": 0.1
+            # "repetition_penalty": 1,
+            # "temperature": 0.1
         })
         headers = {
             'Authorization': 'Bearer {}'.format(token),
