@@ -85,7 +85,6 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
             month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
             month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
             await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
-    # await message.answer(title)
     if day:  # Публикация дня
         for day_rev in day[::-1]:
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
@@ -181,7 +180,6 @@ async def bonds_info(message: types.Message):
         # print(month)
         title = 'ОФЗ'
         data_source = 'investing.com'
-        # await message.answer('Да да - Вот оно: \n')
         await __sent_photo_and_msg(message, photo, day, month,
                                    title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
@@ -329,7 +327,6 @@ async def exchange_info(message: types.Message):
         photo = open(png_path, 'rb')
         title = 'Курсы валют'
         data_source = 'investing.com'
-        # await message.answer('Да да - Вот оно:\n')
         curdatetime = read_curdatetime()
         await __sent_photo_and_msg(message, photo, day, month,
                                    title=sample_of_img_title.format(title, data_source, curdatetime))
@@ -412,7 +409,6 @@ async def metal_info(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
         day = pd.read_sql_query('select * from "report_met_day"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
-        # await message.answer('Да да - Вот оно:')
         title = ' Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
         await __sent_photo_and_msg(message, photo, day,
@@ -456,18 +452,25 @@ async def user_in_whitelist(user: str):
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
-    user_id = user_raw['id']
-    user_username = user_raw['username']
-    user_lang = user_raw['language_code']
-    user = pd.DataFrame([[user_id, user_username, user_lang]],
-                        columns=['user_id', 'user_username', 'user_lang'])
-    try:
-        engine = create_engine(psql_engine)
-        user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-        await message.answer('Welcome a board captain!', protect_content=True)
-    except Exception as e:
-        await message.answer('Somthing went wrong', protect_content=True)
-        print('Somthing went wrong: {}'.format(e))
+    email = 'message: types.Message'
+    if user_in_whitelist(user_raw):
+        if 'username' in user_raw:
+            user_username = user_raw['username']
+        else:
+            user_username = 'Empty_username'
+        user_id = user_raw['id']
+        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active']],
+                            columns=['user_id', 'username', 'email', 'user_type', 'user_status'])
+        try:
+            engine = create_engine(psql_engine)
+            user.to_sql('whitelist', if_exists='append', index=False, con=engine)
+            await message.answer(f'Добро пожаловать {email}!', protect_content=True)
+        except Exception as e:
+            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже '
+                                 f'\n\n{e}', protect_content=True)
+            print('Во время авторизации произошла ошибка, попробуйте позже: {}'.format(e))
+    else:
+        await message.answer(f'{email} - уже существует', protect_content=True)
 
 
 @dp.message_handler()
@@ -497,18 +500,19 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
-        if message.text.lower() in bonds_aliases:
+        message_text = message.text.lower().strip()
+        if message_text in bonds_aliases:
             await bonds_info(message)
-        elif message.text.lower() in eco_aliases:
+        elif message_text in eco_aliases:
             await economy_info(message)
-        elif message.text.lower() in metal_aliases:
+        elif message_text in metal_aliases:
             await metal_info(message)
-        elif message.text.lower() in exchange_aliases:
+        elif message_text in exchange_aliases:
             await exchange_info(message)
-        elif message.text.lower() in view_aliases:
+        elif message_text in view_aliases:
             await data_mart(message)
-        elif message.text.lower() in ['test']:
-            await draw_all_tables(message)
+        # elif message_text in ['test']:
+        #    await draw_all_tables(message)
         else:
             try:
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)
@@ -533,8 +537,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 return giga_js
             print('{} - {}'.format('GigaChat_say', giga_js))
     else:
-        await message.answer('You are NOT in club, get lost!\nhttps://www.youtube.com/watch?v=IjGEox6UOTs',
-                             protect_content=True)
+        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
 
 
 if __name__ == '__main__':
