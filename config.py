@@ -108,96 +108,91 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Gold spot',
-            'alias':'золото'
-
+            'alias': ''
         },
         'Медь LME спот, $/т': {
             'links': ['LMCADY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Copper LME spot price',
-            'alias':'медь'  
-
+            'alias': ''
         },
         'Алюминий LME спот, $/т': {
             'links': ['AHDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Aluminium LME spot',
-            'alias':'алюминий'  
-
+            'alias': ''
         },
         'Никель LME спот, $/т': {
             'links': ['LMNIDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Nickel LME spot',
-            'alias':'никель'  
-
+            'alias': ''
         },
         'Палладий LME спот, $/унц': {
             'links': ['PALL'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Palladium LME spot',
-            'alias':'палладий'  
+            'alias': ''
         },
         'Платина LME спот, $/унц': {
             'links': ['PLAT'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Platinum LME spot',
-            'alias':'платина'  
+            'alias': ''
         },
         'Цинк LME спот, $/т': {
             'links': ['LMZSDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Zinc LME spot',
-            'alias':'цинк'  
-
+            'alias': ''
         },
         'Свинец LME спот, $/т': {
             'links': ['LMPBDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Lead LME spot',
-            'alias':'свинец'  
+            'alias': ''
         },
         'Серебро спот, $/унц': {
             'links': ['SILV'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Silver spot',
-            'alias':'серебро'  
+            'alias': ''
         },
         'Кобальт LME спот, $/т': {
             'links': ['LMCODY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Cobalt LME spot',
-            'alias':'кобальт'  
+            'alias': ''
         },
         'Железная руда 62% Fe CFR Китай, $/т': {
             'links': ['MB020424'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Iron ore 62% Fe CFR China',
-            'alias':'жрс'  
+            'alias': ''
         },
         'Олово LME spot, $/т': {
             'links': ['LMSNDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Tin LME spot',
-            'alias':'олово'  
+            'alias': ''
         },
         'Уран Generic 1st UxC, $/фунт': {
             'links': ['UXA1'],
             'to_take': 3,
             'measurables': '$/фунт',
             'naming': 'Generic 1st UxC Uranium Price',
-            'alias':'уран'  
+            'alias': ''
         },
         'Энергетический уголь 6 000kcal, CIF ARA, $/т': {
             'links': ['CIFARA'],
@@ -211,7 +206,7 @@ dict_of_commodities = \
             'to_take': 3,
             'measurables': '$/т',
             'naming': 'HCC FOB Australia',
-            'alias':'коксующийся уголь'  
+            'alias': ''
         },
         'Рулон г/к FOB Черное море, $/т': {
             'links': ['RUHRC2'],
@@ -267,13 +262,13 @@ dict_of_commodities = \
             'to_take': 3,
             'measurables': '$/т',
             'naming': 'Ammonia, CFR Tampa',
-            'alias':'аммиак'  
+            'alias': ''
         },
         'Газ, Natural Gas, $/тыс м3': {
             'links': [
                 'https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
             'measurables': '$/тыс м3',
             'naming': 'Gas',
-            'alias':'газ'   
+            'alias': ''
         },
     }
