@@ -473,6 +473,17 @@ async def user_to_whitelist(message: types.Message):
         await message.answer(f'{email} - уже существует', protect_content=True)
 
 
+async def check_your_right(user: str):
+    user_json = json.loads(user)
+    user_id = user_json['id']
+    engine = create_engine(psql_engine)
+    user_type = pd.read_sql_query(f'select "user_type" from "whitelist" WHERE user_id="{user_id}"', con=engine)
+    if user_type == 'admin' or user_type == 'owner':
+        return True
+    else:
+        return False
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
@@ -490,7 +501,6 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             for article in articles:
                 await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
         return None
-
     global chat
     global token
     msg = '{} {}'.format(prompt, message.text)
