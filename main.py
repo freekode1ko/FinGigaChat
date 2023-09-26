@@ -17,6 +17,7 @@ import time
 import datetime
 import re
 from typing import List, Tuple, Dict
+from webdriver_manager.chrome import ChromeDriverManager
 import json
 
 
@@ -83,7 +84,7 @@ class Main:
             response = session.get(url)
             name = name.replace('/','_')
             name = name.replace(' ','_')
-            name = name.split(',')  
+            name = name.split(',')
             name =f'{name[0]}_graph.png'
             with open(f'./sources/img/{name}', 'wb') as f:
                 f.write(response.content)
@@ -204,7 +205,7 @@ class Main:
             commodity_price_obj = CommodityPricing(
                                                     commodity_id=q_gas[0].id,
                                                     subname='Газ',
-                                                    unit=np.nan, 
+                                                    unit=np.nan,
                                                     price=np.nan,
                                                     m_delta=np.nan,
                                                     y_delta=np.nan,
@@ -435,11 +436,13 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
+
         print('research start')
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
 
         # economy
+        key_eco_table = authed_user.get_key_econ_ind_table()
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                             name_of_review='Экономика России. Ежемесячный обзор')
@@ -486,7 +489,7 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        return reviews, companies_pages_html
+        return reviews, companies_pages_html, key_eco_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -513,6 +516,11 @@ class Main:
 
         print('SAVE REVIEWS...ok')
 
+
+    def save_key_eco_table(self, key_eco_table):
+        engine = create_engine(self.psql_engine)
+        key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+
     def process_companies_data(self, company_pages_html) -> None:
         """
         Process and save fin mark of the companies.
@@ -538,7 +546,7 @@ class Main:
                 df.reset_index(inplace=True)
                 df = df.drop(['Unnamed: 0', 'index', 'group_no'], axis=1)
                 df = df.drop(index=df.index[0], axis=0)
-                df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
+                df.rename(columns={'`Unnam`ed: 1': 'Показатели'}, inplace=True)
                 page_tables.append([tables_names[i], company, df])
 
             companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
@@ -557,11 +565,18 @@ if __name__ == '__main__':
         runner.main()
 
         # collect and save research data
-        firefox_options = webdriver.FirefoxOptions()
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+
+        options = webdriver.FirefoxOptions()
+        user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15'
+        options.add_argument(f'user-agent={user_agent}')
+        driver = webdriver.Firefox(options=options)
+        # firefox_options = webdriver.FirefoxOptions()
+        # driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+
+            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
