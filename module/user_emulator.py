@@ -268,6 +268,7 @@ class ResearchParser:
         
         return table_without_nan
 
+
 class InvestingAPIParser:
     """
     Class for InvestingAPI parsing
