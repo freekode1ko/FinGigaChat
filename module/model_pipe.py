@@ -11,7 +11,7 @@ from module.gigachat import GigaChat
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
-COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
@@ -113,11 +113,12 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def rate_commodity(df: pd.DataFrame, use_relevance_model: bool) -> pd.DataFrame:
+def rate_commodity(df: pd.DataFrame, use_relevance_model: bool, threshold=0.4) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
     :param df: Pandas DF. Pandas DF with current news batch.
     :param use_relevance_model : bool. Flag shows whether binary relevance model should be applied.
+    :param threshold : float. Threshold on binary commodity relevance model.
     :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
     """
     # read commodity rating system
@@ -151,7 +152,7 @@ def rate_commodity(df: pd.DataFrame, use_relevance_model: bool) -> pd.DataFrame:
         probs = binary_model.predict_proba(df['cleaned_data'])
         res = []
         for pair in probs:
-            if (pair[1]) > 0.25:
+            if (pair[1]) > threshold:
                 res.append(1)
             else:
                 res.append(0)
