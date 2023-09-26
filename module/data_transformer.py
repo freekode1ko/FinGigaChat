@@ -68,7 +68,6 @@ class Transformer:
                          edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
                          header_columns=0, title=None, ax=None, **kwargs):
         data = data.fillna('-')
-        print(data)
         if title is None:
             title = name
 
