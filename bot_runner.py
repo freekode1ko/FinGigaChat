@@ -38,7 +38,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
 # analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
-sample_of_img_title = '<b>{}</b>\nДанные на <i>{}</i>'
+sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
@@ -77,7 +77,8 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
                              parse_mode="HTML", protect_content=True)
 
 
-async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
+async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
+                               month: str = '', title: str = '', source: str = ''):
     batch_size = 3500
     if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
@@ -179,9 +180,10 @@ async def bonds_info(message: types.Message):
         # month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         # print(month)
         title = 'ОФЗ'
+        data_source = 'investing.com'
         # await message.answer('Да да - Вот оно: \n')
         await __sent_photo_and_msg(message, photo, day, month,
-                                   title=sample_of_img_title.format(title, read_curdatetime()))
+                                   title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -239,8 +241,10 @@ async def economy_info(message: types.Message):
         day = pd.read_sql_query('select * from "report_eco_day"', con=engine).values.tolist()
         month = pd.read_sql_query('select * from "report_eco_mon"', con=engine).values.tolist()
         title = 'Ключевые ставки ЦБ мира'
+        data_source = 'ЦБ стран мира'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
+        await __sent_photo_and_msg(message, photo, day, month,
+                                   title=sample_of_img_title.format(title, data_source, curdatetime))
         # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
         #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
 
@@ -258,7 +262,9 @@ async def economy_info(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
         photo = open(png_path, 'rb')
         title = 'Инфляция в России'
-        await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime),
+        data_source = 'ЦБ РФ'
+        await bot.send_photo(message.chat.id, photo,
+                             caption=sample_of_img_title.format(title, data_source, curdatetime),
                              parse_mode='HTML', protect_content=True)
         # сообщение с текущими ставками
         stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
@@ -322,18 +328,21 @@ async def exchange_info(message: types.Message):
         # month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         photo = open(png_path, 'rb')
         title = 'Курсы валют'
+        data_source = 'investing.com'
         # await message.answer('Да да - Вот оно:\n')
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
+        await __sent_photo_and_msg(message, photo, day, month,
+                                   title=sample_of_img_title.format(title, data_source, curdatetime))
 
         fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(
             columns={'базовый сценарий': ' '})
         title = 'Прогноз валютных курсов'
+        data_source = 'Sber analytical research'
         transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
                                      col_width=1.5, title=title)
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
         photo = open(png_path, 'rb')
-        await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, curdatetime))
+        await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
@@ -405,7 +414,9 @@ async def metal_info(message: types.Message):
         photo = open(png_path, 'rb')
         # await message.answer('Да да - Вот оно:')
         title = ' Сырьевые товары'
-        await __sent_photo_and_msg(message, photo, day, title=sample_of_img_title.format(title, read_curdatetime()))
+        data_source = 'LME, Bloomberg, investing.com'
+        await __sent_photo_and_msg(message, photo, day,
+                                   title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
 
 def __replacer(data: str):
