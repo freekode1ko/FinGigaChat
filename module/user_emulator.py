@@ -267,6 +267,7 @@ class ResearchParser:
         table_without_nan = table_without_nan[['Id', 'Name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'Alias']]
         return table_without_nan
 
+
 class InvestingAPIParser:
     """
     Class for InvestingAPI parsing
