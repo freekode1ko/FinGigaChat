@@ -6,7 +6,6 @@ import six
 import datetime
 import config
 import copy
-import matplotlib.ticker as ticker
 
 class Transformer:
 
@@ -68,7 +67,6 @@ class Transformer:
                          edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
                          header_columns=0, title=None, ax=None, **kwargs):
         data = data.fillna('-')
-        print(data)
         if title is None:
             title = name
 
@@ -127,35 +125,8 @@ class Transformer:
         for spine in ax.spines.values():
             spine.set_visible(False)
 
-        labels_new = []
-        for i, label in enumerate(labels):
-            if i!= len(labels)-1:
-                labels_new.append(label)
-                labels_new.append('')
-            else:
-                labels_new.append(label)
-                labels_new.append('')
-
-        xticks_new = []
-        for i, xtick in enumerate(xticks):
-            if i!= len(labels)-1:
-                xticks_new.append(xtick)
-                xticks_new.append((xticks[i+1]-xticks[i])/2 + xtick)
-            else:
-                xticks_new.append(xtick)
-                xticks_new.append((xticks[i]-xticks[i-1])/2 + xtick)
-
-        minor_locator = ticker.AutoMinorLocator(n=2)
-        plt.gca().yaxis.set_minor_locator(minor_locator)
-        plt.gca().tick_params(which='minor', length=4, color='black', width=1)
-        def format_yticks(value, pos):
-            return '{:,.0f}'.format(value).replace(',', ' ')
-
-        formatter = ticker.FuncFormatter(format_yticks)
-        ax.yaxis.set_major_formatter(formatter)
-
-        plt.xticks(xticks_new)
-        ax.set_xticklabels(labels_new)
+        plt.xticks(xticks)
+        ax.set_xticklabels(labels)
         ax.yaxis.set_tick_params(length=0)
 
         color = (30/255, 212/255, 132/255)
@@ -174,8 +145,8 @@ class Transformer:
         x_name = df['x'].iloc[first]
         y_name = df['y'][first:].max()
 
-        ax.text(x_name, y_name, name, fontsize=12)
-        ax.text(x-delta_x, y+delta_y, y,fontsize=10, weight='bold')
+        ax.text(x_name, y_name, name, fontsize=14)
+        ax.text(x-delta_x, y+delta_y, y,fontsize=12, weight='bold')
         ax.plot(x, y, 'o', markersize=6, color=color)
 
     @staticmethod
