@@ -440,6 +440,7 @@ class Main:
         authed_user = ue.ResearchParser(driver)
 
         # economy
+        key_eco_table = authed_user.get_key_econ_ind_table()
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                             name_of_review='Экономика России. Ежемесячный обзор')
@@ -486,7 +487,7 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        return reviews, companies_pages_html
+        return reviews, companies_pages_html, key_eco_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -564,7 +565,6 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-
         try:
             reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
             runner.save_key_eco_table(key_eco_table)
