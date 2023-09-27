@@ -65,7 +65,7 @@ def daily_func():
     # ap_obj.delete_old_article()
 
     client_flag = commodity_flag = False
-    client_filepath = commodity_filepath = None
+    client_filepath = commodity_filepath = ''
 
     count_of_attempt = 5
     for attempt in range(count_of_attempt):

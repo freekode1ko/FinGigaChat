@@ -63,7 +63,11 @@ def find_names(text: str, table: pd.DataFrame, clean: bool) -> str:
     """
     # search for names in normal case and upper case.
     if clean:
-        text = clean_data(text)
+        try:
+            text = clean_data(text)
+        except Exception as e:
+            print(e, '\n-- type sum_text:', type(text), '-- sum_text:', text)
+            text = clean_data(str(text))
     answer = []
     for i in range(len(table)):
         for j in range(len(table.loc[i])):
