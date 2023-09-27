@@ -513,6 +513,11 @@ class Main:
 
         print('SAVE REVIEWS...ok')
 
+
+    def save_key_eco_table(self, key_eco_table):
+        engine = create_engine(self.psql_engine)
+        key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+
     def process_companies_data(self, company_pages_html) -> None:
         """
         Process and save fin mark of the companies.
@@ -561,7 +566,8 @@ if __name__ == '__main__':
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
