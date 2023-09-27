@@ -10,7 +10,7 @@ from config import mail_username, mail_password, mail_imap_server
 
 CLIENT_FOLDER_DIR = "data/articles/client"
 COMMODITY_FOLDER_DIR = "data/articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=14, minutes=24)
+HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 
 def imap_func(type_of_article, folder_name):
@@ -29,7 +29,6 @@ def imap_func(type_of_article, folder_name):
 
     if date_msg == dt.datetime.now().date():
         filepath = imap_obj.get_and_download_attachment(folder_name)
-        print(f'-- download {filepath}')
     else:
         filepath = None
 
@@ -44,15 +43,11 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
     filepath = imap_func(type_of_article, folder_dir)
     if filepath:
         df = ap_obj.load_file(filepath, type_of_article)
-        print(f'-- got {len(df)} {type_of_article} articles')
         if not df.empty:
-            print('-- go throw models')
             df = ap_obj.throw_the_models(df, type_of_article)
         else:
-            print('-- df is empty')
             df[['text_sum', f'{type_of_article}_score', 'cleaned_data']] = None
         df.to_csv(filepath, index=False)
-        print('-- save to csv after models')
         return True, filepath
     else:
         return False, None
@@ -62,7 +57,7 @@ def daily_func():
 
     # delete old articles from database
     ap_obj = ArticleProcess()
-    # ap_obj.delete_old_article()
+    ap_obj.delete_old_article()
 
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = ''
@@ -92,8 +87,6 @@ def daily_func():
                                   'commodity_score', 'cleaned_data']))
 
     if client_flag or commodity_flag:
-        print(f'is there new client article? -- {client_flag}')
-        print(f'is there new commodity article? -- {commodity_flag}')
         ap_obj.merge_client_commodity_article(df_client, df_commodity)
         ap_obj.drop_duplicate()
         ap_obj.save_tables()

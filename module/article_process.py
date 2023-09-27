@@ -61,9 +61,9 @@ class ArticleProcess:
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         old_articles = pd.read_sql('SELECT text from article', con=self.engine)
-        print('-- new article before deduplicate = ', len(self.df_article))
+        print('before deduplicate = ', len(self.df_article))
         self.df_article = deduplicate(self.df_article, old_articles)
-        print('-- new article after deduplicate = ', len(self.df_article))
+        print('after deduplicate = ', len(self.df_article))
 
     def delete_old_article(self):
         with self.engine.connect() as conn:
@@ -89,7 +89,6 @@ class ArticleProcess:
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
         self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity',
                                       'client_score', 'commodity_score', 'cleaned_data']]
-        print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 
     def save_tables(self) -> None:
         """
@@ -107,7 +106,6 @@ class ArticleProcess:
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
-        print(f'-- save {len(article)} articles in database')
 
         # add ids to df_article from article table from db
         query_ids = f"SELECT id, link FROM article WHERE link IN ({links_value})"
@@ -138,9 +136,9 @@ class ArticleProcess:
         # make relation df between client id and article id
         df_relation_subject_article = df_article_subject.merge(subject, on=name)[[f'{name}_id', 'article_id',
                                                                                   f'{name}_score']]
+
         # save relation df to database
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
-        print(f'-- relation_{name}_article is {len(df_relation_subject_article)}')
 
     def _find_subject_id(self, message: str, subject: str):
         """
@@ -250,7 +248,6 @@ class ArticleProcess:
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
         com_data, reply_msg, img_name_list = None, '', []
-        client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
@@ -265,9 +262,7 @@ class ArticleProcess:
 
         reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
-        if client_id and not articles:
-            return 'Пока нет новостей на эту тему', img_name_list
-        elif commodity_id and not articles and not img_name_list:
+        if subject_name and not articles and not reply_msg:
             return 'Пока нет новостей на эту тему', img_name_list
 
         return reply_msg, img_name_list

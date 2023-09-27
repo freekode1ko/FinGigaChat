@@ -222,7 +222,6 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     :return: df with subject name and score
     """
     # add column with clean text
-    print('-- cleaned data')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
     clean_flag = False
 
@@ -231,7 +230,6 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     # make_summarization
     if type_of_article == 'commodity':
-        print('-- make summary for commodity')
         giga_chat = GigaChat()
         token = giga_chat.get_user_token()
         df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
@@ -239,13 +237,11 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         clean_flag = True
 
     # find subject name in text and union with polyanalyst names
-    print(f'-- find {type_of_article} names in article')
     df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names, clean_flag))
     df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
                                    axis=1)
 
     # make rating for article
-    print(f'-- rate {type_of_article} articles')
     df = rate_client(df) if type_of_article == 'client' else rate_commodity(df, True)
 
     # sum cluster labels
@@ -269,7 +265,6 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     # TODO: учитывать кол-во найденных клиентов при удалении новости - удалять где меньше клиентов
     # make clean data for previous dataframe
     df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
-    print(f'len of articles in database -- {len(df_previous)}')
     # concat two columns with news from both DFs.
     df_concat = pd.DataFrame(pd.concat([df_previous['cleaned_data'], df['cleaned_data']], keys=['df_previous', 'df']),
                              columns=['cleaned_data'])

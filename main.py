@@ -113,20 +113,22 @@ class Main:
             link = self.commodities[commodity]['links'][0]
             name = self.commodities[commodity]['naming']
             print(commodity)
-            print(self.commodities[commodity]['links'][0])
-            
-            self.graph_collector(link,session,driver,commodity)
-
+            self.graph_collector(link, session, driver, commodity)
 
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
                 InvAPI_obj = ue.InvestingAPIParser(driver)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
-                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price), 1)}
-                
-                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                dict_row = {'Resource': self.commodities[commodity]['naming'], 'SPOT': round(float(streaming_price), 1)}
+
+                if self.commodities[commodity]['alias'] != '':
+                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                else:
+                    dict_row['alias'] = commodity.lower().strip()
+
                 dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity.split(',')[0] 
+                dict_row['Resource'] = commodity
+
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
             elif self.commodities[commodity]['naming'] != 'Gas':
@@ -144,16 +146,20 @@ class Main:
                             dict_row[key] = num
                         else:
                             dict_row[key] = np.nan
-                    
-                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+
+                if self.commodities[commodity]['alias'] != '':
+                    dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
+                else:
+                    dict_row['alias'] = commodity.lower().strip()
 
                 dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity.split(',')[0]
+                dict_row['Resource'] = commodity
 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-        
+
         engine = create_engine(self.psql_engine)
         commodity = pd.read_sql_query("select * from commodity", con=engine)
+
         commodity_ids = pd.DataFrame()
 
         for i, row in commodity_pricing.iterrows():
@@ -174,7 +180,7 @@ class Main:
         session = Session()
         q = session.query(CommodityPricing)
 
-        if q.count() == 28:
+        if q.count() == 27:
             for i, row in df_combined.iterrows():
                 session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
                     update(
@@ -205,7 +211,6 @@ class Main:
                                                     cons=np.nan)
             session.merge(commodity_price_obj, load=True)
             session.commit()
-            
 
         session.close()
 
@@ -508,6 +513,11 @@ class Main:
 
         print('SAVE REVIEWS...ok')
 
+
+    def save_key_eco_table(self, key_eco_table):
+        engine = create_engine(self.psql_engine)
+        key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+
     def process_companies_data(self, company_pages_html) -> None:
         """
         Process and save fin mark of the companies.
@@ -556,7 +566,8 @@ if __name__ == '__main__':
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
