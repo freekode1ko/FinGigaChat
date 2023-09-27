@@ -176,21 +176,23 @@ class Main:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
-                    update(
-                    {"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
 
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                    update({"price": row['price'], "m_delta": np.nan, "y_delta": row['y_delta'], "cons": row['cons']})
+                    # update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
+                
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
-                    commodity_id=int(row['commodity_id']),
-                    subname=row['subname'],
-                    unit=row['unit'],
-                    price=row['price'],
-                    m_delta=row['m_delta'],
-                    y_delta=row['y_delta'],
-                    cons=row['cons'])
+                                                    commodity_id=int(row['commodity_id']),
+                                                    subname=row['subname'],
+                                                    unit=row['unit'], 
+                                                    price=row['price'],
+                                                    m_delta=np.nan,
+                                                    # m_delta=row['m_delta'],
+                                                    y_delta=row['y_delta'],
+                                                    cons=row['cons'])
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 

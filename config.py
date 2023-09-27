@@ -82,11 +82,12 @@ dict_of_commodities = \
             'alias': 'Нефть'
         },
         'Нефть WTI, $/бар': {
-            'links': ['USCRWTIC'],
-            'to_take': 3,
+            'links': ['8849',
+                      'https://ru.investing.com/commodities/crude-oil'],
+            'to_take':1,
             'measurables': '$/бар',
             'naming': 'WTI',
-            'alias': 'Нефть'
+            'alias':'Нефть'
         },
         'Нефть Urals, $/бар': {
             'links': ['1168084',

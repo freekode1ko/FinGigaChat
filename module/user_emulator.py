@@ -277,7 +277,7 @@ class InvestingAPIParser:
 
         url = f'{url}-streaming-chart'
         self.driver.get(url)
-        data = self.driver.find_element(By.ID, 'last_last').text
+        data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
 
         return data
 
