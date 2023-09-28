@@ -249,7 +249,7 @@ class ResearchParser:
         page_html = self.driver.page_source
         tables = pd.read_html(page_html.replace(',', '.'))
         df = tables[-1].dropna(how='all')
-        df = df.rename(columns={'Unnamed: 0': 'Name'})
+        df = df.rename(columns={'Unnamed: 0': 'name'})
         left_column = df[df.isnull().any(axis=1)]
         table_without_nan = df.dropna().reset_index(drop=True)
         counts = []
@@ -261,13 +261,12 @@ class ResearchParser:
                 counts.append(count)
                 count = 0
         counts.append(count)
-        alias = left_column['Name'].repeat(counts).reset_index(drop=True)
-        table_without_nan['Alias'] = alias
-        table_without_nan['Id'] = range(1, table_without_nan.shape[0] + 1)
-        table_without_nan = table_without_nan[['Id', 'Name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'Alias']]
-        
-        return table_without_nan
+        alias = left_column['name'].repeat(counts).reset_index(drop=True)
+        table_without_nan['alias'] = alias
+        table_without_nan['id'] = range(1, table_without_nan.shape[0] + 1)
+        table_without_nan = table_without_nan[['id', 'name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'alias']]
 
+        return table_without_nan
 
 class InvestingAPIParser:
     """
