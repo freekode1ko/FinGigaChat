@@ -1,18 +1,22 @@
 import json
+import datetime
+import warnings
+import re
+import numpy as np
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.utils.exceptions import MessageIsTooLong
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from sqlalchemy import create_engine
+import pandas as pd
+import ast
+
 import module.data_transformer as dt
 import module.gigachat as gig
+from module.chatgpt import ChatGPT
 from module.article_process import ArticleProcess
-import pandas as pd
-import numpy as np
-import datetime
-import warnings
 import config
-import ast
-import re
 
 path_to_source = config.path_to_source
 # curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
@@ -21,8 +25,9 @@ psql_engine = config.psql_engine
 token = ''
 chat = ''
 
+storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=storage)
 
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
 eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика', 'макро',
@@ -44,6 +49,11 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
+
+
+# States
+class Form(StatesGroup):
+    link = State()  # Will be represented in storage as 'Form:link'
 
 
 def read_curdatetime():
@@ -473,15 +483,55 @@ async def user_to_whitelist(message: types.Message):
         await message.answer(f'{email} - уже существует', protect_content=True)
 
 
-async def check_your_right(user: str):
-    user_json = json.loads(user)
-    user_id = user_json['id']
-    engine = create_engine(psql_engine)
-    user_type = pd.read_sql_query(f'select "user_type" from "whitelist" WHERE user_id="{user_id}"', con=engine)
+async def check_your_right(user: dict):
+    user_id = user['id']
+    engine = create_engine(config.psql_engine)
+    user_series = pd.read_sql_query(f"select user_type from whitelist WHERE user_id='{user_id}'", con=engine)
+    user_type = user_series.values.tolist()[0][0]
     if user_type == 'admin' or user_type == 'owner':
         return True
     else:
         return False
+
+
+@dp.message_handler(commands=['change_summary'])
+async def change_summary(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
+        await Form.link.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link)
+async def continue_change_summary(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    ap_obj = ArticleProcess()
+    old_text_sum = ap_obj.get_article_by_link(message.text)
+    if not old_text_sum:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        return None
+
+    gpt = ChatGPT()
+    query_to_gpt = gpt.ask_chat_gpt(text=old_text_sum, prompt=config.summarization_prompt)
+    new_text_sum = query_to_gpt.choices[0].message.content
+
+    ap_obj.insert_new_gpt_summary(new_text_sum)
+
+    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True,
+                         disable_web_page_preview=True)
+    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True,
+                         disable_web_page_preview=True)
 
 
 @dp.message_handler()

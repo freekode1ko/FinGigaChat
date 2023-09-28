@@ -38,6 +38,7 @@ research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
+api_key_gpt = ''
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 
 api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'

@@ -271,3 +271,19 @@ class ArticleProcess:
             return 'Пока нет новостей на эту тему', img_name_list
 
         return reply_msg, img_name_list
+
+    def get_article_by_link(self, link: str):
+        with self.engine.connect() as conn:
+            article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
+        try:
+            text_sum = article[5]
+        except TypeError:
+            return False
+        else:
+            return text_sum
+
+    def insert_new_gpt_summary(self, new_text_summary):
+        """ Insert new gpt summary into database """
+        with self.engine.connect() as conn:
+            conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}')"))
+            conn.commit()
