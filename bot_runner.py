@@ -486,6 +486,11 @@ async def check_your_right(user: str):
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
+    msg = '{} {}'.format(prompt, message.text)
+    msg = msg.replace('/bonds', '')
+    msg = msg.replace('/eco', '')
+    msg = msg.replace('/commodities', '')
+    msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
         reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
@@ -506,12 +511,6 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
 
         global chat
         global token
-        msg = '{} {}'.format(prompt, message.text)
-        msg = msg.replace('/bonds', '')
-        msg = msg.replace('/eco', '')
-        msg = msg.replace('/commodities', '')
-        msg = msg.replace('/fx', '')
-
         message_text = message.text.lower().strip()
         if message_text in bonds_aliases:
             await bonds_info(message)
