@@ -10,7 +10,7 @@ from config import mail_username, mail_password, mail_imap_server
 
 CLIENT_FOLDER_DIR = "data/articles/client"
 COMMODITY_FOLDER_DIR = "data/articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=14, minutes=24)
+HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 
 def imap_func(type_of_article, folder_name):
@@ -65,7 +65,7 @@ def daily_func():
     # ap_obj.delete_old_article()
 
     client_flag = commodity_flag = False
-    client_filepath = commodity_filepath = None
+    client_filepath = commodity_filepath = ''
 
     count_of_attempt = 5
     for attempt in range(count_of_attempt):
