@@ -60,10 +60,7 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
 def daily_func():
 
-    # delete old articles from database
     ap_obj = ArticleProcess()
-    # ap_obj.delete_old_article()
-
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = None
 
@@ -106,7 +103,9 @@ def daily_func():
     else:
         print('DID NOT GET ARTICLES')
 
-    time.sleep(60)  # if pipe too fast
+    # delete old articles from database
+    ap_obj.delete_old_article('client')
+    ap_obj.delete_old_article('commodity')
 
 
 if __name__ == '__main__':
