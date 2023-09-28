@@ -282,8 +282,8 @@ class ArticleProcess:
         else:
             return text_sum
 
-    def insert_new_gpt_summary(self, new_text_summary):
+    def insert_new_gpt_summary(self, new_text_summary, link):
         """ Insert new gpt summary into database """
         with self.engine.connect() as conn:
-            conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}')"))
+            conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link={link}"))
             conn.commit()

@@ -517,7 +517,8 @@ async def continue_change_summary(message: types.Message):
     await types.ChatActions.typing()
 
     ap_obj = ArticleProcess()
-    old_text_sum = ap_obj.get_article_by_link(message.text)
+    link = message.text
+    old_text_sum = ap_obj.get_article_by_link(link)
     if not old_text_sum:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
         return None
@@ -526,7 +527,7 @@ async def continue_change_summary(message: types.Message):
     query_to_gpt = gpt.ask_chat_gpt(text=old_text_sum, prompt=config.summarization_prompt)
     new_text_sum = query_to_gpt.choices[0].message.content
 
-    ap_obj.insert_new_gpt_summary(new_text_sum)
+    ap_obj.insert_new_gpt_summary(new_text_sum, link)
 
     await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True,
                          disable_web_page_preview=True)
