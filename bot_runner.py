@@ -517,7 +517,6 @@ async def change_summary(message: types.Message):
 @dp.message_handler(state=Form.link)
 async def continue_change_summary(message: types.Message, state: FSMContext):
 
-    await types.ChatActions.typing()
     await state.update_data(link=message.text)
     data = await state.get_data()
 
@@ -528,13 +527,13 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
         await state.finish()
         return
 
+    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=True)
+    await types.ChatActions.typing()
     new_text_sum = summarization_by_chatgpt(full_text)
     ap_obj.insert_new_gpt_summary(new_text_sum, data['link'])
 
-    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True,
-                         disable_web_page_preview=True)
-    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True,
-                         disable_web_page_preview=True)
+    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
     await state.finish()
 
 

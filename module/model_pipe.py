@@ -319,7 +319,8 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     return df
 
 
-def summarization_by_chatgpt(full_text):
+def summarization_by_chatgpt(full_text: str):
+    # TODO: do by langchain
     """ Make summary by chatgpt """
     batch_size = 4000
     text_batches = []
@@ -331,7 +332,6 @@ def summarization_by_chatgpt(full_text):
             full_text = full_text[point_index+1:]
     else:
         text_batches = [full_text]
-    print(text_batches)
     for batch in text_batches:
         gpt = ChatGPT()
         query_to_gpt = gpt.ask_chat_gpt(text=batch, prompt=summarization_prompt)
