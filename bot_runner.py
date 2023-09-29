@@ -55,6 +55,7 @@ giga_ans_footer = 'Ответ сгенерирован Gigachat. Информа�
 # States
 class Form(StatesGroup):
     link = State()
+    link_change_summary = State()
     link_to_delete = State()
     permission_to_delete = State()
 
@@ -497,6 +498,46 @@ async def check_your_right(user: dict):
         return False
 
 
+@dp.message_handler(commands=['show_article'])
+async def show_article(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите получить..'
+        await Form.link.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link)
+async def continue_show_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(link=message.text)
+    data = await state.get_data()
+
+    ap_obj = ArticleProcess()
+    full_text, old_text_sum = ap_obj.get_article_text_by_link(data['link'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+
+    data_article_dict = ap_obj.get_article_by_link(data['link'])
+    format_msg = ''
+    for key, val in data_article_dict.items():
+        format_msg += f'<b>{key}</b>: {val}\n'
+
+    await message.answer(format_msg, parse_mode='HTML', protect_content=True)
+    await state.finish()
+
+
 @dp.message_handler(commands=['change_summary'])
 async def change_summary(message: types.Message):
 
@@ -507,21 +548,21 @@ async def change_summary(message: types.Message):
 
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
-        await Form.link.set()
+        await Form.link_change_summary.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
                                protect_content=True, disable_web_page_preview=True)
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
-@dp.message_handler(state=Form.link)
+@dp.message_handler(state=Form.link_change_summary)
 async def continue_change_summary(message: types.Message, state: FSMContext):
 
-    await state.update_data(link=message.text)
+    await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
 
     ap_obj = ArticleProcess()
-    full_text, old_text_sum = ap_obj.get_article_by_link(data['link'])
+    full_text, old_text_sum = ap_obj.get_article_text_by_link(data['link_change_summary'])
     if not full_text:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
         await state.finish()
@@ -530,7 +571,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=True)
     await types.ChatActions.typing()
     new_text_sum = summarization_by_chatgpt(full_text)
-    ap_obj.insert_new_gpt_summary(new_text_sum, data['link'])
+    ap_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
 
     await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
     await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
@@ -562,13 +603,13 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
     data = await state.get_data()
 
     ap_obj = ArticleProcess()
-    full_text, old_text_sum = ap_obj.get_article_by_link(data['link_to_delete'])
+    full_text, old_text_sum = ap_obj.get_article_text_by_link(data['link_to_delete'])
     if not full_text:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
         await state.finish()
         return
     else:
-        permission_answer = f'Вы уверены, что хотите удалить данную новость ?\nНапишите "да" или "нет".'
+        permission_answer = f'Вы уверены, что хотите удалить данную новость ?\nЕсли да, то напишите: "Удалить новость".'
         await Form.permission_to_delete.set()
         await message.reply(permission_answer, protect_content=True)
 
@@ -581,7 +622,7 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
     data = await state.get_data()
 
     ap_obj = ArticleProcess()
-    if data["permission_to_delete"].lower().strip().replace('"', '') == 'да':
+    if data["permission_to_delete"].lower().strip().replace('"', '').replace('.', '') == 'удалить новость':
         ap_obj.delete_article_by_link(data['link_to_delete'])
         await message.answer('Новость удалена.', protect_content=True)
     else:

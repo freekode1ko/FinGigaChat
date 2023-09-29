@@ -273,7 +273,7 @@ class ArticleProcess:
 
         return reply_msg, img_name_list
 
-    def get_article_by_link(self, link: str):
+    def get_article_text_by_link(self, link: str):
         try:
             with self.engine.connect() as conn:
                 article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
@@ -282,6 +282,25 @@ class ArticleProcess:
             return '', ''
         else:
             return full_text, text_sum
+
+    def get_article_by_link(self, link: str):
+        dict_keys = ('Заголовок', 'Ссылка', 'Дата', 'Балл по клиенту', 'Балл по товару', 'Саммари')
+        data = dict.fromkeys(dict_keys, '')
+        query_select = (f"SELECT title, link, date, r_client.client_score, r_commodity.commodity_score, text_sum "
+                        f"FROM article "
+                        f"JOIN relation_client_article r_client ON article.id = r_client.article_id "
+                        f"JOIN relation_commodity_article r_commodity ON article.id = r_commodity.article_id"
+                        f"WHERE link='{link}'")
+        try:
+            with self.engine.connect() as conn:
+                article = conn.execute(text(query_select)).fetchall()
+                print(article)
+                data = {key: val for key, val in zip(dict_keys, article[:6])}
+            return data
+        # except (TypeError, ProgrammingError):
+        except Exception as e:
+            print(e)
+            return data
 
     def delete_article_by_link(self, link: str):
         try:
