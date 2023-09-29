@@ -561,7 +561,7 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'user-agent={config.user_agents[0]}')
-        
+
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
