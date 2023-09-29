@@ -1,6 +1,7 @@
 import re
 from re import search
 import pickle
+from requests.exceptions import ConnectionError
 
 import pandas as pd
 import pymorphy2
@@ -11,7 +12,7 @@ from module.gigachat import GigaChat
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
-COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
@@ -63,7 +64,11 @@ def find_names(text: str, table: pd.DataFrame, clean: bool) -> str:
     """
     # search for names in normal case and upper case.
     if clean:
-        text = clean_data(text)
+        try:
+            text = clean_data(text)
+        except Exception as e:
+            print(e, '\n-- type sum_text:', type(text), '-- sum_text:', text)
+            text = clean_data(str(text))
     answer = []
     for i in range(len(table)):
         for j in range(len(table.loc[i])):
@@ -81,9 +86,11 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     :return: Pandas DF. Current news batch DF with added column 'client_labels'
     """
     # read binary classification model (relevant or not)
-    binary_model = pickle.load(open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb'))
+    with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+        binary_model = pickle.load(f)
     # read multiclass classification model
-    multiclass_model = pickle.load(open(CLIENT_MULTY_CLASSIFICATION_MODEL_PATH, 'rb'))
+    with open(CLIENT_MULTY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+        multiclass_model = pickle.load(f)
     # predict relevance and adding a column with relevance label (1 or 0)
     df['relevance'] = binary_model.predict(df['cleaned_data'])
     # predict label from multiclass classification
@@ -113,11 +120,12 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def rate_commodity(df: pd.DataFrame, use_relevance_model: bool) -> pd.DataFrame:
+def rate_commodity(df: pd.DataFrame, use_relevance_model: bool, threshold=0.4) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
     :param df: Pandas DF. Pandas DF with current news batch.
     :param use_relevance_model : bool. Flag shows whether binary relevance model should be applied.
+    :param threshold : float. Threshold on binary commodity relevance model.
     :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
     """
     # read commodity rating system
@@ -146,12 +154,13 @@ def rate_commodity(df: pd.DataFrame, use_relevance_model: bool) -> pd.DataFrame:
         df['commodity_labels'][j] = ';'.join(str(x) for x in temp_ans)
     if use_relevance_model:
         # load binary relevance model
-        binary_model = pickle.load(open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb'))
+        with open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+            binary_model = pickle.load(f)
         # make predictions
         probs = binary_model.predict_proba(df['cleaned_data'])
         res = []
         for pair in probs:
-            if (pair[1]) > 0.25:
+            if (pair[1]) > threshold:
                 res.append(1)
             else:
                 res.append(0)
@@ -186,13 +195,20 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
     :return: summarization text.
     """
 
-    giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
     try:
+        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
-        if giga_answer in BAD_GIGA_ANSWERS:
-            giga_answer = ''
+    except ConnectionError:
+        print('ConnectionResetError while summarization by GigaChat')
+        giga_chat = GigaChat()
+        token = giga_chat.get_user_token()
+        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
+        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except Exception as e:
         print(e)
+        giga_answer = ''
+
+    if giga_answer in BAD_GIGA_ANSWERS:
         giga_answer = ''
 
     return giga_answer
@@ -217,6 +233,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     :return: df with subject name and score
     """
     # add column with clean text
+    print('-- cleaned data')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
     clean_flag = False
 
@@ -225,6 +242,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     # make_summarization
     if type_of_article == 'commodity':
+        print('-- make summary for commodity')
         giga_chat = GigaChat()
         token = giga_chat.get_user_token()
         df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
@@ -232,11 +250,13 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         clean_flag = True
 
     # find subject name in text and union with polyanalyst names
+    print(f'-- find {type_of_article} names in article')
     df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names, clean_flag))
     df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
                                    axis=1)
 
     # make rating for article
+    print(f'-- rate {type_of_article} articles')
     df = rate_client(df) if type_of_article == 'client' else rate_commodity(df, True)
 
     # sum cluster labels
@@ -249,7 +269,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     return df
 
 
-def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.45) -> pd.DataFrame:
+def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.51) -> pd.DataFrame:
     """
     Delete similar articles
     :param df: df with new article
@@ -257,14 +277,21 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     :param threshold: limit value for deduplicate
     :return: df without duplicates article
     """
-    # TODO: учитывать кол-во найденных клиентов при удалении новости - удалять где меньше клиентов
-    # make clean data for previous dataframe
+    # sort new batch
+    df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and len(x) > 0) else 0)
+    df['count_commodity'] = df['commodity'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and len(x) > 0) else 0)
+    df = df.sort_values(by=['count_client', 'count_commodity', 'client_score', 'commodity_score'],
+                        ascending=[False, False, False, False])
+    df = df.reset_index(drop=True)
+    df.drop(columns=['count_client', 'count_commodity'], inplace=True)
+    # concat two columns with news from both DFs.
     df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
+    print(f'len of articles in database -- {len(df_previous)}')
     # concat two columns with news from both DFs.
     df_concat = pd.DataFrame(pd.concat([df_previous['cleaned_data'], df['cleaned_data']], keys=['df_previous', 'df']),
                              columns=['cleaned_data'])
     df_concat = df_concat.reset_index(drop=True)
-    # vectorize news in new DF.
+    # vectorizing news in new DF
     vectorizer = TfidfVectorizer()
     X_tf_idf = vectorizer.fit_transform(df_concat['cleaned_data'])
     X_tf_idf = X_tf_idf.toarray()
