@@ -6,9 +6,11 @@ from requests.exceptions import ConnectionError
 import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
+from openai.error import InvalidRequestError
 
 from config import summarization_prompt
 from module.gigachat import GigaChat
+from module.chatgpt import ChatGPT
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
@@ -315,3 +317,27 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df.reset_index(drop=True)
     df = df.drop(columns=['unique', 'cleaned_data'])
     return df
+
+
+def summarization_by_chatgpt(full_text):
+    """ Make summary by chatgpt """
+    batch_size = 4000
+    text_batches = []
+    new_text_sum = ''
+    if len(full_text+summarization_prompt) > batch_size:
+        while len(full_text+summarization_prompt) > batch_size:
+            point_index = full_text[:batch_size].rfind('.')
+            text_batches.append(full_text[:point_index+1])
+            full_text = full_text[point_index+1:]
+    else:
+        text_batches = [full_text]
+    print(text_batches)
+    for batch in text_batches:
+        gpt = ChatGPT()
+        query_to_gpt = gpt.ask_chat_gpt(text=batch, prompt=summarization_prompt)
+        new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
+
+    return new_text_sum
+
+
+
