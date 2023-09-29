@@ -511,9 +511,9 @@ class Main:
 
         print('SAVE REVIEWS...ok')
 
-        def save_key_eco_table(self, key_eco_table):
-            engine = create_engine(self.psql_engine)
-            key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+    def save_key_eco_table(self, key_eco_table):
+        engine = create_engine(self.psql_engine)
+        key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
 
     def process_companies_data(self, company_pages_html) -> None:
         """
