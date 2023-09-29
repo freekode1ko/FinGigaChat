@@ -437,6 +437,7 @@ class Main:
         authed_user = ue.ResearchParser(driver)
 
         # economy
+        key_eco_table = authed_user.get_key_econ_ind_table()
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                             name_of_review='Экономика России. Ежемесячный обзор')
@@ -483,7 +484,7 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        return reviews, companies_pages_html
+        return reviews, companies_pages_html, key_eco_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -509,6 +510,10 @@ class Main:
             pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
 
         print('SAVE REVIEWS...ok')
+
+        def save_key_eco_table(self, key_eco_table):
+            engine = create_engine(self.psql_engine)
+            key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
 
     def process_companies_data(self, company_pages_html) -> None:
         """
@@ -560,7 +565,8 @@ if __name__ == '__main__':
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
