@@ -264,22 +264,24 @@ async def economy_info(message: types.Message):
 async def data_mart(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
-        keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
-        keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
-        spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
-
+        engine = create_engine(psql_engine)
+        key_eco_table = pd.read_sql_query('select * from key_eco', con=engine)
+        split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
+        key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
+        spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
         title = 'Динамика и прогноз основных макроэкономических показателей'
         for key_eco in spld_keys_eco:
-            key_eco = key_eco[key_eco['Экономические показатели'].notna()]
-            key_eco.reset_index(inplace=True, drop=True)
-            block = key_eco['Экономические показатели'][0]
-            key_eco = key_eco.iloc[1:]
-            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
-            png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo, title=sample_of_img_title_view.format(title, block, read_curdatetime()))
-
+            if not key_eco.empty:
+                key_eco.reset_index(inplace=True, drop=True)
+                block = key_eco['alias'][0]
+                key_eco = key_eco.drop(['id', 'alias'], axis=1)
+                key_eco = key_eco.iloc[:, [0, -4, -3, -2, -1]]
+                transformer.render_mpl_table(key_eco,
+                                             'key_eco', header_columns=0, col_width=6, title=title)
+                png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+                photo = open(png_path, 'rb')
+                await __sent_photo_and_msg(message, photo,
+                                           title=sample_of_img_title_view.format(title, block, read_curdatetime()))
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
