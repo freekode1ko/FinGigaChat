@@ -511,7 +511,7 @@ class Main:
 
         print('SAVE REVIEWS...ok')
 
-        def save_key_eco_table(self, key_eco_table):
+    def save_key_eco_table(self, key_eco_table):
             engine = create_engine(self.psql_engine)
             key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
 
