@@ -497,6 +497,20 @@ async def check_your_right(user: dict):
         return False
 
 
+@dp.message_handler(commands=['admin_help'])
+async def admin_help(message: types.Message):
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
+                    '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
+                    '<b>/delete_article</b> - удалить новость из базы данных')
+        await message.answer(help_msg, protect_content=True, parse_mode='HTML')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
 @dp.message_handler(commands=['show_article'])
 async def show_article(message: types.Message):
 
