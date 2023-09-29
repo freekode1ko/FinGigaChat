@@ -273,8 +273,10 @@ async def data_mart(message: types.Message):
         for key_eco in spld_keys_eco:
             if not key_eco.empty:
                 key_eco.reset_index(inplace=True, drop=True)
-                block = key_eco['alias'][0]  # key_eco.drop(['id', 'alias'], axis=1),
-                transformer.render_mpl_table(key_eco[['Экономические показатели', '2021', '2022', '2023E', '2024E']],
+                block = key_eco['alias'][0]
+                key_eco = key_eco.drop(['id', 'alias'], axis=1)
+                key_eco = key_eco.iloc[:, [0, -4, -3, -2, -1]]
+                transformer.render_mpl_table(key_eco,
                                              'key_eco', header_columns=0, col_width=6, title=title)
                 png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
                 photo = open(png_path, 'rb')
