@@ -176,21 +176,23 @@ class Main:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
-                    update(
-                    {"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
 
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                    update({"price": row['price'], "m_delta": np.nan, "y_delta": row['y_delta'], "cons": row['cons']})
+                    # update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
+                
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
-                    commodity_id=int(row['commodity_id']),
-                    subname=row['subname'],
-                    unit=row['unit'],
-                    price=row['price'],
-                    m_delta=row['m_delta'],
-                    y_delta=row['y_delta'],
-                    cons=row['cons'])
+                                                    commodity_id=int(row['commodity_id']),
+                                                    subname=row['subname'],
+                                                    unit=row['unit'], 
+                                                    price=row['price'],
+                                                    m_delta=np.nan,
+                                                    # m_delta=row['m_delta'],
+                                                    y_delta=row['y_delta'],
+                                                    cons=row['cons'])
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
@@ -435,6 +437,7 @@ class Main:
         authed_user = ue.ResearchParser(driver)
 
         # economy
+        key_eco_table = authed_user.get_key_econ_ind_table()
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                             name_of_review='Экономика России. Ежемесячный обзор')
@@ -481,7 +484,7 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        return reviews, companies_pages_html
+        return reviews, companies_pages_html, key_eco_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -507,6 +510,10 @@ class Main:
             pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
 
         print('SAVE REVIEWS...ok')
+
+    def save_key_eco_table(self, key_eco_table):
+        engine = create_engine(self.psql_engine)
+        key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
 
     def process_companies_data(self, company_pages_html) -> None:
         """
@@ -553,24 +560,18 @@ if __name__ == '__main__':
 
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
+        firefox_options.add_argument(f'user-agent={config.user_agents[0]}')
+        
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            reviews_dict, companies_pages_html_dict = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             print(f'Some error with Research, check: {e}')
-        # finally:
-        #    driver.close()
 
-        # collect and save commodity charts and a table
-        # firefox_options = webdriver.FirefoxOptions()
-        # user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' \
-        #              'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15
-        # firefox_options.add_argument(f'user-agent={user_agent}')
-        # driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-        # print('driver started')
         try:
             session = req.Session()
             # print('session started')

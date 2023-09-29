@@ -238,6 +238,35 @@ class ResearchParser:
 
         return page_html
 
+    def get_key_econ_ind_table(self):
+        """
+        :return: table in dataframe format
+        """
+        url = f'{self.home_page}/group/guest/econ'
+        self.driver.implicitly_wait(5)
+        self.driver.get(url)
+        page_html = self.driver.page_source
+        tables = pd.read_html(page_html.replace(',', '.'))
+        df = tables[-1].dropna(how='all')
+        df = df.rename(columns={'Unnamed: 0': 'Name'})
+        left_column = df[df.isnull().any(axis=1)]
+        table_without_nan = df.dropna().reset_index(drop=True)
+        counts = []
+        count = 0
+        for cell in df.iloc[:, 1]:
+            if not np.isnan(cell):
+                count += 1
+            elif np.isnan(cell) and count > 0:
+                counts.append(count)
+                count = 0
+        counts.append(count)
+        alias = left_column['Name'].repeat(counts).reset_index(drop=True)
+        table_without_nan['Alias'] = alias
+        table_without_nan['Id'] = range(1, table_without_nan.shape[0] + 1)
+        table_without_nan = table_without_nan[['Id', 'Name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'Alias']]
+
+        return table_without_nan
+
 
 class InvestingAPIParser:
     """
@@ -277,7 +306,7 @@ class InvestingAPIParser:
 
         url = f'{url}-streaming-chart'
         self.driver.get(url)
-        data = self.driver.find_element(By.ID, 'last_last').text
+        data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
 
         return data
 

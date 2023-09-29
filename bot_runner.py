@@ -85,7 +85,6 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
             month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
             month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
             await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
-    # await message.answer(title)
     if day:  # Публикация дня
         for day_rev in day[::-1]:
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
@@ -181,7 +180,6 @@ async def bonds_info(message: types.Message):
         # print(month)
         title = 'ОФЗ'
         data_source = 'investing.com'
-        # await message.answer('Да да - Вот оно: \n')
         await __sent_photo_and_msg(message, photo, day, month,
                                    title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
@@ -277,23 +275,24 @@ async def economy_info(message: types.Message):
 async def data_mart(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
-        keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
-        keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
-        spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
-
+        engine = create_engine(psql_engine)
+        key_eco_table = pd.read_sql_query('select * from key_eco', con=engine)
+        split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
+        key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
+        spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
         title = 'Динамика и прогноз основных макроэкономических показателей'
         for key_eco in spld_keys_eco:
-            key_eco = key_eco[key_eco['Экономические показатели'].notna()]
-            key_eco.reset_index(inplace=True, drop=True)
-            block = key_eco['Экономические показатели'][0]
-            key_eco = key_eco.iloc[1:]
-            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
-            png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo,
-                                       title=sample_of_img_title_view.format(title, block, read_curdatetime()))
-
+            if not key_eco.empty:
+                key_eco.reset_index(inplace=True, drop=True)
+                block = key_eco['alias'][0]
+                key_eco = key_eco.drop(['id', 'alias'], axis=1)
+                key_eco = key_eco.iloc[:, [0, -4, -3, -2, -1]]
+                transformer.render_mpl_table(key_eco,
+                                             'key_eco', header_columns=0, col_width=6, title=title)
+                png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+                photo = open(png_path, 'rb')
+                await __sent_photo_and_msg(message, photo,
+                                           title=sample_of_img_title_view.format(title, block, read_curdatetime()))
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -329,7 +328,6 @@ async def exchange_info(message: types.Message):
         photo = open(png_path, 'rb')
         title = 'Курсы валют'
         data_source = 'investing.com'
-        # await message.answer('Да да - Вот оно:\n')
         curdatetime = read_curdatetime()
         await __sent_photo_and_msg(message, photo, day, month,
                                    title=sample_of_img_title.format(title, data_source, curdatetime))
@@ -412,7 +410,6 @@ async def metal_info(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
         day = pd.read_sql_query('select * from "report_met_day"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
-        # await message.answer('Да да - Вот оно:')
         title = ' Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
         await __sent_photo_and_msg(message, photo, day,
@@ -456,40 +453,40 @@ async def user_in_whitelist(user: str):
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
-    user_id = user_raw['id']
-    user_username = user_raw['username']
-    user_lang = user_raw['language_code']
-    user = pd.DataFrame([[user_id, user_username, user_lang]],
-                        columns=['user_id', 'user_username', 'user_lang'])
-    try:
-        engine = create_engine(psql_engine)
-        user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-        await message.answer('Welcome a board captain!', protect_content=True)
-    except Exception as e:
-        await message.answer('Somthing went wrong', protect_content=True)
-        print('Somthing went wrong: {}'.format(e))
+    email = 'message: types.Message'
+    if user_in_whitelist(user_raw):
+        if 'username' in user_raw:
+            user_username = user_raw['username']
+        else:
+            user_username = 'Empty_username'
+        user_id = user_raw['id']
+        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active']],
+                            columns=['user_id', 'username', 'email', 'user_type', 'user_status'])
+        try:
+            engine = create_engine(psql_engine)
+            user.to_sql('whitelist', if_exists='append', index=False, con=engine)
+            await message.answer(f'Добро пожаловать {email}!', protect_content=True)
+        except Exception as e:
+            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже '
+                                 f'\n\n{e}', protect_content=True)
+            print('Во время авторизации произошла ошибка, попробуйте позже: {}'.format(e))
+    else:
+        await message.answer(f'{email} - уже существует', protect_content=True)
+
+
+async def check_your_right(user: str):
+    user_json = json.loads(user)
+    user_id = user_json['id']
+    engine = create_engine(psql_engine)
+    user_type = pd.read_sql_query(f'select "user_type" from "whitelist" WHERE user_id="{user_id}"', con=engine)
+    if user_type == 'admin' or user_type == 'owner':
+        return True
+    else:
+        return False
 
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
-    reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
-    if reply_msg:
-        if img_name_list:
-            await types.ChatActions.upload_photo()
-            media = types.MediaGroup()
-            for name in img_name_list:
-                media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
-            await bot.send_media_group(message.chat.id, media=media, protect_content=True)
-        try:
-            await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-        except MessageIsTooLong:
-            articles = reply_msg.split('\n\n')
-            for article in articles:
-                await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-        return None
-
-    global chat
-    global token
     msg = '{} {}'.format(prompt, message.text)
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
@@ -497,18 +494,37 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
-        if message.text.lower() in bonds_aliases:
+        reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
+        if reply_msg:
+            if img_name_list:
+                await types.ChatActions.upload_photo()
+                media = types.MediaGroup()
+                for name in img_name_list:
+                    media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
+                await bot.send_media_group(message.chat.id, media=media, protect_content=True)
+            try:
+                await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+            except MessageIsTooLong:
+                articles = reply_msg.split('\n\n')
+                for article in articles:
+                    await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+            return None
+
+        global chat
+        global token
+        message_text = message.text.lower().strip()
+        if message_text in bonds_aliases:
             await bonds_info(message)
-        elif message.text.lower() in eco_aliases:
+        elif message_text in eco_aliases:
             await economy_info(message)
-        elif message.text.lower() in metal_aliases:
+        elif message_text in metal_aliases:
             await metal_info(message)
-        elif message.text.lower() in exchange_aliases:
+        elif message_text in exchange_aliases:
             await exchange_info(message)
-        elif message.text.lower() in view_aliases:
+        elif message_text in view_aliases:
             await data_mart(message)
-        elif message.text.lower() in ['test']:
-            await draw_all_tables(message)
+        # elif message_text in ['test']:
+        #    await draw_all_tables(message)
         else:
             try:
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)
@@ -533,8 +549,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 return giga_js
             print('{} - {}'.format('GigaChat_say', giga_js))
     else:
-        await message.answer('You are NOT in club, get lost!\nhttps://www.youtube.com/watch?v=IjGEox6UOTs',
-                             protect_content=True)
+        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
 
 
 if __name__ == '__main__':

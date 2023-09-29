@@ -273,4 +273,6 @@ if __name__ == '__main__':
     # update_database(main_engine, query_new_alternative_com_electro)
     # update_database(main_engine, query_new_alternative_com_olovo)
     # update gas client name
-    update_database(main_engine, query_update_gas_client_name)
+    # update_database(main_engine, query_update_gas_client_name)
+    # delete rbk from client
+    update_database(main_engine, "DELETE FROM client WHERE name='рбк-холдинг'")
