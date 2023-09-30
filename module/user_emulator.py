@@ -258,6 +258,8 @@ class ResearchParser:
             if col_name != '':
                 headers.append(col_name)
 
+        print(headers)
+
         data = []
         for tr in table_soup.find_all('tr'):
             data_row = []
@@ -304,7 +306,8 @@ class ResearchParser:
         df['alias'] = aliases_series
         df['id'] = range(1, df.shape[0] + 1)
         df = df[['id', 'name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'alias']]
-
+        print(df)
+ 
         return df
 
 
@@ -347,7 +350,7 @@ class InvestingAPIParser:
         url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
-
+        
         return data
 
 
