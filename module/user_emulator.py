@@ -246,6 +246,7 @@ class ResearchParser:
         url = f'{self.home_page}/group/guest/econ'
         self.driver.implicitly_wait(5)
         self.driver.get(url)
+        time.sleep(60)
 
         page_html = self.driver.page_source
         
@@ -258,17 +259,16 @@ class ResearchParser:
             if col_name != '':
                 headers.append(col_name)
 
-        print(headers)
-
         data = []
         for tr in table_soup.find_all('tr'):
             data_row = []
             for td in tr.find_all('td'):
                 data_row.append(td.text.strip())
             if data_row:
-                data.append(data_row)
-
-        print(data)
+                if len(data_row) == 7:
+                    data.append(data_row[1:])
+                elif len(data_row) == 6:
+                    data.append(data_row)
 
         df = pd.DataFrame(data, columns=headers)
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
