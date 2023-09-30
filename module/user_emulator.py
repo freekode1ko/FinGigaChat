@@ -268,6 +268,8 @@ class ResearchParser:
             if data_row:
                 data.append(data_row)
 
+        print(data)
+
         df = pd.DataFrame(data, columns=headers)
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
         df = df.drop(index=0).reset_index(drop=True)
