@@ -571,13 +571,6 @@ if __name__ == '__main__':
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             print(f'Some error with Research, check: {e}')
-        finally:
-            driver.close()
-
-        firefox_options.add_argument('--disable-images')
-        firefox_options.page_load_strategy = 'eager'
-        # driver = webdriver.Firefox(options=firefox_options)
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
             session = req.Session()
