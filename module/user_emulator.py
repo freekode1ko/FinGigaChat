@@ -246,6 +246,7 @@ class ResearchParser:
         url = f'{self.home_page}/group/guest/econ'
         self.driver.implicitly_wait(5)
         self.driver.get(url)
+        time.sleep(60)
 
         page_html = self.driver.page_source
         
@@ -264,7 +265,10 @@ class ResearchParser:
             for td in tr.find_all('td'):
                 data_row.append(td.text.strip())
             if data_row:
-                data.append(data_row)
+                if len(data_row) == 7:
+                    data.append(data_row[1:])
+                elif len(data_row) == 6:
+                    data.append(data_row)
 
         df = pd.DataFrame(data, columns=headers)
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
@@ -276,8 +280,8 @@ class ResearchParser:
         aliases_longevity = []
         for elem in table_soup_al_name:
             col_text = elem.find('td').text.strip()
-            if col_text != '' and 'Норма' not in col_text:
-                if 'name'in elem.find('td').get('class'):
+            if col_text != '' :
+                if 'name'in elem.find('td').get('class') and 'Норма' not in col_text:
                     names.append(col_text)
                     aliases_longevity.append(1)
                 else:
@@ -304,7 +308,8 @@ class ResearchParser:
         df['alias'] = aliases_series
         df['id'] = range(1, df.shape[0] + 1)
         df = df[['id', 'name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'alias']]
-
+        print(df)
+ 
         return df
 
 
@@ -347,7 +352,7 @@ class InvestingAPIParser:
         url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
-
+        
         return data
 
 
