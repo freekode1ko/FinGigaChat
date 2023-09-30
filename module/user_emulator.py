@@ -280,8 +280,8 @@ class ResearchParser:
         aliases_longevity = []
         for elem in table_soup_al_name:
             col_text = elem.find('td').text.strip()
-            if col_text != '' and 'Норма' not in col_text:
-                if 'name'in elem.find('td').get('class'):
+            if col_text != '' :
+                if 'name'in elem.find('td').get('class') and 'Норма' not in col_text:
                     names.append(col_text)
                     aliases_longevity.append(1)
                 else:
