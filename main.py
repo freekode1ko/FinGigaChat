@@ -566,7 +566,6 @@ if __name__ == '__main__':
         try:
             pass
             reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
-            key_eco_table = runner.collect_research(driver)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
