@@ -35,10 +35,10 @@ class Parser:
         :return: None
         """
         global proxy
-        proxy['https'] = ['socks5://193.23.50.38:10222']
-        proxy['https'] = ['socks5://135.125.212.24:10034']
-        proxy['https'] = ['socks5://141.95.93.35:10112']
-        proxy['https'] = ['socks5://193.23.50.38:10222']
+        proxy['https'] = ['socks5h://193.23.50.38:10222']
+        proxy['https'] = ['socks5h://135.125.212.24:10034']
+        proxy['https'] = ['socks5h://141.95.93.35:10112']
+        proxy['https'] = ['socks5h://54.37.194.34:10526']
         '''
         try:
             ip_table = pd.DataFrame()
@@ -75,30 +75,34 @@ class Parser:
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}
-
+        html = ''
         if '.ru' in url:
             euro_standard = True
 
         try:
-            header = {'User-Agent': random.choice(self.user_agents),
-                      'Connection': 'keep-alive',
-                      'Accept-Encoding': 'gzip,deflate'}
+            random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
+            header = {'Accept': '*/*',
+                      'User-Agent': random_user_agent,
+                      'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
+            html = req_page.text
             print(url, ' - with proxy')
+
             if 'ddos-guard' in req_page.text.lower():
                 print('DDOS Guard found - trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
 
-        except req.exceptions.ConnectionError as ex:
+        except req.exceptions.ConnectionError:
             session = req.Session()
-            header = {'User-Agent': random.choice(self.user_agents),
-                      'Connection': 'keep-alive',
-                      'Accept-Encoding': 'gzip,deflate'}
+            random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
+            header = {'Accept': '*/*',
+                      'User-Agent': random_user_agent,
+                      'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header)
-            print(url, ' - with OUT proxy ', ex)
+            html = req_page.text
+            print(url, ' - with OUT proxy, second try')
+
         except Exception as ex:
-            html = ''
             print('During collecting data from: {}, except error: {}'.format(url, ex))
-        html = req_page.text
 
         return euro_standard, html
