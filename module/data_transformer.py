@@ -7,6 +7,7 @@ import datetime
 import config
 import copy
 import matplotlib.ticker as ticker
+from bot_runner import read_curdatetime
 
 class Transformer:
 
@@ -66,7 +67,7 @@ class Transformer:
     def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
                          header_color='#000000', row_colors=['#030303', '#0E0E0E'],
                          edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
-                         header_columns=0, title=None, ax=None, **kwargs):
+                         header_columns=0, title=None, alias=None, ax=None, **kwargs):
         data = data.fillna('-')
         if title is None:
             title = name
@@ -77,34 +78,74 @@ class Transformer:
         # data = pd.DataFrame(data=data.values.tolist(),
         #                    columns=pd.MultiIndex.from_tuples(columns, names=['title', 'columns']))
 
-        if ax is None:
-            size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
-            fig, ax = plt.subplots(figsize=size)
-            fig.facecolor = 'black'
-            # rect = patches.Rectangle((-100, -100), 70, 70, linewidth=1, edgecolor='r', facecolor='black', )
-            # ax.add_patch(rect)
-            # ax.set_title(title, color='black')
-            ax.axis('off')
+        if alias:
+            size = None
 
-        mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
-                             cellLoc='center', **kwargs)
-        mpl_table.auto_set_font_size(False)
-        mpl_table.set_fontsize(font_size)
+            if ax is None:
+                row_height=1
+                size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+                y_delta = size[1] + 0.145
+                size = (15,y_delta)
+                fig, ax = plt.subplots(figsize=size)
+                fig.patch.set_facecolor('black')
+                ax.axis('off')
 
-        for k, cell in six.iteritems(mpl_table._cells):
-            cell.set_edgecolor(edge_color)
-            if k[0] == 0 or k[1] < header_columns:
-                cell.set_text_props(weight='bold', color='w')
-                cell.set_facecolor(header_color)
-                cell.get_text().set_color('white')
+            mpl_table = ax.table(cellText=data.values, bbox=[-0.17, -0.2, 1.3, 1.145], colLabels=data.columns, colWidths=[0.2, 0.05, 0.05, 0.05, 0.05],
+                                cellLoc='center', **kwargs)
+            plt.subplots_adjust(bottom=0.25)
+            mpl_table.auto_set_font_size(False)
+            mpl_table.set_fontsize(font_size)
 
-            else:
-                cell.set_facecolor(row_colors[k[0] % len(row_colors)])
-                cell.get_text().set_color('white')
+            for k, cell in six.iteritems(mpl_table._cells):
+                cell.set_edgecolor(edge_color)
+                if k[0] == 0 or k[1] < header_columns:
+                    cell.set_text_props(weight='bold', color='w', fontsize=20)
+                    cell.set_facecolor(header_color)
+                    cell.get_text().set_color('white')
+                else:
+                    cell.set_text_props(fontsize=18)
+                    cell.set_facecolor(row_colors[k[0] % len(row_colors)])
+                    cell.get_text().set_color('white')
+            
+            title_loc = 'center'
+            ax.text(0.5, 1.1, alias, fontsize=20, fontweight='bold',
+                    color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
+                    clip_on=False)
+            
+            sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
+            sample_of_img_title_view = sample_of_img_title_view.format(read_curdatetime().split()[0])
+            title_loc = 'left'
+            ax.text(-0.1, -0.245, sample_of_img_title_view, fontsize=10, fontweight='bold',
+                    color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
+                    clip_on=False)
+        else:
+            if ax is None:
+                size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+                fig, ax = plt.subplots(figsize=size)
+                fig.facecolor = 'black'
+                # rect = patches.Rectangle((-100, -100), 70, 70, linewidth=1, edgecolor='r', facecolor='black', )
+                # ax.add_patch(rect)
+                # ax.set_title(title, color='black')
+                ax.axis('off')
+
+            mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
+                                cellLoc='center', **kwargs)
+            mpl_table.auto_set_font_size(False)
+            mpl_table.set_fontsize(font_size)
+
+            for k, cell in six.iteritems(mpl_table._cells):
+                cell.set_edgecolor(edge_color)
+                if k[0] == 0 or k[1] < header_columns:
+                    cell.set_text_props(weight='bold', color='w')
+                    cell.set_facecolor(header_color)
+                    cell.get_text().set_color('white')
+                else:
+                    cell.set_facecolor(row_colors[k[0] % len(row_colors)])
+                    cell.get_text().set_color('white')
 
         # save png and return it to user
         png_path = '{}/img/{}_table.png'.format('./sources', name)
-        plt.savefig(png_path, transparent=True)
+        plt.savefig(png_path, transparent=False)
 
     def __draw_plot(df, name):
         labels = []
