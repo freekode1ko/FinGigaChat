@@ -75,7 +75,7 @@ class Parser:
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}
-
+        html = ''
         if '.ru' in url:
             euro_standard = True
 
@@ -85,7 +85,9 @@ class Parser:
                       'User-Agent': random_user_agent,
                       'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
+            html = req_page.text
             print(url, ' - with proxy')
+
             if 'ddos-guard' in req_page.text.lower():
                 print('DDOS Guard found - trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
@@ -97,11 +99,10 @@ class Parser:
                       'User-Agent': random_user_agent,
                       'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header)
+            html = req_page.text
             print(url, ' - with OUT proxy, second try')
 
         except Exception as ex:
-            html = ''
             print('During collecting data from: {}, except error: {}'.format(url, ex))
-        html = req_page.text
 
         return euro_standard, html
