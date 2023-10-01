@@ -35,10 +35,10 @@ class Parser:
         :return: None
         """
         global proxy
-        proxy['https'] = ['socks5://193.23.50.38:10222']
-        proxy['https'] = ['socks5://135.125.212.24:10034']
-        proxy['https'] = ['socks5://141.95.93.35:10112']
-        proxy['https'] = ['socks5://193.23.50.38:10222']
+        proxy['https'] = ['socks5h://193.23.50.38:10222']
+        proxy['https'] = ['socks5h://135.125.212.24:10034']
+        proxy['https'] = ['socks5h://141.95.93.35:10112']
+        proxy['https'] = ['socks5h://54.37.194.34:10526']
         '''
         try:
             ip_table = pd.DataFrame()
@@ -80,8 +80,9 @@ class Parser:
             euro_standard = True
 
         try:
+            random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
             header = {'Accept': '*/*',
-                      'User-Agent': random.choice(self.user_agents),
+                      'User-Agent': random_user_agent,
                       'Connection': 'keep-alive',
                       'Accept-Encoding': 'gzip, deflate, br'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
@@ -96,8 +97,8 @@ class Parser:
             header = {'Accept': '*/*',
                       'User-Agent': random_user_agent,
                       'Accept-Encoding': 'gzip, deflate, br'}
-            req_page = session.get(url, verify=False, headers=header, proxies=proxies)
-            print(url, ' - with proxy second try')
+            req_page = session.get(url, verify=False, headers=header)
+            print(url, ' - with OUT proxy, second try')
 
         except Exception as ex:
             html = ''
