@@ -287,12 +287,13 @@ async def data_mart(message: types.Message):
 
         for table in spld_keys_eco:
             table = table.reset_index(drop=True, inplace=True)
-
-        table_1 = pd.concat([spld_keys_eco[0], spld_keys_eco[1], spld_keys_eco[8]])
+        
+        table_1 = pd.concat([spld_keys_eco[0], spld_keys_eco[1], spld_keys_eco[9]])
         table_2 = pd.concat([spld_keys_eco[2], spld_keys_eco[3]])
         table_3 = pd.concat([spld_keys_eco[4], spld_keys_eco[5]])
-        table_4 = pd.concat([spld_keys_eco[9], spld_keys_eco[10], spld_keys_eco[11]])
-        tables = [table_1, table_2, table_3, spld_keys_eco[6], spld_keys_eco[7], table_4]
+        table_4 = pd.concat([spld_keys_eco[10], spld_keys_eco[11]])
+        table_5 = pd.concat([spld_keys_eco[6], spld_keys_eco[7]])
+        tables = [table_1, table_2, table_3, table_5, spld_keys_eco[8], table_4]
 
         for table in tables:
             table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = 'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
