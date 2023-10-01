@@ -83,8 +83,7 @@ class Parser:
             random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
             header = {'Accept': '*/*',
                       'User-Agent': random_user_agent,
-                      'Connection': 'keep-alive',
-                      'Accept-Encoding': 'gzip, deflate, br'}
+                      'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
             print(url, ' - with proxy')
             if 'ddos-guard' in req_page.text.lower():
@@ -96,7 +95,7 @@ class Parser:
             random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
             header = {'Accept': '*/*',
                       'User-Agent': random_user_agent,
-                      'Accept-Encoding': 'gzip, deflate, br'}
+                      'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header)
             print(url, ' - with OUT proxy, second try')
 
