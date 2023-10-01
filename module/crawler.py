@@ -80,22 +80,25 @@ class Parser:
             euro_standard = True
 
         try:
-            header = {'User-Agent': random.choice(self.user_agents),
+            header = {'Accept': '*/*',
+                      'User-Agent': random.choice(self.user_agents),
                       'Connection': 'keep-alive',
-                      'Accept-Encoding': 'gzip,deflate'}
+                      'Accept-Encoding': 'gzip, deflate, br'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
             print(url, ' - with proxy')
             if 'ddos-guard' in req_page.text.lower():
                 print('DDOS Guard found - trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
 
-        except req.exceptions.ConnectionError as ex:
+        except req.exceptions.ConnectionError:
             session = req.Session()
-            header = {'User-Agent': random.choice(self.user_agents),
-                      'Connection': 'keep-alive',
-                      'Accept-Encoding': 'gzip,deflate'}
-            req_page = session.get(url, verify=False, headers=header)
-            print(url, ' - with OUT proxy ', ex)
+            random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
+            header = {'Accept': '*/*',
+                      'User-Agent': random_user_agent,
+                      'Accept-Encoding': 'gzip, deflate, br'}
+            req_page = session.get(url, verify=False, headers=header, proxies=proxies)
+            print(url, ' - with proxy second try')
+
         except Exception as ex:
             html = ''
             print('During collecting data from: {}, except error: {}'.format(url, ex))
