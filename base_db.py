@@ -253,7 +253,7 @@ query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (co
 query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
                                    "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), 'электроэнергия')")
 
-
+#  TODO: пока при вводе имен клиентов должны быть пробелы в начале и в конце
 if __name__ == '__main__':
     main_engine = create_engine(psql_engine)
     # create base table and full it
