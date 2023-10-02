@@ -548,7 +548,8 @@ async def admin_help(message: types.Message):
     admin_flag = await check_your_right(user)
 
     if admin_flag:
-        help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
+        help_msg = ('<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
+                    '<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
                     '<b>/delete_article</b> - удалить новость из базы данных')
         await message.answer(help_msg, protect_content=True, parse_mode='HTML')
@@ -695,6 +696,26 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
         await message.answer('Хорошо, удалим в следующий раз.', protect_content=True)
 
     await state.finish()
+
+
+@dp.message_handler(commands=['analyse_bad_article'])
+async def analyse_bad_article(message: types.Message):
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        apd_obj = ArticleProcessAdmin()
+        msgs = apd_obj.get_bad_article()
+        for msg_dict in msgs:
+            format_msg = ''
+            for key, val in msg_dict.items():
+                format_msg += f'<b>{key}</b>: {val}\n'
+            await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
 
 
 @dp.message_handler()

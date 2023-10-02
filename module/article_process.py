@@ -1,6 +1,7 @@
 import os
 import datetime as dt
 import numpy as np
+import re
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -11,6 +12,7 @@ from module.model_pipe import deduplicate, model_func
 
 
 TIME_LIVE_ARTICLE = 5
+NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
 
 
 class ArticleError(Exception):
@@ -358,3 +360,31 @@ class ArticleProcessAdmin:
         with self.engine.connect() as conn:
             conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link='{link}'"))
             conn.commit()
+
+    @staticmethod
+    def find_not_relevant_news(article: str):
+        for expression in NOT_RELEVANT_EXPRESSION:
+            article = article.lower()
+            regular = f'{expression}'
+            if re.search(regular, article):
+                return False
+            else:
+                return True
+
+    def get_bad_article(self):
+        """ Get article data if it contains bad word """
+        # TODO: как отправлять большее количество новостей
+
+        df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
+        df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
+        df = df[~df['relevant']]
+        bad_links = df['link'].values.tolist()
+        msgs = []
+        for link in bad_links:
+            msgs.append(self.get_article_by_link(link))
+        return msgs[:5]
+
+
+
+
+
