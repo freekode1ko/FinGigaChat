@@ -598,6 +598,10 @@ async def continue_show_article(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['change_summary'])
 async def change_summary(message: types.Message):
 
+    if not config.api_key_gpt:
+        await message.answer('Данная команда пока недоступна.', protect_content=True)
+        return
+
     await types.ChatActions.typing()
 
     user = json.loads(message.from_user.as_json())
