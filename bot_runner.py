@@ -509,7 +509,7 @@ async def user_in_whitelist(user: str):
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
-    email = 'message: types.Message'
+    email = ' '
     if user_in_whitelist(user_raw):
         if 'username' in user_raw:
             user_username = user_raw['username']
