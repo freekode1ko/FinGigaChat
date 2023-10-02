@@ -3,6 +3,7 @@ import datetime
 import warnings
 import re
 import numpy as np
+import textwrap
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.utils.exceptions import MessageIsTooLong
@@ -288,23 +289,66 @@ async def economy_info(message: types.Message):
 async def data_mart(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
-        keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
-        keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
-        spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
+        engine = create_engine(psql_engine)
+        key_eco_table = pd.read_sql_query('select * from key_eco', con=engine)
+        split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
+        key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
 
-        title = 'Динамика и прогноз основных макроэкономических показателей'
-        for key_eco in spld_keys_eco:
-            key_eco = key_eco[key_eco['Экономические показатели'].notna()]
-            key_eco.reset_index(inplace=True, drop=True)
-            block = key_eco['Экономические показатели'][0]
-            key_eco = key_eco.iloc[1:]
-            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
-            png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo,
-                                       title=sample_of_img_title_view.format(title, block, read_curdatetime()))
+        spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
+        title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
+        await bot.send_message(message.chat.id, text=title, parse_mode='HTML', protect_content=True)
 
+        for table in spld_keys_eco:
+            table = table.reset_index(drop=True, inplace=True)
+
+        table_1 = pd.concat([spld_keys_eco[0], spld_keys_eco[1], spld_keys_eco[9]])
+        table_2 = pd.concat([spld_keys_eco[2], spld_keys_eco[3]])
+        table_3 = pd.concat([spld_keys_eco[4], spld_keys_eco[5]])
+        table_4 = pd.concat([spld_keys_eco[10], spld_keys_eco[11]])
+        table_5 = pd.concat([spld_keys_eco[6], spld_keys_eco[7]])
+        tables = [table_1, table_2, table_3, table_5, spld_keys_eco[8], table_4]
+
+        for table in tables:
+            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = 'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+        for table in tables:
+            condition = table['alias'].str.contains('Средняя процентная ставка')
+            values_to_update = table.loc[condition, 'Экономические показатели']
+            values_to_update = values_to_update.apply(lambda x: '\n'.join(textwrap.wrap(x, width=30)))
+            updated_values = 'Средняя ставка ' + values_to_update.str.lower()
+            table.loc[condition, 'Экономические показатели'] = updated_values
+
+        for table in tables:
+            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели']+', $/руб'
+
+        for table in tables:
+            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
+        for table in tables:
+            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
+
+        for table in tables:
+            condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
+            table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели']+ ', €/руб'
+
+        titles = []
+        for key_eco in tables:
+            title = key_eco['alias'].unique()
+            title = ', '.join(title)
+            if 'рубль/доллар' in title:
+                title = 'Курсы валют и нефть Urals'
+            titles.append(title)
+
+        for i,key_eco in enumerate(tables):
+            if not key_eco.empty:
+                key_eco.reset_index(inplace=True, drop=True)
+                key_eco = key_eco.iloc[:, [1, -5, -4, -3, -2]]
+
+                transformer.render_mpl_table(key_eco,
+                                             'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
+                png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+                photo = open(png_path, 'rb')
+
+                await __sent_photo_and_msg(message, photo,
+                                           title='')
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])

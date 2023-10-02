@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 import pandas as pd
+import numpy as np
 
 from module import data_transformer as Transformer
 import config
@@ -238,6 +239,79 @@ class ResearchParser:
 
         return page_html
 
+    def get_key_econ_ind_table(self):
+        """
+        :return: table in dataframe format
+        """
+        url = f'{self.home_page}/group/guest/econ'
+        self.driver.implicitly_wait(5)
+        self.driver.get(url)
+        time.sleep(60)
+
+        page_html = self.driver.page_source
+        
+        soup = BeautifulSoup(page_html, "html.parser")
+        table_soup = soup.find('table',attrs={'class':"grid container black right victim"})
+        headers = []
+        head = table_soup.find('thead').find('tr')
+        for td in head:
+            col_name = td.text.strip()
+            if col_name != '':
+                headers.append(col_name)
+
+        data = []
+        for tr in table_soup.find_all('tr'):
+            data_row = []
+            for td in tr.find_all('td'):
+                data_row.append(td.text.strip())
+            if data_row:
+                if len(data_row) == 7:
+                    data.append(data_row[1:])
+                elif len(data_row) == 6:
+                    data.append(data_row)
+
+        df = pd.DataFrame(data, columns=headers)
+        df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
+        df = df.drop(index=0).reset_index(drop=True)
+
+        table_soup_al_name = soup.find('table',attrs={'class':"grid container black right"})
+        aliases = []
+        names = []
+        aliases_longevity = []
+        for elem in table_soup_al_name:
+            col_text = elem.find('td').text.strip()
+            if col_text != '' :
+                if 'name'in elem.find('td').get('class') and 'Норма' not in col_text:
+                    names.append(col_text)
+                    aliases_longevity.append(1)
+                else:
+                    aliases.append(col_text)
+                    aliases_longevity.append(0)
+
+        df['name'] = names
+                
+        counts = []
+        counter = 0
+
+        for val in aliases_longevity:
+            if val == 0:
+                counts.append(counter)
+                counter = 0
+            else:
+                counter += 1
+
+        counts.append(counter)
+        del counts[0]
+        
+        aliases_series = pd.Series(aliases)
+        aliases_series = aliases_series.repeat(counts).reset_index(drop=True)
+        df['alias'] = aliases_series
+        df['id'] = range(1, df.shape[0] + 1)
+        df = df[['id', 'name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'alias']]
+        print(df)
+ 
+        return df
+
 
 class InvestingAPIParser:
     """
@@ -278,7 +352,7 @@ class InvestingAPIParser:
         url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
-
+        
         return data
 
 

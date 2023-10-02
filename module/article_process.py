@@ -47,6 +47,7 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
+        df_subject['text'] = df_subject['text'].str.replace('«', '"').replace('»', '"')
         df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
@@ -103,6 +104,7 @@ class ArticleProcess:
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
+            print('-- there are old articles in these batch !!!')
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
 
         # make article table and save it in database

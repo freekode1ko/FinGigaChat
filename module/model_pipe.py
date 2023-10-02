@@ -253,7 +253,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     # find subject name in text and union with polyanalyst names
     print(f'-- find {type_of_article} names in article')
-    df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names, clean_flag))
+    df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names, clean_flag))
     df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
                                    axis=1)
 
