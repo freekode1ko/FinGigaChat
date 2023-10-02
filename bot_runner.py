@@ -556,6 +556,7 @@ async def admin_help(message: types.Message):
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
+
 @dp.message_handler(commands=['show_article'])
 async def show_article(message: types.Message):
 

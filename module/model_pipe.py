@@ -98,10 +98,7 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
     # using relevance label condition
-    df['client_labels'] = df.apply(
-        lambda x: [str(x['client_labels'])] if ((len(x['client']) > 0) & (x['relevance'] == 1)) else [], axis=1)
-    # delete relevance column
-    df = df.drop(columns=['relevance'])
+    df['client_labels'] = df.apply(lambda x: [str(x['client_labels'])] if (len(x['client']) > 0) else [], axis=1)
     # add regular expression labels
     # read range system
     range_system_companies = pd.read_excel(CLIENT_RATING_FILE_PATH)
@@ -109,16 +106,21 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     # iterating throug news
     for i, article in enumerate(df['cleaned_data']):
         # iterating through lists of keywords:
-        for j, list_of_key_words in enumerate(range_system_companies['key words']):
-            # iterating through keywords in a list
-            for key_word in list_of_key_words:
-                if re.search(key_word, article):
-                    label = str(range_system_companies['label'][j])
-                    if label not in df['client_labels'][i]:
-                        df['client_labels'][i] += [label]
-        if len(df['client_labels'][i]) == 0:
-            df['client_labels'][i] = ['0']
-        df['client_labels'][i] = ';'.join(sorted(df['client_labels'][i]))
+        if df["relevance"][i] == 1:
+            for j, list_of_key_words in enumerate(range_system_companies['key words']):
+                # iterating through keywords in a list
+                for key_word in list_of_key_words:
+                    if re.search(key_word, article):
+                        label = str(range_system_companies['label'][j])
+                        if label not in df['client_labels'][i]:
+                            df['client_labels'][i] += [label]
+            if len(df['client_labels'][i]) == 0:
+                df['client_labels'][i] = ['0']
+            df['client_labels'][i] = ';'.join(sorted(df['client_labels'][i]))
+        else:
+            df['client_labels'][i] = '0'
+    # delete relevance column
+    df = df.drop(columns=['relevance'])
     return df
 
 
