@@ -292,23 +292,56 @@ class ArticleProcessAdmin:
             return full_text, text_sum
 
     def get_article_by_link(self, link: str):
-        dict_keys = ('Заголовок', 'Ссылка', 'Дата публикации', 'Балл по клиенту', 'Балл по товару', 'Саммари')
-        data = dict.fromkeys(dict_keys, '')
-        query_select = (f"SELECT title, link, date, r_client.client_score, r_commodity.commodity_score, text_sum "
-                        f"FROM article "
-                        f"JOIN relation_client_article r_client ON article.id = r_client.article_id "
-                        f"JOIN relation_commodity_article r_commodity ON article.id = r_commodity.article_id "
-                        f"WHERE link='{link}'")
+        dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
+        dict_keys_client = ('Клиент', 'Балл по клиенту')
+        dict_keys_commodity = ('Товар', 'Балл по товару')
+
+        query_article = f"SELECT title, link, date, text_sum FROM article WHERE link='{link}'"
+
+        query_client = (
+            f"SELECT STRING_AGG(name, '; '), r_cli.client_score "
+            f"FROM client "
+            f"JOIN relation_client_article r_cli ON r_cli.client_id = client.id "
+            f"JOIN article ON article.id = r_cli.article_id "
+            f"WHERE link = '{link}' "
+            f"GROUP BY r_cli.client_score")
+
+        query_commodity = (
+            f"SELECT  STRING_AGG(name, '; '), r_com.commodity_score "
+            f"FROM commodity "
+            f"JOIN relation_commodity_article r_com ON r_com.commodity_id = commodity.id "
+            f"JOIN article ON article.id = r_com.article_id "
+            f"WHERE link = '{link}' "
+            f"GROUP BY r_com.commodity_score")
+
         try:
             with self.engine.connect() as conn:
-                article = conn.execute(text(query_select)).fetchone()
-                print(article)
-                data = {key: val for key, val in zip(dict_keys, article[:6])}
+                article_data = conn.execute(text(query_article)).fetchone()
+                article_client = conn.execute(text(query_client)).fetchone()
+                article_commodity = conn.execute(text(query_commodity)).fetchone()
+
+                article_data_dict = {key: val for key, val in zip(dict_keys_article, article_data)}
+
+                if article_client:
+                    article_client_dict = {key: val for key, val in zip(dict_keys_client, article_client)}
+                else:
+                    article_client_dict = dict.fromkeys(dict_keys_client, '-')
+
+                if article_commodity:
+                    article_commodity_dict = {key: val for key, val in zip(dict_keys_commodity, article_commodity)}
+                else:
+                    article_commodity_dict = dict.fromkeys(dict_keys_commodity, '-')
+
+            summary = article_data_dict.pop('Саммари')
+            article_data_dict.update(article_client_dict)
+            article_data_dict.update(article_commodity_dict)
+            article_data_dict.update({'Саммари': summary})
+            data = article_data_dict.copy()
+
             return data
         # except (TypeError, ProgrammingError):
         except Exception as e:
-            print(e)
-            return data
+            return e
 
     def delete_article_by_link(self, link: str):
         try:

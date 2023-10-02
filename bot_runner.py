@@ -587,6 +587,11 @@ async def continue_show_article(message: types.Message, state: FSMContext):
         return
 
     data_article_dict = apd_obj.get_article_by_link(data['link'])
+    if not isinstance(data_article_dict, dict):
+        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
+                             protect_content=True)
+        return
+
     format_msg = ''
     for key, val in data_article_dict.items():
         format_msg += f'<b>{key}</b>: {val}\n'
