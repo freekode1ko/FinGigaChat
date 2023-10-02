@@ -1,29 +1,34 @@
 import json
+import datetime
+import warnings
+import re
+import numpy as np
+import textwrap
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.utils.exceptions import MessageIsTooLong
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext
 from sqlalchemy import create_engine
+import pandas as pd
+import ast
+
 import module.data_transformer as dt
 import module.gigachat as gig
-from module.article_process import ArticleProcess
-import pandas as pd
-import numpy as np
-import textwrap
-import datetime
-import warnings
+from module.model_pipe import summarization_by_chatgpt
+from module.article_process import ArticleProcess, ArticleProcessAdmin
 import config
-import ast
-import re
 
 path_to_source = config.path_to_source
-# curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 API_TOKEN = config.api_token
 psql_engine = config.psql_engine
 token = ''
 chat = ''
 
+storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=storage)
 
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
 eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика', 'макро',
@@ -45,6 +50,14 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
+
+
+# States
+class Form(StatesGroup):
+    link = State()
+    link_change_summary = State()
+    link_to_delete = State()
+    permission_to_delete = State()
 
 
 def read_curdatetime():
@@ -283,11 +296,11 @@ async def data_mart(message: types.Message):
 
         spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
         title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
-        await bot.send_message(message.chat.id, text=title, parse_mode='HTML', protect_content=True) 
+        await bot.send_message(message.chat.id, text=title, parse_mode='HTML', protect_content=True)
 
         for table in spld_keys_eco:
             table = table.reset_index(drop=True, inplace=True)
-        
+
         table_1 = pd.concat([spld_keys_eco[0], spld_keys_eco[1], spld_keys_eco[9]])
         table_2 = pd.concat([spld_keys_eco[2], spld_keys_eco[3]])
         table_3 = pd.concat([spld_keys_eco[4], spld_keys_eco[5]])
@@ -333,7 +346,7 @@ async def data_mart(message: types.Message):
                                              'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
                 png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
                 photo = open(png_path, 'rb')
-                
+
                 await __sent_photo_and_msg(message, photo,
                                            title='')
 
@@ -517,15 +530,193 @@ async def user_to_whitelist(message: types.Message):
         await message.answer(f'{email} - уже существует', protect_content=True)
 
 
-async def check_your_right(user: str):
-    user_json = json.loads(user)
-    user_id = user_json['id']
-    engine = create_engine(psql_engine)
-    user_type = pd.read_sql_query(f'select "user_type" from "whitelist" WHERE user_id="{user_id}"', con=engine)
+async def check_your_right(user: dict):
+    user_id = user['id']
+    engine = create_engine(config.psql_engine)
+    user_series = pd.read_sql_query(f"select user_type from whitelist WHERE user_id='{user_id}'", con=engine)
+    user_type = user_series.values.tolist()[0][0]
     if user_type == 'admin' or user_type == 'owner':
         return True
     else:
         return False
+
+
+@dp.message_handler(commands=['admin_help'])
+async def admin_help(message: types.Message):
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        help_msg = ('<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
+                    '<b>/show_article</b> - показать детальную информацию о новости\n'
+                    '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
+                    '<b>/delete_article</b> - удалить новость из базы данных')
+        await message.answer(help_msg, protect_content=True, parse_mode='HTML')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(commands=['show_article'])
+async def show_article(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
+        await Form.link.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link)
+async def continue_show_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(link=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+
+    data_article_dict = apd_obj.get_article_by_link(data['link'])
+    if not isinstance(data_article_dict, dict):
+        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
+                             protect_content=True)
+        return
+
+    format_msg = ''
+    for key, val in data_article_dict.items():
+        format_msg += f'<b>{key}</b>: {val}\n'
+
+    await message.answer(format_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+    await state.finish()
+
+
+@dp.message_handler(commands=['change_summary'])
+async def change_summary(message: types.Message):
+
+    if not config.api_key_gpt:
+        await message.answer('Данная команда пока недоступна.', protect_content=True)
+        return
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
+        await Form.link_change_summary.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link_change_summary)
+async def continue_change_summary(message: types.Message, state: FSMContext):
+
+    await state.update_data(link_change_summary=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+
+    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=True)
+    await types.ChatActions.typing()
+    new_text_sum = summarization_by_chatgpt(full_text)
+    apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
+
+    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
+    await state.finish()
+
+
+@dp.message_handler(commands=['delete_article'])
+async def delete_article(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
+        await Form.link_to_delete.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link_to_delete)
+async def continue_delete_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(link_to_delete=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_to_delete'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+    else:
+        permission_answer = f'Вы уверены, что хотите удалить данную новость ?\nЕсли да, то напишите: "Удалить новость".'
+        await Form.permission_to_delete.set()
+        await message.reply(permission_answer, protect_content=True)
+
+
+@dp.message_handler(state=Form.permission_to_delete)
+async def finish_delete_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(permission_to_delete=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    if data["permission_to_delete"].lower().strip().replace('"', '').replace('.', '') == 'удалить новость':
+        apd_obj.delete_article_by_link(data['link_to_delete'])
+        await message.answer('Новость удалена.', protect_content=True)
+    else:
+        await message.answer('Хорошо, удалим в следующий раз.', protect_content=True)
+
+    await state.finish()
+
+
+@dp.message_handler(commands=['analyse_bad_article'])
+async def analyse_bad_article(message: types.Message):
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        apd_obj = ArticleProcessAdmin()
+        msgs = apd_obj.get_bad_article()
+        for msg_dict in msgs:
+            format_msg = ''
+            for key, val in msg_dict.items():
+                format_msg += f'<b>{key}</b>: {val}\n'
+            await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
 
 
 @dp.message_handler()
