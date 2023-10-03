@@ -287,13 +287,33 @@ async def data_mart(message: types.Message):
 
         for table in spld_keys_eco:
             table = table.reset_index(drop=True, inplace=True)
+        spld_keys_eco = [table for table in spld_keys_eco if not table.empty]
         
-        table_1 = pd.concat([spld_keys_eco[0], spld_keys_eco[1], spld_keys_eco[9]])
-        table_2 = pd.concat([spld_keys_eco[2], spld_keys_eco[3]])
-        table_3 = pd.concat([spld_keys_eco[4], spld_keys_eco[5]])
-        table_4 = pd.concat([spld_keys_eco[10], spld_keys_eco[11]])
-        table_5 = pd.concat([spld_keys_eco[6], spld_keys_eco[7]])
-        tables = [table_1, table_2, table_3, table_5, spld_keys_eco[8], table_4]
+        groups = {
+            'Национальные счета': 1,
+            'Бюджет': 1,
+            'Внешний долг': 1,
+            'ИПЦ': 2,
+            'ИЦП': 2,
+            'Денежное предложение': 3,
+            'Средняя процентная ставка': 3,
+            'Социальный сектор': 4,
+            'Норма сбережений': 4,
+            'Платежный баланс': 5,
+            'Обменный курс': 6
+        }
+        groups_dict = {group: [] for group in range(1, 7)}
+
+        for table in spld_keys_eco:
+            table_group = None
+            for condition, group in groups.items():
+                if condition in table['alias'].iloc[0]:
+                    table_group = group
+                    break
+            if table_group:
+                groups_dict[table_group].append(table)
+
+        tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
 
         for table in tables:
             table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = 'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
