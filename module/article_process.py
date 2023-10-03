@@ -2,6 +2,7 @@ import os
 import datetime as dt
 import numpy as np
 import re
+import urllib.parse
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -102,7 +103,7 @@ class ArticleProcess:
         """
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
-        links_value = ", ".join([f"'{link}'" for link in self.df_article["link"].values.tolist()])
+        links_value = ", ".join([f"'{urllib.parse.unquote(link)}'" for link in self.df_article["link"].values.tolist()])
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
