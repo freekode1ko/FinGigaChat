@@ -6,9 +6,11 @@ from requests.exceptions import ConnectionError
 import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
+from openai.error import InvalidRequestError
 
 from config import summarization_prompt
 from module.gigachat import GigaChat
+from module.chatgpt import ChatGPT
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/binary_classification_best.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
@@ -96,10 +98,7 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
     # using relevance label condition
-    df['client_labels'] = df.apply(
-        lambda x: [str(x['client_labels'])] if ((len(x['client']) > 0) & (x['relevance'] == 1)) else [], axis=1)
-    # delete relevance column
-    df = df.drop(columns=['relevance'])
+    df['client_labels'] = df.apply(lambda x: [str(x['client_labels'])] if (len(x['client']) > 0) else [], axis=1)
     # add regular expression labels
     # read range system
     range_system_companies = pd.read_excel(CLIENT_RATING_FILE_PATH)
@@ -107,16 +106,21 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     # iterating throug news
     for i, article in enumerate(df['cleaned_data']):
         # iterating through lists of keywords:
-        for j, list_of_key_words in enumerate(range_system_companies['key words']):
-            # iterating through keywords in a list
-            for key_word in list_of_key_words:
-                if re.search(key_word, article):
-                    label = str(range_system_companies['label'][j])
-                    if label not in df['client_labels'][i]:
-                        df['client_labels'][i] += [label]
-        if len(df['client_labels'][i]) == 0:
-            df['client_labels'][i] = ['0']
-        df['client_labels'][i] = ';'.join(sorted(df['client_labels'][i]))
+        if df["relevance"][i] == 1:
+            for j, list_of_key_words in enumerate(range_system_companies['key words']):
+                # iterating through keywords in a list
+                for key_word in list_of_key_words:
+                    if re.search(key_word, article):
+                        label = str(range_system_companies['label'][j])
+                        if label not in df['client_labels'][i]:
+                            df['client_labels'][i] += [label]
+            if len(df['client_labels'][i]) == 0:
+                df['client_labels'][i] = ['0']
+            df['client_labels'][i] = ';'.join(sorted(df['client_labels'][i]))
+        else:
+            df['client_labels'][i] = '0'
+    # delete relevance column
+    df = df.drop(columns=['relevance'])
     return df
 
 
@@ -251,7 +255,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     # find subject name in text and union with polyanalyst names
     print(f'-- find {type_of_article} names in article')
-    df[f'found_{type_of_article}'] = df['text_sum'].map(lambda x: find_names(x, subject_names, clean_flag))
+    df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names, clean_flag))
     df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
                                    axis=1)
 
@@ -315,3 +319,27 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df.reset_index(drop=True)
     df = df.drop(columns=['unique', 'cleaned_data'])
     return df
+
+
+def summarization_by_chatgpt(full_text: str):
+    # TODO: do by langchain
+    """ Make summary by chatgpt """
+    batch_size = 4000
+    text_batches = []
+    new_text_sum = ''
+    if len(full_text+summarization_prompt) > batch_size:
+        while len(full_text+summarization_prompt) > batch_size:
+            point_index = full_text[:batch_size].rfind('.')
+            text_batches.append(full_text[:point_index+1])
+            full_text = full_text[point_index+1:]
+    else:
+        text_batches = [full_text]
+    for batch in text_batches:
+        gpt = ChatGPT()
+        query_to_gpt = gpt.ask_chat_gpt(text=batch, prompt=summarization_prompt)
+        new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
+
+    return new_text_sum
+
+
+

@@ -253,26 +253,29 @@ query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (co
 query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
                                    "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), 'электроэнергия')")
 
-gas_name = 'группа "газ"'
-query_update_gas_client_name = (f"UPDATE client_alternative SET other_names=('{gas_name};горьковский автомобильный завод;группа газ') "
-                                f"WHERE other_names='газ;группа «газ»;горьковский автомобильный завод';")
-
+#  TODO: пока при вводе имен клиентов должны быть пробелы в начале и в конце
 if __name__ == '__main__':
     main_engine = create_engine(psql_engine)
+    #tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 
+    #          'commodity_alternative', 'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
+    #          'relation_commodity_article' ,'relation_commodity_message']
+    #for table in tables:
+    #    with main_engine.connect() as conn:
+    #        conn.execute(text(f'DROP TABLE IF EXISTS {table} CASCADE'))
+    #        conn.commit()
+    #        print(f'Table {table} id down')
     # create base table and full it
-    # main(main_engine)
-    # # create commodity_pricing
-    # update_database(main_engine, query_commodity_pricing)
-    # # add energy in commodity
-    # update_database(main_engine, query_commodity_energy)
-    # # delete duplicate commodity
-    # update_database(main_engine, query_delete_dupl)
-    # # insert new com: olovo
-    # update_database(main_engine, query_commodity_olovo)
-    # # insert alternative name for new com
-    # update_database(main_engine, query_new_alternative_com_electro)
-    # update_database(main_engine, query_new_alternative_com_olovo)
-    # update gas client name
-    # update_database(main_engine, query_update_gas_client_name)
-    # delete rbk from client
-    update_database(main_engine, "DELETE FROM client WHERE name='рбк-холдинг'")
+    main(main_engine)
+    # create commodity_pricing
+    update_database(main_engine, query_commodity_pricing)
+    # add energy in commodity
+    update_database(main_engine, query_commodity_energy)
+    # delete duplicate commodity
+    update_database(main_engine, query_delete_dupl)
+    # insert new com: olovo
+    update_database(main_engine, query_commodity_olovo)
+    # insert alternative name for new com
+    update_database(main_engine, query_new_alternative_com_electro)
+    update_database(main_engine, query_new_alternative_com_olovo)
+
+
