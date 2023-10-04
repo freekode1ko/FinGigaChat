@@ -568,8 +568,8 @@ async def admin_help(message: types.Message):
     admin_flag = await check_your_right(user)
 
     if admin_flag:
-        help_msg = ('<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
-                    '<b>/show_article</b> - показать детальную информацию о новости\n'
+        # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
+        help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
                     '<b>/delete_article</b> - удалить новость из базы данных')
         await message.answer(help_msg, protect_content=True, parse_mode='HTML')
@@ -722,20 +722,22 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['analyse_bad_article'])
 async def analyse_bad_article(message: types.Message):
     await types.ChatActions.typing()
-
-    user = json.loads(message.from_user.as_json())
-    admin_flag = await check_your_right(user)
-
-    if admin_flag:
-        apd_obj = ArticleProcessAdmin()
-        msgs = apd_obj.get_bad_article()
-        for msg_dict in msgs:
-            format_msg = ''
-            for key, val in msg_dict.items():
-                format_msg += f'<b>{key}</b>: {val}\n'
-            await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
-    else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+    await message.answer('Пока команда недоступна.', protect_content=True)
+    return
+    # TODO: реализовать при необходимости
+    # user = json.loads(message.from_user.as_json())
+    # admin_flag = await check_your_right(user)
+    #
+    # if admin_flag:
+    #     apd_obj = ArticleProcessAdmin()
+    #     msgs = apd_obj.get_bad_article()
+    #     for msg_dict in msgs:
+    #         format_msg = ''
+    #         for key, val in msg_dict.items():
+    #             format_msg += f'<b>{key}</b>: {val}\n'
+    #         await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
+    # else:
+    #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
 
@@ -748,7 +750,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
-        reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
+        msg_text = message.text.replace('«', '"').replace('»', '"')
+        reply_msg, img_name_list = ArticleProcess().process_user_alias(msg_text)
         if reply_msg:
             if img_name_list:
                 await types.ChatActions.upload_photo()
