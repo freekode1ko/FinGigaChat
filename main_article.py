@@ -29,7 +29,6 @@ def imap_func(type_of_article, folder_name):
 
     if date_msg == dt.datetime.now().date():
         filepath = imap_obj.get_and_download_attachment(folder_name)
-        print(f'-- download {filepath}')
     else:
         filepath = None
 
@@ -43,6 +42,7 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
     if filepath:
+        print(f'-- download {filepath}')
         df = ap_obj.load_file(filepath, type_of_article)
         print(f'-- got {len(df)} {type_of_article} articles')
         if not df.empty:
@@ -104,8 +104,7 @@ def daily_func():
         print('DID NOT GET ARTICLES')
 
     # delete old articles from database
-    # ap_obj.delete_old_article('client')
-    # ap_obj.delete_old_article('commodity')
+    # ap_obj.delete_old_article()
 
 
 if __name__ == '__main__':

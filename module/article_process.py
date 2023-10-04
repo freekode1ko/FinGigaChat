@@ -50,12 +50,17 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
-        df_subject['text'] = df_subject['text'].str.replace('«', '"').replace('»', '"').replace('$', ' $')
+        df_subject['text'] = df_subject['text'].str.replace('«', '"')
+        df_subject['text'] = df_subject['text'].str.replace('»', '"')
+        df_subject['text'] = df_subject['text'].str.replace('$', ' $')
         df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
-        df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x.replace('$', ' $'))
+        df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
+        df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
         if type_of_article == 'client':
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"').replace('»', '"').replace('$', ' $')
+            df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
+            df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
+            df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
 
         return df_subject
 
@@ -72,23 +77,25 @@ class ArticleProcess:
         self.df_article = deduplicate(self.df_article, old_articles)
         print('-- new article after deduplicate = ', len(self.df_article))
 
-    def delete_old_article(self, type_of_article):
-        """
-        Delete from db article if there are 10 articles for each subject
-        :param type_of_article: client or commodity
-        """
-        # TODO: а если это общая новость и для клиента, и для товара ????
-        count_to_keep = 10
-        query_delete = ("delete from article where id not in ( "
-                        "select article_id from "
-                        "(select *, row_number() over(partition by {name}_id order by a.date desc, {name}_score desc) "
-                        "rn from relation_{name}_article r "
-                        "join article a on r.article_id = a.id) t1 "
-                        "where rn <= {count})")
+    def delete_old_article(self):
+        """ Delete from db article if there are 10 articles for each subject """
+        count_to_keep = 15
+        query_delete = (f"delete from article where id not in ( "
+                        f"select distinct article_id from "
+                        f"(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn "
+                        f"from relation_client_article r "
+                        f"join article a on r.article_id = a.id) t1 "
+                        f"where rn <= {count_to_keep} "
+                        f"UNION "
+                        f"select distinct article_id from "
+                        f"(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn "
+                        f"from relation_commodity_article r "
+                        f"join article a on r.article_id = a.id) t1 "
+                        f"where rn <= {count_to_keep})")
         with self.engine.connect() as conn:
             # dt_now = dt.datetime.now()
             # conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
-            conn.execute(text(query_delete.format(name=type_of_article, count=count_to_keep)))
+            conn.execute(text(query_delete))
             conn.commit()
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
