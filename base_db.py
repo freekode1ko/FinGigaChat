@@ -286,9 +286,6 @@ if __name__ == '__main__':
     # # insert alternative name for new com
     # update_database(main_engine, query_new_alternative_com_electro)
     # update_database(main_engine, query_new_alternative_com_olovo)
-    # TODO: удалить !!! make query to insert alternative commodity names in commodity_alternative table
-    query_alternative_commodity_insert = make_alternative_tables(main_engine, 'commodity', COMMODITY_ALTERNATIVE_NAME_PATH)
-    update_database(main_engine, query_alternative_commodity_insert)
 
 
 

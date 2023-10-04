@@ -250,7 +250,10 @@ class ArticleProcess:
                 date = date.strftime('%d.%m.%Y')
                 link_phrase = f'<a href="{link}">Источник</a>'
                 text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
-                articles[index] = f'{marker} <b>{title}</b>\n{text_sum} {link_phrase}\n<i>{date}</i>'
+                if title:
+                    articles[index] = f'{marker} <b>{title}</b>\n{text_sum} {link_phrase}\n<i>{date}</i>'
+                else:
+                    articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
 
