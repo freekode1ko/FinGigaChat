@@ -520,6 +520,8 @@ async def user_in_whitelist(user: str):
     user_id = user_json['id']
     engine = create_engine(psql_engine)
     whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
+    temp = whitelist.loc[whitelist['user_id'] == user_id]
+    print(len(temp), '\n\n', temp)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
         return True
     else:
