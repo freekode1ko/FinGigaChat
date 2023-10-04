@@ -64,7 +64,7 @@ def daily_func():
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = ''
 
-    count_of_attempt = 5
+    count_of_attempt = 9
     for attempt in range(count_of_attempt):
 
         if not client_flag:
@@ -77,8 +77,8 @@ def daily_func():
             print('GOT ARTICLES - ', dt.datetime.now().date())
             break
         else:
-            print('wait 10 min')
-            time.sleep(10 * 60)
+            print('wait 20 min')
+            time.sleep(20 * 60)
 
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
         pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client',
@@ -104,8 +104,8 @@ def daily_func():
         print('DID NOT GET ARTICLES')
 
     # delete old articles from database
-    ap_obj.delete_old_article('client')
-    ap_obj.delete_old_article('commodity')
+    # ap_obj.delete_old_article('client')
+    # ap_obj.delete_old_article('commodity')
 
 
 if __name__ == '__main__':

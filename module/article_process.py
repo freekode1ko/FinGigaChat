@@ -50,10 +50,12 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
-        df_subject['text'] = df_subject['text'].str.replace('«', '"').replace('»', '"')
+        df_subject['text'] = df_subject['text'].str.replace('«', '"').replace('»', '"').replace('$', ' $')
         df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
-        df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
+        df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x.replace('$', ' $'))
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
+        if type_of_article == 'client':
+            df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"').replace('»', '"').replace('$', ' $')
 
         return df_subject
 
@@ -77,11 +79,11 @@ class ArticleProcess:
         """
         # TODO: а если это общая новость и для клиента, и для товара ????
         count_to_keep = 10
-        query_delete = ("delete from article where id not in ("
+        query_delete = ("delete from article where id not in ( "
                         "select article_id from "
                         "(select *, row_number() over(partition by {name}_id order by a.date desc, {name}_score desc) "
-                        "rn from relation_{name}_article r"
-                        "join article a on r.article_id = a.id) t1"
+                        "rn from relation_{name}_article r "
+                        "join article a on r.article_id = a.id) t1 "
                         "where rn <= {count})")
         with self.engine.connect() as conn:
             # dt_now = dt.datetime.now()
@@ -187,10 +189,10 @@ class ArticleProcess:
         """
         with self.engine.connect() as conn:
             query_article_data = (f'SELECT relation.article_id, relation.{subject}_score, '
-                                  f'article_.date, article_.link, article_.text_sum '
+                                  f'article_.title, article_.date, article_.link, article_.text_sum '
                                   f'FROM relation_{subject}_article AS relation '
                                   f'INNER JOIN ('
-                                  f'SELECT id, date, link, text_sum '
+                                  f'SELECT id, title, date, link, text_sum '
                                   f'FROM article '
                                   f') AS article_ '
                                   f'ON article_.id = relation.article_id '
@@ -237,11 +239,11 @@ class ArticleProcess:
 
         if articles:
             for index, article_data in enumerate(articles):
-                date, link, text_sum = article_data[0], article_data[1], article_data[2]
+                title, date, link, text_sum = article_data[0], article_data[1], article_data[2], article_data[3]
                 date = date.strftime('%d.%m.%Y')
                 link_phrase = f'<a href="{link}">Источник</a>'
                 text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
-                articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
+                articles[index] = f'{marker} <b>{title}</b>\n{text_sum} {link_phrase}\n<i>{date}</i>'
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
 
