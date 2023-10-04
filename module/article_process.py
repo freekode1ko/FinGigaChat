@@ -1,15 +1,19 @@
 import os
 import datetime as dt
 import numpy as np
+import re
+import urllib.parse
 
 import pandas as pd
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import ProgrammingError
 
 from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
 
 TIME_LIVE_ARTICLE = 5
+NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
 
 
 class ArticleError(Exception):
@@ -46,6 +50,7 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
+        df_subject['text'] = df_subject['text'].str.replace('«', '"').replace('»', '"')
         df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
@@ -111,10 +116,11 @@ class ArticleProcess:
         """
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
-        links_value = ", ".join([f"'{link}'" for link in self.df_article["link"].values.tolist()])
+        links_value = ", ".join([f"'{urllib.parse.unquote(link)}'" for link in self.df_article["link"].values.tolist()])
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
+            print('-- there are old articles in these batch !!!')
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
 
         # make article table and save it in database
@@ -284,3 +290,115 @@ class ArticleProcess:
             return 'Пока нет новостей на эту тему', img_name_list
 
         return reply_msg, img_name_list
+
+
+class ArticleProcessAdmin:
+
+    def __init__(self):
+        self.engine = create_engine(psql_engine)
+
+    def get_article_text_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
+                full_text, text_sum = article[4], article[5]
+        except (TypeError, ProgrammingError):
+            return '', ''
+        else:
+            return full_text, text_sum
+
+    def get_article_by_link(self, link: str):
+        dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
+        dict_keys_client = ('Клиент', 'Балл по клиенту')
+        dict_keys_commodity = ('Товар', 'Балл по товару')
+
+        query_article = f"SELECT title, link, date, text_sum FROM article WHERE link='{link}'"
+
+        query_client = (
+            f"SELECT STRING_AGG(name, '; '), r_cli.client_score "
+            f"FROM client "
+            f"JOIN relation_client_article r_cli ON r_cli.client_id = client.id "
+            f"JOIN article ON article.id = r_cli.article_id "
+            f"WHERE link = '{link}' "
+            f"GROUP BY r_cli.client_score")
+
+        query_commodity = (
+            f"SELECT  STRING_AGG(name, '; '), r_com.commodity_score "
+            f"FROM commodity "
+            f"JOIN relation_commodity_article r_com ON r_com.commodity_id = commodity.id "
+            f"JOIN article ON article.id = r_com.article_id "
+            f"WHERE link = '{link}' "
+            f"GROUP BY r_com.commodity_score")
+
+        try:
+            with self.engine.connect() as conn:
+                article_data = conn.execute(text(query_article)).fetchone()
+                article_client = conn.execute(text(query_client)).fetchone()
+                article_commodity = conn.execute(text(query_commodity)).fetchone()
+
+                article_data_dict = {key: val for key, val in zip(dict_keys_article, article_data)}
+
+                if article_client:
+                    article_client_dict = {key: val for key, val in zip(dict_keys_client, article_client)}
+                else:
+                    article_client_dict = dict.fromkeys(dict_keys_client, '-')
+
+                if article_commodity:
+                    article_commodity_dict = {key: val for key, val in zip(dict_keys_commodity, article_commodity)}
+                else:
+                    article_commodity_dict = dict.fromkeys(dict_keys_commodity, '-')
+
+            summary = article_data_dict.pop('Саммари')
+            article_data_dict.update(article_client_dict)
+            article_data_dict.update(article_commodity_dict)
+            article_data_dict.update({'Саммари': summary})
+            data = article_data_dict.copy()
+
+            return data
+        # except (TypeError, ProgrammingError):
+        except Exception as e:
+            return e
+
+    def delete_article_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                conn.execute(text(f"DELETE FROM article WHERE link='{link}'"))
+                conn.commit()
+        except (TypeError, ProgrammingError):
+            return False
+        else:
+            return True
+
+    def insert_new_gpt_summary(self, new_text_summary, link):
+        """ Insert new gpt summary into database """
+        with self.engine.connect() as conn:
+            conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link='{link}'"))
+            conn.commit()
+
+    @staticmethod
+    def find_not_relevant_news(article: str):
+        for expression in NOT_RELEVANT_EXPRESSION:
+            article = article.lower()
+            regular = f'{expression}'
+            if re.search(regular, article):
+                return False
+            else:
+                return True
+
+    def get_bad_article(self):
+        """ Get article data if it contains bad word """
+        # TODO: как отправлять большее количество новостей
+
+        df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
+        df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
+        df = df[~df['relevant']]
+        bad_links = df['link'].values.tolist()
+        msgs = []
+        for link in bad_links:
+            msgs.append(self.get_article_by_link(link))
+        return msgs[:5]
+
+
+
+
+
