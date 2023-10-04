@@ -520,9 +520,7 @@ async def user_in_whitelist(user: str):
     user_id = user_json['id']
     engine = create_engine(psql_engine)
     whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
-    temp = whitelist.loc[whitelist['user_id'] == user_id]
-    print(len(temp), '\n\n', temp)
-    if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
+    if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
     else:
         return False
@@ -532,7 +530,7 @@ async def user_in_whitelist(user: str):
 async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
     email = ' '
-    if user_in_whitelist(user_raw):
+    if not await user_in_whitelist(message.from_user.as_json()):
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
