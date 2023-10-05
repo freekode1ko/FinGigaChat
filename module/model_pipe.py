@@ -65,6 +65,7 @@ def find_names(text: str, table: pd.DataFrame, clean: bool) -> str:
     :param clean: bool. Flag shows whether search applies to original or cleaned text.
     :return: str. String with found names separated with ; symbol.
     """
+    names_dict = {}
     # search for names in normal case and upper case.
     if clean:
         try:
@@ -76,10 +77,17 @@ def find_names(text: str, table: pd.DataFrame, clean: bool) -> str:
     for i in range(len(table)):
         for j in range(len(table.loc[i])):
             if type(table.loc[i][j]) == str:
-                if search(f'({str(table.loc[i][j])}|{str(table.loc[i][j]).upper()})', text):
-                    answer += [table.loc[i][0].lower()]
+                re_findall = re.findall(f'({str(table.loc[i][j])}|{str(table.loc[i][j]).upper()})', text)
+                if re_findall:
+                    key_name = table.loc[i][0].lower()
+                    names_dict[key_name] = len(re_findall)
                     break
-    return ';'.join(answer)
+
+    if clean:
+        max_count = max(names_dict.values(), default=None)
+        return ';'.join([key for key, val in names_dict.items() if (val > 1 or val == max_count)]) if max_count else ''
+    else:
+        return ';'.join(names_dict.keys())
 
 
 def rate_client(df: pd.DataFrame) -> pd.DataFrame:
@@ -266,10 +274,13 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     # add column with clean text
     print('-- cleaned data')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
-    clean_flag = False
+    clean_flag = False if type_of_article == 'client' else True
 
     # read file with subject name
     subject_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article))
+    # find subject name in text
+    print(f'-- find {type_of_article} names in article')
+    df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names, clean_flag))
 
     # make_summarization
     if type_of_article == 'commodity':
@@ -278,13 +289,11 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         token = giga_chat.get_user_token()
         df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
         df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
-        clean_flag = True
-
-    # find subject name in text and union with polyanalyst names
-    print(f'-- find {type_of_article} names in article')
-    df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names, clean_flag))
-    df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
-                                   axis=1)
+        df[type_of_article] = df[f'found_{type_of_article}'].str.strip()
+    else:
+        # union with polyanalyst names
+        df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']),
+                                       axis=1)
 
     # make rating for article
     print(f'-- rate {type_of_article} articles')
