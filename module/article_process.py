@@ -93,10 +93,11 @@ class ArticleProcess:
                         f"join article a on r.article_id = a.id) t1 "
                         f"where rn <= {count_to_keep})")
         with self.engine.connect() as conn:
-            # dt_now = dt.datetime.now()
-            # conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            len_before = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
             conn.execute(text(query_delete))
             conn.commit()
+            len_after = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_before - len_after} articles')
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
