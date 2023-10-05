@@ -104,7 +104,8 @@ def daily_func():
         print('DID NOT GET ARTICLES')
 
     # delete old articles from database
-    ap_obj.delete_old_article()
+    # TODO: перед запуском еще раз внимательно проверить
+    # ap_obj.delete_old_article()
 
 
 if __name__ == '__main__':

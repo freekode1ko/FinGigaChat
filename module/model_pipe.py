@@ -7,8 +7,9 @@ import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
 from openai.error import InvalidRequestError
+from sqlalchemy import create_engine, text
 
-from config import summarization_prompt
+from config import summarization_prompt, psql_engine
 from module.gigachat import GigaChat
 from module.chatgpt import ChatGPT
 
@@ -124,7 +125,30 @@ def rate_client(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def rate_commodity(df: pd.DataFrame, use_relevance_model: bool, threshold=0.4) -> pd.DataFrame:
+def down_threshold(type_of_article, names, threshold) -> float:
+    """
+    Down threshold if new contains rare subject
+    :param names: list with names of different subjects
+    :param threshold: float value, limit of relevance
+    :return: new little threshold
+    """
+    minus_threshold = 0.2
+    min_count_article_val = 7
+    counts_dict = {}
+    engine = create_engine(psql_engine)
+    with engine.connect() as conn:
+        for subject_name in names:
+            query_count = ("SELECT COUNT(article_id) FROM relation_{type_of_article}_article r "
+                           "JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id "
+                           "where {type_of_article}.name = '{subject_name}'")
+            count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
+            counts_dict[subject_name] = count
+    min_count = min(counts_dict.values())
+    threshold = threshold - minus_threshold if min_count[0] <= min_count_article_val else threshold
+    return threshold
+
+
+def rate_commodity(df: pd.DataFrame, use_relevance_model: bool, threshold=0.5) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
     :param df: Pandas DF. Pandas DF with current news batch.
@@ -163,8 +187,10 @@ def rate_commodity(df: pd.DataFrame, use_relevance_model: bool, threshold=0.4) -
         # make predictions
         probs = binary_model.predict_proba(df['cleaned_data'])
         res = []
-        for pair in probs:
-            if (pair[1]) > threshold:
+        for index, pair in enumerate(probs):
+            commodity_names = df['commodity'].iloc[index].split(';')
+            local_threshold = down_threshold('commodity', commodity_names, threshold)
+            if (pair[1]) > local_threshold:
                 res.append(1)
             else:
                 res.append(0)
