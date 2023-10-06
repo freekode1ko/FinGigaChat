@@ -297,8 +297,8 @@ class Transformer:
     @staticmethod
     def unix_to_default(timestamp):
         """
-        :param timestamp: unix formatted timestamp
         Transform unix-time to world-time
+        :param timestamp: unix formatted timestamp
         """
         
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
