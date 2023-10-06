@@ -760,11 +760,15 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
                 await bot.send_media_group(message.chat.id, media=media, protect_content=True)
             try:
-                await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+                await message.answer(reply_msg, parse_mode='HTML',
+                                     protect_content=True,
+                                     disable_web_page_preview=True)
             except MessageIsTooLong:
                 articles = reply_msg.split('\n\n')
                 for article in articles:
-                    await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+                    await message.answer(article, parse_mode='HTML',
+                                         protect_content=True,
+                                         disable_web_page_preview=True)
             return None
 
         global chat
@@ -785,7 +789,13 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         else:
             try:
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                giga_js = giga_answer.json()['choices'][0]['message']['content']
+                if giga_answer.status_code == 200:
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
+                elif giga_answer.status_code == 401:
+                    print('Token {}...{} is dead.'.format(token[:10], token[-10:]))
+                    raise AttributeError
+                else:
+                    raise KeyError
 
             except AttributeError:
                 chat = gig.GigaChat()
