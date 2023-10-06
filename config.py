@@ -41,10 +41,10 @@ user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = ''
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 
-api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
-# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
-psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
-# psql_engine = 'postgresql://bot:12345@176.53.163.75:5432/users'
+# api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
+api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
+# psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
+psql_engine = 'postgresql://bot:12345@176.53.163.75:5432/users'
 # psql_engine = 'postgresql://admin:root@localhost:5432/postgres'
 
 mail_username = "ai-helper@mail.ru"

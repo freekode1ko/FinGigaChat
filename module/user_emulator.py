@@ -248,12 +248,12 @@ class ResearchParser:
         url = f'{self.home_page}/group/guest/econ'
         self.driver.implicitly_wait(5)
         self.driver.get(url)
-        time.sleep(15)
+        time.sleep(60)
 
         page_html = self.driver.page_source
         
         soup = BeautifulSoup(page_html, "html.parser")
-        table_soup = soup.find('table',attrs={'class':"grid container black right victim"})
+        table_soup = soup.find('table', attrs={'class':"grid container black right victim"})
         headers = []
         head = table_soup.find('thead').find('tr')
         for td in head:
@@ -276,7 +276,7 @@ class ResearchParser:
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
         df = df.drop(index=0).reset_index(drop=True)
 
-        table_soup_al_name = soup.find('table',attrs={'class':"grid container black right"})
+        table_soup_al_name = soup.find('table', attrs={'class':"grid container black right"})
         aliases = []
         names = []
         aliases_longevity = []
@@ -370,7 +370,7 @@ class ResearchParser:
         fin_indicators_tables = {}
         for company in companies:
             link = copy.deepcopy(companies_research_link)
-            link = link.replace('id_id',companies[company]['company_id'])
+            link = link.replace('id_id', companies[company]['company_id'])
             time.sleep(3)
             self.driver.get(link)
 
@@ -464,5 +464,5 @@ class MetalsWireParser:
                 row = {'Resource': row_data[0].strip(), 'SPOT': row_data[4], '1M diff.': row_data[7],
                        'YTD diff.': row_data[8], "Cons-s'23": row_data[12]}
                 df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-                
+
         return df

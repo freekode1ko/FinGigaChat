@@ -327,9 +327,11 @@ async def data_mart(message: types.Message):
                 groups_dict[table_group].append(table)
 
         tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
-
+        # Денежное предложение
         for table in tables:
-            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = 'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = \
+                'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+        # Средняя процентная ставка
         for table in tables:
             condition = table['alias'].str.contains('Средняя процентная ставка')
             values_to_update = table.loc[condition, 'Экономические показатели']
@@ -339,12 +341,15 @@ async def data_mart(message: types.Message):
 
         for table in tables:
             table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели']+', $/руб'
-
+        # ИПЦ
         for table in tables:
-            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
+            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = \
+                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
+        # ИЦП
         for table in tables:
-            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
-
+            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = \
+                  table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
+        # Юралз
         for table in tables:
             condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
             table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели']+ ', €/руб'

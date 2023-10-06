@@ -70,7 +70,7 @@ class Transformer:
         :param f: value to format
         :return: formatted value
         """
-        
+
         try:
             f = float(f)
         except:
@@ -112,7 +112,7 @@ class Transformer:
                 row_height=1
                 size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
                 y_delta = size[1] + 0.145
-                size = (15,y_delta)
+                size = (15, y_delta)
                 fig, ax = plt.subplots(figsize=size)
                 fig.patch.set_facecolor('black')
                 ax.axis('off')
@@ -262,9 +262,9 @@ class Transformer:
         ax.axhline(y=y, color=color, linestyle='dotted')
 
         x = df['x'].iloc[-1]
-        delta_x = (x/100)
+        delta_x = (x / 100)
         y = round(y, 1)
-        delta_y = (y/100)*5
+        delta_y = (y / 100)*5
         x_name = df['x'].iloc[first]
         y_name = df['y'][first:].max()
 
