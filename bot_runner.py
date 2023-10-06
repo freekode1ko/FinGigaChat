@@ -106,29 +106,6 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
 
-''' deprecated
-async def __read_tables_from_companies(message: types.Message, companies: dict):
-    company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
-    company_name = company[0][2]
-    print(company_name)
-    company_url = company[0][3]
-    transformer = dt.Transformer()
-    await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url), protect_content=True)
-    await message.answer('Табличные данные по показателям:', protect_content=True)
-
-    for key in companies.keys():
-        if str(company_name) in key:
-            png_path = '{}/img/{}_table.png'.format(path_to_source, key)
-            title = '{}'.format(key.split('_')[1])
-            # transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
-            #                            column_width=[0.15] * len(companies[key].columns),
-            #                            figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
-            transformer.render_mpl_table(companies[key].drop('Unnamed: 0', axis=1), key,
-                                         header_columns=0, col_width=2)
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo, title=title)
-'''
-
 
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
@@ -141,26 +118,6 @@ async def start_handler(message: types.Message):
                                         message.from_user.full_name,
                                         message.from_user.username))
         await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
-
-''' deprecated
-@dp.message_handler(commands=['companies'])
-async def company_info(message: types.Message):
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    if await user_in_whitelist(message.from_user.as_json()):
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
-        keyboard.add(*buttons)
-        await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard,
-                            protect_content=True)
-
-@dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
-                                                             'полюс', 'русал', 'северсталь'])
-async def button_polymetal(message: types.Message):
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    if await user_in_whitelist(message.from_user.as_json()):
-        companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source), sheet_name=None)
-        await __read_tables_from_companies(message, companies)
-'''
 
 
 # ['облигации', 'бонды', 'офз']
@@ -329,7 +286,10 @@ async def data_mart(message: types.Message):
         tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
 
         for table in tables:
-            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = 'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+            table.loc[table['alias'].str.contains('Денежное предложение'),
+                      'Экономические показатели'] = 'Денежное предложение ' + \
+                                                    table.loc[table['alias'].str.contains('Денежное предложение'),
+                                                              'Экономические показатели'].str.lower()
         for table in tables:
             condition = table['alias'].str.contains('Средняя процентная ставка')
             values_to_update = table.loc[condition, 'Экономические показатели']
@@ -337,17 +297,27 @@ async def data_mart(message: types.Message):
             updated_values = 'Средняя ставка ' + values_to_update.str.lower()
             table.loc[condition, 'Экономические показатели'] = updated_values
 
+        # рубль/доллар
         for table in tables:
-            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели']+', $/руб'
+            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = \
+                table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели']+', $/руб'
 
+        # ИПЦ
         for table in tables:
-            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
-        for table in tables:
-            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
+            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = \
+                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
 
+        # ИЦП
         for table in tables:
-            condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
-            table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели']+ ', €/руб'
+            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = \
+                table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
+
+        # рубль/евро
+        for table in tables:
+            condition = table['alias'].str.contains('рубль/евро') & \
+                        ~table['Экономические показатели'].str.contains('Юралз')
+            table.loc[condition, 'Экономические показатели'] = \
+                table.loc[condition, 'Экономические показатели']+ ', €/руб'
 
         titles = []
         for key_eco in tables:
@@ -738,7 +708,6 @@ async def analyse_bad_article(message: types.Message):
     #         await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
     # else:
     #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
-
 
 
 @dp.message_handler()
