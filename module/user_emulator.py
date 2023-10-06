@@ -248,7 +248,7 @@ class ResearchParser:
         url = f'{self.home_page}/group/guest/econ'
         self.driver.implicitly_wait(5)
         self.driver.get(url)
-        time.sleep(15)
+        time.sleep(60)
 
         page_html = self.driver.page_source
         
