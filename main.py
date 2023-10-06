@@ -435,58 +435,59 @@ class Main:
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
 
-        # # economy
-        # key_eco_table = authed_user.get_key_econ_ind_table()
-        # eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        # eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-        #                                     name_of_review='Экономика России. Ежемесячный обзор')
-        # print('economy...ok')
+        # economy
+        key_eco_table = authed_user.get_key_econ_ind_table()
+        eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
+        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                            name_of_review='Экономика России. Ежемесячный обзор')
+        print('economy...ok')
 
-        # # bonds
-        # bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-        #                                     name_of_review='Валютный рынок и процентные ставки',
-        #                                     type_of_review='bonds', count_of_review=2)
-        # bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
-        #                                       name_of_review='Денежный рынок. Еженедельный обзор')
-        # print('bonds...ok')
+        # bonds
+        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                            name_of_review='Валютный рынок и процентные ставки',
+                                            type_of_review='bonds', count_of_review=2)
+        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
+                                              name_of_review='Денежный рынок. Еженедельный обзор')
+        print('bonds...ok')
 
-        # # exchange
-        # exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-        #                                        name_of_review='Валютный рынок и процентные ставки',
-        #                                        type_of_review='exchange', count_of_review=2)
-        # exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-        #                                              name_of_review='Ежемесячный обзор по юаню')
-        # exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-        #                                               name_of_review='Ежемесячный дайджест по мягким валютам')
-        # print('exchange...ok')
+        # exchange
+        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+                                               name_of_review='Валютный рынок и процентные ставки',
+                                               type_of_review='exchange', count_of_review=2)
+        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                     name_of_review='Ежемесячный обзор по юаню')
+        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+                                                      name_of_review='Ежемесячный дайджест по мягким валютам')
+        print('exchange...ok')
 
-        # # commodity
-        # commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
-        #                                         name_of_review='Сырьевые рынки', type_of_review='commodity')
-        # print('commodity...ok')
+        # commodity
+        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
+                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        print('commodity...ok')
 
-        # exchange_month = exchange_month_uan + exchange_month_soft
-        # reviews = {
-        #     'Economy day': eco_day,
-        #     'Economy month': eco_month,
-        #     'Bonds day': bonds_day,
-        #     'Bonds month': bonds_month,
-        #     'Exchange day': exchange_day,
-        #     'Exchange month': exchange_month,
-        #     'Commodity day': commodity_day
-        # }
+        exchange_month = exchange_month_uan + exchange_month_soft
+        reviews = {
+            'Economy day': eco_day,
+            'Economy month': eco_month,
+            'Bonds day': bonds_day,
+            'Bonds month': bonds_month,
+            'Exchange day': exchange_day,
+            'Exchange month': exchange_month,
+            'Commodity day': commodity_day
+        }
 
-        # # companies
-        # companies_pages_html = dict()
-        # for company in self.list_of_companies:
-        #     page_html = authed_user.get_company_html_page(url_part=company[0])
-        #     companies_pages_html[company[1]] = page_html
-        # print('companies page...ok')
+        # companies
+        companies_pages_html = dict()
+        for company in self.list_of_companies:
+            page_html = authed_user.get_company_html_page(url_part=company[0])
+            companies_pages_html[company[1]] = page_html
+        print('companies page...ok')
 
         clients_table = authed_user.get_companies_financial_indicators_table()
         print('clients table...ok')
-        # return reviews, companies_pages_html, key_eco_table, clients_table
-        return clients_table
+
+        return reviews, companies_pages_html, key_eco_table, clients_table
+
     
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -562,29 +563,28 @@ if __name__ == '__main__':
     while True:
         runner = Main()
         runner.parser_obj.get_proxy_addresses()
-        # runner.main()
+        runner.main()
 
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
-        driver = webdriver.Firefox(options=firefox_options)
-        # driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        # driver = webdriver.Firefox(options=firefox_options)
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
             pass
-            # reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
-            clients_table = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
             runner.save_clients_financial_indicators(clients_table)
-            # runner.save_key_eco_table(key_eco_table)
-            # runner.save_reviews(reviews_dict)
-            # runner.process_companies_data(companies_pages_html_dict)
+            runner.save_key_eco_table(key_eco_table)
+            runner.save_reviews(reviews_dict)
+            runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             print(f'Some error with Research, check: {e}')
 
         try:
             session = req.Session()
             # print('session started')
-            # runner.commodities_plot_collect(session, driver)
+            runner.commodities_plot_collect(session, driver)
             # print('com writed')
         except Exception as e:
             print(f'Some error with commodity parsing, check: {e}')

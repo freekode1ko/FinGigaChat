@@ -566,6 +566,15 @@ async def check_your_right(user: dict):
     else:
         return False
 
+async def __create_fin_table(message, client_fin_table):
+    transformer = dt.Transformer()
+    client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
+    transformer.render_mpl_table(client_fin_table,
+                            'financial_indicator', header_columns=0, col_width=4, title='', alias=message.text.strip().capitalize(), fin=True)
+    png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
+    photo = open(png_path, 'rb')
+    await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
+
 
 @dp.message_handler(commands=['admin_help'])
 async def admin_help(message: types.Message):
@@ -744,7 +753,6 @@ async def analyse_bad_article(message: types.Message):
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
-
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     msg = '{} {}'.format(prompt, message.text)
@@ -756,16 +764,12 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     if await user_in_whitelist(message.from_user.as_json()):
         reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
 
+        fin_table_marker = False
+        if not client_fin_table.empty:
+            await __create_fin_table(message, client_fin_table)
+            fin_table_marker = True
+
         if reply_msg:
-            if not client_fin_table.empty:
-                transformer = dt.Transformer()
-                client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
-                transformer.render_mpl_table(client_fin_table,
-                                                    'financial_indicator', header_columns=0, col_width=4, title='', alias=message.text.strip().capitalize(), fin=True)
-                png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
-                photo = open(png_path, 'rb')
-                await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
-                
             if img_name_list:
                 await types.ChatActions.upload_photo()
                 media = types.MediaGroup()
@@ -802,13 +806,15 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 giga_js = giga_answer.json()['choices'][0]['message']['content']
 
             except AttributeError:
-                chat = gig.GigaChat()
-                token = chat.get_user_token()
-                print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
-                                                             message.from_user.full_name,
-                                                             message.from_user.username))
-                giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                giga_js = giga_answer.json()['choices'][0]['message']['content']
+                if not fin_table_marker:
+                    print(fin_table_marker)
+                    chat = gig.GigaChat()
+                    token = chat.get_user_token()
+                    print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
+                                                                message.from_user.full_name,
+                                                                message.from_user.username))
+                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
 
             except KeyError:
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)

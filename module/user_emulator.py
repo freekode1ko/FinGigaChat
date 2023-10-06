@@ -241,7 +241,8 @@ class ResearchParser:
 
     def get_key_econ_ind_table(self):
         """
-        :return: table in dataframe format
+        Get page about company in html format
+        :return: table in DataFrame format
         """
 
         url = f'{self.home_page}/group/guest/econ'
@@ -317,11 +318,18 @@ class ResearchParser:
             if re.match('^\d+(\.\d+)?[Ee]?$', col):
                 numeric_cols.append(col)
         df_new = df[['id'] + ['name'] + numeric_cols + ['alias']].copy()
- 
+
         return df_new
     
     @staticmethod
     def __get_client_fin_indicators(page_html, company):
+        """
+        Get singe compay financial indicators table
+        :param page_html: html page of company
+        :param company: company name
+        :return: table in DataFrame format
+        """
+
         soup = BeautifulSoup(page_html, "html.parser")
         table_soup = soup.find('div', attrs={'class':"report company-summary-financials"}).\
         find('div', attrs={'class':'grid_container grid-bottom-border'}).\
@@ -336,21 +344,15 @@ class ResearchParser:
         df = df.dropna(how='all', subset=df.columns.difference(['alias']))
         df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace('\xa0', ''))
         df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace(',', '.'))
-        df.iloc[:, 1:-1] = df.iloc[:, 1:-1].apply(pd.to_numeric, errors='coerce')
+
         df = df.rename(columns={'Unnamed: 1': 'name'})
-        # df = df.dropna(how='all', subset=df.columns.difference(['alias','name']))
 
-        idx_name = list(df.columns).index('alias')
-        numeric_cols = df.columns[df.columns.str.match(r'^\d{4}')].tolist()[:4]
+        cols_to_convert = df.columns[~df.columns.isin(['alias', 'name'])]
+        mask = ~df.apply(lambda x: 'IFRS' in x.values, axis=1)
+        df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
+
+        numeric_cols = df.columns[df.columns.str.match(r'^\d{4}')].tolist()[:5]
         df_new = df.loc[:, numeric_cols]
-
-        # cols = df.columns[idx_name-5:idx_name]
-        # cols = df.columns
-        # df_new = df[cols]
-        # numeric_cols = []
-        # for col in df_new.columns:
-        #     if re.match('^\d+(\.\d+)?[Ee]?$', col):
-        #         numeric_cols.append(col)
         df_new = df[['name'] + numeric_cols + ['alias']].copy()
         df_new['company'] = company.lower()
 
@@ -358,6 +360,7 @@ class ResearchParser:
 
     def get_companies_financial_indicators_table(self):
         """
+        Get financial indicators table for all companies
         :return: table in dataframe format
         """
 
@@ -381,8 +384,12 @@ class ResearchParser:
         result = result.replace('Рост', 'Рост, %')
         result = result.replace('EPS (скорр.), R', 'EPS (скорр.), руб.')
         result = result.replace('Финансовые показатели, R млн.', 'Финансовые показатели, млн руб.')
+        result = result.replace('Операционные показатели, R млн.', 'Операционные показатели, млн руб.')
+        result = result.replace('BVPS, R', 'BVPS, руб.')
+        result = result.replace('EPS (прибыль на акцию), R', 'EPS (прибыль на акцию), руб.')
 
         return result
+
 
 class InvestingAPIParser:
     """
@@ -423,7 +430,7 @@ class InvestingAPIParser:
         url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
-        
+
         return data
 
 
@@ -457,5 +464,5 @@ class MetalsWireParser:
                 row = {'Resource': row_data[0].strip(), 'SPOT': row_data[4], '1M diff.': row_data[7],
                        'YTD diff.': row_data[8], "Cons-s'23": row_data[12]}
                 df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-
+                
         return df

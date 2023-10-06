@@ -2,11 +2,8 @@ import os
 import datetime as dt
 import numpy as np
 import re
-<<<<<<< Updated upstream
 import urllib.parse
 
-=======
->>>>>>> Stashed changes
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
@@ -199,12 +196,14 @@ class ArticleProcess:
         :param subject_id: id of commodity
         :return: list(dict) data about commodity pricing
         """
+
         pricing_keys = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
 
         with self.engine.connect() as conn:
             query_com_pricing = f'SELECT * FROM commodity_pricing WHERE commodity_id={subject_id}'
             com_data = conn.execute(text(query_com_pricing)).fetchall()
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
+
         return all_commodity_data
     
     def _get_client_fin_indicators(self, client_name):
@@ -213,11 +212,12 @@ class ArticleProcess:
         :param subject_id: id of commodity
         :return: list(dict) data about commodity pricing
         """
+
         client = pd.read_sql('financial_indicators',con = self.engine)
         client = client[client['company'] == client_name]
         client = client.sort_values('id')
         client_copy = client.copy()
-        print(client)
+
         if not client.empty:
             alias_idx = client.columns.get_loc('alias')
             new_df = client.iloc[:, :alias_idx]
@@ -226,12 +226,12 @@ class ArticleProcess:
             if full_nan_cols > 1:
                 alias_idx = client_copy.columns.get_loc('alias')
                 left_client = client_copy.iloc[:, :alias_idx]
-                remaining_cols = 4 - left_client.notnull().sum(axis=1).iloc[0]
+                remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
                 right_client = client_copy.iloc[:, alias_idx:]
-                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:4]
+                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
 
-                if len(selected_cols) < 4:
-                    if full_nan_cols < 4:
+                if len(selected_cols) < 5:
+                    if full_nan_cols < 5:
                         remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)-1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
                     else:
@@ -243,6 +243,8 @@ class ArticleProcess:
                 numeric_cols.sort()
                 new_cols = ['name'] + numeric_cols
                 new_df = result[new_cols]
+                if new_df.shape[1] > 6:
+                    new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
         else:
             return client
 
@@ -300,6 +302,7 @@ class ArticleProcess:
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
+
         com_data, reply_msg, img_name_list = None, '', []
         client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
@@ -324,8 +327,8 @@ class ArticleProcess:
         elif commodity_id and not articles and not img_name_list:
             return 'Пока нет новостей на эту тему', img_name_list
 
-<<<<<<< Updated upstream
-        return reply_msg, img_name_list
+
+        return reply_msg, img_name_list, client_fin_table
 
 
 class ArticleProcessAdmin:
@@ -435,9 +438,3 @@ class ArticleProcessAdmin:
         return msgs[:5]
 
 
-
-
-
-=======
-        return reply_msg, img_name_list, client_fin_table
->>>>>>> Stashed changes
