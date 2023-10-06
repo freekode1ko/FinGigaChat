@@ -29,7 +29,6 @@ def imap_func(type_of_article, folder_name):
 
     if date_msg == dt.datetime.now().date():
         filepath = imap_obj.get_and_download_attachment(folder_name)
-        print(f'-- download {filepath}')
     else:
         filepath = None
 
@@ -43,6 +42,7 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
     if filepath:
+        print(f'-- download {filepath}')
         df = ap_obj.load_file(filepath, type_of_article)
         print(f'-- got {len(df)} {type_of_article} articles')
         if not df.empty:
@@ -60,14 +60,11 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
 def daily_func():
 
-    # delete old articles from database
     ap_obj = ArticleProcess()
-    # ap_obj.delete_old_article()
-
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = ''
 
-    count_of_attempt = 5
+    count_of_attempt = 9
     for attempt in range(count_of_attempt):
 
         if not client_flag:
@@ -80,8 +77,8 @@ def daily_func():
             print('GOT ARTICLES - ', dt.datetime.now().date())
             break
         else:
-            print('wait 10 min')
-            time.sleep(10 * 60)
+            print('wait 20 min')
+            time.sleep(20 * 60)
 
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
         pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client',
@@ -106,7 +103,8 @@ def daily_func():
     else:
         print('DID NOT GET ARTICLES')
 
-    time.sleep(60)  # if pipe too fast
+    # delete old articles from database
+    ap_obj.delete_old_article()
 
 
 if __name__ == '__main__':

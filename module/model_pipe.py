@@ -222,8 +222,9 @@ def change_bad_summary(row: pd.Series) -> str:
     """ Change summary if it is not exist """
     if row['text_sum']:
         return row['text_sum']
-    elif row['title']:
-        return row['title']
+    # TODO: если заголовки не будут отображаться в боте, то раскомментировать
+    # elif row['title']:
+    #     return row['title']
     else:
         first_sentence = row['text'][:row['text'].find('.') + 1]
         return first_sentence

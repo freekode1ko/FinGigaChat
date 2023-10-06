@@ -521,22 +521,21 @@ async def draw_all_tables(message: types.Message):
 
 
 async def user_in_whitelist(user: str):
-    return True
-    # user_json = json.loads(user)
-    # user_id = user_json['id']
-    # engine = create_engine(psql_engine)
-    # whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
-    # if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
-    #     return True
-    # else:
-    #     return False
+    user_json = json.loads(user)
+    user_id = user_json['id']
+    engine = create_engine(psql_engine)
+    whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
+    if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
+        return True
+    else:
+        return False
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
     email = ' '
-    if user_in_whitelist(user_raw):
+    if not await user_in_whitelist(message.from_user.as_json()):
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
@@ -583,8 +582,8 @@ async def admin_help(message: types.Message):
     admin_flag = await check_your_right(user)
 
     if admin_flag:
-        help_msg = ('<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
-                    '<b>/show_article</b> - показать детальную информацию о новости\n'
+        # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
+        help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
                     '<b>/delete_article</b> - удалить новость из базы данных')
         await message.answer(help_msg, protect_content=True, parse_mode='HTML')
@@ -737,20 +736,22 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['analyse_bad_article'])
 async def analyse_bad_article(message: types.Message):
     await types.ChatActions.typing()
-
-    user = json.loads(message.from_user.as_json())
-    admin_flag = await check_your_right(user)
-
-    if admin_flag:
-        apd_obj = ArticleProcessAdmin()
-        msgs = apd_obj.get_bad_article()
-        for msg_dict in msgs:
-            format_msg = ''
-            for key, val in msg_dict.items():
-                format_msg += f'<b>{key}</b>: {val}\n'
-            await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
-    else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+    await message.answer('Пока команда недоступна.', protect_content=True)
+    return
+    # TODO: реализовать при необходимости
+    # user = json.loads(message.from_user.as_json())
+    # admin_flag = await check_your_right(user)
+    #
+    # if admin_flag:
+    #     apd_obj = ArticleProcessAdmin()
+    #     msgs = apd_obj.get_bad_article()
+    #     for msg_dict in msgs:
+    #         format_msg = ''
+    #         for key, val in msg_dict.items():
+    #             format_msg += f'<b>{key}</b>: {val}\n'
+    #         await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
+    # else:
+    #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
 @dp.message_handler()
@@ -762,6 +763,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
+        msg_text = message.text.replace('«', '"').replace('»', '"')
         reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
 
         fin_table_marker = False
