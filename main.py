@@ -49,7 +49,7 @@ class Main:
         urls = df_urls.values.tolist()
         for url in urls:
             euro_standard, page_html = self.parser_obj.get_html(url[2], session)
-            print(euro_standard, url[2])
+            # print(euro_standard, url[2])
             try:
                 tables = self.transformer_obj.get_table_from_html(euro_standard, page_html)
                 for table in tables:
