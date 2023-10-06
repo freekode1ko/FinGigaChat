@@ -41,8 +41,10 @@ user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = ''
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 
-api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
-psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
+#api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
+api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'
+psql_engine = 'postgresql://bot:12345@176.53.163.75:5432/users'
+# psql_engine = 'postgresql://admin:root@localhost:5432/postgres'
 
 mail_username = "ai-helper@mail.ru"
 mail_password = "ExamKejCpmcpr8kM5emw"
@@ -278,4 +280,216 @@ dict_of_commodities = \
             'naming': 'Gas',
             'alias':'газ'   
         },
+    }
+
+dict_of_companies = \
+    {
+        'Газпром': {
+            'company_id': '656',
+            'alias': 'Нефть и газ'
+        },
+        'Газпром нефть': {
+            'company_id': '657',
+            'alias': 'Нефть и газ'
+        },
+        'ЛУКойл': {
+            'company_id': '673',
+            'alias': 'Нефть и газ'
+        },
+        'НОВАТЭК': {
+            'company_id': '690',
+            'alias': 'Нефть и газ'
+        },
+        'Роснефть': {
+            'company_id': '710',
+            'alias': 'Нефть и газ'
+        },
+        'Татнефть': {
+            'company_id': '722',
+            'alias': 'Нефть и газ'
+        },
+        'Транснефть': {
+            'company_id': '734',
+            'alias': 'Нефть и газ'
+        },
+        'Полиметалл': {
+            'company_id': '831',
+            'alias': 'Металлургия'
+        },  
+        'ММК': {
+            'company_id': '675',
+            'alias': 'Металлургия'
+        },
+        'НЛМК': {
+            'company_id': '691',
+            'alias': 'Металлургия'
+        },
+        'Норильский Никель': {
+            'company_id': '689',
+            'alias': 'Металлургия'
+        },
+        'Полюс': {
+            'company_id': '827',
+            'alias': 'Металлургия'
+        },
+        'РУСАЛ': {
+            'company_id': '798',
+            'alias': 'Металлургия'
+        },
+        'Северсталь': {
+            'company_id': '714',
+            'alias': 'Металлургия'
+        },
+        'Акрон': {
+            'company_id': '640',
+            'alias': 'Химическая промышленность'
+        },
+        'ФосАгро': {
+            'company_id': '824',
+            'alias': 'Химическая промышленность'
+        },
+        'TCS Group': {
+            'company_id': '846',
+            'alias': 'Финансовый сектор'
+        },
+        'Банк "Санкт-Петербург"': {
+            'company_id': '750',
+            'alias': 'Финансовый сектор'
+        },
+        'ВТБ': {
+            'company_id': '744',
+            'alias': 'Финансовый сектор'
+        },
+        'Московская биржа': {
+            'company_id': '872',
+            'alias': 'Финансовый сектор'
+        },
+        'Интер РАО': {
+            'company_id': '781',
+            'alias': 'Электроэнергетика'
+        },
+        'Мосэнерго': {
+            'company_id': '682',
+            'alias': 'Электроэнергетика'
+        },
+        'ОГК-2': {
+            'company_id': '694',
+            'alias': 'Электроэнергетика'
+        },
+        'РусГидро': {
+            'company_id': '749',
+            'alias': 'Электроэнергетика'
+        },
+        'ТГК-1': {
+            'company_id': '723',
+            'alias': 'Электроэнергетика'
+        },
+        'ЭЛ5 Энерго': {
+            'company_id': '696',
+            'alias': 'Электроэнергетика'
+        },
+        'Юнипро': {
+            'company_id': '695',
+            'alias': 'Электроэнергетика'
+        },
+        'Fix Price Group': {
+            'company_id': '1437',
+            'alias': 'Потребительский сектор'
+        },
+        'X5 Retail Group': {
+            'company_id': '747',
+            'alias': 'Потребительский сектор'
+        },
+        'Детский мир': {
+            'company_id': '1404',
+            'alias': 'Потребительский сектор'
+        },
+        'Лента': {
+            'company_id': '1296',
+            'alias': 'Потребительский сектор'
+        },
+        'М.Видео': {
+            'company_id': '796',
+            'alias': 'Потребительский сектор'
+        },
+        'Магнит': {
+            'company_id': '674',
+            'alias': 'Потребительский сектор'
+        },
+        'ОКЕЙ': {
+            'company_id': '817',
+            'alias': 'Потребительский сектор'
+        },
+        'Русагро': {
+            'company_id': '832',
+            'alias': 'Потребительский сектор'
+        },
+        'Эталон': {
+            'company_id': '835',
+            'alias': 'Недвижимость'
+        },
+        'ГК ПИК': {
+            'company_id': '701',
+            'alias': 'Недвижимость'
+        },
+        'ГК Самолет': {
+            'company_id': '1441',
+            'alias': 'Недвижимость'
+        },
+        'ЛСР': {
+            'company_id': '778',
+            'alias': 'Недвижимость'
+        },
+        'ХэдХантер': {
+            'company_id': '1416',
+            'alias': 'Интернет'
+        },
+        'Ozon': {
+            'company_id': '1430',
+            'alias': 'Интернет'
+        },
+        'VK': {
+            'company_id': '819',
+            'alias': 'Интернет'
+        },
+        'Whoosh': {
+            'company_id': '1443',
+            'alias': 'Интернет'
+        },
+        'Группа Позитив': {
+            'company_id': '1440',
+            'alias': 'Интернет'
+        },
+        'Яндекс': {
+            'company_id': '821',
+            'alias': 'Интернет'
+        },
+        'АФК Система': {
+            'company_id': '718',
+            'alias': 'Телекоммуникации'
+        },
+        'МТС': {
+            'company_id': '686',
+            'alias': 'Телекоммуникации'
+        },
+        'Ростелеком': {
+            'company_id': '871',
+            'alias': 'Телекоммуникации'
+        },
+        'Аэрофлот': {
+            'company_id': '641',
+            'alias': 'Транспорт'
+        },
+        'Глобалтранс': {
+            'company_id': '771',
+            'alias': 'Транспорт'
+        },
+        'Совкомфлот': {
+            'company_id': '873',
+            'alias': 'Транспорт'
+        },
+        'Сегежа': {
+            'company_id': '1438',
+            'alias': 'Промышленность'
+        }
     }

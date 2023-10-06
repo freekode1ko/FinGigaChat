@@ -360,7 +360,12 @@ async def data_mart(message: types.Message):
         for i,key_eco in enumerate(tables):
             if not key_eco.empty:
                 key_eco.reset_index(inplace=True, drop=True)
-                key_eco = key_eco.iloc[:, [1, -5, -4, -3, -2]]
+                key_eco = key_eco.drop(['id', 'alias'], axis=1)
+
+                cols_to_keep = [col for col in key_eco.columns if 
+                        re.match(r'\d{4}', col) and col != 'alias'][-4:]
+                cols_to_keep.insert(0, 'Экономические показатели')
+                key_eco = key_eco.loc[:, cols_to_keep]
 
                 transformer.render_mpl_table(key_eco,
                                              'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
@@ -516,14 +521,15 @@ async def draw_all_tables(message: types.Message):
 
 
 async def user_in_whitelist(user: str):
-    user_json = json.loads(user)
-    user_id = user_json['id']
-    engine = create_engine(psql_engine)
-    whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
-    if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
-        return True
-    else:
-        return False
+    return True
+    # user_json = json.loads(user)
+    # user_id = user_json['id']
+    # engine = create_engine(psql_engine)
+    # whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
+    # if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
+    #     return True
+    # else:
+    #     return False
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
@@ -748,14 +754,25 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
-        reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
+        reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
+
         if reply_msg:
+            if not client_fin_table.empty:
+                transformer = dt.Transformer()
+                client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
+                transformer.render_mpl_table(client_fin_table,
+                                                    'financial_indicator', header_columns=0, col_width=4, title='', alias=message.text.strip().capitalize(), fin=True)
+                png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
+                photo = open(png_path, 'rb')
+                await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
+                
             if img_name_list:
                 await types.ChatActions.upload_photo()
                 media = types.MediaGroup()
                 for name in img_name_list:
                     media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
                 await bot.send_media_group(message.chat.id, media=media, protect_content=True)
+
             try:
                 await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
             except MessageIsTooLong:

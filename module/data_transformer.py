@@ -64,14 +64,26 @@ class Transformer:
         plt.savefig(png_path, transparent=True)
 
     @staticmethod
+    def formatter(f):
+        if pd.isna(f):
+            return 'NaN'
+        elif isinstance(f, (int, float)):
+            if f<1000:
+                return '{:,.1f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
+            else:
+                return '{:,.0f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
+        else:
+            return str(f)
+        
+    @staticmethod
     def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
                          header_color='#000000', row_colors=['#030303', '#0E0E0E'],
                          edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
-                         header_columns=0, title=None, alias=None, ax=None, **kwargs):
+                         header_columns=0, title=None, alias=None, fin=None, ax=None, **kwargs):
         data = data.fillna('-')
         if title is None:
             title = name
-
+        
         # titles = [title]*len(data.columns.tolist())
         # orig_columns = data.columns.tolist()
         # columns = [(titles[i], orig_columns[i]) for i in range(0, len(titles))]
@@ -89,13 +101,20 @@ class Transformer:
                 fig, ax = plt.subplots(figsize=size)
                 fig.patch.set_facecolor('black')
                 ax.axis('off')
-
-            mpl_table = ax.table(cellText=data.values, bbox=[-0.17, -0.2, 1.3, 1.145], colLabels=data.columns, colWidths=[0.2, 0.05, 0.05, 0.05, 0.05],
+            
+            if fin:
+                data = data.replace('-', '')
+                vectorized_formatter = np.vectorize(Transformer.formatter)
+                mpl_table = ax.table(cellText=vectorized_formatter(data.values), bbox=[-0.17, -0.2, 1.3, 1.145], colLabels=data.columns, colWidths=[0.2, 0.05, 0.05, 0.05, 0.05],
                                 cellLoc='center', **kwargs)
+            else:
+                mpl_table = ax.table(cellText=data.values, bbox=[-0.17, -0.2, 1.3, 1.145], colLabels=data.columns, colWidths=[0.2, 0.05, 0.05, 0.05, 0.05],
+                                cellLoc='center', **kwargs)
+                
             plt.subplots_adjust(bottom=0.25)
             mpl_table.auto_set_font_size(False)
             mpl_table.set_fontsize(font_size)
-
+            
             for k, cell in six.iteritems(mpl_table._cells):
                 cell.set_edgecolor(edge_color)
                 if k[0] == 0 or k[1] < header_columns:
@@ -106,9 +125,22 @@ class Transformer:
                     cell.set_text_props(fontsize=18)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
-            
+                    if all(mpl_table._cells.get((k[0], j), None) is None or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 7)):
+                        cell.set_text_props(weight='bold',fontsize=20, color='white')
+                        cell.set_linewidth(0)
+                        rgb_color = (30/255, 31/255, 36/255)
+                        cell.set_facecolor(rgb_color)
+                
             title_loc = 'center'
-            ax.text(0.5, 1.1, alias, fontsize=20, fontweight='bold',
+
+            if fin:
+                y_height = 1
+                fontsize = 26
+            else:
+                y_height = 1.1
+                fontsize = 20
+
+            ax.text(0.5, y_height, alias, fontsize=fontsize, fontweight='bold',
                     color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
                     clip_on=False)
             
