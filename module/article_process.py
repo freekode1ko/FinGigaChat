@@ -337,7 +337,6 @@ class ArticleProcess:
         com_data, reply_msg, img_name_list = None, '', []
         client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
-        
         client_fin_table = self._get_client_fin_indicators(message.strip().lower())
 
         if client_id:
@@ -354,9 +353,9 @@ class ArticleProcess:
         reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
         if client_id and not articles:
-            return 'Пока нет новостей на эту тему', img_name_list
+            return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
         elif commodity_id and not articles and not img_name_list:
-            return 'Пока нет новостей на эту тему', img_name_list
+            return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
 
 
         return reply_msg, img_name_list, client_fin_table

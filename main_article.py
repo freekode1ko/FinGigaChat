@@ -10,7 +10,7 @@ from config import mail_username, mail_password, mail_imap_server
 
 CLIENT_FOLDER_DIR = "data/articles/client"
 COMMODITY_FOLDER_DIR = "data/articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
+HOUR_TO_PARSE = dt.timedelta(hours=14, minutes=47)
 
 
 def imap_func(type_of_article, folder_name):

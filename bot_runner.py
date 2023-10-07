@@ -797,11 +797,20 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)
                 giga_js = giga_answer.json()
             if not return_ans:
-                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer),
-                                     protect_content=True)
+                # await types.ChatActions.typing(1)
+                if reply_msg == False and not client_fin_table.empty:
+                    print('NO NEWS FOR THIS TYPE OF MESSAGE')
+                    # await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+                else:
+                    await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=True)
+                #except:
+                #    pass
             else:
                 return giga_js
-            print('{} - {}'.format('GigaChat_say', giga_js))
+            try:
+                print('{} - {}'.format('GigaChat_say', giga_js))
+            except:
+                pass
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
 
