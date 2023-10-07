@@ -81,7 +81,7 @@ class Transformer:
             return 'NaN'
 
         elif isinstance(f, (int, float)):
-            if abs(f)<1000:
+            if abs(f) < 1000:
                 return '{:,.1f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
             else:
                 return '{:,.0f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
@@ -122,7 +122,7 @@ class Transformer:
                 data = data.reset_index(drop=True)
                 for index, row in data.iterrows():
                     if row.to_list().count('-') == 5:
-                        new_values = ['']*5
+                        new_values = [''] * 5
                         new_values.insert(0, data.iloc[index]['Финансовые показатели'])
                         data.loc[index] = new_values
 
@@ -132,7 +132,7 @@ class Transformer:
                 cell_text = data.values
 
             mpl_table = ax.table(cellText=cell_text, bbox=bbox, colLabels=data.columns, colWidths=col_widths,
-                                cellLoc='center', **kwargs)
+                                 cellLoc='center', **kwargs)
 
             plt.subplots_adjust(bottom=0.25)
             mpl_table.auto_set_font_size(False)
@@ -148,10 +148,11 @@ class Transformer:
                     cell.set_text_props(fontsize=18)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
-                    if all(mpl_table._cells.get((k[0], j), None) is None or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 3)):
-                        cell.set_text_props(weight='bold',fontsize=20, color='white')
+                    if all(mpl_table._cells.get((k[0], j), None) is None
+                           or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 3)):
+                        cell.set_text_props(weight='bold', fontsize=20, color='white')
                         cell.set_linewidth(0)
-                        rgb_color = (30/255, 31/255, 36/255)
+                        rgb_color = (30 / 255, 31 / 255, 36 / 255)
                         cell.set_facecolor(rgb_color)
 
             title_loc = 'center'
@@ -164,7 +165,8 @@ class Transformer:
                 fontsize = 20
 
             ax.text(0.5, y_height, alias, fontsize=fontsize, fontweight='bold',
-                    color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
+                    color='white', ha=title_loc, va='top', transform=ax.transAxes,
+                    bbox=dict(facecolor='none', edgecolor='none'),
                     clip_on=False)
 
             sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
@@ -336,5 +338,6 @@ class Transformer:
             elif commodities[commodity]['naming'] != 'Gas':
                 name = commodities[commodity]['links'][0]
                 commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
-                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
+                commodities[commodity]['links'][0] = commodities[commodity]['links'][0] \
+                    .replace('date_date', unix_timestamp)
         return commodities
