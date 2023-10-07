@@ -301,7 +301,7 @@ async def data_mart(message: types.Message):
         for table in spld_keys_eco:
             table = table.reset_index(drop=True, inplace=True)
         spld_keys_eco = [table for table in spld_keys_eco if not table.empty]
-        
+
         groups = {
             'Национальные счета': 1,
             'Бюджет': 1,
@@ -367,7 +367,7 @@ async def data_mart(message: types.Message):
                 key_eco.reset_index(inplace=True, drop=True)
                 key_eco = key_eco.drop(['id', 'alias'], axis=1)
 
-                cols_to_keep = [col for col in key_eco.columns if 
+                cols_to_keep = [col for col in key_eco.columns if
                         re.match(r'\d{4}', col) and col != 'alias'][-4:]
                 cols_to_keep.insert(0, 'Экономические показатели')
                 key_eco = key_eco.loc[:, cols_to_keep]
@@ -375,10 +375,9 @@ async def data_mart(message: types.Message):
                 transformer.render_mpl_table(key_eco,
                                              'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
                 png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
-                photo = open(png_path, 'rb')
 
-                await __sent_photo_and_msg(message, photo,
-                                           title='')
+                with open(png_path, "rb") as photo:
+                    await __sent_photo_and_msg(message, photo, title="")
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -576,8 +575,9 @@ async def __create_fin_table(message, client_fin_table):
     transformer.render_mpl_table(client_fin_table,
                             'financial_indicator', header_columns=0, col_width=4, title='', alias=message.text.strip().capitalize(), fin=True)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
-    photo = open(png_path, 'rb')
-    await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
+    with open(png_path, "rb") as photo:
+        await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
+
 
 
 @dp.message_handler(commands=['admin_help'])
