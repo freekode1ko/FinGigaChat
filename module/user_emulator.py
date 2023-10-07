@@ -3,7 +3,7 @@ import random
 import time
 import json
 from typing import List
-
+import copy
 import selenium
 import selenium.webdriver as wb
 from selenium.webdriver.common.keys import Keys
@@ -241,8 +241,10 @@ class ResearchParser:
 
     def get_key_econ_ind_table(self):
         """
-        :return: table in dataframe format
+        Get page about company in html format
+        :return: table in DataFrame format
         """
+
         url = f'{self.home_page}/group/guest/econ'
         self.driver.implicitly_wait(5)
         self.driver.get(url)
@@ -251,7 +253,7 @@ class ResearchParser:
         page_html = self.driver.page_source
         
         soup = BeautifulSoup(page_html, "html.parser")
-        table_soup = soup.find('table',attrs={'class':"grid container black right victim"})
+        table_soup = soup.find('table', attrs={'class':"grid container black right victim"})
         headers = []
         head = table_soup.find('thead').find('tr')
         for td in head:
@@ -274,7 +276,7 @@ class ResearchParser:
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
         df = df.drop(index=0).reset_index(drop=True)
 
-        table_soup_al_name = soup.find('table',attrs={'class':"grid container black right"})
+        table_soup_al_name = soup.find('table', attrs={'class':"grid container black right"})
         aliases = []
         names = []
         aliases_longevity = []
@@ -305,12 +307,88 @@ class ResearchParser:
         
         aliases_series = pd.Series(aliases)
         aliases_series = aliases_series.repeat(counts).reset_index(drop=True)
-        df['alias'] = aliases_series
+
         df['id'] = range(1, df.shape[0] + 1)
-        df = df[['id', 'name', '2019', '2020', '2021', '2022', '2023E', '2024E', 'alias']]
-        print(df)
- 
-        return df
+        df['alias'] = aliases_series
+        idx_name = list(df.columns).index('name')
+        cols = df.columns[idx_name-4:idx_name+1]
+        df_new = df[cols]
+        numeric_cols = []
+        for col in df_new.columns:
+            if re.match('^\d+(\.\d+)?[Ee]?$', col):
+                numeric_cols.append(col)
+        df_new = df[['id'] + ['name'] + numeric_cols + ['alias']].copy()
+
+        return df_new
+    
+    @staticmethod
+    def __get_client_fin_indicators(page_html, company):
+        """
+        Get singe compay financial indicators table
+        :param page_html: html page of company
+        :param company: company name
+        :return: table in DataFrame format
+        """
+
+        soup = BeautifulSoup(page_html, "html.parser")
+        table_soup = soup.find('div', attrs={'class':"report company-summary-financials"}).\
+        find('div', attrs={'class':'grid_container grid-bottom-border'}).\
+        find('div', attrs={'class':'table-scroll'}).\
+        find('table', attrs={'class':'grid container black right'})
+
+        tables = pd.read_html(str(table_soup), thousands='', decimal=',')
+        df = tables[0]
+        df['Unnamed: 0'].fillna(method='ffill', inplace=True)
+        df['alias'] = df['Unnamed: 0'].ffill(limit=1).fillna('')
+        df.drop('Unnamed: 0', axis=1, inplace=True)
+        df = df.dropna(how='all', subset=df.columns.difference(['alias']))
+        df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace('\xa0', ''))
+        df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace(',', '.'))
+
+        df = df.rename(columns={'Unnamed: 1': 'name'})
+
+        cols_to_convert = df.columns[~df.columns.isin(['alias', 'name'])]
+        mask = ~df.apply(lambda x: 'IFRS' in x.values, axis=1)
+        df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
+
+        numeric_cols = df.columns[df.columns.str.match(r'^\d{4}')].tolist()[:5]
+        df_new = df.loc[:, numeric_cols]
+        df_new = df[['name'] + numeric_cols + ['alias']].copy()
+        df_new['company'] = company.lower()
+
+        return df_new
+
+    def get_companies_financial_indicators_table(self):
+        """
+        Get financial indicators table for all companies
+        :return: table in dataframe format
+        """
+
+        companies = copy.deepcopy(config.dict_of_companies)
+        companies_research_link = 'https://research.sberbank-cib.com/group/guest/companies?companyId=id_id'
+
+        fin_indicators_tables = {}
+        for company in companies:
+            link = copy.deepcopy(companies_research_link)
+            link = link.replace('id_id', companies[company]['company_id'])
+            time.sleep(3)
+            self.driver.get(link)
+
+            page_html = self.driver.page_source
+            fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
+            fin_indicators_tables[company] = fin_indicators_table
+
+        result = pd.concat(list(fin_indicators_tables.values()))
+        result['id'] = range(1, result.shape[0] + 1)
+        result = result.replace('Рентабельность', 'Рентабельность, %')
+        result = result.replace('Рост', 'Рост, %')
+        result = result.replace('EPS (скорр.), R', 'EPS (скорр.), руб.')
+        result = result.replace('Финансовые показатели, R млн.', 'Финансовые показатели, млн руб.')
+        result = result.replace('Операционные показатели, R млн.', 'Операционные показатели, млн руб.')
+        result = result.replace('BVPS, R', 'BVPS, руб.')
+        result = result.replace('EPS (прибыль на акцию), R', 'EPS (прибыль на акцию), руб.')
+
+        return result
 
 
 class InvestingAPIParser:
@@ -352,7 +430,7 @@ class InvestingAPIParser:
         url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
-        
+
         return data
 
 
