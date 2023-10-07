@@ -23,7 +23,7 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        self.engine = create_engine(psql_engine)
+        self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
