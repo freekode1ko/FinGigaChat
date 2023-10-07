@@ -57,15 +57,28 @@ class ArticleProcess:
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
         df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
-        if type_of_article == 'client':
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
+        df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+                                                                            'title': x['title'].iloc[0],
+                                                                            'date': x['date'].iloc[0],
+                                                                            'text': x['text'].iloc[0],
+                                                                            type_of_article: ';'.join(x[type_of_article]),
+                                                                            })).reset_index()
+        # if type_of_article == 'client':
+        #     df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+        #         'client': ';'.join(x['client']),
+        #         'date': x['date'].iloc[0],
+        #         'text': x['text'].iloc[0],
+        #         'text_sum': x['text_sum'].iloc[0],
+        #         'coef': x['coef'].iloc[0],
+        #     })).reset_index()
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
 
         return df_subject
 
     @staticmethod
-    def throw_the_models(df_subject: pd.DataFrame,  name: str,) -> pd.DataFrame:
+    def throw_the_models(df_subject: pd.DataFrame, name: str, ) -> pd.DataFrame:
         """ Call model pipe func """
         df_subject = model_func(df_subject, name)
         return df_subject
