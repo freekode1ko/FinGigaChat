@@ -1,15 +1,19 @@
 import os
 import datetime as dt
 import numpy as np
+import re
+import urllib.parse
 
 import pandas as pd
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import ProgrammingError
 
 from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
 
-TIME_LIVE_ARTICLE = 5
+TIME_LIVE_ARTICLE = 100
+NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
 
 
 class ArticleError(Exception):
@@ -19,7 +23,7 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        self.engine = create_engine(psql_engine)
+        self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
@@ -46,14 +50,35 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
+        df_subject['text'] = df_subject['text'].str.replace('«', '"')
+        df_subject['text'] = df_subject['text'].str.replace('»', '"')
+        df_subject['text'] = df_subject['text'].str.replace('$', ' $')
         df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
+        df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
+        df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+                                                                            'title': x['title'].iloc[0],
+                                                                            'date': x['date'].iloc[0],
+                                                                            'text': x['text'].iloc[0],
+                                                                            type_of_article: ';'.join(x[type_of_article]),
+                                                                            })).reset_index()
+        # if type_of_article == 'client':
+        #     df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+        #         'client': ';'.join(x['client']),
+        #         'date': x['date'].iloc[0],
+        #         'text': x['text'].iloc[0],
+        #         'text_sum': x['text_sum'].iloc[0],
+        #         'coef': x['coef'].iloc[0],
+        #     })).reset_index()
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
 
         return df_subject
 
     @staticmethod
-    def throw_the_models(df_subject: pd.DataFrame,  name: str,) -> pd.DataFrame:
+    def throw_the_models(df_subject: pd.DataFrame, name: str, ) -> pd.DataFrame:
         """ Call model pipe func """
         df_subject = model_func(df_subject, name)
         return df_subject
@@ -61,15 +86,36 @@ class ArticleProcess:
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         old_articles = pd.read_sql('SELECT text from article', con=self.engine)
-        print('before deduplicate = ', len(self.df_article))
+        print('-- new article before deduplicate = ', len(self.df_article))
         self.df_article = deduplicate(self.df_article, old_articles)
-        print('after deduplicate = ', len(self.df_article))
+        print('-- new article after deduplicate = ', len(self.df_article))
 
     def delete_old_article(self):
+        """ Delete from db article if there are 10 articles for each subject """
+        count_to_keep = 30
+        query_delete = (f"delete from article where id not in ( "
+                        f"select distinct article_id from "
+                        f"(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn "
+                        f"from relation_client_article r "
+                        f"join article a on r.article_id = a.id) t1 "
+                        f"where rn <= {count_to_keep} and t1.client_score <> 0"
+                        f"UNION "
+                        f"select distinct article_id from "
+                        f"(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn "
+                        f"from relation_commodity_article r "
+                        f"join article a on r.article_id = a.id) t1 "
+                        f"where rn <= {count_to_keep} and t1.commodity_score <> 0)")
         with self.engine.connect() as conn:
+            len_before = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            conn.execute(text(query_delete))
+            conn.commit()
+            len_after = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_before[0] - len_after[0]} articles')
             dt_now = dt.datetime.now()
             conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
             conn.commit()
+            len_finish = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_after[0] - len_finish[0]} articles with date > 100 days ago')
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
@@ -89,6 +135,7 @@ class ArticleProcess:
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
         self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity',
                                       'client_score', 'commodity_score', 'cleaned_data']]
+        print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 
     def save_tables(self) -> None:
         """
@@ -97,15 +144,17 @@ class ArticleProcess:
         """
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
-        links_value = ", ".join([f"'{link}'" for link in self.df_article["link"].values.tolist()])
+        links_value = ", ".join([f"'{urllib.parse.unquote(link)}'" for link in self.df_article["link"].values.tolist()])
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
+            print('-- there are old articles in these batch !!!')
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
+        print(f'-- save {len(article)} articles in database')
 
         # add ids to df_article from article table from db
         query_ids = f"SELECT id, link FROM article WHERE link IN ({links_value})"
@@ -136,9 +185,9 @@ class ArticleProcess:
         # make relation df between client id and article id
         df_relation_subject_article = df_article_subject.merge(subject, on=name)[[f'{name}_id', 'article_id',
                                                                                   f'{name}_score']]
-
         # save relation df to database
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
+        print(f'-- relation_{name}_article is {len(df_relation_subject_article)}')
 
     def _find_subject_id(self, message: str, subject: str):
         """
@@ -166,10 +215,10 @@ class ArticleProcess:
         """
         with self.engine.connect() as conn:
             query_article_data = (f'SELECT relation.article_id, relation.{subject}_score, '
-                                  f'article_.date, article_.link, article_.text_sum '
+                                  f'article_.title, article_.date, article_.link, article_.text_sum '
                                   f'FROM relation_{subject}_article AS relation '
                                   f'INNER JOIN ('
-                                  f'SELECT id, date, link, text_sum '
+                                  f'SELECT id, title, date, link, text_sum '
                                   f'FROM article '
                                   f') AS article_ '
                                   f'ON article_.id = relation.article_id '
@@ -188,13 +237,60 @@ class ArticleProcess:
         :param subject_id: id of commodity
         :return: list(dict) data about commodity pricing
         """
+
         pricing_keys = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
 
         with self.engine.connect() as conn:
             query_com_pricing = f'SELECT * FROM commodity_pricing WHERE commodity_id={subject_id}'
             com_data = conn.execute(text(query_com_pricing)).fetchall()
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
+
         return all_commodity_data
+    
+    def _get_client_fin_indicators(self, client_name):
+        """
+        Get pricing about commodity from db.
+        :param subject_id: id of commodity
+        :return: list(dict) data about commodity pricing
+        """
+
+        client = pd.read_sql('financial_indicators',con = self.engine)
+        client = client[client['company'] == client_name]
+        client = client.sort_values('id')
+        client_copy = client.copy()
+
+        if not client.empty:
+            alias_idx = client.columns.get_loc('alias')
+            new_df = client.iloc[:, :alias_idx]
+            full_nan_cols = new_df.isna().all().sum()
+
+            if full_nan_cols > 1:
+                alias_idx = client_copy.columns.get_loc('alias')
+                left_client = client_copy.iloc[:, :alias_idx]
+                remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
+                right_client = client_copy.iloc[:, alias_idx:]
+                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
+
+                if len(selected_cols) < 5:
+                    if full_nan_cols < 5:
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)-1]
+                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
+                    else:
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)+1]
+                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
+
+                result = client_copy[selected_cols]
+                numeric_cols = [col for col in result.columns if all(c.isdigit() or c == 'E' for c in col)]
+                numeric_cols.sort()
+                new_cols = ['name'] + numeric_cols
+                new_df = result[new_cols]
+                if new_df.shape[1] > 6:
+                    new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
+        else:
+            return client
+
+        return new_df
+        
 
     @staticmethod
     def _make_place_number(number):
@@ -216,11 +312,14 @@ class ArticleProcess:
 
         if articles:
             for index, article_data in enumerate(articles):
-                date, link, text_sum = article_data[0], article_data[1], article_data[2]
+                title, date, link, text_sum = article_data[0], article_data[1], article_data[2], article_data[3]
                 date = date.strftime('%d.%m.%Y')
                 link_phrase = f'<a href="{link}">Источник</a>'
                 text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
-                articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
+                if title:
+                    articles[index] = f'{marker} <b>{title}</b>\n{text_sum} {link_phrase}\n<i>{date}</i>'
+                else:
+                    articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
 
@@ -247,8 +346,12 @@ class ArticleProcess:
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
+
         com_data, reply_msg, img_name_list = None, '', []
+        client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
+        client_fin_table = self._get_client_fin_indicators(message.strip().lower())
+
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
         else:
@@ -258,11 +361,123 @@ class ArticleProcess:
                 com_data = self._get_commodity_pricing(commodity_id)
             else:
                 print('user do not want articles')
-                return False, img_name_list
+                return False, img_name_list, client_fin_table
 
         reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
-        if subject_name and not articles and not reply_msg:
-            return 'Пока нет новостей на эту тему', img_name_list
+        if client_id and not articles:
+            return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
+        elif commodity_id and not articles and not img_name_list:
+            return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
 
-        return reply_msg, img_name_list
+
+        return reply_msg, img_name_list, client_fin_table
+
+
+class ArticleProcessAdmin:
+
+    def __init__(self):
+        self.engine = create_engine(psql_engine)
+
+    def get_article_text_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
+                full_text, text_sum = article[4], article[5]
+        except (TypeError, ProgrammingError):
+            return '', ''
+        else:
+            return full_text, text_sum
+
+    def get_article_by_link(self, link: str):
+        dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
+        dict_keys_client = ('Клиент', 'Балл по клиенту')
+        dict_keys_commodity = ('Товар', 'Балл по товару')
+
+        query_article = f"SELECT title, link, date, text_sum FROM article WHERE link='{link}'"
+
+        query_client = (
+            f"SELECT STRING_AGG(name, '; '), r_cli.client_score "
+            f"FROM client "
+            f"JOIN relation_client_article r_cli ON r_cli.client_id = client.id "
+            f"JOIN article ON article.id = r_cli.article_id "
+            f"WHERE link = '{link}' "
+            f"GROUP BY r_cli.client_score")
+
+        query_commodity = (
+            f"SELECT  STRING_AGG(name, '; '), r_com.commodity_score "
+            f"FROM commodity "
+            f"JOIN relation_commodity_article r_com ON r_com.commodity_id = commodity.id "
+            f"JOIN article ON article.id = r_com.article_id "
+            f"WHERE link = '{link}' "
+            f"GROUP BY r_com.commodity_score")
+
+        try:
+            with self.engine.connect() as conn:
+                article_data = conn.execute(text(query_article)).fetchone()
+                article_client = conn.execute(text(query_client)).fetchone()
+                article_commodity = conn.execute(text(query_commodity)).fetchone()
+
+                article_data_dict = {key: val for key, val in zip(dict_keys_article, article_data)}
+
+                if article_client:
+                    article_client_dict = {key: val for key, val in zip(dict_keys_client, article_client)}
+                else:
+                    article_client_dict = dict.fromkeys(dict_keys_client, '-')
+
+                if article_commodity:
+                    article_commodity_dict = {key: val for key, val in zip(dict_keys_commodity, article_commodity)}
+                else:
+                    article_commodity_dict = dict.fromkeys(dict_keys_commodity, '-')
+
+            summary = article_data_dict.pop('Саммари')
+            article_data_dict.update(article_client_dict)
+            article_data_dict.update(article_commodity_dict)
+            article_data_dict.update({'Саммари': summary})
+            data = article_data_dict.copy()
+
+            return data
+        # except (TypeError, ProgrammingError):
+        except Exception as e:
+            return e
+
+    def delete_article_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                conn.execute(text(f"DELETE FROM article WHERE link='{link}'"))
+                conn.commit()
+        except (TypeError, ProgrammingError):
+            return False
+        else:
+            return True
+
+    def insert_new_gpt_summary(self, new_text_summary, link):
+        """ Insert new gpt summary into database """
+        with self.engine.connect() as conn:
+            conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link='{link}'"))
+            conn.commit()
+
+    @staticmethod
+    def find_not_relevant_news(article: str):
+        for expression in NOT_RELEVANT_EXPRESSION:
+            article = article.lower()
+            regular = f'{expression}'
+            if re.search(regular, article):
+                return False
+            else:
+                return True
+
+    def get_bad_article(self):
+        """ Get article data if it contains bad word """
+        # TODO: как отправлять большее количество новостей
+
+        df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
+        df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
+        df = df[~df['relevant']]
+        bad_links = df['link'].values.tolist()
+        msgs = []
+        for link in bad_links:
+            msgs.append(self.get_article_by_link(link))
+        return msgs[:5]
+
+

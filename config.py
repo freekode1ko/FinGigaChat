@@ -37,10 +37,11 @@ chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
-api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
-user_cred = ('oddryabkov', 'gEq8oILFVFTV') # ('nvzamuldinov', 'E-zZ5mRckID2')
+user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
+api_key_gpt = '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'
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 
+api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
 mail_username = "ai-helper@mail.ru"
@@ -60,7 +61,8 @@ summarization_prompt = (
     ''
     'ВАЖНО! Игнорировать формат ответа нельзя! Все условия должны соответствовать формату ответа!'
     ''
-    'Вот текст:'
+    '________________'
+    'Твой ответ:'
 )
 
 table_link = 'https://metals-wire.com/data'
@@ -73,200 +75,419 @@ charts_links = \
 
 dict_of_commodities = \
     {
-        'Нефть Brent': {
+        'Нефть Brent, $/бар': {
             'links': ['CO1'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/бар',
             'naming': 'Brent',
-            'alias':'Нефть'
+            'alias': 'Нефть'
         },
-        'Нефть WTI': {
-            'links': ['USCRWTIC'],
-            'to_take':3,
+        'Нефть WTI, $/бар': {
+            'links': ['8849',
+                      'https://ru.investing.com/commodities/crude-oil'],
+            'to_take':1,
             'measurables': '$/бар',
             'naming': 'WTI',
             'alias':'Нефть'
         },
-        'Нефть Urals': {
+        'Нефть Urals, $/бар': {
             'links': ['1168084',
-                  'https://www.investing.com/commodities/crude-oil-urals-spot-futures'],
-            'to_take':1,
+                      'https://www.investing.com/commodities/crude-oil-urals-spot-futures'],
+            'to_take': 1,
             'measurables': '$/бар',
             'naming': 'Urals',
-            'alias':'Нефть'
+            'alias': 'Нефть'
         },
-        'СПГ Япония/ Корея': {
+        'СПГ Япония/Корея, $/MMBTU': {
             'links': ['JKL1'],
-            'to_take':1,
+            'to_take': 1,
             'measurables': '$/MMBTU',
-            'naming': 'LNG Japan/Korea' ,
-            'alias':'СПГ'
+            'naming': 'LNG Japan/Korea',
+            'alias': 'СПГ'
         },
-        'Золото': {
+        'Золото спот, $/унц': {
             'links': ['XAU'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Gold spot',
-            'alias':''
+            'alias':'золото'
+
         },
-        'Медь': {
+        'Медь LME спот, $/т': {
             'links': ['LMCADY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Copper LME spot price',
-            'alias':''  
+            'alias':'медь'  
+
         },
-        'Алюминий': {
+        'Алюминий LME спот, $/т': {
             'links': ['AHDY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Aluminium LME spot',
-            'alias':''  
+            'alias':'алюминий'  
+
         },
-        'Никель': {
+        'Никель LME спот, $/т': {
             'links': ['LMNIDY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Nickel LME spot',
-            'alias':''  
+            'alias':'никель'  
+
         },
-        'Палладий': {
+        'Палладий LME спот, $/унц': {
             'links': ['PALL'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Palladium LME spot',
-            'alias':''  
+            'alias':'палладий'  
         },
-        'Платина': {
+        'Платина LME спот, $/унц': {
             'links': ['PLAT'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Platinum LME spot',
-            'alias':''  
+            'alias':'платина'  
         },
-        'Цинк': {
+        'Цинк LME спот, $/т': {
             'links': ['LMZSDY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Zinc LME spot',
-            'alias':''  
+            'alias':'цинк'  
+
         },
-        'Свинец': {
+        'Свинец LME спот, $/т': {
             'links': ['LMPBDY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Lead LME spot',
-            'alias':''  
+            'alias':'свинец'  
         },
-        'Серебро': {
+        'Серебро спот, $/унц': {
             'links': ['SILV'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Silver spot',
-            'alias':''  
+            'alias':'серебро'  
         },
-        'Кобальт': {
+        'Кобальт LME спот, $/т': {
             'links': ['LMCODY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Cobalt LME spot',
-            'alias':''  
+            'alias':'кобальт'  
         },
-        'ЖРС': {
+        'Железная руда 62% Fe CFR Китай, $/т': {
             'links': ['MB020424'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Iron ore 62% Fe CFR China',
-            'alias':''  
+            'alias':'жрс'  
         },
-        'Олово': {
+        'Олово LME spot, $/т': {
             'links': ['LMSNDY'],
-            'to_take':4,
+            'to_take': 4,
             'measurables': '$/т',
             'naming': 'Tin LME spot',
-            'alias':''  
+            'alias':'олово'  
         },
-        'Уран': {
+        'Уран Generic 1st UxC, $/фунт': {
             'links': ['UXA1'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/фунт',
             'naming': 'Generic 1st UxC Uranium Price',
-            'alias':''  
+            'alias':'уран'  
         },
-        'Уголь Европа CIF ARA': {
+        'Энергетический уголь 6 000kcal, CIF ARA, $/т': {
             'links': ['CIFARA'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': '6,000kcal, CIF ARA',
-            'alias':'Уголь'  
+            'alias': 'Уголь'
         },
-        'Коксующийся уголь': {
+        'Коксующийся уголь, FOB Australia, $/т': {
             'links': ['AUHCC1D'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'HCC FOB Australia',
-            'alias':''  
+            'alias':'коксующийся уголь'  
         },
-        'Рулон г/к FOB Черное море': {
+        'Рулон г/к FOB Черное море, $/т': {
             'links': ['RUHRC2'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'HRC FOB Black Sea',
-            'alias':'Сталь'  
+            'alias': 'Сталь'
         },
-        'Чугун FOB Черное море': {
+        'Чугун FOB Черное море, $/т': {
             'links': ['RUPIGIRON1'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'Pig Iron, FOB Black Sea',
-            'alias':'Сталь'  
+            'alias': 'Сталь'
         },
-        'Арматура РФ': {
+        'Арматура РФ, $/т': {
             'links': ['RUREBAR1'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'Rebar, Russia domestic',
-            'alias':'Сталь'  
+            'alias': 'Сталь'
         },
-        'Лом РФ': {
+        'Лом РФ, $/т': {
             'links': ['RUSCRAP2'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'Scrap Russia domestic',
-            'alias':'Сталь'  
+            'alias': 'Сталь'
         },
-        'Cляб FOB Черное море': {
+        'Cляб FOB Черное море, $/т': {
             'links': ['RUSLAB'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'Scrap FOB Black Sea',
-            'alias':'Сталь'  
+            'alias': 'Сталь'
         },
         'Электроэнергия в РФ (Европа)': {
             'links': ['RUelectricityEurope'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': 'руб/MWh',
             'naming': 'Electricity price Russia - Europe',
-            'alias':'Электроэнергия'  
+            'alias': 'Электроэнергия'
         },
         'Электроэнергия в РФ (Сибирь)': {
             'links': ['RUelectricitySiberia'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': 'руб/MWh',
             'naming': 'Electricity price Russia - Siberia',
-            'alias':'Электроэнергия'  
+            'alias': 'Электроэнергия'
         },
-        'Аммиак': {
+        'Аммиак, CFR Tampa, $/т': {
             'links': ['AR96530000'],
-            'to_take':3,
+            'to_take': 3,
             'measurables': '$/т',
             'naming': 'Ammonia, CFR Tampa',
-            'alias':''  
+            'alias':'аммиак'  
         },
-        'Газ': {
-            'links': ['https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
+        'Газ, Natural Gas, $/тыс м3': {
+            'links': [
+                'https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
             'measurables': '$/тыс м3',
             'naming': 'Gas',
-            'alias':''   
+            'alias':'газ'   
         },
+    }
+
+dict_of_companies = \
+    {
+        'Газпром': {
+            'company_id': '656',
+            'alias': 'Нефть и газ'
+        },
+        'Газпром нефть': {
+            'company_id': '657',
+            'alias': 'Нефть и газ'
+        },
+        'ЛУКойл': {
+            'company_id': '673',
+            'alias': 'Нефть и газ'
+        },
+        'НОВАТЭК': {
+            'company_id': '690',
+            'alias': 'Нефть и газ'
+        },
+        'Роснефть': {
+            'company_id': '710',
+            'alias': 'Нефть и газ'
+        },
+        'Татнефть': {
+            'company_id': '722',
+            'alias': 'Нефть и газ'
+        },
+        'Транснефть': {
+            'company_id': '734',
+            'alias': 'Нефть и газ'
+        },
+        'Полиметалл': {
+            'company_id': '831',
+            'alias': 'Металлургия'
+        },  
+        'ММК': {
+            'company_id': '675',
+            'alias': 'Металлургия'
+        },
+        'НЛМК': {
+            'company_id': '691',
+            'alias': 'Металлургия'
+        },
+        'Норильский Никель': {
+            'company_id': '689',
+            'alias': 'Металлургия'
+        },
+        'Полюс': {
+            'company_id': '827',
+            'alias': 'Металлургия'
+        },
+        'РУСАЛ': {
+            'company_id': '798',
+            'alias': 'Металлургия'
+        },
+        'Северсталь': {
+            'company_id': '714',
+            'alias': 'Металлургия'
+        },
+        'Акрон': {
+            'company_id': '640',
+            'alias': 'Химическая промышленность'
+        },
+        'ФосАгро': {
+            'company_id': '824',
+            'alias': 'Химическая промышленность'
+        },
+        'TCS Group': {
+            'company_id': '846',
+            'alias': 'Финансовый сектор'
+        },
+        'Банк Санкт-Петербург': {
+            'company_id': '750',
+            'alias': 'Финансовый сектор'
+        },
+        'ВТБ': {
+            'company_id': '744',
+            'alias': 'Финансовый сектор'
+        },
+        'Московская биржа': {
+            'company_id': '872',
+            'alias': 'Финансовый сектор'
+        },
+        'Интер РАО': {
+            'company_id': '781',
+            'alias': 'Электроэнергетика'
+        },
+        'Мосэнерго': {
+            'company_id': '682',
+            'alias': 'Электроэнергетика'
+        },
+        'ОГК-2': {
+            'company_id': '694',
+            'alias': 'Электроэнергетика'
+        },
+        'РусГидро': {
+            'company_id': '749',
+            'alias': 'Электроэнергетика'
+        },
+        'ТГК-1': {
+            'company_id': '723',
+            'alias': 'Электроэнергетика'
+        },
+        'ЭЛ5 Энерго': {
+            'company_id': '696',
+            'alias': 'Электроэнергетика'
+        },
+        'Юнипро': {
+            'company_id': '695',
+            'alias': 'Электроэнергетика'
+        },
+        'Fix Price Group': {
+            'company_id': '1437',
+            'alias': 'Потребительский сектор'
+        },
+        'X5 Retail Group': {
+            'company_id': '747',
+            'alias': 'Потребительский сектор'
+        },
+        'Детский мир': {
+            'company_id': '1404',
+            'alias': 'Потребительский сектор'
+        },
+        'Лента': {
+            'company_id': '1296',
+            'alias': 'Потребительский сектор'
+        },
+        'М.Видео': {
+            'company_id': '796',
+            'alias': 'Потребительский сектор'
+        },
+        'Магнит': {
+            'company_id': '674',
+            'alias': 'Потребительский сектор'
+        },
+        'ОКЕЙ': {
+            'company_id': '817',
+            'alias': 'Потребительский сектор'
+        },
+        'Русагро': {
+            'company_id': '832',
+            'alias': 'Потребительский сектор'
+        },
+        'Эталон': {
+            'company_id': '835',
+            'alias': 'Недвижимость'
+        },
+        'ГК ПИК': {
+            'company_id': '701',
+            'alias': 'Недвижимость'
+        },
+        'ГК Самолет': {
+            'company_id': '1441',
+            'alias': 'Недвижимость'
+        },
+        'ЛСР': {
+            'company_id': '778',
+            'alias': 'Недвижимость'
+        },
+        'ХэдХантер': {
+            'company_id': '1416',
+            'alias': 'Интернет'
+        },
+        'Ozon': {
+            'company_id': '1430',
+            'alias': 'Интернет'
+        },
+        'VK': {
+            'company_id': '819',
+            'alias': 'Интернет'
+        },
+        'Whoosh': {
+            'company_id': '1443',
+            'alias': 'Интернет'
+        },
+        'Группа Позитив': {
+            'company_id': '1440',
+            'alias': 'Интернет'
+        },
+        'Яндекс': {
+            'company_id': '821',
+            'alias': 'Интернет'
+        },
+        'АФК Система': {
+            'company_id': '718',
+            'alias': 'Телекоммуникации'
+        },
+        'МТС': {
+            'company_id': '686',
+            'alias': 'Телекоммуникации'
+        },
+        'Ростелеком': {
+            'company_id': '871',
+            'alias': 'Телекоммуникации'
+        },
+        'Аэрофлот': {
+            'company_id': '641',
+            'alias': 'Транспорт'
+        },
+        'Глобалтранс': {
+            'company_id': '771',
+            'alias': 'Транспорт'
+        },
+        'Совкомфлот': {
+            'company_id': '873',
+            'alias': 'Транспорт'
+        },
+        'Сегежа': {
+            'company_id': '1438',
+            'alias': 'Промышленность'
+        }
     }

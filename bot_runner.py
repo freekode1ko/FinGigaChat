@@ -1,40 +1,63 @@
 import json
+import datetime
+import warnings
+import re
+import numpy as np
+import textwrap
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.utils.exceptions import MessageIsTooLong
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher import FSMContext
 from sqlalchemy import create_engine
+import pandas as pd
+import ast
+
 import module.data_transformer as dt
 import module.gigachat as gig
-from module.article_process import ArticleProcess
-import pandas as pd
-import numpy as np
-import datetime
-import warnings
+from module.model_pipe import summarization_by_chatgpt
+from module.article_process import ArticleProcess, ArticleProcessAdmin
 import config
-import ast
-import re
 
 path_to_source = config.path_to_source
-# curdatetime = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 API_TOKEN = config.api_token
 psql_engine = config.psql_engine
 token = ''
 chat = ''
 
+storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher(bot, storage=storage)
 
-bonds_aliases = ['облигации', 'бонды', 'офз']
-eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
-exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
-metal_aliases = ['металлы', 'сырьевые товары', 'commodities']
+bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
+eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика', 'макро',
+               'макроэкономика', 'ключевая ставка', 'кс', 'ставка цб', 'ruonia', 'lpr', 'инфляция']
+exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро', 'fx', 'валютный рынок',
+                    'валюта', 'курс доллара', 'курс евро', 'курс юаня', 'курс рубля', 'доллар к рублю',
+                    'прогноз валютных курсов', 'прогнозы курса', 'прогнозы курса рубля', 'прогнозы курса доллара',
+                    'прогнозы курса юаня', 'мягкие валюты', 'рупии', 'лиры', 'тенге']
+metal_aliases = ['металлы', 'сырьевые товары', 'commodities', 'сырьевые рынки', 'сырье', 'цены на commodities',
+                 'ценны на металлы']
+view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'денежное предложение', 'проценстная ставка по кредитам',
+                'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
+                'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
+
 # analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
-summ_prompt = 'Сократи текст, оставь только ключевую информацию с числовыми показателями и прогнозами на будущее, ' \
-              'кратко указывай источник данных, убери из текста сравнительные обороты, вводные фразы, авторские ' \
-              'мнения и другую не ключевую информацию. Вот текст:'
-sample_of_img_title = '<b>{}</b>\nДанные на <i>{}</i>'
+sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
+
+research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
+giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
+
+
+# States
+class Form(StatesGroup):
+    link = State()
+    link_change_summary = State()
+    link_to_delete = State()
+    permission_to_delete = State()
 
 
 def read_curdatetime():
@@ -49,7 +72,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     # date = dparser.parse(date, fuzzy=True)
     # print(date)
 
-    # uncommet me if need summory
+    # uncommet me if need summory #TODO: исправить порядок парметров и промпт
     # ****************************
     # giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
     # ****************************
@@ -61,49 +84,27 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
         for batch in range(0, len(giga_ans), batch_size):
             text_group.append(text[batch:batch + batch_size])
         for summ_part in text_group:
-            await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, date),
+            await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer, date),
                                  parse_mode="HTML", protect_content=True)
     else:
-        await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, date),
+        await message.answer('<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date),
                              parse_mode="HTML", protect_content=True)
 
 
-async def __sent_photo_and_msg(message: types.Message, photo, day: str = '', month: str = '', title: str = ''):
+async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
+                               month: str = '', title: str = '', source: str = ''):
     batch_size = 3500
     if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
             month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
             month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
             await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
-    # await message.answer(title)
     if day:  # Публикация дня
         for day_rev in day[::-1]:
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
-
-
-async def __read_tables_from_companies(message: types.Message, companies: dict):
-    company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
-    company_name = company[0][2]
-    print(company_name)
-    company_url = company[0][3]
-    transformer = dt.Transformer()
-    await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url), protect_content=True)
-    await message.answer('Табличные данные по показателям:', protect_content=True)
-
-    for key in companies.keys():
-        if str(company_name) in key:
-            png_path = '{}/img/{}_table.png'.format(path_to_source, key)
-            title = '{}'.format(key.split('_')[1])
-            # transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
-            #                            column_width=[0.15] * len(companies[key].columns),
-            #                            figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
-            transformer.render_mpl_table(companies[key].drop('Unnamed: 0', axis=1), key,
-                                         header_columns=0, col_width=2)
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo, title=title)
 
 
 @dp.message_handler(commands=['start'])
@@ -117,25 +118,6 @@ async def start_handler(message: types.Message):
                                         message.from_user.full_name,
                                         message.from_user.username))
         await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
-
-
-@dp.message_handler(commands=['companies'])
-async def company_info(message: types.Message):
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    if await user_in_whitelist(message.from_user.as_json()):
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
-        keyboard.add(*buttons)
-        await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard, protect_content=True)
-
-
-@dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
-                                                             'полюс', 'русал', 'северсталь'])
-async def button_polymetal(message: types.Message):
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    if await user_in_whitelist(message.from_user.as_json()):
-        companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source), sheet_name=None)
-        await __read_tables_from_companies(message, companies)
 
 
 # ['облигации', 'бонды', 'офз']
@@ -168,8 +150,9 @@ async def bonds_info(message: types.Message):
         # month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         # print(month)
         title = 'ОФЗ'
-        # await message.answer('Да да - Вот оно: \n')
-        await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, read_curdatetime()))
+        data_source = 'investing.com'
+        await __sent_photo_and_msg(message, photo, day, month,
+                                   title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -178,13 +161,13 @@ async def economy_info(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         engine = create_engine(psql_engine)
-        #eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
+        # eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
         #                    sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
-        world_bet = pd.read_sql_query('select * from "eco_global_stake"',con=engine)
-        #rus_infl = eco['Инфляция в России'][[]]
+        world_bet = pd.read_sql_query('select * from "eco_global_stake"', con=engine)
+        # rus_infl = eco['Инфляция в России'][[]]
         rus_infl = pd.read_sql_query('select * from "eco_rus_influence"', con=engine)
         rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
-        #world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
+        # world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
         #                                                                                      'Last': '',
         #                                                                                      'Previous': ''})
         world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
@@ -212,7 +195,8 @@ async def economy_info(message: types.Message):
         world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
         for num, country in enumerate(world_bet['Страна'].values):
             world_bet.Страна[world_bet.Страна == country] = countries[country]
-        # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"), axis=1)
+        # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"),
+        # axis=1)
 
         # df transformation
         transformer = dt.Transformer()
@@ -226,8 +210,10 @@ async def economy_info(message: types.Message):
         day = pd.read_sql_query('select * from "report_eco_day"', con=engine).values.tolist()
         month = pd.read_sql_query('select * from "report_eco_mon"', con=engine).values.tolist()
         title = 'Ключевые ставки ЦБ мира'
+        data_source = 'ЦБ стран мира'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
+        await __sent_photo_and_msg(message, photo, day, month,
+                                   title=sample_of_img_title.format(title, data_source, curdatetime))
         # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
         #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
 
@@ -245,7 +231,9 @@ async def economy_info(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
         photo = open(png_path, 'rb')
         title = 'Инфляция в России'
-        await bot.send_photo(message.chat.id, photo, caption=sample_of_img_title.format(title, curdatetime),
+        data_source = 'ЦБ РФ'
+        await bot.send_photo(message.chat.id, photo,
+                             caption=sample_of_img_title.format(title, data_source, curdatetime),
                              parse_mode='HTML', protect_content=True)
         # сообщение с текущими ставками
         stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
@@ -258,22 +246,98 @@ async def economy_info(message: types.Message):
 async def data_mart(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        keys_eco = pd.read_excel('{}/tables/key_eco.xlsx'.format(path_to_source))
-        keys_eco = keys_eco[['Unnamed: 0', 2021, 2022, '2023E', '2024E']]
-        keys_eco = keys_eco.rename(columns=({'Unnamed: 0': 'Экономические показатели'}))
-        spld_keys_eco = np.split(keys_eco, keys_eco[keys_eco.isnull().all(1)].index)
+        engine = create_engine(psql_engine)
+        key_eco_table = pd.read_sql_query('select * from key_eco', con=engine)
+        split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
+        key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
 
-        title = 'Динамика и прогноз основных макроэкономических показателей'
-        for key_eco in spld_keys_eco:
-            key_eco = key_eco[key_eco['Экономические показатели'].notna()]
-            key_eco.reset_index(inplace=True, drop=True)
-            block = key_eco['Экономические показатели'][0]
-            key_eco = key_eco.iloc[1:]
-            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=6, title=title)
-            png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo, title=sample_of_img_title_view.format(title, block, read_curdatetime()))
+        spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
+        title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
+        await bot.send_message(message.chat.id, text=title, parse_mode='HTML', protect_content=True)
 
+        for table in spld_keys_eco:
+            table = table.reset_index(drop=True, inplace=True)
+        spld_keys_eco = [table for table in spld_keys_eco if not table.empty]
+
+        groups = {
+            'Национальные счета': 1,
+            'Бюджет': 1,
+            'Внешний долг': 1,
+            'ИПЦ': 2,
+            'ИЦП': 2,
+            'Денежное предложение': 3,
+            'Средняя процентная ставка': 3,
+            'Социальный сектор': 4,
+            'Норма сбережений': 4,
+            'Платежный баланс': 5,
+            'Обменный курс': 6
+        }
+        groups_dict = {group: [] for group in range(1, 7)}
+
+        for table in spld_keys_eco:
+            table_group = None
+            for condition, group in groups.items():
+                if condition in table['alias'].iloc[0]:
+                    table_group = group
+                    break
+            if table_group:
+                groups_dict[table_group].append(table)
+
+        tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
+        # Денежное предложение
+        for table in tables:
+            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = \
+                'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+        # Средняя процентная ставка
+        for table in tables:
+            condition = table['alias'].str.contains('Средняя процентная ставка')
+            values_to_update = table.loc[condition, 'Экономические показатели']
+            values_to_update = values_to_update.apply(lambda x: '\n'.join(textwrap.wrap(x, width=30)))
+            updated_values = 'Средняя ставка ' + values_to_update.str.lower()
+            table.loc[condition, 'Экономические показатели'] = updated_values
+
+        # рубль/доллар
+        for table in tables:
+            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели']+', $/руб'
+        # ИПЦ
+        for table in tables:
+            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = \
+                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
+        # ИЦП
+        for table in tables:
+            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = \
+                  table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
+        # Юралз
+        for table in tables:
+            condition = table['alias'].str.contains('рубль/евро') & \
+                        ~table['Экономические показатели'].str.contains('Юралз')
+            table.loc[condition, 'Экономические показатели'] = \
+                table.loc[condition, 'Экономические показатели']+ ', €/руб'
+
+        titles = []
+        for key_eco in tables:
+            title = key_eco['alias'].unique()
+            title = ', '.join(title)
+            if 'рубль/доллар' in title:
+                title = 'Курсы валют и нефть Urals'
+            titles.append(title)
+
+        for i,key_eco in enumerate(tables):
+            if not key_eco.empty:
+                key_eco.reset_index(inplace=True, drop=True)
+                key_eco = key_eco.drop(['id', 'alias'], axis=1)
+
+                cols_to_keep = [col for col in key_eco.columns if
+                        re.match(r'\d{4}', col) and col != 'alias'][-4:]
+                cols_to_keep.insert(0, 'Экономические показатели')
+                key_eco = key_eco.loc[:, cols_to_keep]
+
+                transformer.render_mpl_table(key_eco,
+                                             'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
+                png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+
+                with open(png_path, "rb") as photo:
+                    await __sent_photo_and_msg(message, photo, title="")
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -282,10 +346,10 @@ async def exchange_info(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
         engine = create_engine(psql_engine)
-        exc = pd.read_sql_query('select * from exc',con = engine)
+        exc = pd.read_sql_query('select * from exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
-        #exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
-        #exc = exc.drop('Unnamed: 0', axis=1)
+        # exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
+        # exc = exc.drop('Unnamed: 0', axis=1)
 
         # df transformation
         transformer = dt.Transformer()
@@ -308,17 +372,20 @@ async def exchange_info(message: types.Message):
         # month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         photo = open(png_path, 'rb')
         title = 'Курсы валют'
-        # await message.answer('Да да - Вот оно:\n')
+        data_source = 'investing.com'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month, title=sample_of_img_title.format(title, curdatetime))
+        await __sent_photo_and_msg(message, photo, day, month,
+                                   title=sample_of_img_title.format(title, data_source, curdatetime))
 
-        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(columns={'базовый сценарий':' '})
+        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(
+            columns={'базовый сценарий': ' '})
         title = 'Прогноз валютных курсов'
+        data_source = 'Sber analytical research'
         transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
                                      col_width=1.5, title=title)
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
         photo = open(png_path, 'rb')
-        await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, curdatetime))
+        await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
 
 
 # ['Металлы', 'сырьевые товары', 'commodities']
@@ -369,14 +436,14 @@ async def metal_info(message: types.Message):
             metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
             metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan)
-                                                    if str(x) == 'None'
-                                                    else '{}'.format(x))
+            if str(x) == 'None'
+            else '{}'.format(x))
             metal[key] = metal[key].astype('float')
             metal[key] = metal[key].round()
             metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
             metal[key] = metal[key].apply(lambda x: '{}%'.format(x)
-                                                    if x != 'nan' and key != 'Цена'
-                                                    else str(x).replace("nan", "-"))
+            if x != 'nan' and key != 'Цена'
+            else str(x).replace("nan", "-"))
 
         metal.index = metal.index.astype('int')
         metal.sort_index(inplace=True)
@@ -388,9 +455,10 @@ async def metal_info(message: types.Message):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
         day = pd.read_sql_query('select * from "report_met_day"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
-        # await message.answer('Да да - Вот оно:')
         title = ' Сырьевые товары'
-        await __sent_photo_and_msg(message, photo, day, title=sample_of_img_title.format(title, read_curdatetime()))
+        data_source = 'LME, Bloomberg, investing.com'
+        await __sent_photo_and_msg(message, photo, day,
+                                   title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
 
 def __replacer(data: str):
@@ -412,7 +480,7 @@ def __replacer(data: str):
 async def draw_all_tables(message: types.Message):
     from sqlalchemy import create_engine
     engine = create_engine('postgresql://bot:12345@0.0.0.0:5432/users')
-    df_from_db = pd.read_sql_query('select * from "users"', con = engine)
+    df_from_db = pd.read_sql_query('select * from "users"', con=engine)
     print(df_from_db)
 
 
@@ -421,7 +489,7 @@ async def user_in_whitelist(user: str):
     user_id = user_json['id']
     engine = create_engine(psql_engine)
     whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
-    if len(whitelist.loc[whitelist['user_id'] == user_id]) > 0:
+    if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
     else:
         return False
@@ -430,41 +498,229 @@ async def user_in_whitelist(user: str):
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
     user_raw = json.loads(message.from_user.as_json())
-    user_id = user_raw['id']
-    user_username = user_raw['username']
-    user_lang = user_raw['language_code']
-    user = pd.DataFrame([[user_id, user_username, user_lang]],
-                        columns=['user_id', 'user_username', 'user_lang'])
-    try:
-        engine = create_engine(psql_engine)
-        user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-        await message.answer('Welcome a board captain!', protect_content=True)
-    except Exception as e:
-        await message.answer('Somthing went wrong', protect_content=True)
-        print('Somthing went wrong: {}'.format(e))
+    email = ' '
+    if not await user_in_whitelist(message.from_user.as_json()):
+        if 'username' in user_raw:
+            user_username = user_raw['username']
+        else:
+            user_username = 'Empty_username'
+        user_id = user_raw['id']
+        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active']],
+                            columns=['user_id', 'username', 'email', 'user_type', 'user_status'])
+        try:
+            engine = create_engine(psql_engine)
+            user.to_sql('whitelist', if_exists='append', index=False, con=engine)
+            await message.answer(f'Добро пожаловать {email}!', protect_content=True)
+        except Exception as e:
+            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже '
+                                 f'\n\n{e}', protect_content=True)
+            print('Во время авторизации произошла ошибка, попробуйте позже: {}'.format(e))
+    else:
+        await message.answer(f'{email} - уже существует', protect_content=True)
+
+
+async def check_your_right(user: dict):
+    user_id = user['id']
+    engine = create_engine(config.psql_engine)
+    user_series = pd.read_sql_query(f"select user_type from whitelist WHERE user_id='{user_id}'", con=engine)
+    user_type = user_series.values.tolist()[0][0]
+    if user_type == 'admin' or user_type == 'owner':
+        return True
+    else:
+        return False
+
+async def __create_fin_table(message, client_fin_table):
+    transformer = dt.Transformer()
+    client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
+    transformer.render_mpl_table(client_fin_table,
+                            'financial_indicator', header_columns=0, col_width=4, title='', alias=message.text.strip().capitalize(), fin=True)
+    png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
+    with open(png_path, "rb") as photo:
+        await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
+
+
+
+@dp.message_handler(commands=['admin_help'])
+async def admin_help(message: types.Message):
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
+        help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
+                    '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
+                    '<b>/delete_article</b> - удалить новость из базы данных')
+        await message.answer(help_msg, protect_content=True, parse_mode='HTML')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(commands=['show_article'])
+async def show_article(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
+        await Form.link.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link)
+async def continue_show_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(link=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+
+    data_article_dict = apd_obj.get_article_by_link(data['link'])
+    if not isinstance(data_article_dict, dict):
+        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
+                             protect_content=True)
+        return
+
+    format_msg = ''
+    for key, val in data_article_dict.items():
+        format_msg += f'<b>{key}</b>: {val}\n'
+
+    await message.answer(format_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+    await state.finish()
+
+
+@dp.message_handler(commands=['change_summary'])
+async def change_summary(message: types.Message):
+
+    if not config.api_key_gpt:
+        await message.answer('Данная команда пока недоступна.', protect_content=True)
+        return
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
+        await Form.link_change_summary.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link_change_summary)
+async def continue_change_summary(message: types.Message, state: FSMContext):
+
+    await state.update_data(link_change_summary=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+
+    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=True)
+    await types.ChatActions.typing()
+    new_text_sum = summarization_by_chatgpt(full_text)
+    apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
+
+    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
+    await state.finish()
+
+
+@dp.message_handler(commands=['delete_article'])
+async def delete_article(message: types.Message):
+
+    await types.ChatActions.typing()
+
+    user = json.loads(message.from_user.as_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
+        await Form.link_to_delete.set()
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
+                               protect_content=True, disable_web_page_preview=True)
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+
+
+@dp.message_handler(state=Form.link_to_delete)
+async def continue_delete_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(link_to_delete=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_to_delete'])
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await state.finish()
+        return
+    else:
+        permission_answer = f'Вы уверены, что хотите удалить данную новость ?\nЕсли да, то напишите: "Удалить новость".'
+        await Form.permission_to_delete.set()
+        await message.reply(permission_answer, protect_content=True)
+
+
+@dp.message_handler(state=Form.permission_to_delete)
+async def finish_delete_article(message: types.Message, state: FSMContext):
+
+    await types.ChatActions.typing()
+    await state.update_data(permission_to_delete=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    if data["permission_to_delete"].lower().strip().replace('"', '').replace('.', '') == 'удалить новость':
+        apd_obj.delete_article_by_link(data['link_to_delete'])
+        await message.answer('Новость удалена.', protect_content=True)
+    else:
+        await message.answer('Хорошо, удалим в следующий раз.', protect_content=True)
+
+    await state.finish()
+
+
+@dp.message_handler(commands=['analyse_bad_article'])
+async def analyse_bad_article(message: types.Message):
+    await types.ChatActions.typing()
+    await message.answer('Пока команда недоступна.', protect_content=True)
+    return
+    # TODO: реализовать при необходимости
+    # user = json.loads(message.from_user.as_json())
+    # admin_flag = await check_your_right(user)
+    #
+    # if admin_flag:
+    #     apd_obj = ArticleProcessAdmin()
+    #     msgs = apd_obj.get_bad_article()
+    #     for msg_dict in msgs:
+    #         format_msg = ''
+    #         for key, val in msg_dict.items():
+    #             format_msg += f'<b>{key}</b>: {val}\n'
+    #         await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
+    # else:
+    #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
-
-    reply_msg, img_name_list = ArticleProcess().process_user_alias(message.text)
-    if reply_msg:
-        if img_name_list:
-            await types.ChatActions.upload_photo()
-            media = types.MediaGroup()
-            for name in img_name_list:
-                media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
-            await bot.send_media_group(message.chat.id, media=media, protect_content=True)
-        try:
-            await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-        except MessageIsTooLong:
-            articles = reply_msg.split('\n\n')
-            for article in articles:
-                await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-        return None
-
-    global chat
-    global token
     msg = '{} {}'.format(prompt, message.text)
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
@@ -472,41 +728,92 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/fx', '')
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
-        if message.text.lower() in bonds_aliases:
+        msg_text = message.text.replace('«', '"').replace('»', '"')
+        reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
+
+        fin_table_marker = False
+        if not client_fin_table.empty:
+            await __create_fin_table(message, client_fin_table)
+            fin_table_marker = True
+
+        if reply_msg:
+            if img_name_list:
+                await types.ChatActions.upload_photo()
+                media = types.MediaGroup()
+                for name in img_name_list:
+                    media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
+                await bot.send_media_group(message.chat.id, media=media, protect_content=True)
+
+            try:
+                await message.answer(reply_msg, parse_mode='HTML',
+                                     protect_content=True,
+                                     disable_web_page_preview=True)
+            except MessageIsTooLong:
+                articles = reply_msg.split('\n\n')
+                for article in articles:
+                    await message.answer(article, parse_mode='HTML',
+                                         protect_content=True,
+                                         disable_web_page_preview=True)
+            return None
+
+        global chat
+        global token
+        message_text = message.text.lower().strip()
+        if message_text in bonds_aliases:
             await bonds_info(message)
-        elif message.text.lower() in eco_aliases:
+        elif message_text in eco_aliases:
             await economy_info(message)
-        elif message.text.lower() in metal_aliases:
+        elif message_text in metal_aliases:
             await metal_info(message)
-        elif message.text.lower() in exchange_aliases:
+        elif message_text in exchange_aliases:
             await exchange_info(message)
-        elif message.text.lower() in ['test']:
-            await draw_all_tables(message)
+        elif message_text in view_aliases:
+            await data_mart(message)
+        # elif message_text in ['test']:
+        #    await draw_all_tables(message)
         else:
             try:
-                giga_answer = chat.ask_giga_chat(msg, token)
-                giga_js = giga_answer.json()['choices'][0]['message']['content']
+                giga_answer = chat.ask_giga_chat(token=token, text=msg)
+                if giga_answer.status_code == 200:
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
+                elif giga_answer.status_code == 401:
+                    print('Token {}...{} is dead.'.format(token[:10], token[-10:]))
+                    raise AttributeError
+                else:
+                    raise KeyError
 
             except AttributeError:
-                chat = gig.GigaChat()
-                token = chat.get_user_token()
-                print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
-                                                             message.from_user.full_name,
-                                                             message.from_user.username))
-                giga_answer = chat.ask_giga_chat(msg, token)
-                giga_js = giga_answer.json()['choices'][0]['message']['content']
+                if not fin_table_marker:
+                    print(fin_table_marker)
+                    chat = gig.GigaChat()
+                    token = chat.get_user_token()
+                    print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
+                                                                message.from_user.full_name,
+                                                                message.from_user.username))
+                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
 
             except KeyError:
-                giga_answer = chat.ask_giga_chat(msg, token)
+                giga_answer = chat.ask_giga_chat(token=token, text=msg)
                 giga_js = giga_answer.json()
             if not return_ans:
-                await message.answer('{}\n\n{}'.format(giga_js, 'This content generated by GigaChat'), protect_content=True)
+                # await types.ChatActions.typing(1)
+                if reply_msg == False and not client_fin_table.empty:
+                    print('NO NEWS FOR THIS TYPE OF MESSAGE')
+                    # await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+                else:
+                    await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=True)
+                #except:
+                #    pass
             else:
                 return giga_js
-            print('{} - {}'.format('GigaChat_say', giga_js))
+            try:
+                print('{} - {}'.format('GigaChat_say', giga_js))
+            except:
+                pass
     else:
-        await message.answer('You are NOT in club, get lost!\nhttps://www.youtube.com/watch?v=IjGEox6UOTs',
-                             protect_content=True)
+        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
+
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')

@@ -10,7 +10,7 @@ from config import mail_username, mail_password, mail_imap_server
 
 CLIENT_FOLDER_DIR = "data/articles/client"
 COMMODITY_FOLDER_DIR = "data/articles/commodity"
-HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=20)
+HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 
 def imap_func(type_of_article, folder_name):
@@ -42,12 +42,17 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
     if filepath:
+        print(f'-- download {filepath}')
         df = ap_obj.load_file(filepath, type_of_article)
+        print(f'-- got {len(df)} {type_of_article} articles')
         if not df.empty:
+            print('-- go throw models')
             df = ap_obj.throw_the_models(df, type_of_article)
         else:
+            print('-- df is empty')
             df[['text_sum', f'{type_of_article}_score', 'cleaned_data']] = None
         df.to_csv(filepath, index=False)
+        print('-- save to csv after models')
         return True, filepath
     else:
         return False, None
@@ -55,14 +60,11 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
 def daily_func():
 
-    # delete old articles from database
     ap_obj = ArticleProcess()
-    ap_obj.delete_old_article()
-
     client_flag = commodity_flag = False
-    client_filepath = commodity_filepath = None
+    client_filepath = commodity_filepath = ''
 
-    count_of_attempt = 5
+    count_of_attempt = 9
     for attempt in range(count_of_attempt):
 
         if not client_flag:
@@ -72,11 +74,11 @@ def daily_func():
             commodity_flag, commodity_filepath = model_func(ap_obj, 'commodity', COMMODITY_FOLDER_DIR)
 
         if client_flag and commodity_flag:
-            print('GOT ARTICLES')
+            print('GOT ARTICLES - ', dt.datetime.now().date())
             break
         else:
-            print('wait 10 min')
-            time.sleep(10 * 60)
+            print('wait 20 min')
+            time.sleep(20 * 60)
 
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
         pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client',
@@ -87,6 +89,8 @@ def daily_func():
                                   'commodity_score', 'cleaned_data']))
 
     if client_flag or commodity_flag:
+        print(f'is there new client article? -- {client_flag}')
+        print(f'is there new commodity article? -- {commodity_flag}')
         ap_obj.merge_client_commodity_article(df_client, df_commodity)
         ap_obj.drop_duplicate()
         ap_obj.save_tables()
@@ -99,7 +103,9 @@ def daily_func():
     else:
         print('DID NOT GET ARTICLES')
 
-    time.sleep(60)  # if pipe too fast
+    # delete old articles from database
+    # TODO: перед запуском еще раз внимательно проверить
+    # ap_obj.delete_old_article()
 
 
 if __name__ == '__main__':
