@@ -9,6 +9,7 @@ import copy
 import matplotlib.ticker as ticker
 from bot_runner import read_curdatetime
 
+
 class Transformer:
 
     @staticmethod
@@ -78,13 +79,13 @@ class Transformer:
 
         if pd.isna(f):
             return 'NaN'
-        
+
         elif isinstance(f, (int, float)):
-            if abs(f)<1000:
+            if abs(f) < 1000:
                 return '{:,.1f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
             else:
                 return '{:,.0f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
-            
+
         else:
             return str(f)
 
@@ -96,7 +97,7 @@ class Transformer:
         data = data.fillna('-')
         if title is None:
             title = name
-        
+
         # titles = [title]*len(data.columns.tolist())
         # orig_columns = data.columns.tolist()
         # columns = [(titles[i], orig_columns[i]) for i in range(0, len(titles))]
@@ -107,21 +108,21 @@ class Transformer:
             size = None
             bbox = [-0.17, -0.2, 1.3, 1.145]
             col_widths = [0.2, 0.05, 0.05, 0.05, 0.05, 0.05]
-            
+
             if ax is None:
-                row_height=1
+                row_height = 1
                 size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
                 y_delta = size[1] + 0.145
                 size = (15, y_delta)
                 fig, ax = plt.subplots(figsize=size)
                 fig.patch.set_facecolor('black')
                 ax.axis('off')
-            
+
             if fin:
                 data = data.reset_index(drop=True)
                 for index, row in data.iterrows():
                     if row.to_list().count('-') == 5:
-                        new_values = ['']*5
+                        new_values = [''] * 5
                         new_values.insert(0, data.iloc[index]['Финансовые показатели'])
                         data.loc[index] = new_values
 
@@ -129,14 +130,14 @@ class Transformer:
                 cell_text = vectorized_formatter(data.values)
             else:
                 cell_text = data.values
-            
+
             mpl_table = ax.table(cellText=cell_text, bbox=bbox, colLabels=data.columns, colWidths=col_widths,
-                                cellLoc='center', **kwargs)
-                
+                                 cellLoc='center', **kwargs)
+
             plt.subplots_adjust(bottom=0.25)
             mpl_table.auto_set_font_size(False)
             mpl_table.set_fontsize(font_size)
-            
+
             for k, cell in six.iteritems(mpl_table._cells):
                 cell.set_edgecolor(edge_color)
                 if k[0] == 0 or k[1] < header_columns:
@@ -147,12 +148,13 @@ class Transformer:
                     cell.set_text_props(fontsize=18)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
-                    if all(mpl_table._cells.get((k[0], j), None) is None or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 3)):
-                        cell.set_text_props(weight='bold',fontsize=20, color='white')
+                    if all(mpl_table._cells.get((k[0], j), None) is None
+                           or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 3)):
+                        cell.set_text_props(weight='bold', fontsize=20, color='white')
                         cell.set_linewidth(0)
-                        rgb_color = (30/255, 31/255, 36/255)
+                        rgb_color = (30 / 255, 31 / 255, 36 / 255)
                         cell.set_facecolor(rgb_color)
-                
+
             title_loc = 'center'
 
             if fin:
@@ -163,14 +165,16 @@ class Transformer:
                 fontsize = 20
 
             ax.text(0.5, y_height, alias, fontsize=fontsize, fontweight='bold',
-                    color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
+                    color='white', ha=title_loc, va='top', transform=ax.transAxes,
+                    bbox=dict(facecolor='none', edgecolor='none'),
                     clip_on=False)
-            
+
             sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
             sample_of_img_title_view = sample_of_img_title_view.format(read_curdatetime().split()[0])
             title_loc = 'left'
             ax.text(-0.1, -0.245, sample_of_img_title_view, fontsize=10, fontweight='bold',
-                    color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
+                    color='white', ha=title_loc, va='top', transform=ax.transAxes,
+                    bbox=dict(facecolor='none', edgecolor='none'),
                     clip_on=False)
         else:
             if ax is None:
@@ -183,7 +187,7 @@ class Transformer:
                 ax.axis('off')
 
             mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
-                                cellLoc='center', **kwargs)
+                                 cellLoc='center', **kwargs)
             mpl_table.auto_set_font_size(False)
             mpl_table.set_fontsize(font_size)
 
@@ -204,16 +208,16 @@ class Transformer:
     def __draw_plot(df, name):
         labels = []
         xticks = []
-        for i,date in enumerate(df['date']):
+        for i, date in enumerate(df['date']):
             date_obj_year = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S').year
             if date_obj_year not in labels:
                 labels.append(date_obj_year)
                 xticks.append(df.iloc[i]['x'])
 
-        while len(labels)>5:
+        while len(labels) > 5:
             del labels[0]
             del xticks[0]
-    
+
         first = df.loc[df['x'] == xticks[0], 'x'].index[0]
         fig, ax = plt.subplots()
         fig.canvas.draw()
@@ -223,7 +227,7 @@ class Transformer:
 
         labels_new = []
         for i, label in enumerate(labels):
-            if i!= len(labels)-1:
+            if i != len(labels) - 1:
                 labels_new.append(label)
                 labels_new.append('')
             else:
@@ -232,16 +236,17 @@ class Transformer:
 
         xticks_new = []
         for i, xtick in enumerate(xticks):
-            if i!= len(labels)-1:
+            if i != len(labels) - 1:
                 xticks_new.append(xtick)
-                xticks_new.append((xticks[i+1]-xticks[i])/2 + xtick)
+                xticks_new.append((xticks[i + 1] - xticks[i]) / 2 + xtick)
             else:
                 xticks_new.append(xtick)
-                xticks_new.append((xticks[i]-xticks[i-1])/2 + xtick)
+                xticks_new.append((xticks[i] - xticks[i - 1]) / 2 + xtick)
 
         minor_locator = ticker.AutoMinorLocator(n=2)
         plt.gca().yaxis.set_minor_locator(minor_locator)
         plt.gca().tick_params(which='minor', length=4, color='black', width=1)
+
         def format_yticks(value, pos):
             return '{:,.0f}'.format(value).replace(',', ' ')
 
@@ -252,11 +257,11 @@ class Transformer:
         ax.set_xticklabels(labels_new)
         ax.yaxis.set_tick_params(length=0)
 
-        color = (30/255, 212/255, 132/255)
+        color = (30 / 255, 212 / 255, 132 / 255)
         ax.plot(df['x'][first:], df['y'][first:], color=color)
         ax.yaxis.tick_right()
 
-        plt.xlim(df['x'].iloc[first],df['x'].iloc[-1])
+        plt.xlim(df['x'].iloc[first], df['x'].iloc[-1])
 
         y = df['y'].iloc[-1]
         ax.axhline(y=y, color=color, linestyle='dotted')
@@ -264,12 +269,12 @@ class Transformer:
         x = df['x'].iloc[-1]
         delta_x = (x / 100)
         y = round(y, 1)
-        delta_y = (y / 100)*5
+        delta_y = (y / 100) * 5
         x_name = df['x'].iloc[first]
         y_name = df['y'][first:].max()
 
         ax.text(x_name, y_name, name, fontsize=12)
-        ax.text(x-delta_x, y+delta_y, y,fontsize=10, weight='bold')
+        ax.text(x - delta_x, y + delta_y, y, fontsize=10, weight='bold')
         ax.plot(x, y, 'o', markersize=6, color=color)
 
     @staticmethod
@@ -280,16 +285,16 @@ class Transformer:
         :param name: charts name
         """
 
-        if isinstance(data,pd.DataFrame):
+        if isinstance(data, pd.DataFrame):
             Transformer.__draw_plot(data, name)
         else:
             df = pd.DataFrame(data.json()['series'][0]['data'])
             Transformer.__draw_plot(df, name)
 
-        name = name.replace('/','_')
-        name = name.replace(' ','_')
-        name = name.split(',')  
-        name =f'{name[0]}_graph.png'
+        name = name.replace('/', '_')
+        name = name.replace(' ', '_')
+        name = name.split(',')
+        name = f'{name[0]}_graph.png'
         # save png and return it to user
         png_path = '{}/img/{}'.format('./sources', name)
         plt.savefig(png_path, transparent=False)
@@ -300,11 +305,11 @@ class Transformer:
         Transform unix-time to world-time
         :param timestamp: unix formatted timestamp
         """
-        
+
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
         formatted_date = date_time.strftime('%Y-%m-%dT%H:%M:%S')
         return formatted_date
-    
+
     @staticmethod
     def default_to_unix():
         """
@@ -315,13 +320,13 @@ class Transformer:
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = int(date_time.timestamp())
         return str(unix_timestamp)
-    
+
     @staticmethod
     def url_updater():
         """
         Create urls to charts 
         """
-        
+
         unix_timestamp = Transformer.default_to_unix()
         charts_links = copy.deepcopy(config.charts_links)
         commodities = copy.deepcopy(config.dict_of_commodities)
@@ -333,5 +338,6 @@ class Transformer:
             elif commodities[commodity]['naming'] != 'Gas':
                 name = commodities[commodity]['links'][0]
                 commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
-                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
+                commodities[commodity]['links'][0] = commodities[commodity]['links'][0] \
+                    .replace('date_date', unix_timestamp)
         return commodities
