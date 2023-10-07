@@ -445,7 +445,7 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df.drop(df[df.unique == False].index)
     df = df.reset_index(drop=True)
     # df.to_excel('Комоды квартал через все модели (без саммари).xlsx', index=False)
-    # df.to_excel('Клиенты квартал через все модели (без саммари).xlsx', index=False)
+    df.to_excel('Клиенты квартал через все модели (без саммари).xlsx', index=False)
     df = df.drop(columns=['unique', 'cleaned_data'])
     return df
 
