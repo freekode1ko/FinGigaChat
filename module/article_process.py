@@ -43,7 +43,7 @@ class ArticleProcess:
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
                                 'text': 'text', 'text Summary Summary': 'text_sum', 'Company_name': 'client'}
-            columns = ['link', 'title', 'date', 'text', 'text_sum', 'client']
+            columns = ['link', 'title', 'date', 'text', 'client']
         else:
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'text': 'text', 'Металл': 'commodity'}
             columns = ['link', 'title', 'date', 'text', 'commodity']
