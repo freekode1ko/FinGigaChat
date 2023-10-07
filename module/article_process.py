@@ -12,7 +12,7 @@ from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
 
-TIME_LIVE_ARTICLE = 5
+TIME_LIVE_ARTICLE = 100
 NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
 
 
@@ -23,7 +23,7 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        self.engine = create_engine(psql_engine)
+        self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
@@ -79,24 +79,30 @@ class ArticleProcess:
 
     def delete_old_article(self):
         """ Delete from db article if there are 10 articles for each subject """
-        count_to_keep = 15
+        count_to_keep = 30
         query_delete = (f"delete from article where id not in ( "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn "
                         f"from relation_client_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep} "
+                        f"where rn <= {count_to_keep} and t1.client_score <> 0"
                         f"UNION "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn "
                         f"from relation_commodity_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep})")
+                        f"where rn <= {count_to_keep} and t1.commodity_score <> 0)")
         with self.engine.connect() as conn:
-            # dt_now = dt.datetime.now()
-            # conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            len_before = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
             conn.execute(text(query_delete))
             conn.commit()
+            len_after = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_before[0] - len_after[0]} articles')
+            dt_now = dt.datetime.now()
+            conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            conn.commit()
+            len_finish = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_after[0] - len_finish[0]} articles with date > 100 days ago')
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """

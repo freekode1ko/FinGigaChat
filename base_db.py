@@ -274,18 +274,18 @@ if __name__ == '__main__':
     # # # # drop_tables(main_engine)
 
     # create base table and full it
-    # main(main_engine)
-    # # create commodity_pricing
-    # update_database(main_engine, query_commodity_pricing)
-    # # add energy in commodity
-    # update_database(main_engine, query_commodity_energy)
-    # # delete duplicate commodity
-    # update_database(main_engine, query_delete_dupl)
-    # # insert new com: olovo
-    # update_database(main_engine, query_commodity_olovo)
-    # # insert alternative name for new com
-    # update_database(main_engine, query_new_alternative_com_electro)
-    # update_database(main_engine, query_new_alternative_com_olovo)
+    main(main_engine)
+    # create commodity_pricing
+    update_database(main_engine, query_commodity_pricing)
+    # add energy in commodity
+    update_database(main_engine, query_commodity_energy)
+    # delete duplicate commodity
+    update_database(main_engine, query_delete_dupl)
+    # insert new com: olovo
+    update_database(main_engine, query_commodity_olovo)
+    # insert alternative name for new com
+    update_database(main_engine, query_new_alternative_com_electro)
+    update_database(main_engine, query_new_alternative_com_olovo)
 
 
 
