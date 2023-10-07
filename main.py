@@ -486,8 +486,12 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        return reviews, companies_pages_html, key_eco_table
+        clients_table = authed_user.get_companies_financial_indicators_table()
+        print('clients table...ok')
 
+        return reviews, companies_pages_html, key_eco_table, clients_table
+
+    
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
         Save all reviews into the database.
@@ -512,6 +516,10 @@ class Main:
             pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
 
         print('SAVE REVIEWS...ok')
+
+    def save_clients_financial_indicators(self, clients_table):
+        engine = create_engine(self.psql_engine)
+        clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
 
     def save_key_eco_table(self, key_eco_table):
         engine = create_engine(self.psql_engine)
@@ -568,7 +576,8 @@ if __name__ == '__main__':
 
         try:
             pass
-            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+            runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)

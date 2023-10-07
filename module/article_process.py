@@ -12,7 +12,7 @@ from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
 
-TIME_LIVE_ARTICLE = 5
+TIME_LIVE_ARTICLE = 100
 NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
 
 
@@ -23,7 +23,7 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        self.engine = create_engine(psql_engine)
+        self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
@@ -79,24 +79,30 @@ class ArticleProcess:
 
     def delete_old_article(self):
         """ Delete from db article if there are 10 articles for each subject """
-        count_to_keep = 15
+        count_to_keep = 30
         query_delete = (f"delete from article where id not in ( "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn "
                         f"from relation_client_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep} "
+                        f"where rn <= {count_to_keep} and t1.client_score <> 0"
                         f"UNION "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn "
                         f"from relation_commodity_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep})")
+                        f"where rn <= {count_to_keep} and t1.commodity_score <> 0)")
         with self.engine.connect() as conn:
-            # dt_now = dt.datetime.now()
-            # conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            len_before = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
             conn.execute(text(query_delete))
             conn.commit()
+            len_after = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_before[0] - len_after[0]} articles')
+            dt_now = dt.datetime.now()
+            conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            conn.commit()
+            len_finish = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_after[0] - len_finish[0]} articles with date > 100 days ago')
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
@@ -218,13 +224,60 @@ class ArticleProcess:
         :param subject_id: id of commodity
         :return: list(dict) data about commodity pricing
         """
+
         pricing_keys = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
 
         with self.engine.connect() as conn:
             query_com_pricing = f'SELECT * FROM commodity_pricing WHERE commodity_id={subject_id}'
             com_data = conn.execute(text(query_com_pricing)).fetchall()
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
+
         return all_commodity_data
+    
+    def _get_client_fin_indicators(self, client_name):
+        """
+        Get pricing about commodity from db.
+        :param subject_id: id of commodity
+        :return: list(dict) data about commodity pricing
+        """
+
+        client = pd.read_sql('financial_indicators',con = self.engine)
+        client = client[client['company'] == client_name]
+        client = client.sort_values('id')
+        client_copy = client.copy()
+
+        if not client.empty:
+            alias_idx = client.columns.get_loc('alias')
+            new_df = client.iloc[:, :alias_idx]
+            full_nan_cols = new_df.isna().all().sum()
+
+            if full_nan_cols > 1:
+                alias_idx = client_copy.columns.get_loc('alias')
+                left_client = client_copy.iloc[:, :alias_idx]
+                remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
+                right_client = client_copy.iloc[:, alias_idx:]
+                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
+
+                if len(selected_cols) < 5:
+                    if full_nan_cols < 5:
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)-1]
+                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
+                    else:
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)+1]
+                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
+
+                result = client_copy[selected_cols]
+                numeric_cols = [col for col in result.columns if all(c.isdigit() or c == 'E' for c in col)]
+                numeric_cols.sort()
+                new_cols = ['name'] + numeric_cols
+                new_df = result[new_cols]
+                if new_df.shape[1] > 6:
+                    new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
+        else:
+            return client
+
+        return new_df
+        
 
     @staticmethod
     def _make_place_number(number):
@@ -280,9 +333,13 @@ class ArticleProcess:
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
+
         com_data, reply_msg, img_name_list = None, '', []
         client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
+        
+        client_fin_table = self._get_client_fin_indicators(message.strip().lower())
+
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
         else:
@@ -292,7 +349,7 @@ class ArticleProcess:
                 com_data = self._get_commodity_pricing(commodity_id)
             else:
                 print('user do not want articles')
-                return False, img_name_list
+                return False, img_name_list, client_fin_table
 
         reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
@@ -301,7 +358,8 @@ class ArticleProcess:
         elif commodity_id and not articles and not img_name_list:
             return 'Пока нет новостей на эту тему', img_name_list
 
-        return reply_msg, img_name_list
+
+        return reply_msg, img_name_list, client_fin_table
 
 
 class ArticleProcessAdmin:
@@ -409,8 +467,5 @@ class ArticleProcessAdmin:
         for link in bad_links:
             msgs.append(self.get_article_by_link(link))
         return msgs[:5]
-
-
-
 
 

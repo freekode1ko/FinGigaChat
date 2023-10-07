@@ -65,10 +65,35 @@ class Transformer:
         plt.savefig(png_path, transparent=True)
 
     @staticmethod
+    def formatter(f):
+        """
+        Format value
+        :param f: value to format
+        :return: formatted value
+        """
+
+        try:
+            f = float(f)
+        except:
+            pass
+
+        if pd.isna(f):
+            return 'NaN'
+
+        elif isinstance(f, (int, float)):
+            if abs(f)<1000:
+                return '{:,.1f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
+            else:
+                return '{:,.0f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
+
+        else:
+            return str(f)
+
+    @staticmethod
     def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
                          header_color='#000000', row_colors=['#030303', '#0E0E0E'],
                          edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
-                         header_columns=0, title=None, alias=None, ax=None, **kwargs):
+                         header_columns=0, title=None, alias=None, fin=None, ax=None, **kwargs):
         data = data.fillna('-')
         if title is None:
             title = name
@@ -81,6 +106,8 @@ class Transformer:
 
         if alias:
             size = None
+            bbox = [-0.17, -0.2, 1.3, 1.145]
+            col_widths = [0.2, 0.05, 0.05, 0.05, 0.05, 0.05]
 
             if ax is None:
                 row_height = 1
@@ -91,9 +118,22 @@ class Transformer:
                 fig.patch.set_facecolor('black')
                 ax.axis('off')
 
-            mpl_table = ax.table(cellText=data.values, bbox=[-0.17, -0.2, 1.3, 1.145], colLabels=data.columns,
-                                 colWidths=[0.2, 0.05, 0.05, 0.05, 0.05],
-                                 cellLoc='center', **kwargs)
+            if fin:
+                data = data.reset_index(drop=True)
+                for index, row in data.iterrows():
+                    if row.to_list().count('-') == 5:
+                        new_values = ['']*5
+                        new_values.insert(0, data.iloc[index]['Финансовые показатели'])
+                        data.loc[index] = new_values
+
+                vectorized_formatter = np.vectorize(Transformer.formatter)
+                cell_text = vectorized_formatter(data.values)
+            else:
+                cell_text = data.values
+
+            mpl_table = ax.table(cellText=cell_text, bbox=bbox, colLabels=data.columns, colWidths=col_widths,
+                                cellLoc='center', **kwargs)
+
             plt.subplots_adjust(bottom=0.25)
             mpl_table.auto_set_font_size(False)
             mpl_table.set_fontsize(font_size)
@@ -108,11 +148,23 @@ class Transformer:
                     cell.set_text_props(fontsize=18)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
+                    if all(mpl_table._cells.get((k[0], j), None) is None or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 3)):
+                        cell.set_text_props(weight='bold',fontsize=20, color='white')
+                        cell.set_linewidth(0)
+                        rgb_color = (30/255, 31/255, 36/255)
+                        cell.set_facecolor(rgb_color)
 
             title_loc = 'center'
-            ax.text(0.5, 1.1, alias, fontsize=20, fontweight='bold',
-                    color='white', ha=title_loc, va='top', transform=ax.transAxes,
-                    bbox=dict(facecolor='none', edgecolor='none'),
+
+            if fin:
+                y_height = 1
+                fontsize = 26
+            else:
+                y_height = 1.1
+                fontsize = 20
+
+            ax.text(0.5, y_height, alias, fontsize=fontsize, fontweight='bold',
+                    color='white', ha=title_loc, va='top', transform=ax.transAxes, bbox=dict(facecolor='none', edgecolor='none'), 
                     clip_on=False)
 
             sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
@@ -225,6 +277,12 @@ class Transformer:
 
     @staticmethod
     def five_year_graph(data, name):
+        """
+        Plot 5Y charts
+        :param data: data to plot in Dataframe or json format
+        :param name: charts name
+        """
+
         if isinstance(data, pd.DataFrame):
             Transformer.__draw_plot(data, name)
         else:
@@ -243,23 +301,22 @@ class Transformer:
     def unix_to_default(timestamp):
         """
         Transform unix-time to world-time
+        :param timestamp: unix formatted timestamp
         """
 
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
         formatted_date = date_time.strftime('%Y-%m-%dT%H:%M:%S')
-
         return formatted_date
 
     @staticmethod
     def default_to_unix():
         """
-        Transform world-time to unix-time
+        Transform world-time now to unix-time
         """
 
         now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = int(date_time.timestamp())
-
         return str(unix_timestamp)
 
     @staticmethod
@@ -279,7 +336,5 @@ class Transformer:
             elif commodities[commodity]['naming'] != 'Gas':
                 name = commodities[commodity]['links'][0]
                 commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
-                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date',
-                                                                                                unix_timestamp)
-
+                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
         return commodities
