@@ -41,12 +41,15 @@ def find_bad_gas(names: str, clean_text: str) -> str:
     return names
 
 
-def check_gazprom(names: str, clean_text: str) -> str:
-    if 'газпром нефть' in names:
-        if not search('газпром(?! нефть)', clean_text):
-            names_list = names.split(';')
-            names_list.remove('газпром')
-            names = ';'.join(names_list)
+def check_gazprom(names: str, text: str) -> str:
+    names_list = names.split(';')
+    if 'газпром' in names_list and 'газпром нефть' in names_list:
+        if not search('газпром(?! нефть)', text):
+            try:
+                names_list.remove('газпром')
+                names = ';'.join(names_list)
+            except ValueError:
+                print('check gazprom error in ', names)
     return names
 
 
@@ -94,7 +97,7 @@ def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_art
     names_pattern = get_names_pattern(names, type_of_article)
 
     # Get new labels score based on rules
-    if title and search(stock_pattern, clean_text):
+    if title and isinstance(title, str) and search(stock_pattern, clean_text):
         clean_title = clean_data(title)
         if search(stock_pattern, clean_title):
             return '0'
@@ -337,7 +340,7 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
 
 def change_bad_summary(row: pd.Series) -> str:
     """ Change summary if it is not exist """
-    if row['text_sum']:
+    if row['text_sum'] and len(row['text_sum']) > 50:
         return row['text_sum']
     # TODO: если заголовки не будут отображаться в боте, то раскомментировать
     # elif row['title']:
@@ -384,7 +387,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
         df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names))
         df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']), axis=1)
-        df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['cleaned_data']), axis=1)
+        df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['text']), axis=1)
 
     # make rating for article
     print(f'-- rate {type_of_article} articles')
