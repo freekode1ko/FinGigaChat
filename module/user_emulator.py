@@ -1,20 +1,21 @@
-""" NEW VERSION OF PARSING CIB RESEARCH """
-
+import re
+import random
+import time
+import json
+from typing import List
+import copy
 import selenium
 import selenium.webdriver as wb
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-import re
-import config
-import random
-import time
-from typing import List
-import pandas as pd
-import datetime
-import json
-from module import data_transformer as Transformer
+from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
+import pandas as pd
+import numpy as np
+
+from module import data_transformer as Transformer
+import config
+
 
 class ResearchError(Exception):
     """ Base class for Research exception """
@@ -238,6 +239,158 @@ class ResearchParser:
 
         return page_html
 
+    def get_key_econ_ind_table(self):
+        """
+        Get page about company in html format
+        :return: table in DataFrame format
+        """
+
+        url = f'{self.home_page}/group/guest/econ'
+        self.driver.implicitly_wait(5)
+        self.driver.get(url)
+        time.sleep(60)
+
+        page_html = self.driver.page_source
+        
+        soup = BeautifulSoup(page_html, "html.parser")
+        table_soup = soup.find('table', attrs={'class':"grid container black right victim"})
+        headers = []
+        head = table_soup.find('thead').find('tr')
+        for td in head:
+            col_name = td.text.strip()
+            if col_name != '':
+                headers.append(col_name)
+
+        data = []
+        for tr in table_soup.find_all('tr'):
+            data_row = []
+            for td in tr.find_all('td'):
+                data_row.append(td.text.strip())
+            if data_row:
+                if len(data_row) == 7:
+                    data.append(data_row[1:])
+                elif len(data_row) == 6:
+                    data.append(data_row)
+
+        df = pd.DataFrame(data, columns=headers)
+        df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
+        df = df.drop(index=0).reset_index(drop=True)
+
+        table_soup_al_name = soup.find('table', attrs={'class':"grid container black right"})
+        aliases = []
+        names = []
+        aliases_longevity = []
+        for elem in table_soup_al_name:
+            col_text = elem.find('td').text.strip()
+            if col_text != '' :
+                if 'name'in elem.find('td').get('class') and 'Норма' not in col_text:
+                    names.append(col_text)
+                    aliases_longevity.append(1)
+                else:
+                    aliases.append(col_text)
+                    aliases_longevity.append(0)
+
+        df['name'] = names
+                
+        counts = []
+        counter = 0
+
+        for val in aliases_longevity:
+            if val == 0:
+                counts.append(counter)
+                counter = 0
+            else:
+                counter += 1
+
+        counts.append(counter)
+        del counts[0]
+        
+        aliases_series = pd.Series(aliases)
+        aliases_series = aliases_series.repeat(counts).reset_index(drop=True)
+
+        df['id'] = range(1, df.shape[0] + 1)
+        df['alias'] = aliases_series
+        idx_name = list(df.columns).index('name')
+        cols = df.columns[idx_name-4:idx_name+1]
+        df_new = df[cols]
+        numeric_cols = []
+        for col in df_new.columns:
+            if re.match('^\d+(\.\d+)?[Ee]?$', col):
+                numeric_cols.append(col)
+        df_new = df[['id'] + ['name'] + numeric_cols + ['alias']].copy()
+
+        return df_new
+    
+    @staticmethod
+    def __get_client_fin_indicators(page_html, company):
+        """
+        Get singe compay financial indicators table
+        :param page_html: html page of company
+        :param company: company name
+        :return: table in DataFrame format
+        """
+
+        soup = BeautifulSoup(page_html, "html.parser")
+        table_soup = soup.find('div', attrs={'class':"report company-summary-financials"}).\
+        find('div', attrs={'class':'grid_container grid-bottom-border'}).\
+        find('div', attrs={'class':'table-scroll'}).\
+        find('table', attrs={'class':'grid container black right'})
+
+        tables = pd.read_html(str(table_soup), thousands='', decimal=',')
+        df = tables[0]
+        df['Unnamed: 0'].fillna(method='ffill', inplace=True)
+        df['alias'] = df['Unnamed: 0'].ffill(limit=1).fillna('')
+        df.drop('Unnamed: 0', axis=1, inplace=True)
+        df = df.dropna(how='all', subset=df.columns.difference(['alias']))
+        df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace('\xa0', ''))
+        df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace(',', '.'))
+
+        df = df.rename(columns={'Unnamed: 1': 'name'})
+
+        cols_to_convert = df.columns[~df.columns.isin(['alias', 'name'])]
+        mask = ~df.apply(lambda x: 'IFRS' in x.values, axis=1)
+        df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
+
+        numeric_cols = df.columns[df.columns.str.match(r'^\d{4}')].tolist()[:5]
+        df_new = df.loc[:, numeric_cols]
+        df_new = df[['name'] + numeric_cols + ['alias']].copy()
+        df_new['company'] = company.lower()
+
+        return df_new
+
+    def get_companies_financial_indicators_table(self):
+        """
+        Get financial indicators table for all companies
+        :return: table in dataframe format
+        """
+
+        companies = copy.deepcopy(config.dict_of_companies)
+        companies_research_link = 'https://research.sberbank-cib.com/group/guest/companies?companyId=id_id'
+
+        fin_indicators_tables = {}
+        for company in companies:
+            link = copy.deepcopy(companies_research_link)
+            link = link.replace('id_id', companies[company]['company_id'])
+            time.sleep(3)
+            self.driver.get(link)
+
+            page_html = self.driver.page_source
+            fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
+            fin_indicators_tables[company] = fin_indicators_table
+
+        result = pd.concat(list(fin_indicators_tables.values()))
+        result['id'] = range(1, result.shape[0] + 1)
+        result = result.replace('Рентабельность', 'Рентабельность, %')
+        result = result.replace('Рост', 'Рост, %')
+        result = result.replace('EPS (скорр.), R', 'EPS (скорр.), руб.')
+        result = result.replace('Финансовые показатели, R млн.', 'Финансовые показатели, млн руб.')
+        result = result.replace('Операционные показатели, R млн.', 'Операционные показатели, млн руб.')
+        result = result.replace('BVPS, R', 'BVPS, руб.')
+        result = result.replace('EPS (прибыль на акцию), R', 'EPS (прибыль на акцию), руб.')
+
+        return result
+
+
 class InvestingAPIParser:
     """
     Class for InvestingAPI parsing
@@ -252,22 +405,21 @@ class InvestingAPIParser:
         :param url: investing.com api url
         :return: price chart df
         """
-        
+
         self.driver.get(url)
-        data = self.driver.find_element(By.ID,
-                                         'json').text
+        data = self.driver.find_element(By.ID, 'json').text
         json_obj = json.loads(data)
 
         df = pd.DataFrame()
         for day in json_obj['data']:
             date = Transformer.Transformer.unix_to_default(day[0])
             x = day[0]
-            y = day[1]
-            row = {'date':date,'x':x,'y':y}
+            y = day[4]
+            row = {'date': date, 'x': x, 'y': y}
             df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
 
         return df
-    
+
     def get_streaming_chart_investing(self, url: str):
         """
         Get streaming chart data of investing.com
@@ -277,19 +429,19 @@ class InvestingAPIParser:
 
         url = f'{url}-streaming-chart'
         self.driver.get(url)
-        data = self.driver.find_element(By.ID,'last_last').text
+        data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
 
         return data
+
 
 class MetalsWireParser:
     """
     Class for MetalsWire table data parsing
     """
 
-    def __init__(self, driver): 
+    def __init__(self, driver):
         table_link = config.table_link
-
-        self.driver = driver 
+        self.driver = driver
         self.table_link = table_link
 
     def get_table_data(self):
@@ -309,275 +461,8 @@ class MetalsWireParser:
                 row_data = []
                 for col in elem.parent:
                     row_data.append(col.text)
-                row = {'Resource':row_data[0].strip(),'SPOT':row_data[4],'1M diff.':row_data[7],'YTD diff.': row_data[8],"Cons-s'23": row_data[12]}
+                row = {'Resource': row_data[0].strip(), 'SPOT': row_data[4], '1M diff.': row_data[7],
+                       'YTD diff.': row_data[8], "Cons-s'23": row_data[12]}
                 df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-          
-        return df  
 
-'''
-    OLD VERSION 
-import selenium
-import selenium.webdriver as wb
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
-import config
-import random
-import time
-
-
-class ResearchParser:
-    def __init__(self):
-        cred = config.research_cred
-        research_base_url = config.research_base_url
-        tabs_eco = {'all': 'all', 'everyday': '905--910--900', 'reviews': '3--0--5--106--15--63--81--87'}
-        tabs_money = {'all': 'all', 'everyday': '93', 'reviews': '0--113--123--110--91--82--101--100'}
-        tabs_metal = {'all': 'all', 'everyday': '96--905--900', 'reviews': '134--0--137'}
-        base_popup_xpath = '/html/body/div[2]/div/div/div/div/div/div/div[3]'
-
-        self.base_popup_xpath = base_popup_xpath
-        self.research_base_url = research_base_url
-        self.tabs_eco = tabs_eco
-        self.tabs_money = tabs_money
-        self.tabs_metal = tabs_metal
-        self.cred = cred
-
-    @staticmethod
-    def __sleep_some_time(start: float = 1.0, end: float = 2.0):
-        """
-        Send user emulator to sleep.
-        Fake user delay and wait to load HTML elements
-        :param start: Wait from...
-        :param end: Wait to...
-        :return: None
-        """
-        time.sleep(random.uniform(start, end))
-
-    def __popup_worker_eco(self, table: wb.remote.webelement.WebElement,
-                           driver: wb.firefox.webdriver.WebDriver) -> list:
-        """
-        Get review text from popup menu after a click
-        :param table: HTML element to click
-        :param driver: Browser session where to work
-        :return: list with text from HTML element, first and last <P> tag from review text and date of publicity
-        """
-        try:
-            table.find_elements('tag name', 'a')[0].click()
-        except IndexError:
-            table.click()
-        self.__sleep_some_time(2, 3)
-        review_page = driver.find_element(By.XPATH, self.base_popup_xpath)
-        rows = review_page.find_elements('tag name', 'p')
-        review = ''
-        for row in rows:
-            review += '\n\n' + row.text
-        try:
-            review_page.send_keys(Keys.ESCAPE)
-        except selenium.common.exceptions.ElementNotInteractableException:
-            review_page = driver.find_element(By.XPATH, '/html/body/div[2]/div/div/a')
-            review_page.click()
-        return [table.text, review]
-
-    def __popup_worker_eco_month(self, driver: wb.firefox.webdriver.WebDriver, url: str,
-                         review_filter: str = 'Экономика России. Ежемесячный обзор'):
-        """
-        Get review from global every month money review
-        :param driver: Browser session where to work
-        :param review_filter: Find specific review
-        :param url: URL with reviews
-        :return: list with review info
-        """
-        review = []
-        driver.get(url)
-        assert 'Экономика' in driver.title
-        self.__sleep_some_time(1.5, 2.5)
-        driver.find_element('id', self.tabs_eco['all']).click()
-        self.__sleep_some_time(2, 3)
-
-        search = driver.find_element('id', '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_'
-                                           'INSTANCE_btxt3yIWPKYW_publication-search-input')
-        search.click()
-        search.send_keys(review_filter, Keys.ENTER)
-        self.__sleep_some_time(2.5, 3.2)
-        try:
-            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
-            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[4]')
-        except selenium.common.exceptions.NoSuchElementException:
-            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[1]/div/a')
-            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[4]')
-
-        review.append([*self.__popup_worker_eco(table, driver), date.text])
-        return review
-
-    def __popup_worker_money(self, table: wb.remote.webelement.WebElement,
-                             driver: wb.firefox.webdriver.WebDriver,
-                             text_filter: tuple) -> list:
-        """
-        Get review with filter text from popup menu after a click
-        :param table: HTML element to click
-        :param text_filter: Keywords for searching in review text
-        :param driver: Browser session where to work
-        :return: Review name and review without d'>' symbol
-        """
-        table.click()
-        self.__sleep_some_time(2, 3)
-        review_page = driver.find_element(By.XPATH, self.base_popup_xpath)
-        rows = review_page.find_elements('tag name', 'p')
-        output = ''
-        start_bool = False
-        for row in rows:
-            if text_filter[0] in row.text:
-                output += '\n\n' + ''.join(row.text)
-                start_bool = True
-            elif start_bool and (text_filter[1] not in row.text):
-                output += '\n\n' + ''.join(row.text)
-            else:
-                start_bool = False
-
-        # for row in rows:
-        #    if (text_filter[0] not in row.text) \
-        #            and (text_filter[1] not in row.text) \
-        #            and ('@sber' not in row.text):
-        #        output += '\n\n' + ''.join(row.text)
-        try:
-            review_page.send_keys(Keys.ESCAPE)
-        except selenium.common.exceptions.ElementNotInteractableException:
-            review_page = driver.find_element(By.XPATH, '/html/body/div[2]/div/div/a')
-            review_page.click()
-        return [table.text, output.replace('>', '')]
-
-    def auth(self, driver: wb.firefox.webdriver.WebDriver) -> wb.firefox.webdriver.WebDriver:
-        """
-        Authorize in sberbank research platform
-        :param driver: Browser session where to work
-        :return: Browser session after authorization
-        """
-        login = self.cred[0]
-        password = self.cred[1]
-        wait = WebDriverWait(driver, 10)
-        driver.get(self.research_base_url)
-        assert 'Login' in driver.title
-        login_field = driver.find_element('id', '_58_login')
-        password_field = driver.find_element('id', '_58_password')
-
-        login_field.send_keys(login)
-        password_field.send_keys(password)
-        password_field.send_keys(Keys.ENTER)
-        wait.until_not(ec.title_is("Login"))
-        assert 'Login' not in driver.title
-
-        return driver
-
-    def get_everyday_reviews(self, driver: wb.firefox.webdriver.WebDriver, url: str):
-        """
-        Get last everyday economical reviews
-        :param driver: Browser session where to work
-        :param url: URL with reviews
-        :return: list with lists filled with reviews info
-        """
-        reviews = []
-        driver.get(url)
-        assert 'Экономика' in driver.title
-        self.__sleep_some_time()
-        driver.find_element('id', self.tabs_eco['everyday']).click()
-        self.__sleep_some_time()
-
-        table = driver.find_elements('class name', 'title')
-        dates = driver.find_elements('class name', 'date')
-        row_numb = 0
-        for i in table[1:6:2]:
-            self.__sleep_some_time(2, 3)
-            row_numb += 1
-            reviews.append([*self.__popup_worker_eco(i, driver), dates[row_numb].text])
-        return reviews
-
-    def get_eco_review(self, driver: wb.firefox.webdriver.WebDriver, url: str):
-        """
-        Get review from global every month economic review
-        :param driver: Browser session where to work
-        :param url: URL with reviews
-        :return: list with review info
-        """
-        review = []
-        driver.get(url)
-        review_filter = 'Экономика России. Ежемесячный обзор'
-        assert 'Экономика' in driver.title
-        self.__sleep_some_time(1.5, 2.5)
-        driver.find_element('id', self.tabs_money['all']).click()
-        self.__sleep_some_time(2, 3)
-
-        search = driver.find_element('id', '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet'
-                                           '_INSTANCE_btxt3yIWPKYW_publication-search-input')
-        search.click()
-        search.send_keys(review_filter, Keys.ENTER)
-        self.__sleep_some_time(2.5, 3.2)
-        try:
-            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
-            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[5]')
-        except selenium.common.exceptions.NoSuchElementException:
-            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[1]/div/a')
-            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[5]')
-
-        review.append([*self.__popup_worker_eco(table, driver), date.text])
-        return review
-
-    def get_everyday_money(self, driver: wb.firefox.webdriver.WebDriver, url: str, title: str = 'FX & Ставки',
-                           text_filter: tuple = (['Процентные ставки', 'Прогноз'])):
-        """
-        Get last everyday money reviews
-        :param title: Name of browser tab (Page name)
-        :param text_filter: Keywords for searching in review text
-        :param driver: Browser session where to work
-        :param url: URL with reviews
-        :return: list with lists filled with reviews info
-        """
-        reviews = []
-        driver.get(url)
-        assert title in driver.title
-        self.__sleep_some_time(2, 3)
-        try:
-            driver.find_element('id', self.tabs_money['everyday']).click()
-        except selenium.common.exceptions.NoSuchElementException:
-            driver.find_element('id', self.tabs_metal['everyday']).click()
-        self.__sleep_some_time()
-
-        table = driver.find_elements('class name', 'summarylink')
-        dates = driver.find_elements('class name', 'date')
-        for row_numb, i in enumerate(table[:2]):
-            self.__sleep_some_time(2, 3)
-            reviews.append(([*self.__popup_worker_money(i, driver, text_filter), dates[row_numb+1].text]))
-        return reviews
-
-    def get_money_review(self, driver: wb.firefox.webdriver.WebDriver, url: str,
-                         review_filter: str = 'Денежный рынок. Еженедельный обзор'):
-        """
-        Get review from global every month money review
-        :param driver: Browser session where to work
-        :param review_filter: Find specific review
-        :param url: URL with reviews
-        :return: list with review info
-        """
-        review = []
-        driver.get(url)
-        assert 'FX & Ставки' in driver.title
-        self.__sleep_some_time(1.5, 2.5)
-        driver.find_element('id', self.tabs_money['all']).click()
-        self.__sleep_some_time(2, 3)
-
-        search = driver.find_element('id', '_cibfxmmpublicationportlet_WAR_cibpublicationsportlet_'
-                                           'INSTANCE_K5rpkFlwUUMi_publication-search-input')
-        search.click()
-        search.send_keys(review_filter, Keys.ENTER)
-        self.__sleep_some_time(2.5, 3.2)
-        try:
-            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[1]/div/a')
-            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[2]/td[4]')
-        except selenium.common.exceptions.NoSuchElementException:
-            table = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[1]/div/a')
-            date = driver.find_element(By.XPATH, '//*[@id="publicationsTable"]/tbody/tr[3]/td[4]')
-
-        review.append([*self.__popup_worker_eco(table, driver), date.text])
-        return review
-'''
-
+        return df

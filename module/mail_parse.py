@@ -89,7 +89,8 @@ class ImapParse:
                     if filename and filename != old_filename:
                         filepath = os.path.join(folder_name, filename)
                         clear_dir(folder_name)
-                        open(filepath, "wb").write(part.get_payload(decode=True))
+                        with open(filepath, "wb") as f:
+                            f.write(part.get_payload(decode=True))
                         return filepath
                     else:
                         return ''

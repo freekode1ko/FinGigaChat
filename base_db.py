@@ -248,16 +248,44 @@ query_commodity_pricing = ('CREATE TABLE IF NOT EXISTS public.commodity_pricing'
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
+query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
+                                   "values ((SELECT id FROM public.commodity WHERE name = 'олово'), 'олово')")
+query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
+                                   "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), 'электроэнергия')")
 
+
+def drop_tables(engine):
+    tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
+              'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
+              'relation_commodity_article', 'relation_commodity_message']
+
+    with engine.connect() as conn:
+        for table in tables:
+            conn.execute(text(f'DROP TABLE IF EXISTS {table} CASCADE'))
+            conn.commit()
+            print(f'Table {table} is down')
+
+
+#  TODO: пока при вводе имен клиентов должны быть пробелы в начале и в конце
 if __name__ == '__main__':
     main_engine = create_engine(psql_engine)
+
+    # !!! DROP TABLE !!!
+    # # # # drop_tables(main_engine)
+
     # create base table and full it
-    # main(main_engine)
+    main(main_engine)
     # create commodity_pricing
-    # update_database(main_engine, query_commodity_pricing)
-    #  add energy in commodity
-    # update_database(main_engine, query_commodity_energy)
+    update_database(main_engine, query_commodity_pricing)
+    # add energy in commodity
+    update_database(main_engine, query_commodity_energy)
     # delete duplicate commodity
-    # update_database(main_engine, query_delete_dupl)
+    update_database(main_engine, query_delete_dupl)
     # insert new com: olovo
-    # update_database(main_engine, query_commodity_olovo)
+    update_database(main_engine, query_commodity_olovo)
+    # insert alternative name for new com
+    update_database(main_engine, query_new_alternative_com_electro)
+    update_database(main_engine, query_new_alternative_com_olovo)
+
+
+
