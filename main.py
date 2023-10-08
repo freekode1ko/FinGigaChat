@@ -49,14 +49,14 @@ class Main:
         urls = df_urls.values.tolist()
         for url in urls:
             euro_standard, page_html = self.parser_obj.get_html(url[2], session)
-            print(euro_standard, url[2])
+            # print(euro_standard, url[2])
             try:
                 tables = self.transformer_obj.get_table_from_html(euro_standard, page_html)
                 for table in tables:
                     all_tables.append([url[0].split('/')[0], *url[1:], table])
                 print('Tables added {}'.format(len(tables)))
             except ValueError as val_err:
-                print(url[2])
+                # print(url[2])
                 print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
 
@@ -81,10 +81,10 @@ class Main:
 
         elif 'profinance' in url:
             response = session.get(url)
-            name = name.replace('/','_')
-            name = name.replace(' ','_')
-            name = name.split(',')  
-            name =f'{name[0]}_graph.png'
+            name = name.replace('/', '_')
+            name = name.replace(' ', '_')
+            name = name.split(',')
+            name = f'{name[0]}_graph.png'
             with open(f'./sources/img/{name}', 'wb') as f:
                 f.write(response.content)
         else:
@@ -114,18 +114,24 @@ class Main:
             name = self.commodities[commodity]['naming']
             print(commodity)
             print(self.commodities[commodity]['links'][0])
-            
-            self.graph_collector(link,session,driver,commodity)
+
+            self.graph_collector(link, session, driver, commodity)
 
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
                 InvAPI_obj = ue.InvestingAPIParser(driver)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
-                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price), 1)}
-                
+
+                ''' What's the difference?
+                dict_row = {'Resource': commodity.split(',')[0], 'SPOT': round(float(streaming_price), 1),
+                            'alias': self.commodities[commodity]['alias'].lower().strip(),
+                            'unit': self.commodities[commodity]['measurables']}
+                '''
+                dict_row = {'Resource': self.commodities[commodity]['naming'], 'SPOT': round(float(streaming_price), 1)}
                 dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
                 dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity.split(',')[0] 
+                dict_row['Resource'] = commodity.split(',')[0]
+
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
             elif self.commodities[commodity]['naming'] != 'Gas':
@@ -143,14 +149,12 @@ class Main:
                             dict_row[key] = num
                         else:
                             dict_row[key] = np.nan
-                    
-                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
 
+                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
                 dict_row['unit'] = self.commodities[commodity]['measurables']
                 dict_row['Resource'] = commodity.split(',')[0]
-
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-        
+
         engine = create_engine(self.psql_engine)
         commodity = pd.read_sql_query("select * from commodity", con=engine)
         commodity_ids = pd.DataFrame()
@@ -175,38 +179,37 @@ class Main:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
                     update({"price": row['price'], "m_delta": np.nan, "y_delta": row['y_delta'], "cons": row['cons']})
-                    # update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
-                
+                # update({"price": row['price'], "m_delta": row['m_delta'],
+                # "y_delta": row['y_delta'], "cons": row['cons']})
+
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
-                                                    commodity_id=int(row['commodity_id']),
-                                                    subname=row['subname'],
-                                                    unit=row['unit'], 
-                                                    price=row['price'],
-                                                    m_delta=np.nan,
-                                                    # m_delta=row['m_delta'],
-                                                    y_delta=row['y_delta'],
-                                                    cons=row['cons'])
+                    commodity_id=int(row['commodity_id']),
+                    subname=row['subname'],
+                    unit=row['unit'],
+                    price=row['price'],
+                    m_delta=np.nan,
+                    # m_delta=row['m_delta'],
+                    y_delta=row['y_delta'],
+                    cons=row['cons'])
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
-            q_gas = session.query(Commodity).filter(Commodity.name=='газ')
+            q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
             commodity_price_obj = CommodityPricing(
-                                                    commodity_id=q_gas[0].id,
-                                                    subname='Газ',
-                                                    unit=np.nan, 
-                                                    price=np.nan,
-                                                    m_delta=np.nan,
-                                                    y_delta=np.nan,
-                                                    cons=np.nan)
+                commodity_id=q_gas[0].id,
+                subname='Газ',
+                unit=np.nan,
+                price=np.nan,
+                m_delta=np.nan,
+                y_delta=np.nan,
+                cons=np.nan)
             session.merge(commodity_price_obj, load=True)
             session.commit()
-            
 
         session.close()
 
@@ -242,8 +245,8 @@ class Main:
         exchange_kot = []
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
             if {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
-                row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] == 'Real-time Currencies'][
-                    'Last'].values.tolist()[0]]
+                row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
+                                                            'Real-time Currencies']['Last'].values.tolist()[0]]
                 exchange_kot.append(row)
 
         elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cny', 'usdollar']:
@@ -483,7 +486,11 @@ class Main:
             companies_pages_html[company[1]] = page_html
         print('companies page...ok')
 
-        return reviews, companies_pages_html, key_eco_table
+        clients_table = authed_user.get_companies_financial_indicators_table()
+        print('clients table...ok')
+
+        return reviews, companies_pages_html, key_eco_table, clients_table
+
     
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -509,6 +516,10 @@ class Main:
             pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
 
         print('SAVE REVIEWS...ok')
+
+    def save_clients_financial_indicators(self, clients_table):
+        engine = create_engine(self.psql_engine)
+        clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
 
     def save_key_eco_table(self, key_eco_table):
         engine = create_engine(self.psql_engine)
@@ -565,7 +576,8 @@ if __name__ == '__main__':
 
         try:
             pass
-            reviews_dict, companies_pages_html_dict, key_eco_table = runner.collect_research(driver)
+            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+            runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
