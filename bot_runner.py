@@ -717,6 +717,14 @@ async def analyse_bad_article(message: types.Message):
     # else:
     #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
+@dp.callback_query_handler(text='next_5_news')
+async def send_next_five_news(call: types.CallbackQuery):
+    reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
+    articles_l5 = reply_msg.split('\n\n', 6)
+    await message.answer(articles_f5, parse_mode='HTML',
+                                     protect_content=True,
+                                     disable_web_page_preview=True)
+
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
@@ -729,9 +737,9 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     if await user_in_whitelist(message.from_user.as_json()):
         # msg_text = message.text.replace('«', '"').replace('»', '"')
         reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
-        print('reply_msg: ', reply_msg)
-        print('img_name_list: ', img_name_list)
-        print('client_fin_table: ', client_fin_table)
+        #print('reply_msg: ', reply_msg)
+        #print('img_name_list: ', img_name_list)
+        #print('client_fin_table: ', client_fin_table)
         fin_table_marker = False
         if not client_fin_table.empty:
             await __create_fin_table(message, client_fin_table)
@@ -746,9 +754,15 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 await bot.send_media_group(message.chat.id, media=media, protect_content=True)
 
             try:
-                await message.answer(reply_msg, parse_mode='HTML',
+                articles_all = reply_msg.split('\n\n', 6)
+                articles_f5 = '\n\n'.join(articles_all[:6])
+                articles_l5 = articles_all[-1]
+                keyboard = types.InlineKeyboardMarkup()
+                keyboard.add(types.InlineKeyboardButton(text='Next 5 news', callback_data='next_5_news'))
+                await message.answer(articles_f5, parse_mode='HTML',
                                      protect_content=True,
-                                     disable_web_page_preview=True)
+                                     disable_web_page_preview=True,
+                                     reply_markup=keyboard)
             except MessageIsTooLong:
                 articles = reply_msg.split('\n\n')
                 for article in articles:
