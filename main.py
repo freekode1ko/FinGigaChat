@@ -277,7 +277,8 @@ class Main:
             # object_xpath = '//*[@id="root"]/div/div/section/section[1]/div/div[2]/section[1]/section/section/section'
             # price = tree.xpath('{}/div[1]/span[1]/text()'.format(object_xpath))
             # price_diff = tree.xpath('{}/div[2]/span[2]/text()'.format(object_xpath))
-            object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div[1]/main/div/div[1]/div[4]/div'
+            object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div/main/div/div[1]/div[4]/div'
+            #              '//*[@id="__next"]/div/div[2]/div[6]/div[1]/main/div/div[1]/div[4]/div'
             price = tree.xpath('{}/div[1]/text()'.format(object_xpath))
             price_diff = tree.xpath('{}/div[2]/span/span/text()'.format(object_xpath))
             try:
