@@ -21,6 +21,7 @@ import config
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
 psql_engine = config.psql_engine
+articles_l5 = ''
 token = ''
 chat = ''
 
@@ -717,13 +718,15 @@ async def analyse_bad_article(message: types.Message):
     # else:
     #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
+
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
-    reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
-    articles_l5 = reply_msg.split('\n\n', 6)
-    await message.answer(articles_f5, parse_mode='HTML',
-                                     protect_content=True,
-                                     disable_web_page_preview=True)
+    try:
+        await call.answer(articles_l5, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+    except MessageIsTooLong:
+        articles = articles_l5.split('\n\n')
+        for article in articles:
+            await call.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
 
 
 @dp.message_handler()
@@ -733,18 +736,16 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
+    global articles_l5
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
         # msg_text = message.text.replace('«', '"').replace('»', '"')
         reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
-        #print('reply_msg: ', reply_msg)
-        #print('img_name_list: ', img_name_list)
-        #print('client_fin_table: ', client_fin_table)
         fin_table_marker = False
         if not client_fin_table.empty:
             await __create_fin_table(message, client_fin_table)
             fin_table_marker = True
-
+        
         if reply_msg:
             if img_name_list:
                 await types.ChatActions.upload_photo()
@@ -758,7 +759,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 articles_f5 = '\n\n'.join(articles_all[:6])
                 articles_l5 = articles_all[-1]
                 keyboard = types.InlineKeyboardMarkup()
-                keyboard.add(types.InlineKeyboardButton(text='Next 5 news', callback_data='next_5_news'))
+                keyboard.add(types.InlineKeyboardButton(text='Следующие 5 новостей', callback_data='next_5_news'))
                 await message.answer(articles_f5, parse_mode='HTML',
                                      protect_content=True,
                                      disable_web_page_preview=True,
