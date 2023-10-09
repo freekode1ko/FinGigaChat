@@ -1,21 +1,21 @@
 import re
 import json
 import warnings
-import numpy as np
 import textwrap
+import numpy as np
+import pandas as pd
+from sqlalchemy import create_engine
 
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.utils.exceptions import MessageIsTooLong
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.utils.exceptions import MessageIsTooLong
+from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import FSMContext
-from sqlalchemy import create_engine
-import pandas as pd
 
+from module.article_process import ArticleProcess, ArticleProcessAdmin
+from module.model_pipe import summarization_by_chatgpt
 import module.data_transformer as dt
 import module.gigachat as gig
-from module.model_pipe import summarization_by_chatgpt
-from module.article_process import ArticleProcess, ArticleProcessAdmin
 import config
 
 path_to_source = config.path_to_source
@@ -286,8 +286,8 @@ async def data_mart(message: types.Message):
         # Денежное предложение
         for table in tables:
             table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = \
-                'Денежное предложение ' + table.loc[
-                    table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+                'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'),
+                                                    'Экономические показатели'].str.lower()
         # Средняя процентная ставка
         for table in tables:
             condition = table['alias'].str.contains('Средняя процентная ставка')
@@ -328,8 +328,7 @@ async def data_mart(message: types.Message):
                 key_eco.reset_index(inplace=True, drop=True)
                 key_eco = key_eco.drop(['id', 'alias'], axis=1)
 
-                cols_to_keep = [col for col in key_eco.columns if
-                                re.match(r'\d{4}', col) and col != 'alias'][-4:]
+                cols_to_keep = [col for col in key_eco.columns if re.match(r'\d{4}', col) and col != 'alias'][-4:]
                 cols_to_keep.insert(0, 'Экономические показатели')
                 key_eco = key_eco.loc[:, cols_to_keep]
 
