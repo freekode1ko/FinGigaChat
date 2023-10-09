@@ -492,7 +492,6 @@ class Main:
 
         return reviews, companies_pages_html, key_eco_table, clients_table
 
-    
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
         Save all reviews into the database.
