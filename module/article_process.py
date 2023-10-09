@@ -224,7 +224,7 @@ class ArticleProcess:
                                   f'ON article_.id = relation.article_id '
                                   f'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
                                   f'ORDER BY date DESC, relation.{subject}_score DESC '
-                                  f'LIMIT 5')
+                                  f'LIMIT 10')
 
             article_data = [item[2:] for item in conn.execute(text(query_article_data))]
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
@@ -369,7 +369,6 @@ class ArticleProcess:
             return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
         elif commodity_id and not articles and not img_name_list:
             return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
-
 
         return reply_msg, img_name_list, client_fin_table
 

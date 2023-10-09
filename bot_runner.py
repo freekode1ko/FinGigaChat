@@ -729,7 +729,9 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     if await user_in_whitelist(message.from_user.as_json()):
         # msg_text = message.text.replace('«', '"').replace('»', '"')
         reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
-
+        print('reply_msg: ', reply_msg)
+        print('img_name_list: ', img_name_list)
+        print('client_fin_table: ', client_fin_table)
         fin_table_marker = False
         if not client_fin_table.empty:
             await __create_fin_table(message, client_fin_table)
