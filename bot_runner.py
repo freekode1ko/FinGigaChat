@@ -722,12 +722,12 @@ async def analyse_bad_article(message: types.Message):
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
     try:
-        await call.answer(articles_l5, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+        await call.message.answer(articles_l5, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
     except MessageIsTooLong:
         articles = articles_l5.split('\n\n')
         for article in articles:
-            await call.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-
+            await call.message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+    await call.message.edit_reply_markup()
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
