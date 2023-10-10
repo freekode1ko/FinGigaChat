@@ -150,7 +150,10 @@ def find_names(article_text, alt_names_dict, commodity_flag: bool = False) -> st
             names_dict[key_name] = len(re_findall)
     if commodity_flag:
         max_count = max(names_dict.values(), default=None)
-        return ';'.join([key for key, val in names_dict.items() if val > 1]) if max_count else ''
+        if max_count and max_count != 1:
+            return ';'.join([key for key, val in names_dict.items() if val == max_count])
+        else:
+            return ''
     else:
         return ';'.join(names_dict.keys())
 
