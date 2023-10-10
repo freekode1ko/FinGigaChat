@@ -759,7 +759,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 articles_f5 = '\n\n'.join(articles_all[:6])
                 articles_l5 = articles_all[-1]
                 keyboard = types.InlineKeyboardMarkup()
-                keyboard.add(types.InlineKeyboardButton(text='Следующие 5 новостей', callback_data='next_5_news'))
+                keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
                 await message.answer(articles_f5, parse_mode='HTML',
                                      protect_content=True,
                                      disable_web_page_preview=True,
