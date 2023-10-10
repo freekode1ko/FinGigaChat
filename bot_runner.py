@@ -106,20 +106,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
     await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
 
 
-@dp.message_handler(commands=['start'])
-async def start_handler(message: types.Message):
-    global chat
-    global token
-    if await user_in_whitelist(message.from_user.as_json()):
-        chat = gig.GigaChat()
-        token = chat.get_user_token()
-        print('{}...{} - {}({})'.format(token[:10], token[-10:],
-                                        message.from_user.full_name,
-                                        message.from_user.username))
-        await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
-
-
-@dp.message_handler(commands=['help'])
+@dp.message_handler(commands=['start', 'help'])
 async def help_handler(message: types.Message):
     help_text = config.help_text
     if await user_in_whitelist(message.from_user.as_json()):
