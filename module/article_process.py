@@ -214,20 +214,46 @@ class ArticleProcess:
         :param subject: client or commodity
         :return: name of client(commodity) and sorted sum articles
         """
-        with self.engine.connect() as conn:
-            query_article_data = (f'SELECT relation.article_id, relation.{subject}_score, '
-                                  f'article_.title, article_.date, article_.link, article_.text_sum '
-                                  f'FROM relation_{subject}_article AS relation '
-                                  f'INNER JOIN ('
-                                  f'SELECT id, title, date, link, text_sum '
-                                  f'FROM article '
-                                  f') AS article_ '
-                                  f'ON article_.id = relation.article_id '
-                                  f'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
-                                  f'ORDER BY date DESC, relation.{subject}_score DESC '
-                                  f'LIMIT 10')
+        count_all, count_top = 10, 3
+        date_now = dt.datetime.now()
+        query_temp = ('SELECT relation.article_id, relation.{subject}_score, '
+                      'article_.title, article_.date, article_.link, article_.text_sum '
+                      'FROM relation_{subject}_article AS relation '
+                      'INNER JOIN ('
+                      'SELECT id, title, date, link, text_sum '
+                      'FROM article '
+                      ') AS article_ '
+                      'ON article_.id = relation.article_id '
+                      'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
+                      '{condition} '
+                      'ORDER BY date DESC, relation.{subject}_score DESC '
+                      'LIMIT {count}')
+        condition_top = (f"AND '{date_now}' - article_.date < '15 day' AND "
+                         f"(article_.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
+                         f"OR article_.link SIMILAR TO '%.interfax(|-russia).ru%' "
+                         f"OR article_.link SIMILAR TO '%www.kommersant.ru%' "
+                         f"OR article_.link SIMILAR TO '%www.vedomosti.ru%' "
+                         f"OR article_.link SIMILAR TO '%www.forbes.ru%' "
+                         f"OR article_.link SIMILAR TO '%(.|//)iz.ru/%' "
+                         f"OR article_.link SIMILAR TO '%//tass.(ru|com)%' "
+                         f"OR article_.link SIMILAR TO '%(realty.|//)ria.ru%')")
 
-            article_data = [item[2:] for item in conn.execute(text(query_article_data))]
+        with self.engine.connect() as conn:
+
+            query_article_top_data = query_temp.format(subject=subject, subject_id=subject_id,
+                                                       count=count_top, condition=condition_top)
+            result_top = conn.execute(text(query_article_top_data)).fetchall()
+            article_data_top = [item[2:] for item in result_top]
+            top_link = ','.join([f"'{item[4]}'" for item in result_top]) if result_top else "''"
+
+            condition_all = f"AND article_.link not in ({top_link})"
+            query_article_all_data = query_temp.format(subject=subject, subject_id=subject_id,
+                                                       count=count_all, condition=condition_all)
+
+            article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
+            count_of_not_top_news = count_all - len(article_data_top)
+            article_data = article_data_top + article_data_all[:count_of_not_top_news]
+
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
             return name, article_data
@@ -349,6 +375,9 @@ class ArticleProcess:
                 row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
                 com_format = '\n'.join(row_list)
                 com_msg += f'\n\n{com_format}'
+
+        if subject_name == 'газ':
+            com_msg = ''
 
         return com_msg, format_msg, img_name_list
 
