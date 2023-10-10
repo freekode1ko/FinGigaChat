@@ -31,6 +31,8 @@ STOCK_WORDS = ['индекс мосбиржа', 'индекс мб', 'индек
                'утренний обзор', 'вечерний обзор', 'главный анонс', 'главный событие день', 'главный событие неделя',
                'главный событие месяц', 'вечерний комментарий', 'дневной обзор']
 
+morph = pymorphy2.MorphAnalyzer()
+
 
 def find_bad_gas(names: str, clean_text: str) -> str:
     if 'газ' in names:
@@ -41,12 +43,15 @@ def find_bad_gas(names: str, clean_text: str) -> str:
     return names
 
 
-def check_gazprom(names: str, clean_text: str) -> str:
-    if 'газпром нефть' in names:
-        if not search('газпром(?! нефть)', clean_text):
-            names_list = names.split(';')
-            names_list.remove('газпром')
-            names = ';'.join(names_list)
+def check_gazprom(names: str, text: str) -> str:
+    names_list = names.split(';')
+    if 'газпром' in names_list and 'газпром нефть' in names_list:
+        if not search('газпром(?! нефть)', text):
+            try:
+                names_list.remove('газпром')
+                names = ';'.join(names_list)
+            except ValueError:
+                print('check gazprom error in ', names)
     return names
 
 
@@ -94,7 +99,7 @@ def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_art
     names_pattern = get_names_pattern(names, type_of_article)
 
     # Get new labels score based on rules
-    if title and search(stock_pattern, clean_text):
+    if title and isinstance(title, str) and search(stock_pattern, clean_text):
         clean_title = clean_data(title)
         if search(stock_pattern, clean_title):
             return '0'
@@ -113,44 +118,36 @@ def clean_data(text: str) -> str:
     #  cleaning from symbols excluding letters and casting to lower case
     text = re.sub('[^\w\s]', '', text)
     text = re.sub('[-+?\d+]', '', text)
-    text = text.strip()
     text = text.lower()
+    text_list = re.split('\s', text)
+    text_list = list(filter(None, text_list))
     #  lemmatization
-    morph = pymorphy2.MorphAnalyzer()
     lemma = []
-    text = re.split('\n | ', text)
-    text = list(filter(None, text))
-    for w in text:
+    for w in text_list:
         word = morph.parse(w)[0]
         lemma.append(word.normal_form)
-    temp = '\n'.join(map(str, lemma))
-    text = temp.split('\n')
     # stop words cleaning
     with open(STOP_WORDS_FILE_PATH, 'r', encoding='utf-8') as file:
-        stop_words = list(map(str.rstrip, file.readlines()))
-    text = [token for token in text if token not in stop_words and token != " "]
-    text = ' '.join(text)
-    return text
+        stop_words_list = [line.strip() for line in file.readlines()]
+    clean_text_list = [token for token in lemma if token not in stop_words_list]
+    clean_text = ' '.join(clean_text_list)
+    return clean_text
 
 
-def find_names(text: str, table: pd.DataFrame, commodity_flag: bool = False) -> str:
+def find_names(article_text, alt_names_dict, commodity_flag: bool = False) -> str:
     """
     Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
-    :param text: str. Current string in which we search for names.
-    :param table: Pandas DF. Pandas DF with columns with names neeeded to be found. In one row all names - alternatives.
+    :param article_text: str. Current string in which we search for names.
+    :param alt_names_dict: Pandas DF. Pandas DF with columns with names neeeded to be found. In one row all names - alternatives.
     :param commodity_flag: bool. Flag shows that it commodity text or not.
     :return: str. String with found names separated with ; symbol.
     """
     names_dict = {}
-    # search for names in normal case and upper case.
-    for i in range(len(table)):
-        for j in range(len(table.loc[i])):
-            if type(table.loc[i][j]) == str:
-                re_findall = re.findall(f'({str(table.loc[i][j])}|{str(table.loc[i][j]).upper()})', text)
-                if re_findall:
-                    key_name = table.loc[i][0].lower()
-                    names_dict[key_name] = len(re_findall)
-                    break
+    for key, alt_names in alt_names_dict.items():
+        re_findall = re.findall(alt_names, article_text)
+        if re_findall:
+            key_name = key.lower()
+            names_dict[key_name] = len(re_findall)
     if commodity_flag:
         max_count = max(names_dict.values(), default=None)
         return ';'.join([key for key, val in names_dict.items() if (val > 1 or val == max_count)]) if max_count else ''
@@ -182,9 +179,25 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     return threshold
 
 
-def rate_client(df: pd.DataFrame, threshold: float = 0.65) -> pd.DataFrame:
+def search_keywords(relevance, subject, clean_text, labels, rating_dict):
+    if not relevance or not subject:
+        labels = '0'
+    else:
+        labels = str(labels)
+        for group in rating_dict:
+            keywords_pattern = group['key words'].replace(',', '|')
+            if search(keywords_pattern, clean_text):
+                label = str(group['label'])
+                if label not in labels:
+                    labels += f';{label}'
+
+    return labels
+
+
+def rate_client(df, rating_dict, threshold: float = 0.65) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
+    :param rating_dict: dict with rating
     :param df: Pandas DF. Pandas DF with current news batch.
     :param threshold: limit relevant for binary model
     :return: Pandas DF. Current news batch DF with added column 'client_labels'
@@ -192,102 +205,58 @@ def rate_client(df: pd.DataFrame, threshold: float = 0.65) -> pd.DataFrame:
     # read binary classification model (relevant or not)
     with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
         binary_model = pickle.load(f)
+
     # read multiclass classification model
     with open(CLIENT_MULTY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
         multiclass_model = pickle.load(f)
+
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
-    res = []
-    for pair in probs:
-        if (pair[1]) > threshold:
-            res.append(1)
-        else:
-            res.append(0)
-    df['relevance'] = res
+    df['relevance'] = [1 if (pair[1]) > threshold else 0 for pair in probs]
+
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
+
     # using relevance label condition
-    df['client_labels'] = df.apply(lambda x: [str(x['client_labels'])] if (len(x['client']) > 0) else [], axis=1)
-    # add regular expression labels
-    # read range system
-    range_system_companies = pd.read_excel(CLIENT_RATING_FILE_PATH)
-    range_system_companies['key words'] = range_system_companies['key words'].map(lambda x: re.split(',', x))
-    # iterating throug news
-    for i, article in enumerate(df['cleaned_data']):
-        # iterating through lists of keywords:
-        if df["relevance"][i] == 1:
-            for j, list_of_key_words in enumerate(range_system_companies['key words']):
-                # iterating through keywords in a list
-                for key_word in list_of_key_words:
-                    if re.search(key_word, article):
-                        label = str(range_system_companies['label'][j])
-                        if label not in df['client_labels'][i]:
-                            df['client_labels'][i] += [label]
-            if len(df['client_labels'][i]) == 0:
-                df['client_labels'][i] = ['0']
-            df['client_labels'][i] = ';'.join(sorted(df['client_labels'][i]))
-        else:
-            df['client_labels'][i] = '0'
+    df['client_labels'] = df.apply(lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'],
+                                                               row['client_labels'], rating_dict), axis=1)
+
     # delete relevance column
-    df = df.drop(columns=['relevance'])
+    df.drop(columns=['relevance'], inplace=True)
+
     # processing stck news
     df['client_labels'] = df.apply(lambda row: find_stock(row['title'], row['client'], row['cleaned_data'],
                                                           row['client_labels']), axis=1)
+
     return df
 
 
-def rate_commodity(df: pd.DataFrame, threshold=0.5) -> pd.DataFrame:
+def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
     :param df: Pandas DF. Pandas DF with current news batch.
+    :param rating_dict: dict with rating
     :param threshold : float. Threshold on binary commodity relevance model.
     :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
     """
-    # read commodity rating system
-    rating_data = pd.read_excel(COMMODITY_RATING_FILE_PATH)
-    rating_data['keys'] = rating_data['keys'].str.lower()
-    rating_data['keys'] = rating_data['keys'].map(lambda x: re.split(',', x))
-    # adding new column
-    df['commodity_labels'] = ''
-    # iterating through news
-    for j, article in enumerate(df['cleaned_data']):
-        # temp list for answer
-        temp_ans = []
-        # condition that current row contains any commodity found
-        if len(df['commodity'][j]) != 0:
-            # iterating through rows in rating system
-            for i, keys in enumerate(rating_data['keys']):
-                # iterating throw keywords
-                for key in keys:
-                    # adding label
-                    if search(key, str(article)):
-                        if (str(key)) != '':
-                            temp_ans += [rating_data['label'][i]]
-                            break
-        if len(temp_ans) == 0:
-            temp_ans = [str(0)]
-        df['commodity_labels'][j] = ';'.join(str(x) for x in temp_ans)
 
-    # load binary relevance model
     with open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
         binary_model = pickle.load(f)
-    # make predictions
+
     probs = binary_model.predict_proba(df['cleaned_data'])
+
     res = []
     engine = create_engine(psql_engine, pool_pre_ping=True)
     for index, pair in enumerate(probs):
         commodity_names = df['commodity'].iloc[index].split(';')
         local_threshold = down_threshold(engine, 'commodity', commodity_names, threshold)
-        if (pair[1]) > local_threshold:
-            res.append(1)
-        else:
-            res.append(0)
+        res.append(1 if (pair[1]) > local_threshold else 0)
     df['relevance'] = res
-    # apply model results
-    df['commodity_labels'] = df.apply(lambda x: x['commodity_labels'] if (x['relevance'] == 1) else '0', axis=1)
-    # delete relevance column
-    df = df.drop(columns=['relevance'])
-    # processing stock news
+
+    df['commodity_labels'] = df.apply(lambda row: search_keywords(row['relevance'], row['commodity'],
+                                                                  row['cleaned_data'], '0', rating_dict), axis=1)
+    df.drop(columns=['relevance'], inplace=True)
+
     df['commodity_labels'] = df.apply(lambda row: find_stock(row['title'], row['commodity'], row['cleaned_data'],
                                                              row['commodity_labels'], 'commodity'), axis=1)
     return df
@@ -337,7 +306,7 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
 
 def change_bad_summary(row: pd.Series) -> str:
     """ Change summary if it is not exist """
-    if row['text_sum']:
+    if row['text_sum'] and len(row['text_sum']) > 50:
         return row['text_sum']
     # TODO: если заголовки не будут отображаться в боте, то раскомментировать
     # elif row['title']:
@@ -348,6 +317,18 @@ def change_bad_summary(row: pd.Series) -> str:
         return first_sentence
 
 
+def get_alternative_names_pattern(alt_names):
+    alter_names_dict = dict()
+    table_subject_list = alt_names.values.tolist()
+    for i, alt_names_list in enumerate(table_subject_list):
+        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        names_pattern_base = '|'.join(clear_alt_names)
+        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
+        key = clear_alt_names[0]
+        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
+    return alter_names_dict
+
+
 def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     """
     Find subject names which contain in article and make score for these articles
@@ -355,13 +336,14 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     :param type_of_article: type of article (client or commodity)
     :return: df with subject name and score
     """
-    # TODO: рефакторинг !!!!
+
     # add column with clean text
     print('-- cleaned data')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
     # read file with subject name
     subject_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article))
+    alter_names_dict = get_alternative_names_pattern(subject_names)
 
     # make_summarization
     print(f'-- make summary for {type_of_article}')
@@ -375,20 +357,27 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     if type_of_article == 'commodity':
 
-        df[f'found_{type_of_article}'] = df['cleaned_data'].map(lambda x: find_names(x, subject_names, True))
+        df[f'found_{type_of_article}'] = df['cleaned_data'].map(lambda x: find_names(x, alter_names_dict, True))
         df[f'found_{type_of_article}'] = df.apply(lambda row: find_bad_gas(row[f'found_{type_of_article}'],
                                                                            row['cleaned_data']), axis=1)
         df[type_of_article] = df[f'found_{type_of_article}']
 
     else:
 
-        df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, subject_names))
+        df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, alter_names_dict))
         df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']), axis=1)
-        df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['cleaned_data']), axis=1)
+        df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['text']), axis=1)
 
     # make rating for article
     print(f'-- rate {type_of_article} articles')
-    df = rate_client(df) if type_of_article == 'client' else rate_commodity(df)
+    if type_of_article == 'client':
+        rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
+    else:
+        rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
+        for group in rating_system_dict:
+            group['key words'] = ','.join([f' {word.strip().lower()}' for word in group['key words'].split(',')])
+
+    df = rate_client(df, rating_system_dict) if type_of_article == 'client' else rate_commodity(df, rating_system_dict)
 
     # sum cluster labels
     df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
@@ -408,45 +397,55 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     :param threshold: limit value for deduplicate
     :return: df without duplicates article
     """
+    # clear from 0 (not relevant articles)
+    df = df.query('not client_score.isnull() and client_score != 0 or '
+                  'not commodity_score.isnull() and commodity_score != 0')
+
     # sort new batch
-    df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and len(x) > 0) else 0)
-    df['count_commodity'] = df['commodity'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and len(x) > 0) else 0)
+    df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
+    df['count_commodity'] = df['commodity'].map(
+        lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
     df = df.sort_values(by=['count_client', 'count_commodity', 'client_score', 'commodity_score'],
-                        ascending=[False, False, False, False])
-    df = df.reset_index(drop=True)
+                        ascending=[False, False, False, False]).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
-    # concat two columns with news from both DFs.
-    df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
+
+    # clean data for dn article
     print(f'len of articles in database -- {len(df_previous)}')
+    df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
+
     # concat two columns with news from both DFs.
-    df_concat = pd.DataFrame(pd.concat([df_previous['cleaned_data'], df['cleaned_data']], keys=['df_previous', 'df']),
-                             columns=['cleaned_data'])
-    df_concat = df_concat.reset_index(drop=True)
+    df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
+
     # vectorizing news in new DF
     vectorizer = TfidfVectorizer()
-    X_tf_idf = vectorizer.fit_transform(df_concat['cleaned_data'])
+    X_tf_idf = vectorizer.fit_transform(df_concat)
     X_tf_idf = X_tf_idf.toarray()
+
     # adding a column with unique/not unique label for all news.
-    df['unique'] = ''
+    df['unique'] = None
+
     # iterating over current news batch
-    for actual_pos in range(len(df_previous['cleaned_data']), len(df_concat['cleaned_data'])):
+    start = len(df_previous['cleaned_data'])
+    end = len(df_concat)
+    for actual_pos in range(start, end):
+
         flag_unique = True
         for previous_pos in range(actual_pos):
-            # if found two close news - adding not unique label
+
+            # if found two close news - adding not unique label,
             # modify threshold for comparing news in one batch and from the different ones
-            current_threshold = threshold
-            if previous_pos < len(df_previous['cleaned_data']):
-                current_threshold += 0.2
+            current_threshold = threshold + 0.2 if previous_pos < start else threshold
+
             if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:
                 flag_unique = False
                 break
-        df['unique'][actual_pos - len(df_previous['cleaned_data'])] = flag_unique
+
+        df['unique'][actual_pos - start] = flag_unique
+
     # delete duplicates from current batch
-    df = df.drop(df[df.unique == False].index)
-    df = df.reset_index(drop=True)
-    # df.to_excel('Комоды квартал через все модели (без саммари).xlsx', index=False)
-    # df.to_excel('Клиенты квартал через все модели (без саммари).xlsx', index=False)
-    df = df.drop(columns=['unique', 'cleaned_data'])
+    df = df[df['unique']]
+    df.drop(columns=['unique', 'cleaned_data'], inplace=True)
+
     return df
 
 
