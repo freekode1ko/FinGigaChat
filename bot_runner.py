@@ -727,7 +727,8 @@ async def send_next_five_news(call: types.CallbackQuery):
         articles = articles_l5.split('\n\n')
         for article in articles:
             await call.message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
-    await call.message.edit_reply_markup()
+    finally:
+        await call.message.edit_reply_markup()
 
 
 @dp.message_handler()
@@ -746,7 +747,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         if not client_fin_table.empty:
             await __create_fin_table(message, client_fin_table)
             fin_table_marker = True
-        
+
         if reply_msg:
             if img_name_list:
                 await types.ChatActions.upload_photo()
@@ -759,18 +760,23 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 await message.answer(com_price, parse_mode='HTML', protect_content=True,
                                      disable_web_page_preview=True)
 
-            try:
-                articles_all = reply_msg.split('\n\n', 6)
+            articles_all = reply_msg.split('\n\n', 6)
+            if len(articles_all) > 5:
                 articles_f5 = '\n\n'.join(articles_all[:6])
                 articles_l5 = articles_all[-1]
                 keyboard = types.InlineKeyboardMarkup()
                 keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
+            else:
+                articles_f5 = reply_msg
+                keyboard = None
+
+            try:
                 await message.answer(articles_f5, parse_mode='HTML',
                                      protect_content=True,
                                      disable_web_page_preview=True,
                                      reply_markup=keyboard)
             except MessageIsTooLong:
-                articles = reply_msg.split('\n\n')
+                articles = articles_f5.split('\n\n')
                 for article in articles:
                     await message.answer(article, parse_mode='HTML',
                                          protect_content=True,
