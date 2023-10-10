@@ -324,6 +324,8 @@ class ArticleProcess:
                     articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
+        else:
+            format_msg = True
 
         img_name_list = []
         if com_data:

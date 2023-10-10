@@ -745,6 +745,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text)
         fin_table_marker = False
         if not client_fin_table.empty:
+            await types.ChatActions.upload_photo()
             await __create_fin_table(message, client_fin_table)
             fin_table_marker = True
 
