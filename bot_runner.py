@@ -729,6 +729,7 @@ async def send_next_five_news(call: types.CallbackQuery):
             await call.message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
     await call.message.edit_reply_markup()
 
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     msg = '{} {}'.format(prompt, message.text)
@@ -739,8 +740,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     global articles_l5
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
-        # msg_text = message.text.replace('«', '"').replace('»', '"')
-        reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
+        msg_text = message.text.replace('«', '"').replace('»', '"')
+        com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text)
         fin_table_marker = False
         if not client_fin_table.empty:
             await __create_fin_table(message, client_fin_table)
@@ -753,6 +754,10 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 for name in img_name_list:
                     media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
                 await bot.send_media_group(message.chat.id, media=media, protect_content=True)
+
+            if com_price:
+                await message.answer(com_price, parse_mode='HTML', protect_content=True,
+                                     disable_web_page_preview=True)
 
             try:
                 articles_all = reply_msg.split('\n\n', 6)

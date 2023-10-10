@@ -310,6 +310,7 @@ class ArticleProcess:
         # TODO: 23 (year) автоматически обновлять ?
         com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
         format_msg = f'<b>{subject_name.capitalize()}</b>'
+        com_msg = ''
 
         if articles:
             for index, article_data in enumerate(articles):
@@ -333,17 +334,21 @@ class ArticleProcess:
                 com["price"] = ArticleProcess._make_place_number(com["price"]) if not np.isnan(com['price']) else None
                 com["cons"] = ArticleProcess._make_place_number(com["cons"]) if not np.isnan(com["cons"]) else None
                 # create rows with commodity pricing
-                subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
-                price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com["price"] else None
-                m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
-                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                subname = f'<b>{com["subname"]}</b>'
+                # subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
+                price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com[
+                    "price"] else None
+                m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(
+                    com['m_delta']) else None
+                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(
+                    com['y_delta']) else None
                 cons = f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com["cons"] else None
                 # join rows
                 row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
                 com_format = '\n'.join(row_list)
-                format_msg += f'\n\n{com_format}'
+                com_msg += f'\n\n{com_format}'
 
-        return format_msg, img_name_list
+        return com_msg, format_msg, img_name_list
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
@@ -362,16 +367,16 @@ class ArticleProcess:
                 com_data = self._get_commodity_pricing(commodity_id)
             else:
                 print('user do not want articles')
-                return False, img_name_list, client_fin_table
+                return '', False, img_name_list, client_fin_table
 
-        reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
+        com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
         if client_id and not articles:
-            return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
+            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
         elif commodity_id and not articles and not img_name_list:
-            return 'Пока нет новостей на эту тему', img_name_list, client_fin_table
+            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
 
-        return reply_msg, img_name_list, client_fin_table
+        return com_cotirov, reply_msg, img_name_list, client_fin_table
 
 
 class ArticleProcessAdmin:
