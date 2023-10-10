@@ -119,6 +119,15 @@ async def start_handler(message: types.Message):
         await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
 
 
+@dp.message_handler(commands=['help'])
+async def help_handler(message: types.Message):
+    help_text = config.help_text
+    if await user_in_whitelist(message.from_user.as_json()):
+        to_pin = await bot.send_message(message.chat.id, help_text, protect_content=True)
+        msg_id = to_pin.message_id
+        await bot.pin_chat_message(chat_id=message.chat.id, message_id=msg_id)
+
+
 # ['облигации', 'бонды', 'офз']
 @dp.message_handler(commands=['bonds'])
 async def bonds_info(message: types.Message):
