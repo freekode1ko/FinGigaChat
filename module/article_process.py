@@ -85,7 +85,8 @@ class ArticleProcess:
 
     def drop_duplicate(self):
         """ Call func to delete similar articles """
-        old_articles = pd.read_sql('SELECT text from article', con=self.engine)
+        dt_now = dt.datetime.now()
+        old_articles = pd.read_sql(f"SELECT text from article where '{dt_now}' - date < '15 day'", con=self.engine)
         print('-- new article before deduplicate = ', len(self.df_article))
         self.df_article = deduplicate(self.df_article, old_articles)
         print('-- new article after deduplicate = ', len(self.df_article))
