@@ -63,7 +63,7 @@ def daily_func():
     ap_obj = ArticleProcess()
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = ''
-
+    '''
     count_of_attempt = 9
     for attempt in range(count_of_attempt):
 
@@ -79,7 +79,11 @@ def daily_func():
         else:
             print('wait 20 min')
             time.sleep(20 * 60)
+    '''
 
+    client_flag = commodity_flag = True
+    client_filepath = 'data/articles/client/Client news sum no 0.csv'
+    commodity_filepath = 'data/articles/commodity/Commodity news sum.csv'
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
         pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact'
                                   'client_score', 'cleaned_data']))
@@ -92,7 +96,7 @@ def daily_func():
         print(f'is there new client article? -- {client_flag}')
         print(f'is there new commodity article? -- {commodity_flag}')
         ap_obj.merge_client_commodity_article(df_client, df_commodity)
-        ap_obj.drop_duplicate()
+        # ap_obj.drop_duplicate()
         ap_obj.save_tables()
         if client_flag and commodity_flag:
             print('PROCESSED ARTICLES')
