@@ -245,6 +245,15 @@ query_commodity_pricing = ('CREATE TABLE IF NOT EXISTS public.commodity_pricing'
                            ')'
                            'TABLESPACE pg_default;')
 
+query_article_name_impact = ("CREATE TABLE IF NOT EXISTS article_name_impact "
+                             "("
+                             "id SERIAL PRIMARY KEY, "
+                             "article_id INTEGER REFERENCES article(id) ON UPDATE CASCADE ON DELETE CASCADE, "
+                             "commodity_impact JSON, "
+                             "client_impact JSON, "
+                             "cleaned_data TEXT)")
+
+
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
@@ -274,18 +283,20 @@ if __name__ == '__main__':
     # # # # drop_tables(main_engine)
 
     # create base table and full it
-    main(main_engine)
-    # create commodity_pricing
-    update_database(main_engine, query_commodity_pricing)
-    # add energy in commodity
-    update_database(main_engine, query_commodity_energy)
-    # delete duplicate commodity
-    update_database(main_engine, query_delete_dupl)
-    # insert new com: olovo
-    update_database(main_engine, query_commodity_olovo)
-    # insert alternative name for new com
-    update_database(main_engine, query_new_alternative_com_electro)
-    update_database(main_engine, query_new_alternative_com_olovo)
+    # main(main_engine)
+    # # create commodity_pricing
+    # update_database(main_engine, query_commodity_pricing)
+    # # add energy in commodity
+    # update_database(main_engine, query_commodity_energy)
+    # # delete duplicate commodity
+    # update_database(main_engine, query_delete_dupl)
+    # # insert new com: olovo
+    # update_database(main_engine, query_commodity_olovo)
+    # # insert alternative name for new com
+    # update_database(main_engine, query_new_alternative_com_electro)
+    # update_database(main_engine, query_new_alternative_com_olovo)
+    # make article_name_count
+    update_database(main_engine, query_article_name_impact)
 
 
 
