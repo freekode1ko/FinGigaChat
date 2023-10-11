@@ -1,5 +1,6 @@
 import re
 from re import search
+import json
 import pickle
 from requests.exceptions import ConnectionError
 
@@ -134,7 +135,7 @@ def clean_data(text: str) -> str:
     return clean_text
 
 
-def find_names(article_text, alt_names_dict, commodity_flag: bool = False) -> str:
+def find_names(article_text, alt_names_dict, commodity_flag: bool = False):
     """
     Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
     :param article_text: str. Current string in which we search for names.
@@ -146,22 +147,22 @@ def find_names(article_text, alt_names_dict, commodity_flag: bool = False) -> st
     for key, alt_names in alt_names_dict.items():
         re_findall = re.findall(alt_names, article_text)
         if re_findall:
-            key_name = key.lower()
+            key_name = key.lower().strip()
             names_dict[key_name] = len(re_findall)
+    impact_json = json.dumps(names_dict, ensure_ascii=False)
     if commodity_flag:
         max_count = max(names_dict.values(), default=None)
         if max_count and max_count != 1:
-            return ';'.join([key for key, val in names_dict.items() if val == max_count])
-        else:
-            return ''
-    else:
-        return ';'.join(names_dict.keys())
+            return ';'.join([key for key, val in names_dict.items() if val == max_count]), impact_json
+        return '', impact_json
+    return ';'.join(names_dict.keys()), impact_json
 
 
 def down_threshold(engine, type_of_article, names, threshold) -> float:
     """
     Down threshold if new contains rare subject
     :param engine: engine to database
+    :param type_of_article: client or commodity
     :param names: list with names of different subjects
     :param threshold: float value, limit of relevance
     :return: new little threshold
@@ -360,14 +361,18 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     if type_of_article == 'commodity':
 
-        df[f'found_{type_of_article}'] = df['cleaned_data'].map(lambda x: find_names(x, alter_names_dict, True))
+        df[[f'found_{type_of_article}', 'commodity_impact']] = df['cleaned_data'].apply(
+            lambda x: pd.Series(find_names(x, alter_names_dict, True)))
+
         df[f'found_{type_of_article}'] = df.apply(lambda row: find_bad_gas(row[f'found_{type_of_article}'],
                                                                            row['cleaned_data']), axis=1)
         df[type_of_article] = df[f'found_{type_of_article}']
 
     else:
 
-        df[f'found_{type_of_article}'] = df['text'].map(lambda x: find_names(x, alter_names_dict))
+        df[[f'found_{type_of_article}', 'client_impact']] = df['text'].apply(
+            lambda x: pd.Series(find_names(x, alter_names_dict)))
+
         df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']), axis=1)
         df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['text']), axis=1)
 
@@ -447,7 +452,7 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
 
     # delete duplicates from current batch
     df = df[df['unique']]
-    df.drop(columns=['unique', 'cleaned_data'], inplace=True)
+    df.drop(columns=['unique'], inplace=True)
 
     return df
 
