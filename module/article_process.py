@@ -126,7 +126,7 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
-        df_link_client = df_client[['link', 'client', 'client_score']][df_client['link'].isin(df_commodity['link'])]
+        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
         # remove from df_client and df_commodity common links
@@ -134,8 +134,8 @@ class ArticleProcess:
         df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
         # concat all df in one, so there are no duplicates and contain all data
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
-        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity',
-                                      'client_score', 'commodity_score', 'cleaned_data']]
+        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity', 'client_impact',
+                                      'commodity_impact', 'client_score', 'commodity_score', 'cleaned_data']]
         print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 
     def save_tables(self) -> None:
@@ -163,6 +163,12 @@ class ArticleProcess:
 
         # merge ids from db with df_article
         self.df_article = self.df_article.merge(pd.DataFrame(ids), on='link')
+
+        # save data in article_impact table
+        article_name_impact = self.df_article[['id', 'cleaned_data', 'client_impact', 'commodity_impact']].rename(
+            columns={'id': 'article_id'})
+        article_name_impact.to_sql('article_name_impact', con=self.engine, if_exists='append', index=False)
+        print('-- save article impact in database')
 
         # make relation tables between articles and client and commodity
         self._make_save_relation_article_table('client')

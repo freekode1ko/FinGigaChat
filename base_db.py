@@ -245,6 +245,16 @@ query_commodity_pricing = ('CREATE TABLE IF NOT EXISTS public.commodity_pricing'
                            ')'
                            'TABLESPACE pg_default;')
 
+query_article_name_impact = ("CREATE TABLE IF NOT EXISTS public.article_name_impact "
+                             "("
+                             "id SERIAL PRIMARY KEY, "
+                             "article_id INTEGER REFERENCES article(id) ON UPDATE CASCADE ON DELETE CASCADE, "
+                             "commodity_impact JSON, "
+                             "client_impact JSON, "
+                             "cleaned_data TEXT)"
+                             "TABLESPACE pg_default;")
+
+
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
@@ -286,6 +296,8 @@ if __name__ == '__main__':
     # insert alternative name for new com
     update_database(main_engine, query_new_alternative_com_electro)
     update_database(main_engine, query_new_alternative_com_olovo)
+    # make article_name_count
+    update_database(main_engine, query_article_name_impact)
 
 
 
