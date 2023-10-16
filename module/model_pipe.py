@@ -314,7 +314,7 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
 
 def change_bad_summary(row: pd.Series) -> str:
     """ Change summary if it is not exist """
-    if row['text_sum'] and len(row['text_sum']) > 50:
+    if row['text_sum']:
         return row['text_sum']
     # TODO: если заголовки не будут отображаться в боте, то раскомментировать
     # elif row['title']:
