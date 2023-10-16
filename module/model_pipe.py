@@ -45,9 +45,10 @@ def find_bad_gas(names: str, clean_text: str) -> str:
 
 
 def check_gazprom(names: str, text: str) -> str:
+    text = text.replace('"', '')
     names_list = names.split(';')
     if 'газпром' in names_list and 'газпром нефть' in names_list:
-        if not search('газпром(?! нефть)', text):
+        if not search('газпром(?! нефт[ь,и])', text):
             try:
                 names_list.remove('газпром')
                 names = ';'.join(names_list)
@@ -143,8 +144,11 @@ def find_names(article_text, alt_names_dict, commodity_flag: bool = False):
     :param commodity_flag: bool. Flag shows that it commodity text or not.
     :return: str. String with found names separated with ; symbol.
     """
+    # TODO: убрать удаление кавычек, когда перейдем на свой парсинг
+    article_text = article_text.replace('"', '')
     names_dict = {}
     for key, alt_names in alt_names_dict.items():
+        alt_names = alt_names.replace('"', '')
         re_findall = re.findall(alt_names, article_text)
         if re_findall:
             key_name = key.lower().strip()
@@ -310,7 +314,7 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
 
 def change_bad_summary(row: pd.Series) -> str:
     """ Change summary if it is not exist """
-    if row['text_sum'] and len(row['text_sum']) > 50:
+    if row['text_sum']:
         return row['text_sum']
     # TODO: если заголовки не будут отображаться в боте, то раскомментировать
     # elif row['title']:
