@@ -37,7 +37,7 @@ morph = pymorphy2.MorphAnalyzer()
 
 def find_bad_gas(names: str, clean_text: str) -> str:
     if 'газ' in names:
-        if search('парниковый|углекислый ', clean_text):
+        if search('парниковый|углекислый| сектор газ ', clean_text):
             names_list = names.split(';')
             names_list.remove('газ')
             names = ';'.join(names_list)
@@ -48,7 +48,7 @@ def check_gazprom(names: str, text: str) -> str:
     text = text.replace('"', '')
     names_list = names.split(';')
     if 'газпром' in names_list and 'газпром нефть' in names_list:
-        if not search('газпром(?! нефт[ь,и])', text):
+        if not search('газпром(?! нефт[ьи])', text):
             try:
                 names_list.remove('газпром')
                 names = ';'.join(names_list)
