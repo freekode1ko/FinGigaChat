@@ -50,7 +50,7 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
             df = ap_obj.throw_the_models(df, type_of_article)
         else:
             print('-- df is empty')
-            df[['text_sum', f'{type_of_article}_score', 'cleaned_data']] = None
+            df[['text_sum', f'{type_of_article}_score', 'cleaned_data', f'{type_of_article}_impact']] = None
         df.to_csv(filepath, index=False)
         print('-- save to csv after models')
         return True, filepath
