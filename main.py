@@ -244,7 +244,12 @@ class Main:
     def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session):
         exchange_kot = []
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
-            if {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
+            if exchange_page == 'usd-rub':
+                euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
+                table = self.transformer_obj.get_table_from_html(euro_standart, page_html)[5]
+                row = ['usd-rub', table.loc[table['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0]]
+                exchange_kot.append(row)
+            elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
                 exchange_kot.append(row)
@@ -254,7 +259,8 @@ class Main:
             tree = html.fromstring(page_html)
 
             # USDOLLAR
-            object_xpath = '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]'
+            object_xpath = '//*[@id="__next"]/div[2]/div[3]/div[1]/div[1]/div[3]/div/div[1]/div[1]/div[1]'
+            # '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]' -old
             price = tree.xpath('{}/text()'.format(object_xpath))
             # usd-cny
             if not price:
