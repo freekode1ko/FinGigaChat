@@ -465,10 +465,6 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
                         ascending=[False, False, False, False]).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
-    # clean data for dn article
-    print(f'len of articles in database (last 4 days) -- {len(df_previous)}')
-    df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
-
     # concat two columns with news from both DFs.
     df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
 
@@ -502,6 +498,7 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df[df['unique']]
     df.drop(columns=['unique'], inplace=True)
 
+    print(f'len of articles in database (last 4 days) -- {len(df_previous)}')
     print('-- new article after deduplicate =', len(df))
 
     return df

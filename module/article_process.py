@@ -70,7 +70,7 @@ class ArticleProcess:
         return df_subject
 
     @staticmethod
-    def preprocess_article_online(df) -> pd.DataFrame:
+    def preprocess_article_online(df: pd.DataFrame) -> pd.DataFrame:
         """
         Preprocess articles dataframe and set df.
         :param df: df with articles
@@ -79,12 +79,19 @@ class ArticleProcess:
         new_name_columns = {'url': 'link', 'title': 'title', 'created_at': 'date', 'content': 'text'}
         columns = ['link', 'title', 'date', 'text']
         source_filter = ['The Economist']
+        not_finish_article_filter = 'новость дополняется'
 
         df = df[~df['source'].isin(source_filter)]
         print(f'-- remove foreign source, so len of articles is {len(df)}')
 
         df = df.rename(columns=new_name_columns)
         df = df[columns]
+
+        df = df.dropna(subset='text')
+        print(f'-- remove empty text, so len of articles is {len(df)}')
+        df = df[~df['text'].str.contains(not_finish_article_filter, case=False)]
+        print(f'-- remove not finish article, so len of articles is {len(df)}')
+
         df['text'] = df['text'].str.replace('«', '"')
         df['text'] = df['text'].str.replace('»', '"')
         df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms'))
@@ -106,7 +113,10 @@ class ArticleProcess:
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         dt_now = dt.datetime.now()
-        old_articles = pd.read_sql(f"SELECT text from article where '{dt_now}' - date < '5 day'", con=self.engine)
+        old_query = (f"SELECT cleaned_data FROM article_name_impact "
+                     f"JOIN article a ON a.id=article_id "
+                     f"WHERE  '{dt_now}' - a.date < '5 day'")
+        old_articles = pd.read_sql(old_query, con=self.engine)
         self.df_article = deduplicate(self.df_article, old_articles)
 
     def make_text_sum(self):

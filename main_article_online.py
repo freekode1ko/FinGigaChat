@@ -11,20 +11,18 @@ from module.article_process import ArticleProcess
 PERIOD = dt.timedelta(hours=1, minutes=0)
 FROM_TIME = ''
 URL_TO_DB = 'http://gigaparsernews.ru:8000/get_articles/{date}:{hour}'  # TODO: перенести в конфиг
-# TODO: проверить дайджесты
-# TODO: не делать клин дата старым новостям, а брать из таблицы с импактами
-# TODO: настроить фильтры на поли
+# TODO: настроить фильтры на поли .
 # TODO: сделать парсинг каждые три часа
 # TODO: утвердить метод сортировки, чтобы потом не нужно было переделывать
-# TODO: сделать фильтр на "новость дополняется"
 
 
 def get_period_article() -> pd.DataFrame:
     """ Get and save articles """
     df_article = pd.DataFrame()
+    date_ = '20.10.23'
+    hour_ = '0'
     try:
-
-        req = requests.get(URL_TO_DB)
+        req = requests.get(URL_TO_DB.format(date=date_, hour=hour_))
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
         else:
