@@ -248,16 +248,13 @@ class Main:
                 euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
                 tables = pd.read_html(page_html)
                 for table in tables:
-                   try:
-                       
-                #print(table, '\n-----------------------')
-                #table=table[5]
-                #print(table)
-                       row = ['usd-rub', table.loc[table['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0]]
-                       exchange_kot.append(row)
-                       break
-                   except:
-                       print('Not correct table')
+                    try:
+                        row = ['usd-rub', table.loc[table['Exchange'] ==
+                                                    'Real-time Currencies']['Last'].values.tolist()[0]]
+                        exchange_kot.append(row)
+                        break
+                    except:
+                        print('Not correct table')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
