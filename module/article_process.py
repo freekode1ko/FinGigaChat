@@ -39,6 +39,10 @@ class ArticleProcess:
         :param type_of_article: type of article (client or commodity)
         :return: dataframe of articles
         """
+        source_filter = ("(www|realty|quote|pro|marketing).rbc.ru|.interfax(|-russia).ru|www.kommersant.ru|"
+                         "www.vedomosti.ru|//tass.(ru|com)/|(realty.|//)ria.ru|/1prime.ru/|www.banki.ru|"
+                         "(.|//)iz.ru/") #TODO: дополнить
+
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
                                 'text': 'text', 'text Summary Summary': 'text_sum', 'Company_name': 'client'}
@@ -49,6 +53,11 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
+
+        print(f'-- got {len(df_subject)} {type_of_article} articles')
+        df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
+        print(f'-- remove some sources, so len is {len(df_subject)}')
+
         df_subject['text'] = df_subject['text'].str.replace('«', '"')
         df_subject['text'] = df_subject['text'].str.replace('»', '"')
         df_subject['text'] = df_subject['text'].str.replace('$', ' $')

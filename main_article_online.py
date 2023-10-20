@@ -11,7 +11,6 @@ from module.article_process import ArticleProcess
 PERIOD = dt.timedelta(hours=1, minutes=0)
 FROM_TIME = ''
 URL_TO_DB = 'http://gigaparsernews.ru:8000/get_articles/{date}:{hour}'  # TODO: перенести в конфиг
-# TODO: настроить фильтры на поли .
 # TODO: сделать парсинг каждые три часа
 # TODO: утвердить метод сортировки, чтобы потом не нужно было переделывать
 
