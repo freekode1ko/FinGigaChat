@@ -641,7 +641,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     await state.finish()
 
 
-#TODO: Убрать проверку удаления новости
+# TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
     await types.ChatActions.typing()
