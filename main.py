@@ -246,9 +246,18 @@ class Main:
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
             if exchange_page == 'usd-rub':
                 euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
-                table = self.transformer_obj.get_table_from_html(euro_standart, page_html)[5]
-                row = ['usd-rub', table.loc[table['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0]]
-                exchange_kot.append(row)
+                tables = pd.read_html(page_html)
+                for table in tables:
+                   try:
+                       
+                #print(table, '\n-----------------------')
+                #table=table[5]
+                #print(table)
+                       row = ['usd-rub', table.loc[table['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0]]
+                       exchange_kot.append(row)
+                       break
+                   except:
+                       print('Not correct table')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
