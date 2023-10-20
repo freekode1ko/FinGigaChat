@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 
 from config import psql_engine
-from module.model_pipe import deduplicate, model_func
+from module.model_pipe import deduplicate, model_func, model_func_online, add_text_sum_column
 
 
 TIME_LIVE_ARTICLE = 100
@@ -22,7 +22,6 @@ class ArticleError(Exception):
 
 class ArticleProcess:
     def __init__(self):
-        # TODO: psql_engine
         self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
@@ -57,39 +56,62 @@ class ArticleProcess:
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
         df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
-        df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+        try:
+            df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
                                                                             'title': x['title'].iloc[0],
                                                                             'date': x['date'].iloc[0],
                                                                             'text': x['text'].iloc[0],
                                                                             type_of_article: ';'.join(x[type_of_article]),
                                                                             })).reset_index()
-        # if type_of_article == 'client':
-        #     df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
-        #         'client': ';'.join(x['client']),
-        #         'date': x['date'].iloc[0],
-        #         'text': x['text'].iloc[0],
-        #         'text_sum': x['text_sum'].iloc[0],
-        #         'coef': x['coef'].iloc[0],
-        #     })).reset_index()
-        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
-        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
-        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
+            print(f'-- group by link, so len of articles is {len(df_subject)}')
+        except Exception as e:
+            print(f'-- Error: {e}')
 
         return df_subject
 
     @staticmethod
-    def throw_the_models(df_subject: pd.DataFrame, name: str, ) -> pd.DataFrame:
+    def preprocess_article_online(df) -> pd.DataFrame:
+        """
+        Preprocess articles dataframe and set df.
+        :param df: df with articles
+        :return: dataframe of articles
+        """
+        new_name_columns = {'url': 'link', 'title': 'title', 'created_at': 'date', 'content': 'text'}
+        columns = ['link', 'title', 'date', 'text']
+        source_filter = ['The Economist']
+
+        df = df[~df['source'].isin(source_filter)]
+        print(f'-- remove foreign source, so len of articles is {len(df)}')
+
+        df = df.rename(columns=new_name_columns)
+        df = df[columns]
+        df['text'] = df['text'].str.replace('«', '"')
+        df['text'] = df['text'].str.replace('»', '"')
+        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms'))
+        try:
+            df = df.groupby('link').apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0],
+                                                               'text': x['text'].iloc[0]})).reset_index()
+            print(f'-- group by link, so len of articles is {len(df)}')
+        except Exception as e:
+            print(f'Error: {e}')
+
+        return df
+
+    @staticmethod
+    def throw_the_models(df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
         """ Call model pipe func """
-        df_subject = model_func(df_subject, name)
-        return df_subject
+        df = model_func_online(df) if online_flag else model_func(df, name)
+        return df
 
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         dt_now = dt.datetime.now()
-        old_articles = pd.read_sql(f"SELECT text from article where '{dt_now}' - date < '15 day'", con=self.engine)
-        print('-- new article before deduplicate = ', len(self.df_article))
+        old_articles = pd.read_sql(f"SELECT text from article where '{dt_now}' - date < '5 day'", con=self.engine)
         self.df_article = deduplicate(self.df_article, old_articles)
-        print('-- new article after deduplicate = ', len(self.df_article))
+
+    def make_text_sum(self):
+        """ Call summary func """
+        self.df_article = add_text_sum_column(self.df_article)
 
     def delete_old_article(self):
         """ Delete from db article if there are 10 articles for each subject """
@@ -134,7 +156,7 @@ class ArticleProcess:
         df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
         # concat all df in one, so there are no duplicates and contain all data
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
-        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity', 'client_impact',
+        self.df_article = df_article[['link', 'title', 'date', 'text', 'client', 'commodity', 'client_impact',
                                       'commodity_impact', 'client_score', 'commodity_score', 'cleaned_data']]
         print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 

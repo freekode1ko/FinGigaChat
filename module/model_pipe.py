@@ -7,7 +7,6 @@ from requests.exceptions import ConnectionError
 import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
-from openai.error import InvalidRequestError
 from sqlalchemy import create_engine, text
 
 from config import summarization_prompt, psql_engine
@@ -32,7 +31,30 @@ STOCK_WORDS = ['индекс мосбиржа', 'индекс мб', 'индек
                'утренний обзор', 'вечерний обзор', 'главный анонс', 'главный событие день', 'главный событие неделя',
                'главный событие месяц', 'вечерний комментарий', 'дневной обзор']
 
+
+def get_alternative_names_pattern(alt_names):
+    alter_names_dict = dict()
+    table_subject_list = alt_names.values.tolist()
+    for i, alt_names_list in enumerate(table_subject_list):
+        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        names_pattern_base = '|'.join(clear_alt_names)
+        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
+        key = clear_alt_names[0]
+        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
+    return alter_names_dict
+
+
 morph = pymorphy2.MorphAnalyzer()
+
+client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
+commodity_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
+alter_client_names_dict = get_alternative_names_pattern(client_names)
+alter_commodity_names_dict = get_alternative_names_pattern(commodity_names)
+
+client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
+commodity_rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
+for group in commodity_rating_system_dict:
+    group['key words'] = ','.join([f' {word.strip().lower()}' for word in group['key words'].split(',')])
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
@@ -106,7 +128,7 @@ def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_art
         if search(stock_pattern, clean_title):
             return '0'
         else:
-            return '1' if search(names_pattern, clean_title) else '0'
+            return '1' if search(names_pattern, clean_title) and names else '0'
     else:
         return labels
 
@@ -325,18 +347,6 @@ def change_bad_summary(row: pd.Series) -> str:
         return first_sentence
 
 
-def get_alternative_names_pattern(alt_names):
-    alter_names_dict = dict()
-    table_subject_list = alt_names.values.tolist()
-    for i, alt_names_list in enumerate(table_subject_list):
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        names_pattern_base = '|'.join(clear_alt_names)
-        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
-        key = clear_alt_names[0]
-        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
-    return alter_names_dict
-
-
 def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     """
     Find subject names which contain in article and make score for these articles
@@ -349,47 +359,30 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     print('-- cleaned data')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
-    # read file with subject name
-    subject_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article))
-    alter_names_dict = get_alternative_names_pattern(subject_names)
-
-    # make_summarization
-    print(f'-- make summary for {type_of_article}')
-    giga_chat = GigaChat()
-    token = giga_chat.get_user_token()
-    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
-    df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
-
     # find subject name in text
     print(f'-- find {type_of_article} names in article')
 
-    if type_of_article == 'commodity':
+    if type_of_article == 'client':
+        df[['found_client', 'client_impact']] = df['text'].apply(
+                                                lambda x: pd.Series(find_names(x, alter_client_names_dict)))
 
-        df[[f'found_{type_of_article}', 'commodity_impact']] = df['cleaned_data'].apply(
-            lambda x: pd.Series(find_names(x, alter_names_dict, True)))
-
-        df[f'found_{type_of_article}'] = df.apply(lambda row: find_bad_gas(row[f'found_{type_of_article}'],
-                                                                           row['cleaned_data']), axis=1)
-        df[type_of_article] = df[f'found_{type_of_article}']
-
-    else:
-
-        df[[f'found_{type_of_article}', 'client_impact']] = df['text'].apply(
-            lambda x: pd.Series(find_names(x, alter_names_dict)))
-
-        df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row[f'found_{type_of_article}']), axis=1)
+        df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row['found_client']), axis=1)
         df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['text']), axis=1)
 
-    # make rating for article
-    print(f'-- rate {type_of_article} articles')
-    if type_of_article == 'client':
-        rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
-    else:
-        rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
-        for group in rating_system_dict:
-            group['key words'] = ','.join([f' {word.strip().lower()}' for word in group['key words'].split(',')])
+        # make rating for article
+        print(f'-- rate client articles')
+        df = rate_client(df, client_rating_system_dict)
 
-    df = rate_client(df, rating_system_dict) if type_of_article == 'client' else rate_commodity(df, rating_system_dict)
+    else:
+        df[['found_commodity', 'commodity_impact']] = df['cleaned_data'].apply(
+            lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True)))
+
+        df['found_commodity'] = df.apply(lambda row: find_bad_gas(row['found_commodity'], row['cleaned_data']), axis=1)
+        df[type_of_article] = df['found_commodity']
+
+        # make rating for article
+        print(f'-- rate commodity articles')
+        df = rate_commodity(df, commodity_rating_system_dict)
 
     # sum cluster labels
     df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
@@ -398,6 +391,53 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     # delete unnecessary columns
     df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
 
+    return df
+
+
+def model_func_online(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Find subject names which contain in article and make score for these articles
+    :param df: dataframe with article
+    :return: df with subject name and score
+    """
+
+    # add column with clean text
+    print('-- cleaned data')
+    df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
+
+    # find subject name in text
+    print('-- find client names in article online')
+    df[['client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict)))
+    df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['text']), axis=1)
+
+    print('-- find commodity names in article online')
+    df[['commodity', 'commodity_impact']] = df['cleaned_data'].apply(
+        lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True)))
+    df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
+
+    # make rating for article
+    print(f'-- rate client articles online')
+    df = rate_client(df, client_rating_system_dict)
+    print(f'-- rate commodity articles online')
+    df = rate_commodity(df, commodity_rating_system_dict)
+
+    # sum cluster labels
+    df['client_score'] = df['client_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+
+    # delete unnecessary columns
+    df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
+
+    return df
+
+
+def add_text_sum_column(df: pd.DataFrame) -> pd.DataFrame:
+    """ Make summary for dataframe with articles """
+    print(f'-- make summary for article')
+    giga_chat = GigaChat()
+    token = giga_chat.get_user_token()
+    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
+    df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
     return df
 
 
@@ -410,8 +450,12 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     :return: df without duplicates article
     """
     # clear from 0 (not relevant articles)
+    old_len = len(df)
     df = df.query('not client_score.isnull() and client_score != 0 or '
                   'not commodity_score.isnull() and commodity_score != 0')
+    now_len = len(df)
+    print(f'-- remove {old_len-now_len} not relevant articles')
+    print('-- new article before deduplicate =', now_len)
 
     # sort new batch
     df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
@@ -422,7 +466,7 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
     # clean data for dn article
-    print(f'len of articles in database -- {len(df_previous)}')
+    print(f'len of articles in database (last 4 days) -- {len(df_previous)}')
     df_previous['cleaned_data'] = df_previous['text'].map(lambda x: clean_data(x))
 
     # concat two columns with news from both DFs.
@@ -458,6 +502,8 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df[df['unique']]
     df.drop(columns=['unique'], inplace=True)
 
+    print('-- new article after deduplicate =', len(df))
+
     return df
 
 
@@ -480,6 +526,3 @@ def summarization_by_chatgpt(full_text: str):
         new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
 
     return new_text_sum
-
-
-
