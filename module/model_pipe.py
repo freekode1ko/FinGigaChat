@@ -158,12 +158,12 @@ def clean_data(text: str) -> str:
     return clean_text
 
 
-def find_names(article_text, alt_names_dict, commodity_flag: bool = False):
+def find_names(article_text, alt_names_dict, rule_flag: bool = False):
     """
     Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
     :param article_text: str. Current string in which we search for names.
     :param alt_names_dict: Pandas DF. Pandas DF with columns with names neeeded to be found. In one row all names - alternatives.
-    :param commodity_flag: bool. Flag shows that it commodity text or not.
+    :param rule_flag: bool. Flag shows that it commodity text or not.
     :return: str. String with found names separated with ; symbol.
     """
     # TODO: убрать удаление кавычек, когда перейдем на свой парсинг
@@ -176,7 +176,7 @@ def find_names(article_text, alt_names_dict, commodity_flag: bool = False):
             key_name = key.lower().strip()
             names_dict[key_name] = len(re_findall)
     impact_json = json.dumps(names_dict, ensure_ascii=False)
-    if commodity_flag:
+    if rule_flag:
         max_count = max(names_dict.values(), default=None)
         if max_count and max_count != 1:
             return ';'.join([key for key, val in names_dict.items() if val == max_count]), impact_json
@@ -407,7 +407,7 @@ def model_func_online(df: pd.DataFrame) -> pd.DataFrame:
 
     # find subject name in text
     print('-- find client names in article online')
-    df[['client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict)))
+    df[['client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict, True)))
     df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['text']), axis=1)
 
     print('-- find commodity names in article online')

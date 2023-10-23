@@ -79,11 +79,11 @@ def daily_func():
             time.sleep(20 * 60)
 
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact'
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact',
                                   'client_score', 'cleaned_data']))
 
     df_commodity = pd.read_csv(commodity_filepath, index_col=False) if commodity_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_impact'
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_impact',
                                   'commodity_score', 'cleaned_data']))
 
     if client_flag or commodity_flag:

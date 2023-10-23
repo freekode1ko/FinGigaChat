@@ -55,8 +55,9 @@ class ArticleProcess:
         df_subject = df_subject[columns]
 
         print(f'-- got {len(df_subject)} {type_of_article} articles')
-        df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
-        print(f'-- remove some sources, so len is {len(df_subject)}')
+        # TODO: расскоментировать при получении онлайн новостей
+        # df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
+        # print(f'-- remove some sources, so len is {len(df_subject)}')
 
         df_subject['text'] = df_subject['text'].str.replace('«', '"')
         df_subject['text'] = df_subject['text'].str.replace('»', '"')
@@ -79,7 +80,7 @@ class ArticleProcess:
         return df_subject
 
     @staticmethod
-    def preprocess_article_online(df: pd.DataFrame) -> pd.DataFrame:
+    def preprocess_article_online(df: pd.DataFrame):
         """
         Preprocess articles dataframe and set df.
         :param df: df with articles
@@ -90,16 +91,19 @@ class ArticleProcess:
         source_filter = ['The Economist']
         not_finish_article_filter = 'новость дополняется'
 
+        df = df.rename(columns=new_name_columns)
+
         df = df[~df['source'].isin(source_filter)]
         print(f'-- remove foreign source, so len of articles is {len(df)}')
 
-        df = df.rename(columns=new_name_columns)
-        df = df[columns]
-
         df = df.dropna(subset='text')
         print(f'-- remove empty text, so len of articles is {len(df)}')
+
         df = df[~df['text'].str.contains(not_finish_article_filter, case=False)]
         print(f'-- remove not finish article, so len of articles is {len(df)}')
+
+        gotten_ids = dict(id=df['id'].values.tolist())
+        df = df[columns]
 
         df['text'] = df['text'].str.replace('«', '"')
         df['text'] = df['text'].str.replace('»', '"')
@@ -111,7 +115,7 @@ class ArticleProcess:
         except Exception as e:
             print(f'Error: {e}')
 
-        return df
+        return df, gotten_ids
 
     @staticmethod
     def throw_the_models(df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
@@ -167,6 +171,7 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
+        print(df_client.columns)
         df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
@@ -244,7 +249,7 @@ class ArticleProcess:
         :param subject: client or commodity
         :return: id of client(commodity) or False if user message not about client or commodity
         """
-
+        # TODO: при одинаковых альтернативных названиях для рахных компаний, выдавать новости о всех компаниях
         message_text = message.lower().strip()
         df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
         df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
