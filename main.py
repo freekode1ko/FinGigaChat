@@ -297,9 +297,8 @@ class Main:
                 row = ['Медь', price[0], price_diff[0]]
                 temp_df = pd.DataFrame([row], columns=['Metals', 'Price', 'Day'])
             except:
-                print(row)
-                print(page_html)
-                raise NameError('HiThere')
+                print('Cannot find Copper Table!!!')
+                temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
             metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
 
         elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
