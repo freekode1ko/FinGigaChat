@@ -246,9 +246,15 @@ class Main:
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
             if exchange_page == 'usd-rub':
                 euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
-                table = self.transformer_obj.get_table_from_html(euro_standart, page_html)[5]
-                row = ['usd-rub', table.loc[table['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0]]
-                exchange_kot.append(row)
+                tables = pd.read_html(page_html)
+                for table in tables:
+                    try:
+                        row = ['usd-rub', table.loc[table['Exchange'] ==
+                                                    'Real-time Currencies']['Last'].values.tolist()[0]]
+                        exchange_kot.append(row)
+                        break
+                    except:
+                        print('Not correct table')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
@@ -291,9 +297,8 @@ class Main:
                 row = ['Медь', price[0], price_diff[0]]
                 temp_df = pd.DataFrame([row], columns=['Metals', 'Price', 'Day'])
             except:
-                print(row)
-                print(page_html)
-                raise NameError('HiThere')
+                print('Cannot find Copper Table!!!')
+                temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
             metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
 
         elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':

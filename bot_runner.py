@@ -641,6 +641,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     await state.finish()
 
 
+# TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
     await types.ChatActions.typing()
@@ -718,11 +719,13 @@ async def analyse_bad_article(message: types.Message):
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
     try:
-        await call.message.answer(articles_l5, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+        await call.message.answer(articles_l5, parse_mode='HTML',
+                                  protect_content=True, disable_web_page_preview=True)
     except MessageIsTooLong:
         articles = articles_l5.split('\n\n')
         for article in articles:
-            await call.message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+            await call.message.answer(article, parse_mode='HTML',
+                                      protect_content=True, disable_web_page_preview=True)
     finally:
         await call.message.edit_reply_markup()
 
