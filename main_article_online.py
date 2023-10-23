@@ -8,24 +8,24 @@ import pandas as pd
 from module.article_process import ArticleProcess
 
 
-PERIOD = dt.timedelta(hours=1, minutes=0)
-FROM_TIME = ''
-URL_TO_DB = 'http://gigaparsernews.ru:8000/get_articles/{date}:{hour}'  # TODO: перенести в конфиг
+PERIOD = 3
+URL_TO_PERIOD_DB = 'http://gigaparsernews.ru:8000/get_articles/{date}:{hour}'  # TODO: перенести в конфиг
+URL_TO_ALL_DB = 'http://gigaparsernews.ru:8000/get_articles/all'  # TODO: перенести в конфиг
 # TODO: сделать парсинг каждые три часа
 # TODO: утвердить метод сортировки, чтобы потом не нужно было переделывать
 
 
-def get_period_article() -> pd.DataFrame:
+def get_period_article(date: str = '0', hour: str = '0') -> pd.DataFrame:
     """ Get and save articles """
     df_article = pd.DataFrame()
-    date_ = '20.10.23'
-    hour_ = '0'
     try:
-        req = requests.get(URL_TO_DB.format(date=date_, hour=hour_))
+        url = URL_TO_PERIOD_DB.format(date=date, hour=hour) if date != '0' else URL_TO_ALL_DB
+        req = requests.get(url)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
         else:
             print(f'{req.status_code} - status code while connect to database.')
+        print(f'url is {url}')
 
     except ConnectionError:
         print('-- Error: Connection error.')
@@ -33,10 +33,10 @@ def get_period_article() -> pd.DataFrame:
     return df_article
 
 
-def regular_func():
+def regular_func(date, hour):
     """ Processing for new articles """
 
-    df_article = get_period_article()
+    df_article = get_period_article(date, hour)
     article_flag = False if df_article.empty else True
 
     if article_flag:
@@ -56,14 +56,34 @@ def regular_func():
         print('-- DID NOT GET ARTICLES')
 
 
+def get_datetime_of_last_article(date_, time_):
+    df_article = get_period_article(date_, time_)
+    max_timestamp = max(df_article['created_at'])
+    datetime_ = pd.to_datetime(max_timestamp, unit='ms')
+    df_article['created_at'] = df_article['created_at'].apply(lambda x: pd.to_datetime(x, unit='ms'))
+    return datetime_
+
+
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    regular_func()
-    # while True:
-    #     current_time = dt.datetime.now().time()
-    #     current_time_timedelta = dt.timedelta(hours=current_time.hour, minutes=current_time.minute)
-    #     delta_time = (PERIOD - current_time_timedelta).seconds
-    #     print('time to wait', delta_time / 60)
-    #     time.sleep(delta_time)
-    #     regular_func()
-    #     print('Wait next hour')
+    current_datetime = dt.datetime(year=2023, month=10, day=20, hour=0)  # МЕНЯТЬ ЕСЛИ ОСТАНОВИЛСЯ ПАРСИНГ
+    try:
+        while True:
+            current_date_s = current_datetime.strftime('%d.%m.%y')
+            current_hour_s = current_datetime.strftime('%H')
+            print(current_date_s, current_hour_s)
+            current_datetime = get_datetime_of_last_article(current_date_s, current_hour_s)
+            print(current_datetime)
+
+            # regular_func(current_date_s, current_hour_s)
+
+            for i in range(PERIOD):
+                # time.sleep(3600)
+                time.sleep(5)
+                print('In waiting: {}/3 hours'.format(i + 1))
+
+    except KeyboardInterrupt:
+        print('--- STOP TIMER:', current_datetime)
+    except Exception as e:
+        print(e)
+        print('--- STOP TIMER:', current_datetime)
