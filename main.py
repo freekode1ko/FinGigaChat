@@ -2,22 +2,24 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
+
 from sql_model.commodity_pricing import CommodityPricing
 from sql_model.commodity import Commodity
-from selenium import webdriver
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from typing import List, Tuple, Dict
+from selenium import webdriver
+
 import requests as req
 from lxml import html
 import pandas as pd
 import numpy as np
+import datetime
 import warnings
 import config
 import time
-import datetime
-import re
-from typing import List, Tuple, Dict
 import json
+import re
 
 
 class Main:
@@ -613,4 +615,4 @@ if __name__ == '__main__':
         while i <= 3:
             i += 1
             time.sleep(3600)
-            print('In waiting. \n{}/3 hours'.format(3 - i))
+            print('In waiting. \n{}/4 hours'.format(4 - i+1))
