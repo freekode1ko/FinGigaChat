@@ -60,9 +60,11 @@ class Form(StatesGroup):
 
 
 def read_curdatetime():
-    with open('sources/tables/time.txt', 'r') as f:
-        curdatetime = f.read()
-    return curdatetime
+    # with open('sources/tables/time.txt', 'r') as f:
+    #     curdatetime = f.read()
+    engine = create_engine(psql_engine)
+    curdatetime = pd.read_sql_query('select * from "date_of_last_build"', con=engine)
+    return curdatetime['date_time'][0]
 
 
 async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048):
