@@ -538,6 +538,12 @@ class Main:
         engine = create_engine(self.psql_engine)
         key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
 
+    def save_date_of_last_build(self):
+        engine = create_engine(self.psql_engine)
+        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
+        cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
+
     def process_companies_data(self, company_pages_html) -> None:
         """
         Process and save fin mark of the companies.
@@ -608,9 +614,10 @@ if __name__ == '__main__':
             driver.close()
 
         i = 0
-        with open('sources/tables/time.txt', 'w') as f:
-            f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Wait 3 hours before recollect data...')
+        runner.save_date_of_last_build()
+        # with open('sources/tables/time.txt', 'w') as f:
+        #    f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
+        print('Wait 4 hours before recollect data...')
 
         while i <= 3:
             i += 1
