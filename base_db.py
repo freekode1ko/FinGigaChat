@@ -203,12 +203,19 @@ def main(engine):
                        'CONSTRAINT user_id_pkey PRIMARY KEY (user_id)) '
                        'TABLESPACE pg_default;')
 
+    query_date_of_last_build = ('CREATE TABLE IF NOT EXISTS public.date_of_last_build ('
+                                'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                                '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                                'date_time text NOT NULL,'
+                                'CONSTRAINT date_time_pkey PRIMARY KEY (id))'
+                                'TABLESPACE pg_default;')
+
     # create tables
     queries = [query_client, query_commodity, query_article,
                query_relation_client, query_relation_commodity,
                query_client_alternative, query_commodity_alternative,
                query_chat, query_message, query_relation_client_msg,
-               query_relation_commodity_msg, query_whitelist]
+               query_relation_commodity_msg, query_whitelist, query_date_of_last_build]
 
     with engine.connect() as conn:
         for query in queries:
