@@ -2,22 +2,24 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
+
 from sql_model.commodity_pricing import CommodityPricing
 from sql_model.commodity import Commodity
-from selenium import webdriver
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from typing import List, Tuple, Dict
+from selenium import webdriver
+
 import requests as req
 from lxml import html
 import pandas as pd
 import numpy as np
+import datetime
 import warnings
 import config
 import time
-import datetime
-import re
-from typing import List, Tuple, Dict
 import json
+import re
 
 
 class Main:
@@ -536,6 +538,12 @@ class Main:
         engine = create_engine(self.psql_engine)
         key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
 
+    def save_date_of_last_build(self):
+        engine = create_engine(self.psql_engine)
+        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
+        cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
+
     def process_companies_data(self, company_pages_html) -> None:
         """
         Process and save fin mark of the companies.
@@ -606,11 +614,12 @@ if __name__ == '__main__':
             driver.close()
 
         i = 0
-        with open('sources/tables/time.txt', 'w') as f:
-            f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Wait 3 hours before recollect data...')
+        runner.save_date_of_last_build()
+        # with open('sources/tables/time.txt', 'w') as f:
+        #    f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
+        print('Wait 4 hours before recollect data...')
 
         while i <= 3:
             i += 1
             time.sleep(3600)
-            print('In waiting. \n{}/3 hours'.format(3 - i))
+            print('In waiting. \n{}/4 hours'.format(4 - i+1))
