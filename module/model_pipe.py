@@ -3,6 +3,7 @@ from re import search
 import json
 import pickle
 from requests.exceptions import ConnectionError
+from typing import Dict
 
 import pandas as pd
 import pymorphy2
@@ -37,10 +38,10 @@ def get_alternative_names_pattern(alt_names):
     table_subject_list = alt_names.values.tolist()
     for i, alt_names_list in enumerate(table_subject_list):
         clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        names_pattern_base = '|'.join(clear_alt_names)
+        names_pattern_base = "( |\. |, |\) )|".join(clear_alt_names)
         names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
         key = clear_alt_names[0]
-        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
+        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+', '\+')
     return alter_names_dict
 
 
@@ -66,10 +67,11 @@ def find_bad_gas(names: str, clean_text: str) -> str:
     return names
 
 
-def check_gazprom(names: str, text: str) -> str:
+def check_gazprom(names: str, names_impact: Dict, text: str) -> str:
     text = text.replace('"', '')
     names_list = names.split(';')
-    if 'газпром' in names_list and 'газпром нефть' in names_list:
+    names_impact_list = list(eval(names_impact).keys())
+    if 'газпром' in names_impact_list and 'газпром нефть' in names_impact_list:
         if not search('газпром(?! нефт[ьи])', text):
             try:
                 names_list.remove('газпром')
@@ -182,6 +184,43 @@ def find_names(article_text, alt_names_dict, rule_flag: bool = False):
             return ';'.join([key for key, val in names_dict.items() if val == max_count]), impact_json
         return '', impact_json
     return ';'.join(names_dict.keys()), impact_json
+
+
+def find_names_online(article_title, article_text, alt_names_dict):
+    """
+    Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
+    :param article_title: str. Current string in which we search for names.
+    :param article_text: str. Current string in which we search for names.
+    :param alt_names_dict: Pandas DF. Pandas DF with columns with names needed to be found. In one row all names - alternatives.
+    :return: str. String with found names separated with ; symbol.
+    """
+    article_text = ' ' + article_text.replace('"', '') + ' '
+    article_title = ' ' + article_title.replace('"', '') + ' ' if isinstance(article_title, str) else ''
+    names_dict = {}
+    title_name_list = []
+    names_text = ''
+    for key, alt_names in alt_names_dict.items():
+        alt_names = alt_names.replace('"', '')
+        re_findall = re.findall(alt_names, article_text)
+
+        # find in text
+        if re_findall:
+            key_name = key.lower().strip()
+            names_dict[key_name] = len(re_findall)
+
+        # find in title
+        re_findall_t = re.findall(alt_names, article_title)
+        if re_findall_t:
+            title_name_list.append(key.lower().strip())
+
+    names_title = ';'.join(title_name_list)
+    impact_json = json.dumps(names_dict, ensure_ascii=False)
+    max_count = max(names_dict.values(), default=None)
+    if max_count and max_count != 1:
+        names_text = ';'.join([key for key, val in names_dict.items() if val == max_count])
+
+    names = union_name(names_title, names_text)
+    return names, impact_json
 
 
 def down_threshold(engine, type_of_article, names, threshold) -> float:
@@ -366,8 +405,8 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         df[['found_client', 'client_impact']] = df['text'].apply(
                                                 lambda x: pd.Series(find_names(x, alter_client_names_dict)))
 
-        df[type_of_article] = df.apply(lambda row: union_name(row[type_of_article], row['found_client']), axis=1)
-        df[type_of_article] = df.apply(lambda row: check_gazprom(row[type_of_article], row['text']), axis=1)
+        df[type_of_article] = df.apply(lambda row: union_name(row['client'], row['found_client']), axis=1)
+        df[type_of_article] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
 
         # make rating for article
         print(f'-- rate client articles')
@@ -407,12 +446,13 @@ def model_func_online(df: pd.DataFrame) -> pd.DataFrame:
 
     # find subject name in text
     print('-- find client names in article online')
-    df[['client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict, True)))
-    df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['text']), axis=1)
+    df[['client', 'client_impact']] = df.apply(
+        lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)), axis=1)
+    df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
 
     print('-- find commodity names in article online')
-    df[['commodity', 'commodity_impact']] = df['cleaned_data'].apply(
-        lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True)))
+    df[['commodity', 'commodity_impact']] = df.apply(
+        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1)
     df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
 
     # make rating for article

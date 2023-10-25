@@ -1,17 +1,15 @@
-import datetime as dt
 import time
 import warnings
 import requests
+import json
 
 import pandas as pd
 
 from module.article_process import ArticleProcess
+from config import URL_TO_ALL_DB, URL_TO_PERIOD_DB, URL_POST_TO_DB
 
 
 PERIOD = 3
-URL_TO_PERIOD_DB = 'http://gigaparsernews.ru:8000/get_articles/{date}:{hour}'  # TODO: перенести в конфиг
-URL_TO_ALL_DB = 'http://gigaparsernews.ru:8000/get_articles/all'  # TODO: перенести в конфиг
-URL_POST_TO_DB = 'http://gigaparsernews.ru:8000/success_request'  # TODO: перенести в конфиг
 
 
 def get_period_article(date: str = '0', hour: str = '0') -> pd.DataFrame:
@@ -37,6 +35,7 @@ def regular_func():
 
     df_article = get_period_article()
     article_flag = False if df_article.empty else True
+    df_article.to_excel('source.xlsx', index=False)
 
     if article_flag:
         try:
@@ -46,17 +45,15 @@ def regular_func():
             print('-- go throw models')
             df_article = ap_obj_online.throw_the_models(df_article)
             ap_obj_online.df_article = df_article
-            # ap_obj_online.df_article.to_excel('check online before dedup.xlsx', index=False)
             ap_obj_online.drop_duplicate()
             ap_obj_online.make_text_sum()
-            # ap_obj_online.df_article.to_excel('check online after dedup.xlsx', index=False)
             ap_obj_online.save_tables()
             print('-- PROCESSED ARTICLES')
-        except Exception as e:
-            print(e)
-            ids = dict(id=[])
+        except Exception as exp:
+            print(exp)
+            ids = json.dumps({'id': []})
     else:
-        ids = dict(id=[])
+        ids = json.dumps({'id': []})
         print('-- DID NOT GET ARTICLES')
 
     return ids

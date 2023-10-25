@@ -3,6 +3,7 @@ import datetime as dt
 import numpy as np
 import re
 import urllib.parse
+import json
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -55,9 +56,8 @@ class ArticleProcess:
         df_subject = df_subject[columns]
 
         print(f'-- got {len(df_subject)} {type_of_article} articles')
-        # TODO: расскоментировать при получении онлайн новостей
-        # df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
-        # print(f'-- remove some sources, so len is {len(df_subject)}')
+        df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
+        print(f'-- remove some sources, so len is {len(df_subject)}')
 
         df_subject['text'] = df_subject['text'].str.replace('«', '"')
         df_subject['text'] = df_subject['text'].str.replace('»', '"')
@@ -103,10 +103,13 @@ class ArticleProcess:
         print(f'-- remove not finish article, so len of articles is {len(df)}')
 
         gotten_ids = dict(id=df['id'].values.tolist())
+        gotten_ids = json.dumps(gotten_ids)
         df = df[columns]
 
         df['text'] = df['text'].str.replace('«', '"')
         df['text'] = df['text'].str.replace('»', '"')
+        df['title'] = df['title'].str.replace('«', '"')
+        df['title'] = df['title'].str.replace('»', '"')
         df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms'))
         try:
             df = df.groupby('link').apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0],
@@ -171,7 +174,6 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
-        print(df_client.columns)
         df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
