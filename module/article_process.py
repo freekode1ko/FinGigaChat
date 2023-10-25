@@ -282,9 +282,10 @@ class ArticleProcess:
     
     def _get_client_fin_indicators(self, client_id, client_name):
         """
-        Get pricing about commodity from db.
-        :param subject_id: id of commodity
-        :return: list(dict) data about commodity pricing
+        Get company finanical indicators.
+        :param client_id: id of company in client table
+        :param client_name: str of company in user's message
+        :return: df financial indicators
         """
         client = None
         if client_id:
