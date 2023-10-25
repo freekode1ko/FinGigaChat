@@ -287,14 +287,11 @@ class ArticleProcess:
         :return: list(dict) data about commodity pricing
         """
         client = None
-        if not client_id:
-            client = pd.read_sql('financial_indicators',con = self.engine)
-            client = client[client['company'] == client_name]
-        else:
+        if client_id:
             client = pd.read_sql('client',con = self.engine)
             client_name = client[client['id']==client_id]['name'].iloc[0]
-            client = pd.read_sql('financial_indicators',con = self.engine)
-            client = client[client['company'] == client_name]
+        client = pd.read_sql('financial_indicators',con = self.engine)
+        client = client[client['company'] == client_name]
         client = client.sort_values('id')
         client_copy = client.copy()
 
