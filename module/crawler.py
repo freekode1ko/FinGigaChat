@@ -75,7 +75,7 @@ class Parser:
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}
-        html = ''
+        html = '<!doctype html><head><title></title></head><body><header>EMPTY PAGE</header></body></html>'
         if '.ru' in url:
             euro_standard = True
 

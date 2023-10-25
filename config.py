@@ -38,10 +38,11 @@ research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
-api_key_gpt = ''
+api_key_gpt = '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'
 research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 
-api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'
+# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
+api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
 mail_username = "ai-helper@mail.ru"
@@ -65,12 +66,33 @@ summarization_prompt = (
     'Твой ответ:'
 )
 
+
+help_text = ('Всем привет! Мы начинаем пилотирование MVP AI-помощника банкира на ограниченной выборке ГКМ, старших '
+             'банкиров и руководителей.\n\n'
+             'В боте можно посмотреть аналитику CIB Research, текущие и прогнозные котировки и данные по макроэкономике,'
+             ' FI, FX, сырьевым товарам воспользовавшись командами из бокового меню или ввести ключевые слова '
+             '(экономика, валюты, ОФЗ, металлы, нефть, инфляция, КС, ВВП, бюджет, юань и тд).\n\n'
+             'Для просмотра новостного потока по клиентам необходимо ввести название клиента («Роснефть», «Магнит», '
+             '«Уралхим» и тд) - в настоящее время доступен сервис по 250 именам. По публичным клиентам доступны '
+             'также исторические и прогнозные финансовые показатели.  Аналогичный новостной функционал, а также '
+             'динамика котировок доступны по ключевым commodities.\n\n'
+             'Кроме того, в боте вы можете пообщаться с Гигачатом в свободной форме, попросив написать письмо, сделать '
+             'самари, перевести текст и тд.\n\n'
+             'В ближайших планах: расширение функционала в части отраслевой аналитики, персонализация под ГКМ и '
+             'настройка пассивного контента (настройка рассылки), инфо по законодательству, госпраммам и многое другое!\n\n'
+             'В перспективе рассматриваем варианты заведения колл репортов через этот бот и интеграцию с контуром '
+             'альфа (тут есть ограничения по безопасности, но мы не сдаемся и ищем варианты:)\n\n'
+             'Бот постоянно совершенствуется и дообучается, поэтому присылайте, пожалуйста, обратную связь по контенту, '
+             'функционалу и новым идеям Максиму Королькову @korolkov_m и Александру Юдину.')
+
 table_link = 'https://metals-wire.com/data'
 
 charts_links = \
     {
-        'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
-        'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120'
+        'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/'
+                            '?to=date_date&countBack=1825',
+        'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/'
+                          '?period=P5Y&interval=P1M&pointscount=120'
     }
 
 dict_of_commodities = \
@@ -85,10 +107,10 @@ dict_of_commodities = \
         'Нефть WTI, $/бар': {
             'links': ['8849',
                       'https://ru.investing.com/commodities/crude-oil'],
-            'to_take':1,
+            'to_take': 1,
             'measurables': '$/бар',
             'naming': 'WTI',
-            'alias':'Нефть'
+            'alias': 'Нефть'
         },
         'Нефть Urals, $/бар': {
             'links': ['1168084',
@@ -110,7 +132,7 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Gold spot',
-            'alias':'золото'
+            'alias': 'золото'
 
         },
         'Медь LME спот, $/т': {
@@ -118,7 +140,7 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Copper LME spot price',
-            'alias':'медь'  
+            'alias': 'медь'
 
         },
         'Алюминий LME спот, $/т': {
@@ -126,7 +148,7 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Aluminium LME spot',
-            'alias':'алюминий'  
+            'alias': 'алюминий'
 
         },
         'Никель LME спот, $/т': {
@@ -134,7 +156,7 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Nickel LME spot',
-            'alias':'никель'  
+            'alias': 'никель'
 
         },
         'Палладий LME спот, $/унц': {
@@ -142,21 +164,21 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Palladium LME spot',
-            'alias':'палладий'  
+            'alias': 'палладий'
         },
         'Платина LME спот, $/унц': {
             'links': ['PLAT'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Platinum LME spot',
-            'alias':'платина'  
+            'alias': 'платина'
         },
         'Цинк LME спот, $/т': {
             'links': ['LMZSDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Zinc LME spot',
-            'alias':'цинк'  
+            'alias': 'цинк'
 
         },
         'Свинец LME спот, $/т': {
@@ -164,42 +186,42 @@ dict_of_commodities = \
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Lead LME spot',
-            'alias':'свинец'  
+            'alias': 'свинец'
         },
         'Серебро спот, $/унц': {
             'links': ['SILV'],
             'to_take': 4,
             'measurables': '$/унц',
             'naming': 'Silver spot',
-            'alias':'серебро'  
+            'alias': 'серебро'
         },
         'Кобальт LME спот, $/т': {
             'links': ['LMCODY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Cobalt LME spot',
-            'alias':'кобальт'  
+            'alias': 'кобальт'
         },
         'Железная руда 62% Fe CFR Китай, $/т': {
             'links': ['MB020424'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Iron ore 62% Fe CFR China',
-            'alias':'жрс'  
+            'alias': 'жрс'
         },
         'Олово LME spot, $/т': {
             'links': ['LMSNDY'],
             'to_take': 4,
             'measurables': '$/т',
             'naming': 'Tin LME spot',
-            'alias':'олово'  
+            'alias': 'олово'
         },
         'Уран Generic 1st UxC, $/фунт': {
             'links': ['UXA1'],
             'to_take': 3,
             'measurables': '$/фунт',
             'naming': 'Generic 1st UxC Uranium Price',
-            'alias':'уран'  
+            'alias': 'уран'
         },
         'Энергетический уголь 6 000kcal, CIF ARA, $/т': {
             'links': ['CIFARA'],
@@ -213,7 +235,7 @@ dict_of_commodities = \
             'to_take': 3,
             'measurables': '$/т',
             'naming': 'HCC FOB Australia',
-            'alias':'коксующийся уголь'  
+            'alias': 'коксующийся уголь'
         },
         'Рулон г/к FOB Черное море, $/т': {
             'links': ['RUHRC2'],
@@ -269,14 +291,15 @@ dict_of_commodities = \
             'to_take': 3,
             'measurables': '$/т',
             'naming': 'Ammonia, CFR Tampa',
-            'alias':'аммиак'  
+            'alias': 'аммиак'
         },
         'Газ, Natural Gas, $/тыс м3': {
             'links': [
-                'https://charts.profinance.ru/html/charts/image?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
+                'https://charts.profinance.ru/html/charts/image'
+                '?SID=kI1Jhn93&s=TTFUSD1000&h=480&w=640&pt=2&tt=10&z=7&ba=2&nw=728'],
             'measurables': '$/тыс м3',
             'naming': 'Gas',
-            'alias':'газ'   
+            'alias': 'газ'
         },
     }
 
@@ -313,7 +336,7 @@ dict_of_companies = \
         'Полиметалл': {
             'company_id': '831',
             'alias': 'Металлургия'
-        },  
+        },
         'ММК': {
             'company_id': '675',
             'alias': 'Металлургия'

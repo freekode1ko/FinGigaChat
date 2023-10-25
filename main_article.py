@@ -50,7 +50,7 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
             df = ap_obj.throw_the_models(df, type_of_article)
         else:
             print('-- df is empty')
-            df[['text_sum', f'{type_of_article}_score', 'cleaned_data']] = None
+            df[['text_sum', f'{type_of_article}_score', 'cleaned_data', f'{type_of_article}_impact']] = None
         df.to_csv(filepath, index=False)
         print('-- save to csv after models')
         return True, filepath
@@ -63,7 +63,6 @@ def daily_func():
     ap_obj = ArticleProcess()
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = ''
-
     count_of_attempt = 9
     for attempt in range(count_of_attempt):
 
@@ -81,11 +80,11 @@ def daily_func():
             time.sleep(20 * 60)
 
     df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client',
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact',
                                   'client_score', 'cleaned_data']))
 
     df_commodity = pd.read_csv(commodity_filepath, index_col=False) if commodity_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity',
+        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_impact',
                                   'commodity_score', 'cleaned_data']))
 
     if client_flag or commodity_flag:
@@ -104,7 +103,8 @@ def daily_func():
         print('DID NOT GET ARTICLES')
 
     # delete old articles from database
-    ap_obj.delete_old_article()
+    # TODO: перед запуском еще раз внимательно проверить
+    # ap_obj.delete_old_article()
 
 
 if __name__ == '__main__':

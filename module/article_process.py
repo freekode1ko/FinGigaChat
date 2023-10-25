@@ -12,7 +12,7 @@ from config import psql_engine
 from module.model_pipe import deduplicate, model_func
 
 
-TIME_LIVE_ARTICLE = 5
+TIME_LIVE_ARTICLE = 100
 NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
 
 
@@ -23,7 +23,7 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self):
         # TODO: psql_engine
-        self.engine = create_engine(psql_engine)
+        self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
@@ -43,7 +43,7 @@ class ArticleProcess:
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
                                 'text': 'text', 'text Summary Summary': 'text_sum', 'Company_name': 'client'}
-            columns = ['link', 'title', 'date', 'text', 'text_sum', 'client']
+            columns = ['link', 'title', 'date', 'text', 'client']
         else:
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'text': 'text', 'Металл': 'commodity'}
             columns = ['link', 'title', 'date', 'text', 'commodity']
@@ -57,46 +57,66 @@ class ArticleProcess:
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
         df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
-        if type_of_article == 'client':
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
-            df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
+        df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+                                                                            'title': x['title'].iloc[0],
+                                                                            'date': x['date'].iloc[0],
+                                                                            'text': x['text'].iloc[0],
+                                                                            type_of_article: ';'.join(x[type_of_article]),
+                                                                            })).reset_index()
+        # if type_of_article == 'client':
+        #     df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+        #         'client': ';'.join(x['client']),
+        #         'date': x['date'].iloc[0],
+        #         'text': x['text'].iloc[0],
+        #         'text_sum': x['text_sum'].iloc[0],
+        #         'coef': x['coef'].iloc[0],
+        #     })).reset_index()
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
+        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
 
         return df_subject
 
     @staticmethod
-    def throw_the_models(df_subject: pd.DataFrame,  name: str,) -> pd.DataFrame:
+    def throw_the_models(df_subject: pd.DataFrame, name: str, ) -> pd.DataFrame:
         """ Call model pipe func """
         df_subject = model_func(df_subject, name)
         return df_subject
 
     def drop_duplicate(self):
         """ Call func to delete similar articles """
-        old_articles = pd.read_sql('SELECT text from article', con=self.engine)
+        dt_now = dt.datetime.now()
+        old_articles = pd.read_sql(f"SELECT text from article where '{dt_now}' - date < '15 day'", con=self.engine)
         print('-- new article before deduplicate = ', len(self.df_article))
         self.df_article = deduplicate(self.df_article, old_articles)
         print('-- new article after deduplicate = ', len(self.df_article))
 
     def delete_old_article(self):
         """ Delete from db article if there are 10 articles for each subject """
-        count_to_keep = 15
+        count_to_keep = 30
         query_delete = (f"delete from article where id not in ( "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn "
                         f"from relation_client_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep} "
+                        f"where rn <= {count_to_keep} and t1.client_score <> 0"
                         f"UNION "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn "
                         f"from relation_commodity_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep})")
+                        f"where rn <= {count_to_keep} and t1.commodity_score <> 0)")
         with self.engine.connect() as conn:
-            # dt_now = dt.datetime.now()
-            # conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            len_before = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
             conn.execute(text(query_delete))
             conn.commit()
+            len_after = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_before[0] - len_after[0]} articles')
+            dt_now = dt.datetime.now()
+            conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
+            conn.commit()
+            len_finish = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
+            print(f'-- delete {len_after[0] - len_finish[0]} articles with date > 100 days ago')
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
@@ -106,7 +126,7 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
-        df_link_client = df_client[['link', 'client', 'client_score']][df_client['link'].isin(df_commodity['link'])]
+        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
         # remove from df_client and df_commodity common links
@@ -114,8 +134,8 @@ class ArticleProcess:
         df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
         # concat all df in one, so there are no duplicates and contain all data
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
-        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity',
-                                      'client_score', 'commodity_score', 'cleaned_data']]
+        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity', 'client_impact',
+                                      'commodity_impact', 'client_score', 'commodity_score', 'cleaned_data']]
         print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 
     def save_tables(self) -> None:
@@ -143,6 +163,12 @@ class ArticleProcess:
 
         # merge ids from db with df_article
         self.df_article = self.df_article.merge(pd.DataFrame(ids), on='link')
+
+        # save data in article_impact table
+        article_name_impact = self.df_article[['id', 'cleaned_data', 'client_impact', 'commodity_impact']].rename(
+            columns={'id': 'article_id'})
+        article_name_impact.to_sql('article_name_impact', con=self.engine, if_exists='append', index=False)
+        print('-- save article impact in database')
 
         # make relation tables between articles and client and commodity
         self._make_save_relation_article_table('client')
@@ -194,20 +220,46 @@ class ArticleProcess:
         :param subject: client or commodity
         :return: name of client(commodity) and sorted sum articles
         """
-        with self.engine.connect() as conn:
-            query_article_data = (f'SELECT relation.article_id, relation.{subject}_score, '
-                                  f'article_.title, article_.date, article_.link, article_.text_sum '
-                                  f'FROM relation_{subject}_article AS relation '
-                                  f'INNER JOIN ('
-                                  f'SELECT id, title, date, link, text_sum '
-                                  f'FROM article '
-                                  f') AS article_ '
-                                  f'ON article_.id = relation.article_id '
-                                  f'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
-                                  f'ORDER BY date DESC, relation.{subject}_score DESC '
-                                  f'LIMIT 5')
+        count_all, count_top = 10, 3
+        date_now = dt.datetime.now()
+        query_temp = ('SELECT relation.article_id, relation.{subject}_score, '
+                      'article_.title, article_.date, article_.link, article_.text_sum '
+                      'FROM relation_{subject}_article AS relation '
+                      'INNER JOIN ('
+                      'SELECT id, title, date, link, text_sum '
+                      'FROM article '
+                      ') AS article_ '
+                      'ON article_.id = relation.article_id '
+                      'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
+                      '{condition} '
+                      'ORDER BY date DESC, relation.{subject}_score DESC '
+                      'LIMIT {count}')
+        condition_top = (f"AND '{date_now}' - article_.date < '15 day' AND "
+                         f"(article_.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
+                         f"OR article_.link SIMILAR TO '%.interfax(|-russia).ru%' "
+                         f"OR article_.link SIMILAR TO '%www.kommersant.ru%' "
+                         f"OR article_.link SIMILAR TO '%www.vedomosti.ru%' "
+                         f"OR article_.link SIMILAR TO '%www.forbes.ru%' "
+                         f"OR article_.link SIMILAR TO '%(.|//)iz.ru/%' "
+                         f"OR article_.link SIMILAR TO '%//tass.(ru|com)%' "
+                         f"OR article_.link SIMILAR TO '%(realty.|//)ria.ru%')")
 
-            article_data = [item[2:] for item in conn.execute(text(query_article_data))]
+        with self.engine.connect() as conn:
+
+            query_article_top_data = query_temp.format(subject=subject, subject_id=subject_id,
+                                                       count=count_top, condition=condition_top)
+            result_top = conn.execute(text(query_article_top_data)).fetchall()
+            article_data_top = [item[2:] for item in result_top]
+            top_link = ','.join([f"'{item[4]}'" for item in result_top]) if result_top else "''"
+
+            condition_all = f"AND article_.link not in ({top_link})"
+            query_article_all_data = query_temp.format(subject=subject, subject_id=subject_id,
+                                                       count=count_all, condition=condition_all)
+
+            article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
+            count_of_not_top_news = count_all - len(article_data_top)
+            article_data = article_data_top + article_data_all[:count_of_not_top_news]
+
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
             return name, article_data
@@ -291,6 +343,7 @@ class ArticleProcess:
         # TODO: 23 (year) автоматически обновлять ?
         com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
         format_msg = f'<b>{subject_name.capitalize()}</b>'
+        com_msg = ''
 
         if articles:
             for index, article_data in enumerate(articles):
@@ -304,6 +357,8 @@ class ArticleProcess:
                     articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
+        else:
+            format_msg = True
 
         img_name_list = []
         if com_data:
@@ -314,17 +369,24 @@ class ArticleProcess:
                 com["price"] = ArticleProcess._make_place_number(com["price"]) if not np.isnan(com['price']) else None
                 com["cons"] = ArticleProcess._make_place_number(com["cons"]) if not np.isnan(com["cons"]) else None
                 # create rows with commodity pricing
-                subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
-                price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com["price"] else None
-                m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
-                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                subname = f'<b>{com["subname"]}</b>'
+                # subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
+                price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com[
+                    "price"] else None
+                m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(
+                    com['m_delta']) else None
+                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(
+                    com['y_delta']) else None
                 cons = f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com["cons"] else None
                 # join rows
                 row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
                 com_format = '\n'.join(row_list)
-                format_msg += f'\n\n{com_format}'
+                com_msg += f'\n\n{com_format}'
 
-        return format_msg, img_name_list
+        if subject_name == 'газ':
+            com_msg = ''
+
+        return com_msg, format_msg, img_name_list
 
     def process_user_alias(self, message: str):
         """ Process user alias and return reply for it """
@@ -333,6 +395,7 @@ class ArticleProcess:
         client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
         client_fin_table = self._get_client_fin_indicators(client_id)
+
 
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
@@ -343,17 +406,16 @@ class ArticleProcess:
                 com_data = self._get_commodity_pricing(commodity_id)
             else:
                 print('user do not want articles')
-                return False, img_name_list, client_fin_table
+                return '', False, img_name_list, client_fin_table
 
-        reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
+        com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
         if client_id and not articles:
-            return 'Пока нет новостей на эту тему', img_name_list
+            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
         elif commodity_id and not articles and not img_name_list:
-            return 'Пока нет новостей на эту тему', img_name_list
+            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
 
-
-        return reply_msg, img_name_list, client_fin_table
+        return com_cotirov, reply_msg, img_name_list, client_fin_table
 
 
 class ArticleProcessAdmin:

@@ -1,28 +1,27 @@
-import json
-import datetime
-import warnings
 import re
-import numpy as np
+import json
+import warnings
 import textwrap
+import numpy as np
+import pandas as pd
+from sqlalchemy import create_engine
 
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.utils.exceptions import MessageIsTooLong
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.utils.exceptions import MessageIsTooLong
+from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import FSMContext
-from sqlalchemy import create_engine
-import pandas as pd
-import ast
 
+from module.article_process import ArticleProcess, ArticleProcessAdmin
+from module.model_pipe import summarization_by_chatgpt
 import module.data_transformer as dt
 import module.gigachat as gig
-from module.model_pipe import summarization_by_chatgpt
-from module.article_process import ArticleProcess, ArticleProcessAdmin
 import config
 
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
 psql_engine = config.psql_engine
+articles_l5 = ''
 token = ''
 chat = ''
 
@@ -61,9 +60,11 @@ class Form(StatesGroup):
 
 
 def read_curdatetime():
-    with open('sources/tables/time.txt', 'r') as f:
-        curdatetime = f.read()
-    return curdatetime
+    # with open('sources/tables/time.txt', 'r') as f:
+    #     curdatetime = f.read()
+    engine = create_engine(psql_engine)
+    curdatetime = pd.read_sql_query('select * from "date_of_last_build"', con=engine)
+    return curdatetime['date_time'][0]
 
 
 async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048):
@@ -106,61 +107,14 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
 
-''' deprecated
-async def __read_tables_from_companies(message: types.Message, companies: dict):
-    company = companies['head'].loc[companies['head']['Name'].str.lower() == message.text.lower()].values.tolist()
-    company_name = company[0][2]
-    print(company_name)
-    company_url = company[0][3]
-    transformer = dt.Transformer()
-    await message.reply("Ссылка на архивы с результатами:\n{}".format(company_url), protect_content=True)
-    await message.answer('Табличные данные по показателям:', protect_content=True)
 
-    for key in companies.keys():
-        if str(company_name) in key:
-            png_path = '{}/img/{}_table.png'.format(path_to_source, key)
-            title = '{}'.format(key.split('_')[1])
-            # transformer.save_df_as_png(df=companies[key].drop('Unnamed: 0', axis=1),
-            #                            column_width=[0.15] * len(companies[key].columns),
-            #                            figure_size=(15, 1.5), path_to_source=path_to_source, name=key)
-            transformer.render_mpl_table(companies[key].drop('Unnamed: 0', axis=1), key,
-                                         header_columns=0, col_width=2)
-            photo = open(png_path, 'rb')
-            await __sent_photo_and_msg(message, photo, title=title)
-'''
-
-
-@dp.message_handler(commands=['start'])
-async def start_handler(message: types.Message):
-    global chat
-    global token
+@dp.message_handler(commands=['start', 'help'])
+async def help_handler(message: types.Message):
+    help_text = config.help_text
     if await user_in_whitelist(message.from_user.as_json()):
-        chat = gig.GigaChat()
-        token = chat.get_user_token()
-        print('{}...{} - {}({})'.format(token[:10], token[-10:],
-                                        message.from_user.full_name,
-                                        message.from_user.username))
-        await message.reply("Давай я спрошу GigaChat за тебя", protect_content=True)
-
-''' deprecated
-@dp.message_handler(commands=['companies'])
-async def company_info(message: types.Message):
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    if await user_in_whitelist(message.from_user.as_json()):
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        buttons = ['Полиметалл', 'ММК', 'Норникель', 'Полюс', 'Русал', 'Северсталь']
-        keyboard.add(*buttons)
-        await message.reply("Выберите компанию для детальной информации по ней", reply_markup=keyboard,
-                            protect_content=True)
-
-@dp.message_handler(lambda message: message.text.lower() in ["полиметалл", 'ммк', 'норникель',
-                                                             'полюс', 'русал', 'северсталь'])
-async def button_polymetal(message: types.Message):
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    if await user_in_whitelist(message.from_user.as_json()):
-        companies = pd.read_excel('{}/tables/companies.xlsx'.format(path_to_source), sheet_name=None)
-        await __read_tables_from_companies(message, companies)
-'''
+        to_pin = await bot.send_message(message.chat.id, help_text, protect_content=True)
+        msg_id = to_pin.message_id
+        await bot.pin_chat_message(chat_id=message.chat.id, message_id=msg_id)
 
 
 # ['облигации', 'бонды', 'офз']
@@ -287,6 +241,7 @@ async def economy_info(message: types.Message):
 
 @dp.message_handler(commands=['view'])
 async def data_mart(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
         engine = create_engine(psql_engine)
@@ -330,7 +285,8 @@ async def data_mart(message: types.Message):
         # Денежное предложение
         for table in tables:
             table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = \
-                'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+                'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'),
+                                                    'Экономические показатели'].str.lower()
         # Средняя процентная ставка
         for table in tables:
             condition = table['alias'].str.contains('Средняя процентная ставка')
@@ -339,20 +295,24 @@ async def data_mart(message: types.Message):
             updated_values = 'Средняя ставка ' + values_to_update.str.lower()
             table.loc[condition, 'Экономические показатели'] = updated_values
 
+        # рубль/доллар
         for table in tables:
-            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели']+', $/руб'
+            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = \
+                table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
         # ИПЦ
         for table in tables:
             table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = \
-                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели']+', ИПЦ'
+                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
         # ИЦП
         for table in tables:
             table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = \
-                  table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели']+', ИЦП'
+                table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
         # Юралз
         for table in tables:
-            condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
-            table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели']+ ', €/руб'
+            condition = table['alias'].str.contains('рубль/евро') & \
+                        ~table['Экономические показатели'].str.contains('Юралз')
+            table.loc[condition, 'Экономические показатели'] = \
+                table.loc[condition, 'Экономические показатели'] + ', €/руб'
 
         titles = []
         for key_eco in tables:
@@ -362,22 +322,22 @@ async def data_mart(message: types.Message):
                 title = 'Курсы валют и нефть Urals'
             titles.append(title)
 
-        for i,key_eco in enumerate(tables):
+        for i, key_eco in enumerate(tables):
             if not key_eco.empty:
                 key_eco.reset_index(inplace=True, drop=True)
                 key_eco = key_eco.drop(['id', 'alias'], axis=1)
 
-                cols_to_keep = [col for col in key_eco.columns if
-                        re.match(r'\d{4}', col) and col != 'alias'][-4:]
+                cols_to_keep = [col for col in key_eco.columns if re.match(r'\d{4}', col) and col != 'alias'][-4:]
                 cols_to_keep.insert(0, 'Экономические показатели')
                 key_eco = key_eco.loc[:, cols_to_keep]
 
-                transformer.render_mpl_table(key_eco,
-                                             'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
+                transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4,
+                                             title=title, alias=titles[i])
                 png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
 
                 with open(png_path, "rb") as photo:
                     await __sent_photo_and_msg(message, photo, title="")
+
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -475,15 +435,12 @@ async def metal_info(message: types.Message):
             metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
             metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
-            metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan)
-            if str(x) == 'None'
-            else '{}'.format(x))
+            metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan) if str(x) == 'None' else '{}'.format(x))
             metal[key] = metal[key].astype('float')
             metal[key] = metal[key].round()
             metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
-            metal[key] = metal[key].apply(lambda x: '{}%'.format(x)
-            if x != 'nan' and key != 'Цена'
-            else str(x).replace("nan", "-"))
+            metal[key] = metal[key].apply(lambda x: '{}%'.format(x) if x != 'nan' and key != 'Цена'
+                                                                    else str(x).replace("nan", "-"))
 
         metal.index = metal.index.astype('int')
         metal.sort_index(inplace=True)
@@ -537,6 +494,7 @@ async def user_in_whitelist(user: str):
 
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     user_raw = json.loads(message.from_user.as_json())
     email = ' '
     if not await user_in_whitelist(message.from_user.as_json()):
@@ -569,20 +527,21 @@ async def check_your_right(user: dict):
     else:
         return False
 
+
 async def __create_fin_table(message, client_fin_table):
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
-                            'financial_indicator', header_columns=0, col_width=4, title='', alias=message.text.strip().capitalize(), fin=True)
+                                 'financial_indicator', header_columns=0, col_width=4, title='',
+                                 alias=message.text.strip().capitalize(), fin=True)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
     with open(png_path, "rb") as photo:
         await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
 
 
-
 @dp.message_handler(commands=['admin_help'])
 async def admin_help(message: types.Message):
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
 
@@ -598,9 +557,8 @@ async def admin_help(message: types.Message):
 
 @dp.message_handler(commands=['show_article'])
 async def show_article(message: types.Message):
-
     await types.ChatActions.typing()
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
 
@@ -615,7 +573,7 @@ async def show_article(message: types.Message):
 
 @dp.message_handler(state=Form.link)
 async def continue_show_article(message: types.Message, state: FSMContext):
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link=message.text)
     data = await state.get_data()
@@ -643,7 +601,7 @@ async def continue_show_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['change_summary'])
 async def change_summary(message: types.Message):
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     if not config.api_key_gpt:
         await message.answer('Данная команда пока недоступна.', protect_content=True)
         return
@@ -664,7 +622,7 @@ async def change_summary(message: types.Message):
 
 @dp.message_handler(state=Form.link_change_summary)
 async def continue_change_summary(message: types.Message, state: FSMContext):
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
 
@@ -685,11 +643,11 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     await state.finish()
 
 
+# TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
-
     await types.ChatActions.typing()
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
 
@@ -704,7 +662,7 @@ async def delete_article(message: types.Message):
 
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link_to_delete=message.text)
     data = await state.get_data()
@@ -723,7 +681,7 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.permission_to_delete)
 async def finish_delete_article(message: types.Message, state: FSMContext):
-
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(permission_to_delete=message.text)
     data = await state.get_data()
@@ -740,6 +698,7 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['analyse_bad_article'])
 async def analyse_bad_article(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await message.answer('Пока команда недоступна.', protect_content=True)
     return
@@ -759,6 +718,20 @@ async def analyse_bad_article(message: types.Message):
     #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
+@dp.callback_query_handler(text='next_5_news')
+async def send_next_five_news(call: types.CallbackQuery):
+    try:
+        await call.message.answer(articles_l5, parse_mode='HTML',
+                                  protect_content=True, disable_web_page_preview=True)
+    except MessageIsTooLong:
+        articles = articles_l5.split('\n\n')
+        for article in articles:
+            await call.message.answer(article, parse_mode='HTML',
+                                      protect_content=True, disable_web_page_preview=True)
+    finally:
+        await call.message.edit_reply_markup()
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     msg = '{} {}'.format(prompt, message.text)
@@ -766,13 +739,14 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
+    global articles_l5
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
         msg_text = message.text.replace('«', '"').replace('»', '"')
-        reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(message.text)
-
+        com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text)
         fin_table_marker = False
         if not client_fin_table.empty:
+            await types.ChatActions.upload_photo()
             await __create_fin_table(message, client_fin_table)
             fin_table_marker = True
 
@@ -784,12 +758,31 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
                 await bot.send_media_group(message.chat.id, media=media, protect_content=True)
 
+            if com_price:
+                await message.answer(com_price, parse_mode='HTML', protect_content=True,
+                                     disable_web_page_preview=True)
+
+            articles_all = reply_msg.split('\n\n', 6)
+            if len(articles_all) > 5:
+                articles_f5 = '\n\n'.join(articles_all[:6])
+                articles_l5 = articles_all[-1]
+                keyboard = types.InlineKeyboardMarkup()
+                keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
+            else:
+                articles_f5 = reply_msg
+                keyboard = None
+
             try:
-                await message.answer(reply_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+                await message.answer(articles_f5, parse_mode='HTML',
+                                     protect_content=True,
+                                     disable_web_page_preview=True,
+                                     reply_markup=keyboard)
             except MessageIsTooLong:
-                articles = reply_msg.split('\n\n')
+                articles = articles_f5.split('\n\n')
                 for article in articles:
-                    await message.answer(article, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+                    await message.answer(article, parse_mode='HTML',
+                                         protect_content=True,
+                                         disable_web_page_preview=True)
             return None
 
         global chat
@@ -810,7 +803,13 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         else:
             try:
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                giga_js = giga_answer.json()['choices'][0]['message']['content']
+                if giga_answer.status_code == 200:
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
+                elif giga_answer.status_code == 401:
+                    print('Token {}...{} is dead.'.format(token[:10], token[-10:]))
+                    raise AttributeError
+                else:
+                    raise KeyError
 
             except AttributeError:
                 if not fin_table_marker:
@@ -818,8 +817,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     chat = gig.GigaChat()
                     token = chat.get_user_token()
                     print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
-                                                                message.from_user.full_name,
-                                                                message.from_user.username))
+                                                                 message.from_user.full_name,
+                                                                 message.from_user.username))
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
 
@@ -827,11 +826,21 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 giga_answer = chat.ask_giga_chat(token=token, text=msg)
                 giga_js = giga_answer.json()
             if not return_ans:
-                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer),
-                                     protect_content=True)
+                # await types.ChatActions.typing(1)
+                if reply_msg == False and not client_fin_table.empty:
+                    print('NO NEWS FOR THIS TYPE OF MESSAGE')
+                    # await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.',
+                    # protect_content=True)
+                else:
+                    await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=True)
+                # except:
+                #    pass
             else:
                 return giga_js
-            print('{} - {}'.format('GigaChat_say', giga_js))
+            try:
+                print('{} - {}'.format('GigaChat_say', giga_js))
+            except:
+                pass
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
 

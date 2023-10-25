@@ -2,22 +2,24 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
+
 from sql_model.commodity_pricing import CommodityPricing
 from sql_model.commodity import Commodity
-from selenium import webdriver
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from typing import List, Tuple, Dict
+from selenium import webdriver
+
 import requests as req
 from lxml import html
 import pandas as pd
 import numpy as np
+import datetime
 import warnings
 import config
 import time
-import datetime
-import re
-from typing import List, Tuple, Dict
 import json
+import re
 
 
 class Main:
@@ -49,14 +51,14 @@ class Main:
         urls = df_urls.values.tolist()
         for url in urls:
             euro_standard, page_html = self.parser_obj.get_html(url[2], session)
-            print(euro_standard, url[2])
+            # print(euro_standard, url[2])
             try:
                 tables = self.transformer_obj.get_table_from_html(euro_standard, page_html)
                 for table in tables:
                     all_tables.append([url[0].split('/')[0], *url[1:], table])
                 print('Tables added {}'.format(len(tables)))
             except ValueError as val_err:
-                print(url[2])
+                # print(url[2])
                 print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
 
@@ -81,10 +83,10 @@ class Main:
 
         elif 'profinance' in url:
             response = session.get(url)
-            name = name.replace('/','_')
-            name = name.replace(' ','_')
-            name = name.split(',')  
-            name =f'{name[0]}_graph.png'
+            name = name.replace('/', '_')
+            name = name.replace(' ', '_')
+            name = name.split(',')
+            name = f'{name[0]}_graph.png'
             with open(f'./sources/img/{name}', 'wb') as f:
                 f.write(response.content)
         else:
@@ -114,18 +116,24 @@ class Main:
             name = self.commodities[commodity]['naming']
             print(commodity)
             print(self.commodities[commodity]['links'][0])
-            
-            self.graph_collector(link,session,driver,commodity)
+
+            self.graph_collector(link, session, driver, commodity)
 
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
                 InvAPI_obj = ue.InvestingAPIParser(driver)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
-                dict_row = {'Resource':self.commodities[commodity]['naming'],'SPOT':round(float(streaming_price), 1)}
-                
+
+                ''' What's the difference?
+                dict_row = {'Resource': commodity.split(',')[0], 'SPOT': round(float(streaming_price), 1),
+                            'alias': self.commodities[commodity]['alias'].lower().strip(),
+                            'unit': self.commodities[commodity]['measurables']}
+                '''
+                dict_row = {'Resource': self.commodities[commodity]['naming'], 'SPOT': round(float(streaming_price), 1)}
                 dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
                 dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity.split(',')[0] 
+                dict_row['Resource'] = commodity.split(',')[0]
+
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
             elif self.commodities[commodity]['naming'] != 'Gas':
@@ -143,14 +151,12 @@ class Main:
                             dict_row[key] = num
                         else:
                             dict_row[key] = np.nan
-                    
-                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
 
+                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
                 dict_row['unit'] = self.commodities[commodity]['measurables']
                 dict_row['Resource'] = commodity.split(',')[0]
-
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-        
+
         engine = create_engine(self.psql_engine)
         commodity = pd.read_sql_query("select * from commodity", con=engine)
         commodity_ids = pd.DataFrame()
@@ -175,38 +181,37 @@ class Main:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).\
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
                     update({"price": row['price'], "m_delta": np.nan, "y_delta": row['y_delta'], "cons": row['cons']})
-                    # update({"price": row['price'], "m_delta": row['m_delta'], "y_delta": row['y_delta'], "cons": row['cons']})
-                
+                # update({"price": row['price'], "m_delta": row['m_delta'],
+                # "y_delta": row['y_delta'], "cons": row['cons']})
+
                 session.commit()
         else:
             for i, row in df_combined.iterrows():
                 commodity_price_obj = CommodityPricing(
-                                                    commodity_id=int(row['commodity_id']),
-                                                    subname=row['subname'],
-                                                    unit=row['unit'], 
-                                                    price=row['price'],
-                                                    m_delta=np.nan,
-                                                    # m_delta=row['m_delta'],
-                                                    y_delta=row['y_delta'],
-                                                    cons=row['cons'])
+                    commodity_id=int(row['commodity_id']),
+                    subname=row['subname'],
+                    unit=row['unit'],
+                    price=row['price'],
+                    m_delta=np.nan,
+                    # m_delta=row['m_delta'],
+                    y_delta=row['y_delta'],
+                    cons=row['cons'])
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
-            q_gas = session.query(Commodity).filter(Commodity.name=='газ')
+            q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
             commodity_price_obj = CommodityPricing(
-                                                    commodity_id=q_gas[0].id,
-                                                    subname='Газ',
-                                                    unit=np.nan, 
-                                                    price=np.nan,
-                                                    m_delta=np.nan,
-                                                    y_delta=np.nan,
-                                                    cons=np.nan)
+                commodity_id=q_gas[0].id,
+                subname='Газ',
+                unit=np.nan,
+                price=np.nan,
+                m_delta=np.nan,
+                y_delta=np.nan,
+                cons=np.nan)
             session.merge(commodity_price_obj, load=True)
             session.commit()
-            
 
         session.close()
 
@@ -241,9 +246,20 @@ class Main:
     def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session):
         exchange_kot = []
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
-            if {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
-                row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] == 'Real-time Currencies'][
-                    'Last'].values.tolist()[0]]
+            if exchange_page == 'usd-rub':
+                euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
+                tables = pd.read_html(page_html)
+                for table in tables:
+                    try:
+                        row = ['usd-rub', table.loc[table['Exchange'] ==
+                                                    'Real-time Currencies']['Last'].values.tolist()[0]]
+                        exchange_kot.append(row)
+                        break
+                    except:
+                        print('Not correct table')
+            elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
+                row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
+                                                            'Real-time Currencies']['Last'].values.tolist()[0]]
                 exchange_kot.append(row)
 
         elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cny', 'usdollar']:
@@ -251,7 +267,8 @@ class Main:
             tree = html.fromstring(page_html)
 
             # USDOLLAR
-            object_xpath = '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]'
+            object_xpath = '//*[@id="__next"]/div[2]/div[3]/div[1]/div[1]/div[3]/div/div[1]/div[1]/div[1]'
+            # '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]' -old
             price = tree.xpath('{}/text()'.format(object_xpath))
             # usd-cny
             if not price:
@@ -274,16 +291,16 @@ class Main:
             # object_xpath = '//*[@id="root"]/div/div/section/section[1]/div/div[2]/section[1]/section/section/section'
             # price = tree.xpath('{}/div[1]/span[1]/text()'.format(object_xpath))
             # price_diff = tree.xpath('{}/div[2]/span[2]/text()'.format(object_xpath))
-            object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div[1]/main/div/div[1]/div[4]/div'
+            object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div/main/div/div[1]/div[4]/div'
+            #              '//*[@id="__next"]/div/div[2]/div[6]/div[1]/main/div/div[1]/div[4]/div'
             price = tree.xpath('{}/div[1]/text()'.format(object_xpath))
             price_diff = tree.xpath('{}/div[2]/span/span/text()'.format(object_xpath))
             try:
                 row = ['Медь', price[0], price_diff[0]]
                 temp_df = pd.DataFrame([row], columns=['Metals', 'Price', 'Day'])
             except:
-                print(row)
-                print(page_html)
-                raise NameError('HiThere')
+                print('Cannot find Copper Table!!!')
+                temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
             metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
 
         elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
@@ -488,7 +505,6 @@ class Main:
 
         return reviews, companies_pages_html, key_eco_table, clients_table
 
-    
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
         Save all reviews into the database.
@@ -517,10 +533,16 @@ class Main:
     def save_clients_financial_indicators(self, clients_table):
         engine = create_engine(self.psql_engine)
         clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
-    
+
     def save_key_eco_table(self, key_eco_table):
         engine = create_engine(self.psql_engine)
         key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+
+    def save_date_of_last_build(self):
+        engine = create_engine(self.psql_engine)
+        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
+        cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
 
     def process_companies_data(self, company_pages_html) -> None:
         """
@@ -592,11 +614,12 @@ if __name__ == '__main__':
             driver.close()
 
         i = 0
-        with open('sources/tables/time.txt', 'w') as f:
-            f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Wait 3 hours before recollect data...')
+        runner.save_date_of_last_build()
+        # with open('sources/tables/time.txt', 'w') as f:
+        #    f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
+        print('Wait 4 hours before recollect data...')
 
         while i <= 3:
             i += 1
             time.sleep(3600)
-            print('In waiting. \n{}/3 hours'.format(3 - i))
+            print('In waiting. \n{}/4 hours'.format(4 - i+1))
