@@ -398,7 +398,6 @@ class ArticleProcess:
         client_id = self._find_subject_id(message, 'client')
         client_fin_table = self._get_client_fin_indicators(client_id, message.strip().lower())
 
-
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
         else:
