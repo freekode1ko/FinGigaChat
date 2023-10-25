@@ -35,7 +35,6 @@ def regular_func():
 
     df_article = get_period_article()
     article_flag = False if df_article.empty else True
-    df_article.to_excel('source.xlsx', index=False)
 
     if article_flag:
         try:

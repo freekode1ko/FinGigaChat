@@ -42,7 +42,11 @@ class ArticleProcess:
         """
         source_filter = ("(www|realty|quote|pro|marketing).rbc.ru|.interfax(|-russia).ru|www.kommersant.ru|"
                          "www.vedomosti.ru|//tass.(ru|com)/|(realty.|//)ria.ru|/1prime.ru/|www.banki.ru|"
-                         "(.|//)iz.ru/") #TODO: дополнить
+                         "(.|//)iz.ru/|//(|www.)ura.news|//(|www.)ru24.net|//(|www.)energyland.info|"
+                         "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
+                         "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
+                         "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
+                         "//(|www.)pronedra.ru") #TODO: дополнять
 
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
