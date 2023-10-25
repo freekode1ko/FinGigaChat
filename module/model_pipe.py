@@ -194,8 +194,8 @@ def find_names_online(article_title, article_text, alt_names_dict):
     :param alt_names_dict: Pandas DF. Pandas DF with columns with names needed to be found. In one row all names - alternatives.
     :return: str. String with found names separated with ; symbol.
     """
-    article_text = ' ' + article_text.replace('"', '') + ' '
-    article_title = ' ' + article_title.replace('"', '') + ' ' if isinstance(article_title, str) else ''
+    article_text = ' {} '.format(article_text.replace('"', ''))
+    article_title = ' {} '.format(article_title.replace('"', '')) if isinstance(article_title, str) else ''
     names_dict = {}
     title_name_list = []
     names_text = ''
