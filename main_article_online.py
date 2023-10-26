@@ -6,23 +6,22 @@ import json
 import pandas as pd
 
 from module.article_process import ArticleProcess
-from config import URL_TO_ALL_DB, URL_TO_PERIOD_DB, URL_POST_TO_DB
+from config import BASE_GIGAPARSER_URL
 
 
 PERIOD = 3
 
 
-def get_period_article(date: str = '0', hour: str = '0') -> pd.DataFrame:
+def get_article() -> pd.DataFrame:
     """ Get and save articles """
     df_article = pd.DataFrame()
     try:
-        url = URL_TO_ALL_DB if date == '0' else URL_TO_PERIOD_DB.format(date=date, hour=hour)
-        req = requests.get(url)
+        url = BASE_GIGAPARSER_URL.format('get_articles/all')
+        req = requests.post(url)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
         else:
             print(f'{req.status_code} - status code while connect to database.')
-        print(f'url is {url}')
 
     except ConnectionError:
         print('-- Error: Connection error.')
@@ -33,7 +32,7 @@ def get_period_article(date: str = '0', hour: str = '0') -> pd.DataFrame:
 def regular_func():
     """ Processing for new articles """
 
-    df_article = get_period_article()
+    df_article = get_article()
     article_flag = False if df_article.empty else True
 
     if article_flag:
@@ -60,7 +59,7 @@ def regular_func():
 
 def post_ids(ids):
     try:
-        requests.post(URL_POST_TO_DB, json=ids)  # ids = {'id': [1,2,3...]}
+        requests.post(BASE_GIGAPARSER_URL.format('success_request'), json=ids)  # ids = {'id': [1,2,3...]}
     except Exception as e:
         print(e)
 

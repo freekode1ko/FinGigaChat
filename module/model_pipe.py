@@ -71,7 +71,7 @@ def check_gazprom(names: str, names_impact: Dict, text: str) -> str:
     text = text.replace('"', '')
     names_list = names.split(';')
     names_impact_list = list(eval(names_impact).keys())
-    if 'газпром' in names_impact_list and 'газпром нефть' in names_impact_list:
+    if 'газпром' in names and 'газпром нефть' in names_impact_list:
         if not search('газпром(?! нефт[ьи])', text):
             try:
                 names_list.remove('газпром')

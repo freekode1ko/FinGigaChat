@@ -45,9 +45,7 @@ research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
-URL_TO_PERIOD_DB = 'http://gigaparsernews.ru:8000/get_articles/{date}:{hour}'
-URL_TO_ALL_DB = 'http://gigaparsernews.ru:8000/get_articles/all'
-URL_POST_TO_DB = 'http://gigaparsernews.ru:8000/success_request'
+BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
 
 mail_username = "ai-helper@mail.ru"
 mail_password = "ExamKejCpmcpr8kM5emw"
