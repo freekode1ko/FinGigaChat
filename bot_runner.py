@@ -739,81 +739,86 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
-    global articles_l5
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
         msg_text = message.text.replace('«', '"').replace('»', '"')
-        com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text)
-        fin_table_marker = False
-        if not client_fin_table.empty:
-            await types.ChatActions.upload_photo()
-            await __create_fin_table(message, client_fin_table)
-            fin_table_marker = True
+        subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'client'), 'client'
+        if not subject_ids:
+            subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'commodity'), 'commodity'
 
-        if reply_msg:
-            if img_name_list:
+        for subject_id in subject_ids:
+            com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text,
+                                                                                                        subject_id,
+                                                                                                        subject)
+
+            if not client_fin_table.empty:
                 await types.ChatActions.upload_photo()
-                media = types.MediaGroup()
-                for name in img_name_list:
-                    media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
-                await bot.send_media_group(message.chat.id, media=media, protect_content=True)
+                await __create_fin_table(message, client_fin_table)
+                return_ans = True
 
-            if com_price:
-                await message.answer(com_price, parse_mode='HTML', protect_content=True,
-                                     disable_web_page_preview=True)
+            if reply_msg:
 
-            articles_all = reply_msg.split('\n\n', 6)
-            if len(articles_all) > 5:
-                articles_f5 = '\n\n'.join(articles_all[:6])
-                articles_l5 = articles_all[-1]
-                keyboard = types.InlineKeyboardMarkup()
-                keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
-            else:
-                articles_f5 = reply_msg
-                keyboard = None
+                if img_name_list:
+                    await types.ChatActions.upload_photo()
+                    media = types.MediaGroup()
+                    for name in img_name_list:
+                        media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
+                    await bot.send_media_group(message.chat.id, media=media, protect_content=True)
 
-            try:
-                await message.answer(articles_f5, parse_mode='HTML',
-                                     protect_content=True,
-                                     disable_web_page_preview=True,
-                                     reply_markup=keyboard)
-            except MessageIsTooLong:
-                articles = articles_f5.split('\n\n')
-                for article in articles:
-                    await message.answer(article, parse_mode='HTML',
-                                         protect_content=True,
+                if com_price:
+                    await message.answer(com_price, parse_mode='HTML', protect_content=True,
                                          disable_web_page_preview=True)
-            return None
 
-        global chat
-        global token
-        message_text = message.text.lower().strip()
-        if message_text in bonds_aliases:
-            await bonds_info(message)
-        elif message_text in eco_aliases:
-            await economy_info(message)
-        elif message_text in metal_aliases:
-            await metal_info(message)
-        elif message_text in exchange_aliases:
-            await exchange_info(message)
-        elif message_text in view_aliases:
-            await data_mart(message)
-        # elif message_text in ['test']:
-        #    await draw_all_tables(message)
-        else:
-            try:
-                giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                if giga_answer.status_code == 200:
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                elif giga_answer.status_code == 401:
-                    print('Token {}...{} is dead.'.format(token[:10], token[-10:]))
-                    raise AttributeError
-                else:
-                    raise KeyError
+                if isinstance(reply_msg, str):
+                    global articles_l5
+                    articles_all = reply_msg.split('\n\n', 6)
+                    if len(articles_all) > 5:
+                        articles_f5 = '\n\n'.join(articles_all[:6])
+                        articles_l5 = articles_all[-1]
+                        keyboard = types.InlineKeyboardMarkup()
+                        keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
+                    else:
+                        articles_f5 = reply_msg
+                        keyboard = None
 
-            except AttributeError:
-                if not fin_table_marker:
-                    print(fin_table_marker)
+                    try:
+                        await message.answer(articles_f5, parse_mode='HTML', protect_content=True,
+                                             disable_web_page_preview=True, reply_markup=keyboard)
+                    except MessageIsTooLong:
+                        articles = articles_f5.split('\n\n')
+                        for article in articles:
+                            await message.answer(article, parse_mode='HTML', protect_content=True,
+                                                 disable_web_page_preview=True)
+                return None
+
+        if not return_ans:
+            global chat
+            global token
+            message_text = message.text.lower().strip()
+            if message_text in bonds_aliases:
+                await bonds_info(message)
+            elif message_text in eco_aliases:
+                await economy_info(message)
+            elif message_text in metal_aliases:
+                await metal_info(message)
+            elif message_text in exchange_aliases:
+                await exchange_info(message)
+            elif message_text in view_aliases:
+                await data_mart(message)
+            # elif message_text in ['test']:
+            #    await draw_all_tables(message)
+            else:
+                try:
+                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
+                    if giga_answer.status_code == 200:
+                        giga_js = giga_answer.json()['choices'][0]['message']['content']
+                    elif giga_answer.status_code == 401:
+                        print('Token {}...{} is dead.'.format(token[:10], token[-10:]))
+                        raise AttributeError
+                    else:
+                        raise KeyError
+
+                except AttributeError:
                     chat = gig.GigaChat()
                     token = chat.get_user_token()
                     print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
@@ -822,25 +827,12 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
 
-            except KeyError:
-                giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                giga_js = giga_answer.json()
-            if not return_ans:
-                # await types.ChatActions.typing(1)
-                if reply_msg == False and not client_fin_table.empty:
-                    print('NO NEWS FOR THIS TYPE OF MESSAGE')
-                    # await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.',
-                    # protect_content=True)
-                else:
-                    await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=True)
-                # except:
-                #    pass
-            else:
-                return giga_js
-            try:
+                except KeyError:
+                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
+                    giga_js = giga_answer.json()
+
+                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=True)
                 print('{} - {}'.format('GigaChat_say', giga_js))
-            except:
-                pass
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
 

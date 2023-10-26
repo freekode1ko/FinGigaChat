@@ -248,7 +248,7 @@ class ArticleProcess:
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         print(f'-- relation_{name}_article is {len(df_relation_subject_article)}')
 
-    def _find_subject_id(self, message: str, subject: str):
+    def find_subject_id(self, message: str, subject: str):
         """
         Find id of client or commodity by user message
         :param message: user massage
@@ -256,14 +256,14 @@ class ArticleProcess:
         :return: id of client(commodity) or False if user message not about client or commodity
         """
         # TODO: при одинаковых альтернативных названиях для рахных компаний, выдавать новости о всех компаниях
+        subject_ids = []
         message_text = message.lower().strip()
         df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
         df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
-
         for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
             if message_text in names:
-                return subject_id
-        return False
+                subject_ids.append(subject_id)
+        return subject_ids
 
     def _get_articles(self, subject_id: int, subject: str):
         """
@@ -443,30 +443,26 @@ class ArticleProcess:
 
         return com_msg, format_msg, img_name_list
 
-    def process_user_alias(self, message: str):
+    def process_user_alias(self, message: str, subject_id: int, subject: str = ''):
         """ Process user alias and return reply for it """
 
-        com_data, reply_msg, img_name_list = None, '', []
-        client_id, commodity_id = '', ''
-        client_id = self._find_subject_id(message, 'client')
-        client_fin_table = self._get_client_fin_indicators(client_id, message.strip().lower())
+        com_data, reply_msg, img_name_list, client_fin_table = None, '', [], pd.DataFrame()
 
-        if client_id:
-            subject_name, articles = self._get_articles(client_id, 'client')
+        if subject == 'client':
+            subject_name, articles = self._get_articles(subject_id, subject)
+            client_fin_table = self._get_client_fin_indicators(subject_id, message.strip().lower())
+        elif subject == 'commodity':
+            subject_name, articles = self._get_articles(subject_id, subject)
+            com_data = self._get_commodity_pricing(subject_id)
         else:
-            commodity_id = self._find_subject_id(message, 'commodity')
-            if commodity_id:
-                subject_name, articles = self._get_articles(commodity_id, 'commodity')
-                com_data = self._get_commodity_pricing(commodity_id)
-            else:
-                print('user do not want articles')
-                return '', False, img_name_list, client_fin_table
+            print('user do not want articles')
+            return '', False, img_name_list, client_fin_table
 
         com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
-        if client_id and not articles:
+        if subject_id and not articles and subject == 'client':
             return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
-        elif commodity_id and not articles and not img_name_list:
+        elif subject_id and not articles and not img_name_list and subject == 'commodity':
             return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
 
         return com_cotirov, reply_msg, img_name_list, client_fin_table

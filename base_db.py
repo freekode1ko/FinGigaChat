@@ -292,7 +292,7 @@ query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (
 def drop_tables(engine):
     tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
               'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
-              'relation_commodity_article', 'relation_commodity_message']
+              'relation_commodity_article', 'relation_commodity_message', 'article_name_impact']
 
     with engine.connect() as conn:
         for table in tables:
