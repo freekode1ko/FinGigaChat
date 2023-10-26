@@ -332,13 +332,17 @@ class ArticleProcess:
 
         return all_commodity_data
     
-    def _get_client_fin_indicators(self, client_name):
+    def _get_client_fin_indicators(self, client_id, client_name):
         """
-        Get pricing about commodity from db.
-        :param subject_id: id of commodity
-        :return: list(dict) data about commodity pricing
+        Get company finanical indicators.
+        :param client_id: id of company in client table
+        :param client_name: str of company in user's message
+        :return: df financial indicators
         """
-
+        client = None
+        if client_id:
+            client = pd.read_sql('client',con = self.engine)
+            client_name = client[client['id']==client_id]['name'].iloc[0]
         client = pd.read_sql('financial_indicators',con = self.engine)
         client = client[client['company'] == client_name]
         client = client.sort_values('id')
@@ -445,7 +449,7 @@ class ArticleProcess:
         com_data, reply_msg, img_name_list = None, '', []
         client_id, commodity_id = '', ''
         client_id = self._find_subject_id(message, 'client')
-        client_fin_table = self._get_client_fin_indicators(message.strip().lower())
+        client_fin_table = self._get_client_fin_indicators(client_id, message.strip().lower())
 
         if client_id:
             subject_name, articles = self._get_articles(client_id, 'client')
