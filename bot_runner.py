@@ -732,6 +732,16 @@ async def send_next_five_news(call: types.CallbackQuery):
         await call.message.edit_reply_markup()
 
 
+async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str) -> bool:
+    client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, msg_text.strip().lower())
+    if not client_fin_table.empty:
+        await types.ChatActions.upload_photo()
+        await __create_fin_table(message, client_fin_table)
+        return True
+    else:
+        return False
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     msg = '{} {}'.format(prompt, message.text)
@@ -747,13 +757,9 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'commodity'), 'commodity'
 
         for subject_id in subject_ids:
-            com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text,
-                                                                                                        subject_id,
-                                                                                                        subject)
+            com_price, reply_msg, img_name_list = ArticleProcess().process_user_alias(subject_id, subject)
 
-            if not client_fin_table.empty:
-                await types.ChatActions.upload_photo()
-                await __create_fin_table(message, client_fin_table)
+            if await show_client_fin_table(message, subject_id, ''):
                 return_ans = True
 
             if reply_msg:
@@ -789,9 +795,14 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                         for article in articles:
                             await message.answer(article, parse_mode='HTML', protect_content=True,
                                                  disable_web_page_preview=True)
-                return None
+                return_ans = True
 
         if not return_ans:
+            if await show_client_fin_table(message, 0, msg_text):
+                return_ans = True
+
+        if not return_ans:
+            await types.ChatActions.typing()
             global chat
             global token
             message_text = message.text.lower().strip()

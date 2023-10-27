@@ -331,19 +331,18 @@ class ArticleProcess:
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
 
         return all_commodity_data
-    
-    def _get_client_fin_indicators(self, client_id, client_name):
+
+    def get_client_fin_indicators(self, client_id, client_name):
         """
         Get company finanical indicators.
         :param client_id: id of company in client table
         :param client_name: str of company in user's message
         :return: df financial indicators
         """
-        client = None
         if client_id:
-            client = pd.read_sql('client',con = self.engine)
-            client_name = client[client['id']==client_id]['name'].iloc[0]
-        client = pd.read_sql('financial_indicators',con = self.engine)
+            client = pd.read_sql('client', con=self.engine)
+            client_name = client[client['id'] == client_id]['name'].iloc[0]
+        client = pd.read_sql('financial_indicators', con=self.engine)
         client = client[client['company'] == client_name]
         client = client.sort_values('id')
         client_copy = client.copy()
@@ -443,29 +442,26 @@ class ArticleProcess:
 
         return com_msg, format_msg, img_name_list
 
-    def process_user_alias(self, message: str, subject_id: int, subject: str = ''):
+    def process_user_alias(self, subject_id: int, subject: str = ''):
         """ Process user alias and return reply for it """
 
-        com_data, reply_msg, img_name_list, client_fin_table = None, '', [], pd.DataFrame()
+        com_data, reply_msg, img_name_list = None, '', []
 
         if subject == 'client':
             subject_name, articles = self._get_articles(subject_id, subject)
-            client_fin_table = self._get_client_fin_indicators(subject_id, message.strip().lower())
         elif subject == 'commodity':
             subject_name, articles = self._get_articles(subject_id, subject)
             com_data = self._get_commodity_pricing(subject_id)
         else:
             print('user do not want articles')
-            return '', False, img_name_list, client_fin_table
+            return '', False, img_name_list
 
         com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
-        if subject_id and not articles and subject == 'client':
-            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
-        elif subject_id and not articles and not img_name_list and subject == 'commodity':
-            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
+        if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+            reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
-        return com_cotirov, reply_msg, img_name_list, client_fin_table
+        return com_cotirov, reply_msg, img_name_list
 
 
 class ArticleProcessAdmin:
