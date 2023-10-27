@@ -33,20 +33,22 @@ def regular_func():
     """ Processing for new articles """
 
     df_article = get_article()
-    article_flag = False if df_article.empty else True
 
-    if article_flag:
+    if not df_article.empty:
         try:
             print(f'-- got {len(df_article)} articles')
             ap_obj_online = ArticleProcess()
             df_article, ids = ap_obj_online.preprocess_article_online(df_article)
-            print('-- go throw models')
-            df_article = ap_obj_online.throw_the_models(df_article)
-            ap_obj_online.df_article = df_article
-            ap_obj_online.drop_duplicate()
-            ap_obj_online.make_text_sum()
-            ap_obj_online.save_tables()
-            print('-- PROCESSED ARTICLES')
+            if not df_article.empty:
+                print('-- go throw models')
+                df_article = ap_obj_online.throw_the_models(df_article)
+                ap_obj_online.df_article = df_article
+                ap_obj_online.drop_duplicate()
+                ap_obj_online.make_text_sum()
+                ap_obj_online.save_tables()
+                print('-- PROCESSED ARTICLES')
+            else:
+                print('-- DID NOT GET ARTICLES')
         except Exception as exp:
             print(exp)
             ids = json.dumps({'id': []})
@@ -54,6 +56,7 @@ def regular_func():
         ids = json.dumps({'id': []})
         print('-- DID NOT GET ARTICLES')
 
+    ids = json.dumps({'id': []})
     return ids
 
 

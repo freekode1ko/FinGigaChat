@@ -120,7 +120,7 @@ class ArticleProcess:
                                                                'text': x['text'].iloc[0]})).reset_index()
             print(f'-- group by link, so len of articles is {len(df)}')
         except Exception as e:
-            print(f'Error: {e}')
+            print(e)
 
         return df, gotten_ids
 
