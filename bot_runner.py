@@ -487,7 +487,7 @@ async def user_subscriptions(message: types.Message):
         buttons = []
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
-        msg_txt = 'Выбирите подписку'
+        msg_txt = 'Выберите подписку'
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
                                              input_field_placeholder=msg_txt)
     await message.answer(msg_txt, reply_markup=keyboard)
