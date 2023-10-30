@@ -474,11 +474,23 @@ def __replacer(data: str):
     return data
 
 
-async def draw_all_tables(message: types.Message):
-    from sqlalchemy import create_engine
-    engine = create_engine('postgresql://bot:12345@0.0.0.0:5432/users')
-    df_from_db = pd.read_sql_query('select * from "users"', con=engine)
-    print(df_from_db)
+@dp.message_handler(commands=['myactivesubscriptions'])
+async def user_subscriptions(message: types.Message):
+    user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
+    engine = create_engine(psql_engine)
+    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
+                                      con=engine)['subscriptions'].values.tolist()
+    if not subscriptions:
+        keyboard = types.ReplyKeyboardRemove()
+        msg_txt = 'Нет активных подписок'
+    else:
+        buttons = []
+        for subscription in subscriptions:
+            buttons.append([types.KeyboardButton(text=subscription)])
+        msg_txt = 'Выберите подписку'
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                             input_field_placeholder=msg_txt)
+    await message.answer(msg_txt, reply_markup=keyboard)
 
 
 async def user_in_whitelist(user: str):
@@ -503,8 +515,8 @@ async def user_to_whitelist(message: types.Message):
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
-        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active']],
-                            columns=['user_id', 'username', 'email', 'user_type', 'user_status'])
+        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active', None]],
+                            columns=['user_id', 'username', 'email', 'user_type', 'user_status', 'subscriptions'])
         try:
             engine = create_engine(psql_engine)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
