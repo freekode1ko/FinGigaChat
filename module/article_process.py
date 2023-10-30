@@ -255,7 +255,6 @@ class ArticleProcess:
         :param subject: client or commodity
         :return: id of client(commodity) or False if user message not about client or commodity
         """
-        # TODO: при одинаковых альтернативных названиях для рахных компаний, выдавать новости о всех компаниях
         subject_ids = []
         message_text = message.lower().strip()
         df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
@@ -559,8 +558,6 @@ class ArticleProcessAdmin:
 
     def get_bad_article(self):
         """ Get article data if it contains bad word """
-        # TODO: как отправлять большее количество новостей
-
         df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
         df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
         df = df[~df['relevant']]

@@ -56,7 +56,6 @@ def regular_func():
         ids = json.dumps({'id': []})
         print('-- DID NOT GET ARTICLES')
 
-    ids = json.dumps({'id': []})
     return ids
 
 
