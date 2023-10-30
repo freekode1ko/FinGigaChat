@@ -4,7 +4,7 @@ import warnings
 import textwrap
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -17,6 +17,9 @@ from module.model_pipe import summarization_by_chatgpt
 import module.data_transformer as dt
 import module.gigachat as gig
 import config
+
+CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
+COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 
 path_to_source = config.path_to_source
 API_TOKEN = config.api_token
@@ -57,6 +60,7 @@ class Form(StatesGroup):
     link_change_summary = State()
     link_to_delete = State()
     permission_to_delete = State()
+    user_subscriptions = State()
 
 
 def read_curdatetime():
@@ -463,7 +467,7 @@ def __replacer(data: str):
     if '.' > 1 and first object in data_list == 0 => '{}.{}{}'(*data_list)
 
     :param data: value from cell
-    :return: formated data
+    :return: formatted data
     """
     data_list = data.split('.')
     if len(data_list) > 2:
@@ -474,9 +478,42 @@ def __replacer(data: str):
     return data
 
 
-@dp.message_handler(commands=['test'])
+@dp.message_handler(commands=['addnewsubscriptions'])
 async def menuButton_test(message: types.Message):
-    await message.answer('test_msg')
+    await Form.user_subscriptions.set()
+    await message.answer('Сформируйте полный список интересующие клиенты или сырье для подписоки на '
+                         'пассивную отпраку новостей по ним.\n'
+                         'Перечистлите их в одном сообщении каждую с новой строки.')
+
+
+@dp.message_handler(state=Form.user_subscriptions)
+async def set_user_subscriptions(message: types.Message, state: FSMContext):
+    await state.finish()
+    subscriptions = []
+    engine = create_engine(psql_engine)
+    user_id = json.loads(message.from_user.as_json())['id']
+    com_df = pd.read_excel(COMMODITY_ALTERNATIVE_NAME_PATH).rename(columns={'Commodity': 'Object'})
+    client_df = pd.read_excel(CLIENT_ALTERNATIVE_NAME_PATH).rename(columns={'Клиент': 'Object'})
+    df_all = pd.concat([client_df, com_df], ignore_index=True, sort=False).fillna('-')
+    user_request = [i.strip().lower() for i in message.text.split('\n')]
+    for subscription in user_request:
+        for index, row in df_all.iterrows():
+            for key in row.keys():
+                if subscription == row[key].strip().lower():
+                    subscriptions.append(row[key])
+                    continue
+    if (len(subscriptions) < len(user_request)) and subscriptions:
+        await message.reply(f'{", ".join(list(set(user_request) - set(subscriptions)))} '
+                            f'- Эти объеты нам не известны, пока что')
+    if subscriptions:
+        subscriptions = ", ".join(subscriptions)
+        with engine.connect() as conn:
+            conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
+            conn.commit()
+        await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
+    else:
+        await message.reply('Не найдена ни один из перечисленных объектов новостей')
+
 
 @dp.message_handler(commands=['myactivesubscriptions'])
 async def user_subscriptions(message: types.Message):
