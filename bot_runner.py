@@ -474,6 +474,10 @@ def __replacer(data: str):
     return data
 
 
+@dp.message_handler(commands=['test'])
+async def menuButton_test(message: types.Message):
+    await message.answer('test_msg')
+
 @dp.message_handler(commands=['myactivesubscriptions'])
 async def user_subscriptions(message: types.Message):
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
