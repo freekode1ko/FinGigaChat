@@ -375,9 +375,9 @@ class ArticleProcess:
                 if new_df.shape[1] > 6:
                     new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
         else:
-            return client
+            return client_name, client
 
-        return new_df
+        return client_name, new_df
         
 
     @staticmethod

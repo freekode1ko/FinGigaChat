@@ -528,12 +528,12 @@ async def check_your_right(user: dict):
         return False
 
 
-async def __create_fin_table(message, client_fin_table):
+async def __create_fin_table(message, client_name, client_fin_table):
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
                                  'financial_indicator', header_columns=0, col_width=4, title='',
-                                 alias=message.text.strip().capitalize(), fin=True)
+                                 alias=client_name.strip().upper(), fin=True)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
     with open(png_path, "rb") as photo:
         await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
@@ -637,8 +637,12 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     await types.ChatActions.typing()
     new_text_sum = summarization_by_chatgpt(full_text)
     apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
-
-    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    try:
+        await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    except MessageIsTooLong:
+        # TODO: показывать батчами при необходимости
+        await message.answer(f"<b>Старое саммари не помещается в одно сообщение.</b>",
+                             parse_mode='HTML', protect_content=True)
     await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
     await state.finish()
 
@@ -733,10 +737,10 @@ async def send_next_five_news(call: types.CallbackQuery):
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str) -> bool:
-    client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, msg_text.strip().lower())
+    client_name, client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, msg_text.strip().lower())
     if not client_fin_table.empty:
         await types.ChatActions.upload_photo()
-        await __create_fin_table(message, client_fin_table)
+        await __create_fin_table(message, client_name, client_fin_table)
         return True
     else:
         return False
@@ -793,8 +797,11 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     except MessageIsTooLong:
                         articles = articles_f5.split('\n\n')
                         for article in articles:
-                            await message.answer(article, parse_mode='HTML', protect_content=True,
-                                                 disable_web_page_preview=True)
+                            if len(article) < 4050:
+                                await message.answer(article, parse_mode='HTML', protect_content=True,
+                                                     disable_web_page_preview=True)
+                            else:
+                                print(f"MessageIsTooLong ERROR: {article}")
                 return_ans = True
 
         if not return_ans:
