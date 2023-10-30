@@ -120,7 +120,7 @@ class ArticleProcess:
                                                                'text': x['text'].iloc[0]})).reset_index()
             print(f'-- group by link, so len of articles is {len(df)}')
         except Exception as e:
-            print(f'Error: {e}')
+            print(e)
 
         return df, gotten_ids
 
@@ -248,22 +248,21 @@ class ArticleProcess:
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         print(f'-- relation_{name}_article is {len(df_relation_subject_article)}')
 
-    def _find_subject_id(self, message: str, subject: str):
+    def find_subject_id(self, message: str, subject: str):
         """
         Find id of client or commodity by user message
         :param message: user massage
         :param subject: client or commodity
         :return: id of client(commodity) or False if user message not about client or commodity
         """
-        # TODO: при одинаковых альтернативных названиях для рахных компаний, выдавать новости о всех компаниях
+        subject_ids = []
         message_text = message.lower().strip()
         df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
         df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
-
         for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
             if message_text in names:
-                return subject_id
-        return False
+                subject_ids.append(subject_id)
+        return subject_ids
 
     def _get_articles(self, subject_id: int, subject: str):
         """
@@ -331,19 +330,18 @@ class ArticleProcess:
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
 
         return all_commodity_data
-    
-    def _get_client_fin_indicators(self, client_id, client_name):
+
+    def get_client_fin_indicators(self, client_id, client_name):
         """
         Get company finanical indicators.
         :param client_id: id of company in client table
         :param client_name: str of company in user's message
         :return: df financial indicators
         """
-        client = None
         if client_id:
-            client = pd.read_sql('client',con = self.engine)
-            client_name = client[client['id']==client_id]['name'].iloc[0]
-        client = pd.read_sql('financial_indicators',con = self.engine)
+            client = pd.read_sql('client', con=self.engine)
+            client_name = client[client['id'] == client_id]['name'].iloc[0]
+        client = pd.read_sql('financial_indicators', con=self.engine)
         client = client[client['company'] == client_name]
         client = client.sort_values('id')
         client_copy = client.copy()
@@ -376,9 +374,9 @@ class ArticleProcess:
                 if new_df.shape[1] > 6:
                     new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
         else:
-            return client
+            return client_name, client
 
-        return new_df
+        return client_name, new_df
         
 
     @staticmethod
@@ -443,33 +441,26 @@ class ArticleProcess:
 
         return com_msg, format_msg, img_name_list
 
-    def process_user_alias(self, message: str):
+    def process_user_alias(self, subject_id: int, subject: str = ''):
         """ Process user alias and return reply for it """
 
         com_data, reply_msg, img_name_list = None, '', []
-        client_id, commodity_id = '', ''
-        client_id = self._find_subject_id(message, 'client')
-        client_fin_table = self._get_client_fin_indicators(client_id, message.strip().lower())
 
-        if client_id:
-            subject_name, articles = self._get_articles(client_id, 'client')
+        if subject == 'client':
+            subject_name, articles = self._get_articles(subject_id, subject)
+        elif subject == 'commodity':
+            subject_name, articles = self._get_articles(subject_id, subject)
+            com_data = self._get_commodity_pricing(subject_id)
         else:
-            commodity_id = self._find_subject_id(message, 'commodity')
-            if commodity_id:
-                subject_name, articles = self._get_articles(commodity_id, 'commodity')
-                com_data = self._get_commodity_pricing(commodity_id)
-            else:
-                print('user do not want articles')
-                return '', False, img_name_list, client_fin_table
+            print('user do not want articles')
+            return '', False, img_name_list
 
         com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
-        if client_id and not articles:
-            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
-        elif commodity_id and not articles and not img_name_list:
-            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
+        if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+            reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
-        return com_cotirov, reply_msg, img_name_list, client_fin_table
+        return com_cotirov, reply_msg, img_name_list
 
 
 class ArticleProcessAdmin:
@@ -567,8 +558,6 @@ class ArticleProcessAdmin:
 
     def get_bad_article(self):
         """ Get article data if it contains bad word """
-        # TODO: как отправлять большее количество новостей
-
         df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
         df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
         df = df[~df['relevant']]
