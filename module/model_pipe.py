@@ -355,11 +355,10 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
 
     # make_summarization
     print(f'-- make summary for {type_of_article}')
-    # giga_chat = GigaChat()
-    # token = giga_chat.get_user_token()
-    # df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
-    # df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
-    df['text_sum'] = ' '
+    giga_chat = GigaChat()
+    token = giga_chat.get_user_token()
+    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
+    df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
 
     # find subject name in text
     print(f'-- find {type_of_article} names in article')
