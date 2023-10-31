@@ -135,7 +135,7 @@ class ArticleProcess:
         dt_now = dt.datetime.now()
         old_query = (f"SELECT cleaned_data FROM article_name_impact "
                      f"JOIN article a ON a.id=article_id "
-                     f"WHERE  '{dt_now}' - a.date < '5 day'")
+                     f"WHERE  '{dt_now}' - a.date < '15 day'")
         old_articles = pd.read_sql(old_query, con=self.engine)
         self.df_article = deduplicate(self.df_article, old_articles)
 

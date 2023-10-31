@@ -481,7 +481,7 @@ def add_text_sum_column(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.51) -> pd.DataFrame:
+def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
     """
     Delete similar articles
     :param df: df with new article
