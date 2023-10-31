@@ -401,7 +401,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     return df
 
 
-def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.51) -> pd.DataFrame:
+def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
     """
     Delete similar articles
     :param df: df with new article
