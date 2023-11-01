@@ -482,6 +482,7 @@ def __replacer(data: str):
 
 @dp.message_handler(commands=['addnewsubscriptions'])
 async def menuButton_test(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await Form.user_subscriptions.set()
     await message.answer('Сформируйте полный список интересующие клиенты или сырье для подписоки на '
                          'пассивную отпраку новостей по ним.\n'
@@ -490,6 +491,7 @@ async def menuButton_test(message: types.Message):
 
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.finish()
     subscriptions = []
     engine = create_engine(psql_engine)
@@ -519,6 +521,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['myactivesubscriptions'])
 async def get_user_subscriptions(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
