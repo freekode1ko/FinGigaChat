@@ -45,6 +45,10 @@ research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
 api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
+CLIENT_NAME_PATH = 'data/name/client_name.csv'
+COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
+CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
+COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
 
 mail_username = "ai-helper@mail.ru"

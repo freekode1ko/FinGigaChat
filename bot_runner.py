@@ -18,12 +18,14 @@ import module.data_transformer as dt
 import module.gigachat as gig
 import config
 
-CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
-COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
+# TODO: read from DataBase
+client_names = config.CLIENT_ALTERNATIVE_NAME_PATH
+commodity_names = config.COMMODITY_ALTERNATIVE_NAME_PATH
 
 path_to_source = config.path_to_source
-API_TOKEN = config.api_token
 psql_engine = config.psql_engine
+API_TOKEN = config.api_token
+
 articles_l5 = ''
 token = ''
 chat = ''
@@ -492,8 +494,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     subscriptions = []
     engine = create_engine(psql_engine)
     user_id = json.loads(message.from_user.as_json())['id']
-    com_df = pd.read_excel(COMMODITY_ALTERNATIVE_NAME_PATH).rename(columns={'Commodity': 'Object'})
-    client_df = pd.read_excel(CLIENT_ALTERNATIVE_NAME_PATH).rename(columns={'Клиент': 'Object'})
+    com_df = pd.read_excel(commodity_names).rename(columns={'Commodity': 'Object'})
+    client_df = pd.read_excel(client_names).rename(columns={'Клиент': 'Object'})
     df_all = pd.concat([client_df, com_df], ignore_index=True, sort=False).fillna('-')
     user_request = [i.strip().lower() for i in message.text.split('\n')]
     for subscription in user_request:
@@ -516,7 +518,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(commands=['myactivesubscriptions'])
-async def user_subscriptions(message: types.Message):
+async def get_user_subscriptions(message: types.Message):
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",

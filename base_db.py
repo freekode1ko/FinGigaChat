@@ -1,11 +1,12 @@
 from sqlalchemy import create_engine, text
 import pandas as pd
-from config import psql_engine
+from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
+    CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH
 
-CLIENT_NAME_PATH = 'data/name/client_name.csv'
-COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
-CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
-COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
+# CLIENT_NAME_PATH = 'data/name/client_name.csv'
+# COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
+# CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
+# COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 
 
 def make_alternative_tables(engine, subject, filepath):
