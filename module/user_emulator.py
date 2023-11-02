@@ -429,7 +429,6 @@ class ResearchParser:
         time.sleep(5)
         reviews = self.driver.find_element(By.XPATH,
                                                 '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
-        # reviews.click()
 
         time.sleep(5)
         reviews_rows = self.driver.find_elements(By.XPATH,
@@ -458,7 +457,6 @@ class ResearchParser:
 
         time.sleep(2)
         link = download_report.find_element(By.XPATH,"./a[1]").click()
-        # link.click()
 
         time.sleep(5)
         thumbnails_div = self.driver.find_element(By.CLASS_NAME, "thumbnails-panel")
