@@ -528,7 +528,7 @@ async def check_your_right(user: dict):
         return False
 
 
-async def __create_fin_table(message, name, client_fin_table):
+async def __create_fin_table(message, client_name, client_fin_table):
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
