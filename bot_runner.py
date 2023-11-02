@@ -533,7 +533,7 @@ async def __create_fin_table(message, client_name, client_fin_table):
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
                                  'financial_indicator', header_columns=0, col_width=4, title='',
-                                 alias=name.strip().capitalize(), fin=True)
+                                 alias=client_name.strip().capitalize(), fin=True)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
     with open(png_path, "rb") as photo:
         await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
