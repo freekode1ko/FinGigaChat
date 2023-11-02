@@ -420,7 +420,7 @@ class ResearchParser:
         """
 
         url = config.industry_base_url.format(id)
-        pdf_dir = config.pdf_dir
+        pdf_dir = f'{config.path_to_source}/reviews'
         filename = None
         date = None
         old = []

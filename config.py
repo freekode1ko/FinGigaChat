@@ -528,5 +528,3 @@ industry_reviews = \
 industry_base_url = 'https://research.sberbank-cib.com/group/guest/' \
         'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_' \
         'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
-
-pdf_dir = f'./sources/reviews'
