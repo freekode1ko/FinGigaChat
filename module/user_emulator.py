@@ -2,7 +2,10 @@ import re
 import random
 import time
 import json
+import os
+import requests
 from typing import List
+from io import BytesIO
 import copy
 import selenium
 import selenium.webdriver as wb
@@ -12,9 +15,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
-
-from module import data_transformer as Transformer
+from PyPDF2 import PdfMerger, PdfFileReader
+from PIL import Image
+from natsort import natsorted
 import config
+from module import data_transformer as Transformer
 
 
 class ResearchError(Exception):
@@ -390,6 +395,107 @@ class ResearchParser:
 
         return result
 
+    @staticmethod
+    def get_emulator_cookies(driver) -> requests.Session():
+        """
+        Sets selenium session params to requests.Session() object
+        :param driver: driver to retrieve session params
+        :return session:
+        """
+
+        cookies = driver.get_cookies()
+        headers = {header["name"]: header["value"] for header in driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming") if header.get("name")}
+        session = requests.Session()
+        session.verify = False
+        session.headers.update(headers)
+        for cookie in cookies:
+            session.cookies.set(cookie["name"], cookie["value"])
+        return session
+
+    def __get_industry_pdf(self, id, value):
+        """
+        Get pdf for industry review
+        :param id: id of industry in SberResearch
+        :param value: name of industry in SberResearch
+        """
+
+        url = config.industry_base_url.format(id)
+        pdf_dir = config.pdf_dir
+        filename = None
+        date = None
+        old = []
+        self.driver.get(url)
+
+        time.sleep(5)
+        reviews = self.driver.find_element(By.XPATH,
+                                                '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
+        # reviews.click()
+
+        time.sleep(5)
+        reviews_rows = self.driver.find_elements(By.XPATH,
+                                                f"//div[contains(@title, '{value}')]")
+
+        for review in reviews_rows:
+            link = review.find_element(By.XPATH,"./a[1]")
+            self.driver.execute_script("arguments[0].scrollIntoView();", link)
+            filename = review.get_attribute('title').replace(' ','_')
+            date = review.find_element(By.XPATH,'..').\
+                find_element(By.XPATH,'..').\
+                find_element(By.CLASS_NAME,'date').text
+            filename = f'{filename}__{date}.pdf'
+            link.click()
+            break 
+        
+        if not os.path.exists(pdf_dir):
+            os.makedirs(pdf_dir)
+        old = [f for f in os.listdir(pdf_dir) if f'{value}' in f]
+        if os.path.exists('{}/{}'.format(pdf_dir,f'{filename}')):
+            return
+
+        time.sleep(2)
+        download_report = self.driver.find_element(By.CLASS_NAME,
+                                                "downloadReport")
+
+        time.sleep(2)
+        link = download_report.find_element(By.XPATH,"./a[1]").click()
+        # link.click()
+
+        time.sleep(5)
+        thumbnails_div = self.driver.find_element(By.CLASS_NAME, "thumbnails-panel")
+
+        session = self.get_emulator_cookies(self.driver)
+
+        for i, a in enumerate(thumbnails_div.find_elements(By.TAG_NAME, "a")):
+            href = a.get_attribute("href")
+            response = session.get(href)
+            content = response.content
+            with Image.open(BytesIO(content)) as img:
+                pdf_path = '{}/{}'.format(pdf_dir, f'image_{i}.pdf')
+                img.save(pdf_path, "PDF", resolution=300.0)
+
+        pdf_files = natsorted([f for f in os.listdir(pdf_dir) if f.endswith('.pdf') and 'image' in f])
+        pdf_merger = PdfMerger()
+        for pdf_file in pdf_files:
+            pdf_merger.append(open(os.path.join(pdf_dir, pdf_file), 'rb'))
+        with open(os.path.join(pdf_dir, filename), 'wb') as file:
+            pdf_merger.write(file)
+        [os.remove(os.path.join(pdf_dir, f)) for f in os.listdir(pdf_dir) if 'image' in f]
+        if old.__len__() > 0:
+            os.remove(os.path.join(pdf_dir, old[0]))
+        
+    def get_industry_reviews(self):  
+        """
+        Get all industry reviews
+        """
+
+        print('---industry reviews---')
+        industry_reviews = config.industry_reviews
+        for industry in industry_reviews:
+            try:
+                self.__get_industry_pdf(industry, industry_reviews[industry])
+                print(f'{industry_reviews[industry]}..ok')
+            except:
+                print(f'{industry_reviews[industry]}..ERROR')
 
 class InvestingAPIParser:
     """

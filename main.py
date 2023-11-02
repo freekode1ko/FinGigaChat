@@ -503,6 +503,9 @@ class Main:
         clients_table = authed_user.get_companies_financial_indicators_table()
         print('clients table...ok')
 
+        authed_user.get_industry_reviews()
+        print('industry reviews...ok')
+
         return reviews, companies_pages_html, key_eco_table, clients_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
@@ -590,11 +593,9 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
-        # driver = webdriver.Firefox(options=firefox_options)
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            pass
             reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
             runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
