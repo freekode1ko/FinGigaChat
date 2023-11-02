@@ -528,12 +528,12 @@ async def check_your_right(user: dict):
         return False
 
 
-async def __create_fin_table(message, client_fin_table):
+async def __create_fin_table(message, name, client_fin_table):
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
                                  'financial_indicator', header_columns=0, col_width=4, title='',
-                                 alias=message.text.strip().capitalize(), fin=True)
+                                 alias=name.strip().capitalize(), fin=True)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
     with open(png_path, "rb") as photo:
         await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
@@ -745,9 +745,11 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         msg_text = message.text.replace('«', '"').replace('»', '"')
         com_price, reply_msg, img_name_list, client_fin_table = ArticleProcess().process_user_alias(msg_text)
         fin_table_marker = False
-        if not client_fin_table.empty:
-            await types.ChatActions.upload_photo()
-            await __create_fin_table(message, client_fin_table)
+        if client_fin_table:
+            for name, client_fin_table_item in client_fin_table.items():
+                if not client_fin_table_item.empty:
+                    await types.ChatActions.upload_photo()
+                    await __create_fin_table(message, name, client_fin_table_item)
             fin_table_marker = True
 
         if reply_msg:
@@ -827,7 +829,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 giga_js = giga_answer.json()
             if not return_ans:
                 # await types.ChatActions.typing(1)
-                if reply_msg == False and not client_fin_table.empty:
+                if reply_msg == False and not client_fin_table:
                     print('NO NEWS FOR THIS TYPE OF MESSAGE')
                     # await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.',
                     # protect_content=True)

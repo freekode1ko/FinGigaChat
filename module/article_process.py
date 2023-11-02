@@ -285,48 +285,89 @@ class ArticleProcess:
         Get company finanical indicators.
         :param client_id: id of company in client table
         :param client_name: str of company in user's message
-        :return: df financial indicators
+        :return: df financial insdicators
         """
         client = None
-        if client_id:
-            client = pd.read_sql('client',con = self.engine)
+        client_alter = None
+        client = pd.read_sql('financial_indicators', con=self.engine)
+        client_fin = client.copy()
+
+        if client_id and client_name not in set(client['company']):
+            client = pd.read_sql('client', con=self.engine)
+            client_alter = client.copy()
             client_name = client[client['id']==client_id]['name'].iloc[0]
-        client = pd.read_sql('financial_indicators',con = self.engine)
+        client = client_fin.copy()
         client = client[client['company'] == client_name]
         client = client.sort_values('id')
         client_copy = client.copy()
+        clients = {}
+        clients[client_name]=client
+        
+        if client.empty:
+            client_alternative = pd.read_sql('client_alternative', con=self.engine)
+            client = client_alter
+            financial_indicators = client_fin
 
-        if not client.empty:
-            alias_idx = client.columns.get_loc('alias')
-            new_df = client.iloc[:, :alias_idx]
-            full_nan_cols = new_df.isna().all().sum()
+            if not isinstance(client, pd.DataFrame):
 
-            if full_nan_cols > 1:
-                alias_idx = client_copy.columns.get_loc('alias')
-                left_client = client_copy.iloc[:, :alias_idx]
-                remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
-                right_client = client_copy.iloc[:, alias_idx:]
-                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
+                if not client:
+                    return client
+            alternates = client_alternative[client_alternative['client_id']==\
+                client[client['name']==client_name]['id'].iloc[0]]['other_names'].iloc[0].split(';')
 
-                if len(selected_cols) < 5:
-                    if full_nan_cols < 5:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)-1]
+            for alternative_name in alternates:
+                subclient = financial_indicators[financial_indicators['company']==alternative_name]
+                clients[alternative_name]=subclient
+
+        new_dfs = {}
+
+        for name, client in clients.items():
+
+            if not client.empty:
+                client_copy = client_fin.copy()
+                client_copy = client_copy[client_copy['company'] == name]
+                client_copy = client_copy.sort_values('id')
+                alias_idx = client.columns.get_loc('alias')
+                new_df = client.iloc[:, :alias_idx]
+                full_nan_cols = new_df.isna().all().sum()
+
+                if full_nan_cols > 1:
+                    alias_idx = client_copy.columns.get_loc('alias')
+                    left_client = client_copy.iloc[:, :alias_idx]
+                    remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
+                    right_client = client_copy.iloc[:, alias_idx:]
+                    selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
+
+                    if len(selected_cols) < 5:
+                        numeric_cols = right_client.select_dtypes(include=np.number).columns
+                        non_nan_numeric_cols = numeric_cols[right_client[numeric_cols].notnull().any()].tolist()
+                        if full_nan_cols < 5:
+                            remaining_numeric_cols = non_nan_numeric_cols[:int(remaining_cols)]
+                        else:
+                            remaining_numeric_cols = non_nan_numeric_cols[:int(remaining_cols)+1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
-                    else:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols)+1]
-                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
 
-                result = client_copy[selected_cols]
-                numeric_cols = [col for col in result.columns if all(c.isdigit() or c == 'E' for c in col)]
-                numeric_cols.sort()
-                new_cols = ['name'] + numeric_cols
-                new_df = result[new_cols]
-                if new_df.shape[1] > 6:
-                    new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
-        else:
-            return client
+                    result = client_copy[selected_cols]
+                    numeric_cols = [col for col in result.columns if all(c.isdigit() or c == 'E' for c in col)]
+                    numeric_cols.sort()
+                    new_cols = ['name'] + numeric_cols
+                    new_df = result[new_cols]
 
-        return new_df
+                    if new_df.shape[1] > 6:
+                        new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
+                    new_dfs[name] = new_df
+                else:
+                    numeric_cols = [col for col in new_df.columns if all(c.isdigit() or c == 'E' for c in col)]
+                    numeric_cols.sort()
+                    new_cols = ['name'] + numeric_cols
+                    new_df = new_df[new_cols]
+                    if new_df.shape[1] > 6:
+                        new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
+                    new_dfs[name] = new_df
+            else:
+                new_dfs[name] = client
+                
+        return new_dfs
         
 
     @staticmethod
