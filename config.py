@@ -436,7 +436,7 @@ dict_of_companies = \
             'company_id': '674',
             'alias': 'Потребительский сектор'
         },
-        'ОКЕЙ': {
+        "О'КЕЙ": {
             'company_id': '817',
             'alias': 'Потребительский сектор'
         },
@@ -468,7 +468,7 @@ dict_of_companies = \
             'company_id': '1430',
             'alias': 'Интернет'
         },
-        'VK': {
+        'ВК': {
             'company_id': '819',
             'alias': 'Интернет'
         },
