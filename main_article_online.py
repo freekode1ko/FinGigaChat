@@ -61,6 +61,7 @@ def regular_func():
 
 def post_ids(ids):
     try:
+        print('-- do post request with ids')
         requests.post(BASE_GIGAPARSER_URL.format('success_request'), json=ids)  # ids = {'id': [1,2,3...]}
     except Exception as e:
         print(e)

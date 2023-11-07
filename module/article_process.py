@@ -133,9 +133,18 @@ class ArticleProcess:
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         dt_now = dt.datetime.now()
-        old_query = (f"SELECT cleaned_data FROM article_name_impact "
-                     f"JOIN article a ON a.id=article_id "
-                     f"WHERE  '{dt_now}' - a.date < '5 day'")
+        old_query = (f"SELECT a.id, "
+                     f"STRING_AGG(DISTINCT client.name, ';') AS client, "
+                     f"STRING_AGG(DISTINCT commodity.name, ';') AS commodity, "
+                     f"ani.cleaned_data "
+                     f"FROM article a "
+                     f"LEFT JOIN relation_client_article r_client ON a.id = r_client.article_id "
+                     f"LEFT JOIN client ON r_client.client_id = client.id "
+                     f"LEFT JOIN relation_commodity_article r_commodity ON a.id = r_commodity.article_id "
+                     f"LEFT JOIN commodity ON r_commodity.commodity_id = commodity.id "
+                     f"JOIN article_name_impact ani ON ani.article_id = a.id "
+                     f"WHERE '{dt_now}' - a.date < '15 day' "
+                     f"GROUP BY a.id, ani.cleaned_data")
         old_articles = pd.read_sql(old_query, con=self.engine)
         self.df_article = deduplicate(self.df_article, old_articles)
 
