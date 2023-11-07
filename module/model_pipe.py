@@ -33,15 +33,58 @@ STOCK_WORDS = ['индекс мосбиржа', 'индекс мб', 'индек
                'главный событие месяц', 'вечерний комментарий', 'дневной обзор']
 
 
-def get_alternative_names_pattern(alt_names):
+def get_alternative_names_pattern_commodity(alt_names):
+    """ Создает регулярные выражения для коммодов """
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for i, alt_names_list in enumerate(table_subject_list):
         clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        names_pattern_base = "( |\. |, |\) )|".join(clear_alt_names)
-        names_patter_upper = '( |\. |, |\) )|'.join([el.upper() for el in clear_alt_names])
+        names_pattern_base = "|".join(clear_alt_names)
+        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
         key = clear_alt_names[0]
+        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
+    return alter_names_dict
+
+
+def add_endings(clear_names_list):
+    """ Добавляет окончания к именам клиента в списке альтернативных имен """
+    vowels = 'ауоыэяюиеь'
+    english_vowels = 'aeiouy'
+    ending_v = '|а|я|ы|и|е|у|ю|ой|ей'
+    ending_c = '|о|е|а|я|у|ю|и|ом|ем'
+
+    for i, name in enumerate(clear_names_list):
+        name_strip = name.strip()
+        if ' ' not in name_strip:
+
+            last_mark = name_strip[-1]
+            last_mark_lower = last_mark.lower()
+
+            if last_mark_lower in vowels and len(name_strip) > 3:
+                clear_names_list[i] = f'{name[:-1]}({last_mark}{ending_v})'
+            elif last_mark.isalpha() and last_mark_lower not in english_vowels and last_mark != 'ъ':
+                clear_names_list[i] = f'{name}({ending_c})'
+
+    return clear_names_list
+
+
+def get_alternative_names_pattern_client(alt_names):
+    """ Создает регулярные выражения для клиентов """
+    alter_names_dict = dict()
+    table_subject_list = alt_names.values.tolist()
+    for alt_names_list in table_subject_list:
+        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        key = clear_alt_names[0]
+
+        clear_alt_names = add_endings(clear_alt_names)
+        clear_alt_names_upper = add_endings([el.upper() for el in clear_alt_names])
+
+        names_pattern_base = "( |\. |, |\) )|".join(clear_alt_names)
+        names_pattern_base += "( |\. |, |\) )"
+        names_patter_upper = '( |\. |, |\) )|'.join(clear_alt_names_upper)
+        names_patter_upper += "( |\. |, |\) )"
         alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+', '\+')
+
     return alter_names_dict
 
 
@@ -49,8 +92,8 @@ morph = pymorphy2.MorphAnalyzer()
 
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
 commodity_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
-alter_client_names_dict = get_alternative_names_pattern(client_names)
-alter_commodity_names_dict = get_alternative_names_pattern(commodity_names)
+alter_client_names_dict = get_alternative_names_pattern_client(client_names)
+alter_commodity_names_dict = get_alternative_names_pattern_commodity(commodity_names)
 
 client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
 commodity_rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
@@ -483,21 +526,21 @@ def add_text_sum_column(df: pd.DataFrame) -> pd.DataFrame:
 
 def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
     """
-    Delete similar articles
-    :param df: df with new article
-    :param df_previous: df with article from database
-    :param threshold: limit value for deduplicate
-    :return: df without duplicates article
+    Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной.
+    :param df: датафрейм с только что полученными новостями
+    :param df_previous: датафрейс с новостями из БД
+    :param threshold: граница отсечения новости
+    :return: датафрейм без дублей
     """
-    # clear from 0 (not relevant articles)
+    # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
     df = df.query('not client_score.isnull() and client_score != 0 or '
                   'not commodity_score.isnull() and commodity_score != 0')
     now_len = len(df)
-    print(f'-- remove {old_len-now_len} not relevant articles')
+    print(f'-- remove {old_len - now_len} not relevant articles')
     print('-- new article before deduplicate =', now_len)
 
-    # sort new batch
+    # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
     df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
     df['count_commodity'] = df['commodity'].map(
         lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
@@ -505,40 +548,66 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
                         ascending=[False, False, False, False]).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
-    # concat two columns with news from both DFs.
+    # объединяем столбцы старого и нового датафрейма
     df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
+    df_concat_client = pd.concat([df_previous['client'], df['client']], ignore_index=True).fillna(';')
+    df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']], ignore_index=True).fillna(';')
 
-    # vectorizing news in new DF
+    # векторизируем новости в датафрейме
     vectorizer = TfidfVectorizer()
     X_tf_idf = vectorizer.fit_transform(df_concat)
     X_tf_idf = X_tf_idf.toarray()
 
-    # adding a column with unique/not unique label for all news.
+    # добавляем колонку с флагом уникальности новости
     df['unique'] = None
 
-    # iterating over current news batch
     start = len(df_previous['cleaned_data'])
     end = len(df_concat)
+    # для каждой новой новости
     for actual_pos in range(start, end):
 
-        flag_unique = True
+        flag_unique = True  # флаг уникальности новости
+        flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
+
+        # от начала старых новостей до конца новых новостей
         for previous_pos in range(actual_pos):
 
-            # if found two close news - adding not unique label,
-            # modify threshold for comparing news in one batch and from the different ones
+            # если новость из старого батча + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
             current_threshold = threshold + 0.2 if previous_pos < start else threshold
 
+            actual_client = df_concat_client[actual_pos].split(';')
+            actual_commodity = df_concat_commodity[actual_pos].split(';')
+            previous_client = df_concat_client[previous_pos].split(';')
+            previous_commodity = df_concat_commodity[previous_pos].split(';')
+
+            # для каждого клиента в списке найденных клиентов
+            for client in actual_client:
+                # если клиент есть в старой новости, то говорим, что новости имеют одинаковых клиентов
+                if client in previous_client and len(actual_client) > 1 and len(previous_client) > 1:
+                    flag_found_same = True
+
+            # для каждого товара в списке найденных товаров
+            for commodity in actual_commodity:
+                # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
+                if commodity in previous_commodity and len(actual_commodity) > 1 and len(previous_commodity) > 1:
+                    flag_found_same = True
+
+            # меняем границу, если новости имеют одинаковых клиентов
+            current_threshold = current_threshold if flag_found_same else current_threshold + 0.1
+
+            # если разница между векторами рассматриваемых новостей больше границы, то новость неуникальна
             if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:
                 flag_unique = False
                 break
 
+        # присваем флаг уникальности новости
         df['unique'][actual_pos - start] = flag_unique
 
-    # delete duplicates from current batch
+    # удаляем дубли из нового батча
     df = df[df['unique']]
     df.drop(columns=['unique'], inplace=True)
 
-    print(f'len of articles in database (last 4 days) -- {len(df_previous)}')
+    print(f'len of articles in database (last 14 days) -- {len(df_previous)}')
     print('-- new article after deduplicate =', len(df))
 
     return df
