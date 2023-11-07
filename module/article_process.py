@@ -3,13 +3,14 @@ import datetime as dt
 import numpy as np
 import re
 import urllib.parse
+import json
 
 import pandas as pd
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 
 from config import psql_engine
-from module.model_pipe import deduplicate, model_func
+from module.model_pipe import deduplicate, model_func, model_func_online, add_text_sum_column
 
 
 TIME_LIVE_ARTICLE = 100
@@ -22,7 +23,6 @@ class ArticleError(Exception):
 
 class ArticleProcess:
     def __init__(self):
-        # TODO: psql_engine
         self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
@@ -40,6 +40,14 @@ class ArticleProcess:
         :param type_of_article: type of article (client or commodity)
         :return: dataframe of articles
         """
+        source_filter = ("(www|realty|quote|pro|marketing).rbc.ru|.interfax(|-russia).ru|www.kommersant.ru|"
+                         "www.vedomosti.ru|//tass.(ru|com)/|(realty.|//)ria.ru|/1prime.ru/|www.banki.ru|"
+                         "(.|//)iz.ru/|//(|www.)ura.news|//(|www.)ru24.net|//(|www.)energyland.info|"
+                         "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
+                         "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
+                         "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
+                         "//(|www.)pronedra.ru") #TODO: дополнять
+
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
                                 'text': 'text', 'text Summary Summary': 'text_sum', 'Company_name': 'client'}
@@ -50,6 +58,11 @@ class ArticleProcess:
 
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
+
+        print(f'-- got {len(df_subject)} {type_of_article} articles')
+        df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
+        print(f'-- remove some sources, so len is {len(df_subject)}')
+
         df_subject['text'] = df_subject['text'].str.replace('«', '"')
         df_subject['text'] = df_subject['text'].str.replace('»', '"')
         df_subject['text'] = df_subject['text'].str.replace('$', ' $')
@@ -57,39 +70,87 @@ class ArticleProcess:
         df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
         df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
-        df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
+        try:
+            df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
                                                                             'title': x['title'].iloc[0],
                                                                             'date': x['date'].iloc[0],
                                                                             'text': x['text'].iloc[0],
                                                                             type_of_article: ';'.join(x[type_of_article]),
                                                                             })).reset_index()
-        # if type_of_article == 'client':
-        #     df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
-        #         'client': ';'.join(x['client']),
-        #         'date': x['date'].iloc[0],
-        #         'text': x['text'].iloc[0],
-        #         'text_sum': x['text_sum'].iloc[0],
-        #         'coef': x['coef'].iloc[0],
-        #     })).reset_index()
-        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('«', '"')
-        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('»', '"')
-        #     df_subject['text_sum'] = df_subject['text_sum'].str.replace('$', ' $')
+            print(f'-- group by link, so len of articles is {len(df_subject)}')
+        except Exception as e:
+            print(f'-- Error: {e}')
 
         return df_subject
 
     @staticmethod
-    def throw_the_models(df_subject: pd.DataFrame, name: str, ) -> pd.DataFrame:
+    def preprocess_article_online(df: pd.DataFrame):
+        """
+        Preprocess articles dataframe and set df.
+        :param df: df with articles
+        :return: dataframe of articles
+        """
+        new_name_columns = {'url': 'link', 'title': 'title', 'created_at': 'date', 'content': 'text'}
+        columns = ['link', 'title', 'date', 'text']
+        source_filter = ['The Economist']
+        not_finish_article_filter = 'новость дополняется'
+
+        df = df.rename(columns=new_name_columns)
+
+        df = df[~df['source'].isin(source_filter)]
+        print(f'-- remove foreign source, so len of articles is {len(df)}')
+
+        df = df.dropna(subset='text')
+        print(f'-- remove empty text, so len of articles is {len(df)}')
+
+        df = df[~df['text'].str.contains(not_finish_article_filter, case=False)]
+        print(f'-- remove not finish article, so len of articles is {len(df)}')
+
+        gotten_ids = dict(id=df['id'].values.tolist())
+        gotten_ids = json.dumps(gotten_ids)
+        df = df[columns]
+
+        df['text'] = df['text'].str.replace('«', '"')
+        df['text'] = df['text'].str.replace('»', '"')
+        df['title'] = df['title'].str.replace('«', '"')
+        df['title'] = df['title'].str.replace('»', '"')
+        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms'))
+        try:
+            df = df.groupby('link').apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0],
+                                                               'text': x['text'].iloc[0]})).reset_index()
+            print(f'-- group by link, so len of articles is {len(df)}')
+        except Exception as e:
+            print(e)
+
+        return df, gotten_ids
+
+    @staticmethod
+    def throw_the_models(df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
         """ Call model pipe func """
-        df_subject = model_func(df_subject, name)
-        return df_subject
+        df = model_func_online(df) if online_flag else model_func(df, name)
+        return df
 
     def drop_duplicate(self):
         """ Call func to delete similar articles """
         dt_now = dt.datetime.now()
-        old_articles = pd.read_sql(f"SELECT text from article where '{dt_now}' - date < '15 day'", con=self.engine)
-        print('-- new article before deduplicate = ', len(self.df_article))
+        old_query = (f"SELECT a.id, "
+                     f"STRING_AGG(DISTINCT client.name, ';') AS client, "
+                     f"STRING_AGG(DISTINCT commodity.name, ';') AS commodity, "
+                     f"ani.cleaned_data "
+                     f"FROM article a "
+                     f"LEFT JOIN relation_client_article r_client ON a.id = r_client.article_id "
+                     f"LEFT JOIN client ON r_client.client_id = client.id "
+                     f"LEFT JOIN relation_commodity_article r_commodity ON a.id = r_commodity.article_id "
+                     f"LEFT JOIN commodity ON r_commodity.commodity_id = commodity.id "
+                     f"JOIN article_name_impact ani ON ani.article_id = a.id "
+                     f"WHERE '{dt_now}' - a.date < '15 day' "
+                     f"GROUP BY a.id, ani.cleaned_data")
+        old_articles = pd.read_sql(old_query, con=self.engine)
         self.df_article = deduplicate(self.df_article, old_articles)
-        print('-- new article after deduplicate = ', len(self.df_article))
+
+    def make_text_sum(self):
+        """ Call summary func """
+        self.df_article = add_text_sum_column(self.df_article)
 
     def delete_old_article(self):
         """ Delete from db article if there are 10 articles for each subject """
@@ -134,7 +195,7 @@ class ArticleProcess:
         df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
         # concat all df in one, so there are no duplicates and contain all data
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
-        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity', 'client_impact',
+        self.df_article = df_article[['link', 'title', 'date', 'text', 'client', 'commodity', 'client_impact',
                                       'commodity_impact', 'client_score', 'commodity_score', 'cleaned_data']]
         print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 
@@ -196,22 +257,21 @@ class ArticleProcess:
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         print(f'-- relation_{name}_article is {len(df_relation_subject_article)}')
 
-    def _find_subject_id(self, message: str, subject: str):
+    def find_subject_id(self, message: str, subject: str):
         """
         Find id of client or commodity by user message
         :param message: user massage
         :param subject: client or commodity
         :return: id of client(commodity) or False if user message not about client or commodity
         """
-
+        subject_ids = []
         message_text = message.lower().strip()
         df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
         df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
-
         for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
             if message_text in names:
-                return subject_id
-        return False
+                subject_ids.append(subject_id)
+        return subject_ids
 
     def _get_articles(self, subject_id: int, subject: str):
         """
@@ -279,15 +339,18 @@ class ArticleProcess:
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
 
         return all_commodity_data
-    
-    def _get_client_fin_indicators(self, client_name):
-        """
-        Get pricing about commodity from db.
-        :param subject_id: id of commodity
-        :return: list(dict) data about commodity pricing
-        """
 
-        client = pd.read_sql('financial_indicators',con = self.engine)
+    def get_client_fin_indicators(self, client_id, client_name):
+        """
+        Get company finanical indicators.
+        :param client_id: id of company in client table
+        :param client_name: str of company in user's message
+        :return: df financial indicators
+        """
+        if client_id:
+            client = pd.read_sql('client', con=self.engine)
+            client_name = client[client['id'] == client_id]['name'].iloc[0]
+        client = pd.read_sql('financial_indicators', con=self.engine)
         client = client[client['company'] == client_name]
         client = client.sort_values('id')
         client_copy = client.copy()
@@ -320,9 +383,9 @@ class ArticleProcess:
                 if new_df.shape[1] > 6:
                     new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
         else:
-            return client
+            return client_name, client
 
-        return new_df
+        return client_name, new_df
         
 
     @staticmethod
@@ -387,33 +450,26 @@ class ArticleProcess:
 
         return com_msg, format_msg, img_name_list
 
-    def process_user_alias(self, message: str):
+    def process_user_alias(self, subject_id: int, subject: str = ''):
         """ Process user alias and return reply for it """
 
         com_data, reply_msg, img_name_list = None, '', []
-        client_id, commodity_id = '', ''
-        client_id = self._find_subject_id(message, 'client')
-        client_fin_table = self._get_client_fin_indicators(message.strip().lower())
 
-        if client_id:
-            subject_name, articles = self._get_articles(client_id, 'client')
+        if subject == 'client':
+            subject_name, articles = self._get_articles(subject_id, subject)
+        elif subject == 'commodity':
+            subject_name, articles = self._get_articles(subject_id, subject)
+            com_data = self._get_commodity_pricing(subject_id)
         else:
-            commodity_id = self._find_subject_id(message, 'commodity')
-            if commodity_id:
-                subject_name, articles = self._get_articles(commodity_id, 'commodity')
-                com_data = self._get_commodity_pricing(commodity_id)
-            else:
-                print('user do not want articles')
-                return '', False, img_name_list, client_fin_table
+            print('user do not want articles')
+            return '', False, img_name_list
 
         com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
-        if client_id and not articles:
-            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
-        elif commodity_id and not articles and not img_name_list:
-            return com_cotirov, 'Пока нет новостей на эту тему', img_name_list, client_fin_table
+        if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+            reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
-        return com_cotirov, reply_msg, img_name_list, client_fin_table
+        return com_cotirov, reply_msg, img_name_list
 
 
 class ArticleProcessAdmin:
@@ -511,8 +567,6 @@ class ArticleProcessAdmin:
 
     def get_bad_article(self):
         """ Get article data if it contains bad word """
-        # TODO: как отправлять большее количество новостей
-
         df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
         df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
         df = df[~df['relevant']]

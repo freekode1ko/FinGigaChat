@@ -32,7 +32,8 @@ def main(engine):
     # query to make client table
     query_client = ('CREATE TABLE IF NOT EXISTS public.client '
                     '('
-                    'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                    'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                    '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                     'name text NOT NULL,'
                     'CONSTRAINT client_pkey PRIMARY KEY (id)'
                     ')'
@@ -41,7 +42,8 @@ def main(engine):
     # query to make commodity table
     query_commodity = ('CREATE TABLE IF NOT EXISTS public.commodity '
                        '('
-                       'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                       'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                       '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                        'name text NOT NULL,'
                        'CONSTRAINT commodity_pkey PRIMARY KEY (id)'
                        ')'
@@ -50,7 +52,8 @@ def main(engine):
     # query to make article table
     query_article = ('CREATE TABLE IF NOT EXISTS public.article'
                      '('
-                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                     '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                      'link text NOT NULL,'
                      'title text,'
                      'date timestamp without time zone NOT NULL,'
@@ -99,7 +102,8 @@ def main(engine):
     # create client alternative names
     query_client_alternative = ('CREATE TABLE IF NOT EXISTS public.client_alternative'
                                 '('
-                                'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                                'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                                '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                                 'client_id integer NOT NULL,'
                                 'other_names text,'
                                 'CONSTRAINT client_alternative_pkey PRIMARY KEY (id),'
@@ -113,7 +117,8 @@ def main(engine):
     # create commodity alternative names
     query_commodity_alternative = ('CREATE TABLE IF NOT EXISTS public.commodity_alternative'
                                    '('
-                                   'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                                   'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                                   '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                                    'commodity_id integer NOT NULL,'
                                    'other_names text,'
                                    'CONSTRAINT commodity_alternative_pkey PRIMARY KEY (id),'
@@ -127,7 +132,8 @@ def main(engine):
     # create chat
     query_chat = ('CREATE TABLE IF NOT EXISTS public.chat'
                   '('
-                  'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                  'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                  '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                   'name text NOT NULL,'
                   'type text NOT NULL,'
                   'CONSTRAINT chat_pkey PRIMARY KEY (id)'
@@ -137,7 +143,8 @@ def main(engine):
     # create message
     query_message = ('CREATE TABLE IF NOT EXISTS public.message'
                      '('
-                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                     '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                      'chat_id integer NOT NULL, '
                      'link text, '
                      'date timestamp without time zone NOT NULL,'
@@ -187,11 +194,28 @@ def main(engine):
                                     ')'
                                     'TABLESPACE pg_default;')
 
+    query_whitelist = ('CREATE TABLE IF NOT EXISTS public.whitelist ('
+                       'user_id integer NOT NULL, '
+                       'username text NOT NULL, '
+                       'email text, '
+                       'user_type text NOT NULL, '
+                       'user_status text NOT NULL, '
+                       'CONSTRAINT user_id_pkey PRIMARY KEY (user_id)) '
+                       'TABLESPACE pg_default;')
+
+    query_date_of_last_build = ('CREATE TABLE IF NOT EXISTS public.date_of_last_build ('
+                                'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                                '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                                'date_time text NOT NULL,'
+                                'CONSTRAINT date_time_pkey PRIMARY KEY (id))'
+                                'TABLESPACE pg_default;')
+
     # create tables
     queries = [query_client, query_commodity, query_article,
                query_relation_client, query_relation_commodity,
                query_client_alternative, query_commodity_alternative,
-               query_chat, query_message, query_relation_client_msg, query_relation_commodity_msg]
+               query_chat, query_message, query_relation_client_msg,
+               query_relation_commodity_msg, query_whitelist, query_date_of_last_build]
 
     with engine.connect() as conn:
         for query in queries:
@@ -229,7 +253,8 @@ def update_database(engine, query: str):
 
 query_commodity_pricing = ('CREATE TABLE IF NOT EXISTS public.commodity_pricing'
                            '('
-                           'id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+                           'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                           '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
                            'commodity_id integer NOT NULL,'
                            'subname text NOT NULL,'
                            'unit text,'
@@ -254,20 +279,20 @@ query_article_name_impact = ("CREATE TABLE IF NOT EXISTS public.article_name_imp
                              "cleaned_data TEXT)"
                              "TABLESPACE pg_default;")
 
-
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
 query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
                                    "values ((SELECT id FROM public.commodity WHERE name = 'олово'), 'олово')")
 query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
-                                   "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), 'электроэнергия')")
+                                     "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), "
+                                     "'электроэнергия')")
 
 
 def drop_tables(engine):
     tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
               'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
-              'relation_commodity_article', 'relation_commodity_message']
+              'relation_commodity_article', 'relation_commodity_message', 'article_name_impact']
 
     with engine.connect() as conn:
         for table in tables:
@@ -298,6 +323,3 @@ if __name__ == '__main__':
     update_database(main_engine, query_new_alternative_com_olovo)
     # make article_name_count
     update_database(main_engine, query_article_name_impact)
-
-
-

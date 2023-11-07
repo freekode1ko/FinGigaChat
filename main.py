@@ -2,22 +2,24 @@ from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
+
 from sql_model.commodity_pricing import CommodityPricing
 from sql_model.commodity import Commodity
-from selenium import webdriver
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from typing import List, Tuple, Dict
+from selenium import webdriver
+
 import requests as req
 from lxml import html
 import pandas as pd
 import numpy as np
+import datetime
 import warnings
 import config
 import time
-import datetime
-import re
-from typing import List, Tuple, Dict
 import json
+import re
 
 
 class Main:
@@ -501,6 +503,9 @@ class Main:
         clients_table = authed_user.get_companies_financial_indicators_table()
         print('clients table...ok')
 
+        authed_user.get_industry_reviews()
+        print('industry reviews...ok')
+
         return reviews, companies_pages_html, key_eco_table, clients_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
@@ -535,6 +540,12 @@ class Main:
     def save_key_eco_table(self, key_eco_table):
         engine = create_engine(self.psql_engine)
         key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+
+    def save_date_of_last_build(self):
+        engine = create_engine(self.psql_engine)
+        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
+        cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
 
     def process_companies_data(self, company_pages_html) -> None:
         """
@@ -582,11 +593,9 @@ if __name__ == '__main__':
         # collect and save research data
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
-        # driver = webdriver.Firefox(options=firefox_options)
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
-            pass
             reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
             runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
@@ -606,11 +615,12 @@ if __name__ == '__main__':
             driver.close()
 
         i = 0
-        with open('sources/tables/time.txt', 'w') as f:
-            f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Wait 3 hours before recollect data...')
+        runner.save_date_of_last_build()
+        # with open('sources/tables/time.txt', 'w') as f:
+        #    f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
+        print('Wait 4 hours before recollect data...')
 
         while i <= 3:
             i += 1
             time.sleep(3600)
-            print('In waiting. \n{}/3 hours'.format(3 - i))
+            print('In waiting. \n{}/4 hours'.format(4 - i+1))
