@@ -410,6 +410,9 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
         print(e)
         giga_answer = ''
 
+    paragraphs = giga_answer.split('\n\n')
+    giga_answer = '\n'.join([p for p in paragraphs if p.strip()])
+
     if giga_answer in BAD_GIGA_ANSWERS:
         giga_answer = ''
 
