@@ -49,6 +49,7 @@ trio==0.22.0
 trio-websocket==0.10.3
 tzdata==2023.3
 urllib3==2.0.2
+# urllib3==1.26.2
 webencodings==0.5.1
 wsproto==1.2.0
 yarl==1.9.2
@@ -61,3 +62,6 @@ threadpoolctl==3.2.0
 typing_extensions==4.7.1
 xgboost==1.7.6
 openai==0.28.1
+PyPDF2==3.0.1
+Pillow==9.5.0
+natsort==8.4.0
