@@ -345,7 +345,7 @@ class ArticleProcess:
         Get company finanical indicators.
         :param client_id: id of company in client table
         :param client_name: str of company in user's message
-        :return: df financial insdicators
+        :return: df financial indicators
         """
         client = None
         client_alter = None
