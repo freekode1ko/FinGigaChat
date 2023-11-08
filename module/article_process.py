@@ -366,13 +366,11 @@ class ArticleProcess:
             client_alternative = pd.read_sql('client_alternative', con=self.engine)
             client = client_alter
             financial_indicators = client_fin
-
             if not isinstance(client, pd.DataFrame):
                 if not client:
                     return client
             alternates = client_alternative[client_alternative['client_id']==\
                 client[client['name']==client_name]['id'].iloc[0]]['other_names'].iloc[0].split(';')
-
             for alternative_name in alternates:
                 subclient = financial_indicators[financial_indicators['company']==alternative_name]
                 clients[alternative_name]=subclient
@@ -388,14 +386,13 @@ class ArticleProcess:
                 alias_idx = client.columns.get_loc('alias')
                 new_df = client.iloc[:, :alias_idx]
                 full_nan_cols = new_df.isna().all().sum()
-
                 if full_nan_cols > 1:
                     alias_idx = client_copy.columns.get_loc('alias')
                     left_client = client_copy.iloc[:, :alias_idx]
                     remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
                     right_client = client_copy.iloc[:, alias_idx:]
                     selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
-
+                    
                     if len(selected_cols) < 5:
                         numeric_cols = right_client.select_dtypes(include=np.number).columns
                         non_nan_numeric_cols = numeric_cols[right_client[numeric_cols].notnull().any()].tolist()
@@ -419,6 +416,7 @@ class ArticleProcess:
                     numeric_cols.sort()
                     new_cols = ['name'] + numeric_cols
                     new_df = new_df[new_cols]
+                    
                     if new_df.shape[1] > 6:
                         new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
                     new_dfs[name] = new_df
