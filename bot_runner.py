@@ -474,11 +474,23 @@ def __replacer(data: str):
     return data
 
 
-async def draw_all_tables(message: types.Message):
-    from sqlalchemy import create_engine
-    engine = create_engine('postgresql://bot:12345@0.0.0.0:5432/users')
-    df_from_db = pd.read_sql_query('select * from "users"', con=engine)
-    print(df_from_db)
+@dp.message_handler(commands=['myactivesubscriptions'])
+async def user_subscriptions(message: types.Message):
+    user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
+    engine = create_engine(psql_engine)
+    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
+                                      con=engine)['subscriptions'].values.tolist()
+    if not subscriptions:
+        keyboard = types.ReplyKeyboardRemove()
+        msg_txt = 'Нет активных подписок'
+    else:
+        buttons = []
+        for subscription in subscriptions:
+            buttons.append([types.KeyboardButton(text=subscription)])
+        msg_txt = 'Выберите подписку'
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                             input_field_placeholder=msg_txt)
+    await message.answer(msg_txt, reply_markup=keyboard)
 
 
 async def user_in_whitelist(user: str):
@@ -503,8 +515,8 @@ async def user_to_whitelist(message: types.Message):
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
-        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active']],
-                            columns=['user_id', 'username', 'email', 'user_type', 'user_status'])
+        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active', None]],
+                            columns=['user_id', 'username', 'email', 'user_type', 'user_status', 'subscriptions'])
         try:
             engine = create_engine(psql_engine)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
@@ -533,7 +545,7 @@ async def __create_fin_table(message, client_name, client_fin_table):
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
                                  'financial_indicator', header_columns=0, col_width=4, title='',
-                                 alias=client_name.strip().capitalize(), fin=True)
+                                 alias=client_name.strip().upper(), fin=True)
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
     with open(png_path, "rb") as photo:
         await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
@@ -637,8 +649,12 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     await types.ChatActions.typing()
     new_text_sum = summarization_by_chatgpt(full_text)
     apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
-
-    await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    try:
+        await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+    except MessageIsTooLong:
+        # TODO: показывать батчами при необходимости
+        await message.answer(f"<b>Старое саммари не помещается в одно сообщение.</b>",
+                             parse_mode='HTML', protect_content=True)
     await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
     await state.finish()
 

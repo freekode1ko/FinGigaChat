@@ -44,10 +44,9 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
     if filepath:
         print(f'-- download {filepath}')
         df = ap_obj.load_file(filepath, type_of_article)
-        print(f'-- got {len(df)} {type_of_article} articles')
         if not df.empty:
             print('-- go throw models')
-            df = ap_obj.throw_the_models(df, type_of_article)
+            df = ap_obj.throw_the_models(df, type_of_article, online_flag=False)
         else:
             print('-- df is empty')
             df[['text_sum', f'{type_of_article}_score', 'cleaned_data', f'{type_of_article}_impact']] = None
@@ -90,9 +89,13 @@ def daily_func():
     if client_flag or commodity_flag:
         print(f'is there new client article? -- {client_flag}')
         print(f'is there new commodity article? -- {commodity_flag}')
-        ap_obj.merge_client_commodity_article(df_client, df_commodity)
-        ap_obj.drop_duplicate()
-        ap_obj.save_tables()
+        if not df_client.empty or not df_commodity.empty:
+            ap_obj.merge_client_commodity_article(df_client, df_commodity)
+            ap_obj.drop_duplicate()
+            ap_obj.make_text_sum()
+            ap_obj.save_tables()
+        else:
+            print('ARTICLES ARE EMPTY !!!')
         if client_flag and commodity_flag:
             print('PROCESSED ARTICLES')
         elif client_flag:

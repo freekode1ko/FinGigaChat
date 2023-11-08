@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 
 from config import psql_engine
-from module.model_pipe import deduplicate, model_func
+from module.model_pipe import deduplicate, model_func, model_func_online, add_text_sum_column
 
 
 TIME_LIVE_ARTICLE = 100
@@ -125,10 +125,10 @@ class ArticleProcess:
         return df, gotten_ids
 
     @staticmethod
-    def throw_the_models(df_subject: pd.DataFrame, name: str, ) -> pd.DataFrame:
+    def throw_the_models(df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
         """ Call model pipe func """
-        df_subject = model_func(df_subject, name)
-        return df_subject
+        df = model_func_online(df) if online_flag else model_func(df, name)
+        return df
 
     def drop_duplicate(self):
         """ Call func to delete similar articles """
@@ -195,7 +195,7 @@ class ArticleProcess:
         df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
         # concat all df in one, so there are no duplicates and contain all data
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
-        self.df_article = df_article[['link', 'title', 'date', 'text', 'text_sum', 'client', 'commodity', 'client_impact',
+        self.df_article = df_article[['link', 'title', 'date', 'text', 'client', 'commodity', 'client_impact',
                                       'commodity_impact', 'client_score', 'commodity_score', 'cleaned_data']]
         print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
 
@@ -339,7 +339,7 @@ class ArticleProcess:
         all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
 
         return all_commodity_data
-    
+
     def get_client_fin_indicators(self, client_id, client_name):
         """
         Get company finanical indicators.
@@ -351,8 +351,6 @@ class ArticleProcess:
         client_alter = None
         client = pd.read_sql('financial_indicators', con=self.engine)
         client_fin = client.copy()
-        print(set(client['company']))
-        print(client_name)
         if client_name not in set(client['company']):
             client = pd.read_sql('client', con=self.engine)
             client_alter = client.copy()
@@ -610,8 +608,6 @@ class ArticleProcessAdmin:
 
     def get_bad_article(self):
         """ Get article data if it contains bad word """
-        # TODO: как отправлять большее количество новостей
-
         df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
         df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
         df = df[~df['relevant']]
