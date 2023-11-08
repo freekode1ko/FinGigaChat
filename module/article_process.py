@@ -368,7 +368,6 @@ class ArticleProcess:
             financial_indicators = client_fin
 
             if not isinstance(client, pd.DataFrame):
-
                 if not client:
                     return client
             alternates = client_alternative[client_alternative['client_id']==\
