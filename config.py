@@ -49,7 +49,8 @@ CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
-BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
+# BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
+BASE_GIGAPARSER_URL = 'http://188.68.205.154:8000/{}'
 
 mail_username = "ai-helper@mail.ru"
 mail_password = "ExamKejCpmcpr8kM5emw"
@@ -520,3 +521,18 @@ dict_of_companies = \
             'alias': 'Промышленность'
         }
     }
+
+industry_reviews = \
+    {
+        '1':'Нефть и газ',
+        '2':'Металлургия',
+        '3':'Химическая промышленность',
+        '5':'Электроэнергетика',
+        '6':'Потребительский индекс Иванова',
+        '7':'Недвижимость',
+        '10':'Железнодорожный транспорт'
+    }
+
+industry_base_url = 'https://research.sberbank-cib.com/group/guest/' \
+        'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_' \
+        'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
