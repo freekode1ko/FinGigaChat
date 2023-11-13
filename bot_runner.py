@@ -490,17 +490,24 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.finish()
     subscriptions = []
+    quotes = ['\'', '\"', '«', '»']
+
     engine = create_engine(psql_engine)
     user_id = json.loads(message.from_user.as_json())['id']
     com_df = pd.read_sql_query('select * from "client_alternative"', con=engine)
     client_df = pd.read_sql_query('select * from "commodity_alternative"', con=engine)
     df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
-    user_request = [i.strip().lower() for i in message.text.split('\n')]
+
+    message_text = message.text
+    for quote in quotes:
+        message_text = message_text.replace(quote, '')
+    user_request = [i.strip().lower() for i in message_text.split('\n')]
+
     for subscription in user_request:
         for index, row in df_all.iterrows():
             # if subscription in row.split(';') - из-за разрядности такой варинт не всегда находит совпадение
             for other_name in row.split(';'):
-                if subscription == other_name.strip().lower():
+                if subscription == other_name:
                     subscriptions.append(other_name)
 
     if (len(subscriptions) < len(user_request)) and subscriptions:
@@ -513,7 +520,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
             conn.commit()
         await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
     else:
-        await message.reply('Не найдены объекты новостей из перечисленных выше')
+        await message.reply('Перечисленные выше объекты не были найдены')
 
 
 @dp.message_handler(commands=['myactivesubscriptions'])
