@@ -18,10 +18,6 @@ import module.data_transformer as dt
 import module.gigachat as gig
 import config
 
-# TODO: read from DataBase
-client_names = config.CLIENT_ALTERNATIVE_NAME_PATH
-commodity_names = config.COMMODITY_ALTERNATIVE_NAME_PATH
-
 path_to_source = config.path_to_source
 psql_engine = config.psql_engine
 API_TOKEN = config.api_token
@@ -484,7 +480,7 @@ def __replacer(data: str):
 async def menuButton_test(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await Form.user_subscriptions.set()
-    await message.answer('Сформируйте полный список интересующие клиенты или сырье для подписоки на '
+    await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписоки на '
                          'пассивную отпраку новостей по ним.\n'
                          'Перечистлите их в одном сообщении каждую с новой строки.')
 
@@ -496,19 +492,20 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     subscriptions = []
     engine = create_engine(psql_engine)
     user_id = json.loads(message.from_user.as_json())['id']
-    com_df = pd.read_excel(commodity_names).rename(columns={'Commodity': 'Object'})
-    client_df = pd.read_excel(client_names).rename(columns={'Клиент': 'Object'})
-    df_all = pd.concat([client_df, com_df], ignore_index=True, sort=False).fillna('-')
+    com_df = pd.read_sql_query('select * from "client_alternative"', con=engine)
+    client_df = pd.read_sql_query('select * from "commodity_alternative"', con=engine)
+    df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
     user_request = [i.strip().lower() for i in message.text.split('\n')]
     for subscription in user_request:
         for index, row in df_all.iterrows():
-            for key in row.keys():
-                if subscription == row[key].strip().lower():
-                    subscriptions.append(row[key])
-                    continue
+            # if subscription in row.split(';') - из-за разрядности такой варинт не всегда находит совпадение
+            for other_name in row.split(';'):
+                if subscription == other_name.strip().lower():
+                    subscriptions.append(other_name)
+
     if (len(subscriptions) < len(user_request)) and subscriptions:
         await message.reply(f'{", ".join(list(set(user_request) - set(subscriptions)))} '
-                            f'- Эти объеты нам не известны, пока что')
+                            f'- Эти объекты новостей нам неизвестны')
     if subscriptions:
         subscriptions = ", ".join(subscriptions)
         with engine.connect() as conn:
@@ -516,7 +513,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
             conn.commit()
         await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
     else:
-        await message.reply('Не найдена ни один из перечисленных объектов новостей')
+        await message.reply('Не найдены объекты новостей из перечисленных выше')
 
 
 @dp.message_handler(commands=['myactivesubscriptions'])
