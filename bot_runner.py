@@ -480,7 +480,7 @@ def __replacer(data: str):
 async def menuButton_test(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await Form.user_subscriptions.set()
-    await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписоки на '
+    await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
                          'пассивную отпраку новостей по ним.\n'
                          'Перечистлите их в одном сообщении каждую с новой строки.')
 
