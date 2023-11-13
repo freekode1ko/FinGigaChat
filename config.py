@@ -39,13 +39,12 @@ data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
-research_cred = ('mpkartoshin@sberbank.ru', 'yf1P%3*%')
+research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
-# BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
-BASE_GIGAPARSER_URL = 'http://188.68.205.154:8000/{}'
+BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
 
 mail_username = "ai-helper@mail.ru"
 mail_password = "ExamKejCpmcpr8kM5emw"

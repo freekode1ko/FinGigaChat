@@ -93,7 +93,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
-                               month: str = '', title: str = '', source: str = ''):
+                               month: str = '', title: str = '', source: str = '', protect_content: bool = True):
     batch_size = 3500
     if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
@@ -105,14 +105,14 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
-    await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=True)
+    await bot.send_photo(message.chat.id, photo, caption=title, parse_mode='HTML', protect_content=protect_content)
 
 
 @dp.message_handler(commands=['start', 'help'])
 async def help_handler(message: types.Message):
     help_text = config.help_text
     if await user_in_whitelist(message.from_user.as_json()):
-        to_pin = await bot.send_message(message.chat.id, help_text, protect_content=True)
+        to_pin = await bot.send_message(message.chat.id, help_text, protect_content=False)
         msg_id = to_pin.message_id
         await bot.pin_chat_message(chat_id=message.chat.id, message_id=msg_id)
 
@@ -148,7 +148,7 @@ async def bonds_info(message: types.Message):
         # print(month)
         title = 'ОФЗ'
         data_source = 'investing.com'
-        await __sent_photo_and_msg(message, photo, day, month,
+        await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
 
@@ -209,7 +209,7 @@ async def economy_info(message: types.Message):
         title = 'Ключевые ставки ЦБ мира'
         data_source = 'ЦБ стран мира'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month,
+        await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, curdatetime))
         # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
         #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
@@ -231,12 +231,12 @@ async def economy_info(message: types.Message):
         data_source = 'ЦБ РФ'
         await bot.send_photo(message.chat.id, photo,
                              caption=sample_of_img_title.format(title, data_source, curdatetime),
-                             parse_mode='HTML', protect_content=True)
+                             parse_mode='HTML', protect_content=False)
         # сообщение с текущими ставками
         stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
-        await message.answer(rates_message, parse_mode='HTML', protect_content=True)
+        await message.answer(rates_message, parse_mode='HTML', protect_content=False)
 
 
 @dp.message_handler(commands=['view'])
@@ -374,7 +374,7 @@ async def exchange_info(message: types.Message):
         title = 'Курсы валют'
         data_source = 'investing.com'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month,
+        await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, curdatetime))
 
         fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(
@@ -454,7 +454,7 @@ async def metal_info(message: types.Message):
         photo = open(png_path, 'rb')
         title = ' Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
-        await __sent_photo_and_msg(message, photo, day,
+        await __sent_photo_and_msg(message, photo, day, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, read_curdatetime()))
 
 
@@ -520,13 +520,13 @@ async def user_to_whitelist(message: types.Message):
         try:
             engine = create_engine(psql_engine)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-            await message.answer(f'Добро пожаловать {email}!', protect_content=True)
+            await message.answer(f'Добро пожаловать {email}!', protect_content=False)
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже '
-                                 f'\n\n{e}', protect_content=True)
+                                 f'\n\n{e}', protect_content=False)
             print('Во время авторизации произошла ошибка, попробуйте позже: {}'.format(e))
     else:
-        await message.answer(f'{email} - уже существует', protect_content=True)
+        await message.answer(f'{email} - уже существует', protect_content=False)
 
 
 async def check_your_right(user: dict):
@@ -562,9 +562,9 @@ async def admin_help(message: types.Message):
         help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
                     '<b>/delete_article</b> - удалить новость из базы данных')
-        await message.answer(help_msg, protect_content=True, parse_mode='HTML')
+        await message.answer(help_msg, protect_content=False, parse_mode='HTML')
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
 
 
 @dp.message_handler(commands=['show_article'])
@@ -578,9 +578,9 @@ async def show_article(message: types.Message):
         ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
         await Form.link.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=True, disable_web_page_preview=True)
+                               protect_content=False, disable_web_page_preview=True)
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
 
 
 @dp.message_handler(state=Form.link)
@@ -593,21 +593,21 @@ async def continue_show_article(message: types.Message, state: FSMContext):
     apd_obj = ArticleProcessAdmin()
     full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link'])
     if not full_text:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
         await state.finish()
         return
 
     data_article_dict = apd_obj.get_article_by_link(data['link'])
     if not isinstance(data_article_dict, dict):
         await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
-                             protect_content=True)
+                             protect_content=False)
         return
 
     format_msg = ''
     for key, val in data_article_dict.items():
         format_msg += f'<b>{key}</b>: {val}\n'
 
-    await message.answer(format_msg, parse_mode='HTML', protect_content=True, disable_web_page_preview=True)
+    await message.answer(format_msg, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
     await state.finish()
 
 
@@ -615,7 +615,7 @@ async def continue_show_article(message: types.Message, state: FSMContext):
 async def change_summary(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if not config.api_key_gpt:
-        await message.answer('Данная команда пока недоступна.', protect_content=True)
+        await message.answer('Данная команда пока недоступна.', protect_content=False)
         return
 
     await types.ChatActions.typing()
@@ -627,9 +627,9 @@ async def change_summary(message: types.Message):
         ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
         await Form.link_change_summary.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=True, disable_web_page_preview=True)
+                               protect_content=False, disable_web_page_preview=True)
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
 
 
 @dp.message_handler(state=Form.link_change_summary)
@@ -641,21 +641,21 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     apd_obj = ArticleProcessAdmin()
     full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
     if not full_text:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
         await state.finish()
         return
 
-    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=True)
+    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=False)
     await types.ChatActions.typing()
     new_text_sum = summarization_by_chatgpt(full_text)
     apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
     try:
-        await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=True)
+        await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=False)
     except MessageIsTooLong:
         # TODO: показывать батчами при необходимости
         await message.answer(f"<b>Старое саммари не помещается в одно сообщение.</b>",
-                             parse_mode='HTML', protect_content=True)
-    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=True)
+                             parse_mode='HTML', protect_content=False)
+    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=False)
     await state.finish()
 
 
@@ -671,9 +671,9 @@ async def delete_article(message: types.Message):
         ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
         await Form.link_to_delete.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=True, disable_web_page_preview=True)
+                               protect_content=False, disable_web_page_preview=True)
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
 
 
 @dp.message_handler(state=Form.link_to_delete)
@@ -686,13 +686,13 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
     apd_obj = ArticleProcessAdmin()
     full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_to_delete'])
     if not full_text:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=True)
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
         await state.finish()
         return
     else:
         permission_answer = f'Вы уверены, что хотите удалить данную новость ?\nЕсли да, то напишите: "Удалить новость".'
         await Form.permission_to_delete.set()
-        await message.reply(permission_answer, protect_content=True)
+        await message.reply(permission_answer, protect_content=False)
 
 
 @dp.message_handler(state=Form.permission_to_delete)
@@ -705,45 +705,32 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
     apd_obj = ArticleProcessAdmin()
     if data["permission_to_delete"].lower().strip().replace('"', '').replace('.', '') == 'удалить новость':
         apd_obj.delete_article_by_link(data['link_to_delete'])
-        await message.answer('Новость удалена.', protect_content=True)
+        await message.answer('Новость удалена.', protect_content=False)
     else:
-        await message.answer('Хорошо, удалим в следующий раз.', protect_content=True)
+        await message.answer('Хорошо, удалим в следующий раз.', protect_content=False)
 
     await state.finish()
 
 
 @dp.message_handler(commands=['analyse_bad_article'])
 async def analyse_bad_article(message: types.Message):
+    # TODO: реализовать при необходимости
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
-    await message.answer('Пока команда недоступна.', protect_content=True)
+    await message.answer('Пока команда недоступна.', protect_content=False)
     return
-    # TODO: реализовать при необходимости
-    # user = json.loads(message.from_user.as_json())
-    # admin_flag = await check_your_right(user)
-    #
-    # if admin_flag:
-    #     apd_obj = ArticleProcessAdmin()
-    #     msgs = apd_obj.get_bad_article()
-    #     for msg_dict in msgs:
-    #         format_msg = ''
-    #         for key, val in msg_dict.items():
-    #             format_msg += f'<b>{key}</b>: {val}\n'
-    #         await message.answer(format_msg, parse_mode='HTML', disable_web_page_preview=True)
-    # else:
-    #     await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=True)
 
 
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
     try:
         await call.message.answer(articles_l5, parse_mode='HTML',
-                                  protect_content=True, disable_web_page_preview=True)
+                                  protect_content=False, disable_web_page_preview=True)
     except MessageIsTooLong:
         articles = articles_l5.split('\n\n')
         for article in articles:
             await call.message.answer(article, parse_mode='HTML',
-                                      protect_content=True, disable_web_page_preview=True)
+                                      protect_content=False, disable_web_page_preview=True)
     finally:
         await call.message.edit_reply_markup()
 
@@ -784,10 +771,10 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     media = types.MediaGroup()
                     for name in img_name_list:
                         media.attach_photo(types.InputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
-                    await bot.send_media_group(message.chat.id, media=media, protect_content=True)
+                    await bot.send_media_group(message.chat.id, media=media, protect_content=False)
 
                 if com_price:
-                    await message.answer(com_price, parse_mode='HTML', protect_content=True,
+                    await message.answer(com_price, parse_mode='HTML', protect_content=False,
                                          disable_web_page_preview=True)
 
                 if isinstance(reply_msg, str):
@@ -803,13 +790,13 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                         keyboard = None
 
                     try:
-                        await message.answer(articles_f5, parse_mode='HTML', protect_content=True,
+                        await message.answer(articles_f5, parse_mode='HTML', protect_content=False,
                                              disable_web_page_preview=True, reply_markup=keyboard)
                     except MessageIsTooLong:
                         articles = articles_f5.split('\n\n')
                         for article in articles:
                             if len(article) < 4050:
-                                await message.answer(article, parse_mode='HTML', protect_content=True,
+                                await message.answer(article, parse_mode='HTML', protect_content=False,
                                                      disable_web_page_preview=True)
                             else:
                                 print(f"MessageIsTooLong ERROR: {article}")
@@ -859,10 +846,10 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()
 
-                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=True)
+                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=False)
                 print('{} - {}'.format('GigaChat_say', giga_js))
     else:
-        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=True)
+        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
 
 
 if __name__ == '__main__':
