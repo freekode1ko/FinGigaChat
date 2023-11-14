@@ -748,7 +748,7 @@ async def send_next_five_news(call: types.CallbackQuery):
         await call.message.edit_reply_markup()
 
 
-async def show_client_fin_table(message: types.Message, s_id: int) -> bool:
+async def show_client_fin_table(message: types.Message, s_id) -> bool:
     client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, message.text.strip().lower())
     if client_fin_table:
         for name, client_fin_table_item in client_fin_table.items():
