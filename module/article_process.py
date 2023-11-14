@@ -351,7 +351,7 @@ class ArticleProcess:
         client_alter = None
         client = pd.read_sql('financial_indicators', con=self.engine)
         client_fin = client.copy()
-        if client_name not in set(client['company']) and not client_id:
+        if client_name not in set(client['company']) and client_id:
             client = pd.read_sql('client', con=self.engine)
             client_alter = client.copy()
             client_name = client[client['id']==client_id]['name'].iloc[0]
