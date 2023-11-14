@@ -477,7 +477,7 @@ def __replacer(data: str):
 
 
 @dp.message_handler(commands=['addnewsubscriptions'])
-async def menuButton_test(message: types.Message):
+async def add_new_subscriptions(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await Form.user_subscriptions.set()
     await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
@@ -490,7 +490,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.finish()
     subscriptions = []
-    quotes = ['\'', '\"', '«', '»']
+    quotes = ['\"', '«', '»']
 
     engine = create_engine(psql_engine)
     user_id = json.loads(message.from_user.as_json())['id']
