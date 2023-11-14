@@ -426,11 +426,11 @@ class ResearchParser:
         old = []
         self.driver.get(url)
 
-        time.sleep(5)
+        time.sleep(10)
         reviews = self.driver.find_element(By.XPATH,
                                                 '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
 
-        time.sleep(5)
+        time.sleep(10)
         reviews_rows = self.driver.find_elements(By.XPATH,
                                                 f"//div[contains(@title, '{value}')]")
 
@@ -442,42 +442,27 @@ class ResearchParser:
                 find_element(By.XPATH,'..').\
                 find_element(By.CLASS_NAME,'date').text
             filename = f'{filename}__{date}.pdf'
+            filename = '{}/{}'.format(pdf_dir, filename)
             link.click()
             break 
         
         if not os.path.exists(pdf_dir):
             os.makedirs(pdf_dir)
-        old = [f for f in os.listdir(pdf_dir) if f'{value}' in f]
-        if os.path.exists('{}/{}'.format(pdf_dir,f'{filename}')):
+        old = [f for f in os.listdir(pdf_dir) if value in f]
+        if os.path.exists(filename):
             return
 
-        time.sleep(2)
-        download_report = self.driver.find_element(By.CLASS_NAME,
-                                                "downloadReport")
-
-        time.sleep(2)
-        link = download_report.find_element(By.XPATH,"./a[1]").click()
-
         time.sleep(5)
-        thumbnails_div = self.driver.find_element(By.CLASS_NAME, "thumbnails-panel")
+        download_report = self.driver.find_element(By.CLASS_NAME,
+                                                "file")
+        href = download_report.get_attribute("href")
 
         session = self.get_emulator_cookies(self.driver)
+        response = session.get(href)
+        
+        with open(filename, 'wb') as file:
+            file.write(response.content)
 
-        for i, a in enumerate(thumbnails_div.find_elements(By.TAG_NAME, "a")):
-            href = a.get_attribute("href")
-            response = session.get(href)
-            content = response.content
-            with Image.open(BytesIO(content)) as img:
-                pdf_path = '{}/{}'.format(pdf_dir, f'image_{i}.pdf')
-                img.save(pdf_path, "PDF", resolution=300.0)
-
-        pdf_files = natsorted([f for f in os.listdir(pdf_dir) if f.endswith('.pdf') and 'image' in f])
-        pdf_merger = PdfMerger()
-        for pdf_file in pdf_files:
-            pdf_merger.append(open(os.path.join(pdf_dir, pdf_file), 'rb'))
-        with open(os.path.join(pdf_dir, filename), 'wb') as file:
-            pdf_merger.write(file)
-        [os.remove(os.path.join(pdf_dir, f)) for f in os.listdir(pdf_dir) if 'image' in f]
         if old.__len__() > 0:
             os.remove(os.path.join(pdf_dir, old[0]))
         

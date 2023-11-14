@@ -291,6 +291,18 @@ query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (
                                      "'электроэнергия')")
 
 
+def update_client_alternative(engine):
+    df_db = pd.read_csv(CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, index_col=False, sep='#')
+    with engine.connect() as conn:
+        for i, row in df_db.iterrows():
+            other_names = row['other_names']
+            client_id = row['client_id']
+            sql_text = f"update client_alternative set other_names='{other_names}' where client_id={client_id}"
+            conn.execute(text(sql_text))
+            conn.commit()
+    print('Client_alternative table is update')
+
+
 def drop_tables(engine):
     tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
               'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
@@ -325,3 +337,5 @@ if __name__ == '__main__':
     update_database(main_engine, query_new_alternative_com_olovo)
     # make article_name_count
     update_database(main_engine, query_article_name_impact)
+    # update client_alternative
+    update_client_alternative(main_engine)

@@ -265,7 +265,7 @@ class ArticleProcess:
         :return: id of client(commodity) or False if user message not about client or commodity
         """
         subject_ids = []
-        message_text = message.lower().strip()
+        message_text = message.lower().strip().replace('"', '')
         df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
         df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
         for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
