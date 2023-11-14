@@ -41,9 +41,15 @@ user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
+# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
 api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
+CLIENT_NAME_PATH = 'data/name/client_name.csv'
+COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
+CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
+COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
+CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
 
 mail_username = "ai-helper@mail.ru"

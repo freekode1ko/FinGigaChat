@@ -4,7 +4,7 @@ import warnings
 import textwrap
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -19,8 +19,9 @@ import module.gigachat as gig
 import config
 
 path_to_source = config.path_to_source
-API_TOKEN = config.api_token
 psql_engine = config.psql_engine
+API_TOKEN = config.api_token
+
 articles_l5 = ''
 token = ''
 chat = ''
@@ -57,6 +58,7 @@ class Form(StatesGroup):
     link_change_summary = State()
     link_to_delete = State()
     permission_to_delete = State()
+    user_subscriptions = State()
 
 
 def read_curdatetime():
@@ -463,7 +465,7 @@ def __replacer(data: str):
     if '.' > 1 and first object in data_list == 0 => '{}.{}{}'(*data_list)
 
     :param data: value from cell
-    :return: formated data
+    :return: formatted data
     """
     data_list = data.split('.')
     if len(data_list) > 2:
@@ -474,8 +476,56 @@ def __replacer(data: str):
     return data
 
 
+@dp.message_handler(commands=['addnewsubscriptions'])
+async def add_new_subscriptions(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
+    await Form.user_subscriptions.set()
+    await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
+                         'пассивную отпраку новостей по ним.\n'
+                         'Перечистлите их в одном сообщении каждую с новой строки.')
+
+
+@dp.message_handler(state=Form.user_subscriptions)
+async def set_user_subscriptions(message: types.Message, state: FSMContext):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
+    await state.finish()
+    subscriptions = []
+    quotes = ['\"', '«', '»']
+
+    engine = create_engine(psql_engine)
+    user_id = json.loads(message.from_user.as_json())['id']
+    com_df = pd.read_sql_query('select * from "client_alternative"', con=engine)
+    client_df = pd.read_sql_query('select * from "commodity_alternative"', con=engine)
+    df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
+
+    message_text = message.text
+    for quote in quotes:
+        message_text = message_text.replace(quote, '')
+    user_request = [i.strip().lower() for i in message_text.split('\n')]
+
+    for subscription in user_request:
+        for index, row in df_all.iterrows():
+            # if subscription in row.split(';') - из-за разрядности такой варинт не всегда находит совпадение
+            for other_name in row.split(';'):
+                if subscription == other_name:
+                    subscriptions.append(other_name)
+
+    if (len(subscriptions) < len(user_request)) and subscriptions:
+        await message.reply(f'{", ".join(list(set(user_request) - set(subscriptions)))} '
+                            f'- Эти объекты новостей нам неизвестны')
+    if subscriptions:
+        subscriptions = ", ".join(subscriptions)
+        with engine.connect() as conn:
+            conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
+            conn.commit()
+        await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
+    else:
+        await message.reply('Перечисленные выше объекты не были найдены')
+
+
 @dp.message_handler(commands=['myactivesubscriptions'])
-async def user_subscriptions(message: types.Message):
+async def get_user_subscriptions(message: types.Message):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
