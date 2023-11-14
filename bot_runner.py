@@ -818,7 +818,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 return_ans = True
 
         if not return_ans:
-            return_ans = await show_client_fin_table(message, 0, msg_text)
+            return_ans = await show_client_fin_table(message, subject_id)
 
         if not return_ans:
             await types.ChatActions.typing()
