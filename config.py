@@ -415,7 +415,7 @@ dict_of_companies = \
             'company_id': '695',
             'alias': 'Электроэнергетика'
         },
-        'Fix Price Group': {
+        'Fix Price': {
             'company_id': '1437',
             'alias': 'Потребительский сектор'
         },
