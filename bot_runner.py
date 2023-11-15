@@ -477,7 +477,7 @@ def __replacer(data: str):
     return data
 
 
-@dp.message_handler(commands=['showmeyourtits'])
+@dp.message_handler(commands=['sendtoall'])
 async def message_to_all(message: types.Message):
     user_str = message.from_user.as_json()
     user = json.loads(message.from_user.as_json())
@@ -503,7 +503,7 @@ async def get_msg_from_admin(message, state: FSMContext):
         file_type = 'document'
         file_name = message.document.file_name
         msg = message.caption
-        await message.document.download('sources/{}'.format(file_name))
+        await message.document.download(destination_file='sources/{}'.format(file_name))
     elif 'photo' in message_jsn:
         file_type = 'photo'
         best_photo = message.photo[0]
@@ -511,7 +511,7 @@ async def get_msg_from_admin(message, state: FSMContext):
             if best_photo.file_size < photo.file_size:
                 best_photo = photo
         file_name = best_photo.file_id
-        await photo.download('sources/{}.jpg'.format(file_name))
+        await photo.download(destination_file='sources/{}.jpg'.format(file_name))
         msg = message.caption
     else:
         await state.finish()
