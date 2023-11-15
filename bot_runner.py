@@ -517,19 +517,16 @@ async def get_msg_from_admin(message, state: FSMContext):
         await state.finish()
         await message.answer('Отправка не удалась')
         return None
-    # await message.download('/sources/{}'.format(msg_document.file_name))
-    # print('Done')
-    # print(msg_document.as_json())
+
     engine = create_engine(psql_engine)
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     await state.finish()
-    # users = pd.DataFrame([[353210315, 'username', 'email', 'user_type', 'user_status', None],
-    #                       [353210315, 'username1', 'email1', 'user_type1', 'user_status1', 'subscriptions']],
-    #                      columns=['user_id', 'username', 'email', 'user_type', 'user_status', 'subscriptions'])
     users_ids = users['user_id'].tolist()
     users_ids.remove(message.from_user.id)
     for user_id in users_ids:
         await send_msg_to(user_id, msg, file_name, file_type)
+        await message.answer('Отправлено пользователю: {}'.format(user_id))
+    await message.answer('Рассылка успешно отправлена всем пользователям')
 
 
 async def send_msg_to(user_id, message_text, file_name, file_type):
