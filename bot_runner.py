@@ -5,6 +5,8 @@ import textwrap
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, text
+from datetime import datetime, timedelta
+import asyncio
 
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -902,6 +904,90 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
 
 
+async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_send: int = 0):
+    """
+    Рассчитаваем время ожидания перед отправкой рассылки
+    :param weekday_to_send: день недели, в который нужно отправить рассылку
+    :param hour_to_send: час, в который нужно отправить рассылку
+    :param minute_to_send: минуты, в которые нужно отправить рассылку
+    return время ожидания перед рассылкой
+    """
+
+    # получаем текущее датувремя и день недели
+    current_datetime = datetime.now()
+    current_weekday = current_datetime.isoweekday()
+
+    # рассчитываем разницу до дня недели, в который нужно отправить рассылку
+    days_until_sending = (weekday_to_send - current_weekday + 7) % 7
+
+    # определяем следующую дату рассылки
+    datetime_ = datetime(current_datetime.year, current_datetime.month, current_datetime.day, hour_to_send, minute_to_send)
+    datetime_for_sending = datetime_ + timedelta(days=days_until_sending)
+
+    # добавляем неделю, если дата прошла
+    if datetime_for_sending <= current_datetime:
+        datetime_for_sending += timedelta(weeks=1)
+
+    # определяем время ожидания
+    time_to_wait = datetime_for_sending - current_datetime
+
+    return time_to_wait
+
+
+async def send_weekly_result():
+    """  Отправляет рассылку "Итоги недели"  """
+
+    # ждем наступления нужной даты
+    sending_weekday, sending_hour, sending_minute = 3, 16, 21  # в пятницу 18:00
+    time_to_wait = await get_waiting_time(sending_weekday, sending_hour, sending_minute)
+    await asyncio.sleep(time_to_wait.total_seconds())
+
+    # формируем текст рассылки
+    title = 'Итоги недели'
+    newsletter = (f'<b>{title}</b>\n'
+                  f'')
+
+    # отправляем пользователям
+    engine = create_engine(psql_engine)
+    with engine.connect() as conn:
+        users_data = conn.execute(text('select user_id, username from whitelist')).fetchall()
+    for user_data in users_data:
+        user_id, user_name = user_data[0], user_data[1]
+        await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+        print(f'Пользователю {user_name} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+
+
+async def send_weekly_event():
+    """ Отправляет рассылку "Что нас ждет на этой неделе?" """
+
+    # ждем наступления нужной даты
+    sending_weekday, sending_hour, sending_minute = 1, 10, 30  # в понедельник 10:30
+    time_to_wait = await get_waiting_time(sending_weekday, sending_hour, sending_minute)
+    await asyncio.sleep(time_to_wait.total_seconds())
+
+    # формируем текст рассылки
+    title = 'Что нас ждет на этой неделе?'
+    newsletter = (f'<b>{title}</b>\n'
+                  f'')
+
+    # отправляем пользователям
+    engine = create_engine(psql_engine)
+    with engine.connect() as conn:
+        users_data = conn.execute(text('select user_id, username from whitelist')).fetchall()
+    for user_data in users_data:
+        user_id, user_name = user_data[0], user_data[1]
+        await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+        print(f'Пользователю {user_name} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+
+
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
+
+    # запускам рассылки
+    loop = asyncio.get_event_loop()
+    loop.create_task(send_weekly_result())
+    loop.create_task(send_weekly_event())
+
+    # запускаем бота
     executor.start_polling(dp, skip_updates=True)
+
