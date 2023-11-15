@@ -479,10 +479,13 @@ def __replacer(data: str):
 @dp.message_handler(commands=['addnewsubscriptions'])
 async def add_new_subscriptions(message: types.Message):
     print('{} - {}'.format(message.from_user.full_name, message.text))
-    await Form.user_subscriptions.set()
-    await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
-                         'пассивную отпраку новостей по ним.\n'
-                         'Перечистлите их в одном сообщении каждую с новой строки.')
+    if await user_in_whitelist(message.from_user.as_json()):
+        await Form.user_subscriptions.set()
+        await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
+                             'пассивную отпраку новостей по ним.\n'
+                             'Перечистлите их в одном сообщении каждую с новой строки.')
+    else:
+        await message.answer('Вы не зарегистрированны в этом боте')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
