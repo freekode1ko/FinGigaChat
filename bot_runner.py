@@ -59,6 +59,7 @@ class Form(StatesGroup):
     link_to_delete = State()
     permission_to_delete = State()
     user_subscriptions = State()
+    send_to_users = State()
 
 
 def read_curdatetime():
@@ -442,7 +443,7 @@ async def metal_info(message: types.Message):
             metal[key] = metal[key].round()
             metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
             metal[key] = metal[key].apply(lambda x: '{}%'.format(x) if x != 'nan' and key != 'Цена'
-                                                                    else str(x).replace("nan", "-"))
+            else str(x).replace("nan", "-"))
 
         metal.index = metal.index.astype('int')
         metal.sort_index(inplace=True)
@@ -474,6 +475,75 @@ def __replacer(data: str):
         else:
             return '{}{}.{}'.format(*data_list)
     return data
+
+
+@dp.message_handler(commands=['showmeyourtits'])
+async def message_to_all(message: types.Message):
+    user_str = message.from_user.as_json()
+    user = json.loads(message.from_user.as_json())
+    if await user_in_whitelist(user_str):
+        if await check_your_right(user):
+            await Form.send_to_users.set()
+            await message.answer('Напишите что надо разослать на всех пользователей')
+        else:
+            await message.answer('Недостаточно прав для этой команды!')
+    else:
+        await message.answer('Вы не зарегистрированны в этом боте')
+
+
+@dp.message_handler(state=Form.send_to_users, content_types=types.ContentTypes.ANY)
+async def get_msg_from_admin(message, state: FSMContext):
+    print('{} - {}'.format(message.from_user.full_name, message.text))
+    message_jsn = json.loads(message.as_json())
+    if 'text' in message_jsn:
+        file_type = 'text'
+        file_name = None
+        msg = message.text
+    elif 'document' in message_jsn:
+        file_type = 'document'
+        file_name = message.document.file_name
+        msg = message.caption
+        await message.document.download('sources/{}'.format(file_name))
+    elif 'photo' in message_jsn:
+        file_type = 'photo'
+        best_photo = message.photo[0]
+        for photo in message.photo[1:]:
+            if best_photo.file_size < photo.file_size:
+                best_photo = photo
+        file_name = best_photo.file_id
+        await photo.download('sources/{}.jpg'.format(file_name))
+        msg = message.caption
+    else:
+        await state.finish()
+        await message.answer('Отправка не удалась')
+        return None
+    # await message.download('/sources/{}'.format(msg_document.file_name))
+    # print('Done')
+    # print(msg_document.as_json())
+    engine = create_engine(psql_engine)
+    users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
+    await state.finish()
+    # users = pd.DataFrame([[353210315, 'username', 'email', 'user_type', 'user_status', None],
+    #                       [353210315, 'username1', 'email1', 'user_type1', 'user_status1', 'subscriptions']],
+    #                      columns=['user_id', 'username', 'email', 'user_type', 'user_status', 'subscriptions'])
+    users_ids = users['user_id'].tolist()
+    users_ids.remove(message.from_user.id)
+    for user_id in users_ids:
+        await send_msg_to(user_id, msg, file_name, file_type)
+
+
+async def send_msg_to(user_id, message_text, file_name, file_type):
+    if file_name:
+        if file_type == 'photo':
+            file = types.InputFile('sources/{}.jpg'.format(file_name))
+            await bot.send_photo(photo=file, chat_id=user_id,
+                                 caption=message_text, parse_mode='HTML', protect_content=True)
+        elif file_type == 'document':
+            file = types.InputFile('sources/{}'.format(file_name))
+            await bot.send_document(document=file, chat_id=user_id,
+                                    caption=message_text, parse_mode='HTML', protect_content=True)
+    else:
+        await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
 
 @dp.message_handler(commands=['addnewsubscriptions'])
