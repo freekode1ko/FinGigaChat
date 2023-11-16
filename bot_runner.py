@@ -1,4 +1,5 @@
 import re
+import os
 import json
 import warnings
 import textwrap
@@ -507,11 +508,11 @@ async def get_msg_from_admin(message, state: FSMContext):
     elif 'photo' in message_jsn:
         file_type = 'photo'
         best_photo = message.photo[0]
-        for photo in message.photo[1:]:
-            if best_photo.file_size < photo.file_size:
-                best_photo = photo
+        for photo_file in message.photo[1:]:
+            if best_photo.file_size < photo_file.file_size:
+                best_photo = photo_file
         file_name = best_photo.file_id
-        await photo.download(destination_file='sources/{}.jpg'.format(file_name))
+        await best_photo.download(destination_file='sources/{}.jpg'.format(file_name))
         msg = message.caption
     else:
         await state.finish()
@@ -527,6 +528,8 @@ async def get_msg_from_admin(message, state: FSMContext):
         await send_msg_to(user_id, msg, file_name, file_type)
         await message.answer('Отправлено пользователю: {}'.format(user_id))
     await message.answer('Рассылка на пользователей успешно отправлена')
+    file_clener('sources/{}'.format(file_name))
+    file_clener('sources/{}.jpg'.format(file_name))
 
 
 async def send_msg_to(user_id, message_text, file_name, file_type):
@@ -541,6 +544,13 @@ async def send_msg_to(user_id, message_text, file_name, file_type):
                                     caption=message_text, parse_mode='HTML', protect_content=True)
     else:
         await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+
+
+def file_clener(filename):
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
 
 
 @dp.message_handler(commands=['addnewsubscriptions'])
