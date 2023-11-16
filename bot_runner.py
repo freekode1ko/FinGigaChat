@@ -480,6 +480,12 @@ def __replacer(data: str):
 
 @dp.message_handler(commands=['sendtoall'])
 async def message_to_all(message: types.Message):
+    """
+    Входная точка для ручной рассылки новостей на всех пользователей
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     user_str = message.from_user.as_json()
     user = json.loads(message.from_user.as_json())
     if await user_in_whitelist(user_str):
@@ -494,6 +500,13 @@ async def message_to_all(message: types.Message):
 
 @dp.message_handler(state=Form.send_to_users, content_types=types.ContentTypes.ANY)
 async def get_msg_from_admin(message, state: FSMContext):
+    """
+    Обработка сообщения и/или файла от пользователя и рассылка их на всех пользователей
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     message_jsn = json.loads(message.as_json())
     if 'text' in message_jsn:
@@ -533,6 +546,15 @@ async def get_msg_from_admin(message, state: FSMContext):
 
 
 async def send_msg_to(user_id, message_text, file_name, file_type):
+    """
+    Рассылка текста и/или файлов(документы и фотокарточки) на выбраного польщователя
+
+    :param user_id: ID пользователя для которого будет произведена отправка
+    :param message_text: Текст для отправки или подпись к файлу
+    :param file_name: Текст содержащий в себе название сохраненного файла
+    :param file_type: Тип файла для отправки. Может быть None, Document и Picture
+    :return: None
+    """
     if file_name:
         if file_type == 'photo':
             file = types.InputFile('sources/{}.jpg'.format(file_name))
@@ -547,6 +569,12 @@ async def send_msg_to(user_id, message_text, file_name, file_type):
 
 
 def file_clener(filename):
+    """
+    Очистка сохраненный файлов после их отправки
+
+    :param filename: Путь от исполняемого файла (если он не рядом) и имя файла для удаления
+    :return: None
+    """
     try:
         os.remove(filename)
     except OSError:
@@ -555,6 +583,12 @@ def file_clener(filename):
 
 @dp.message_handler(commands=['addnewsubscriptions'])
 async def add_new_subscriptions(message: types.Message):
+    """
+    Входная точка для добавления подписок на новостные объекты себе для получения новостей
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         await Form.user_subscriptions.set()
@@ -567,6 +601,13 @@ async def add_new_subscriptions(message: types.Message):
 
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
+    """
+    Обработка сообщения от пользователя и запись известных объектов новстей в подписки
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.finish()
     subscriptions = []
@@ -605,6 +646,12 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['myactivesubscriptions'])
 async def get_user_subscriptions(message: types.Message):
+    """
+    Получение сообщением информации о своих подписках
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
@@ -624,6 +671,12 @@ async def get_user_subscriptions(message: types.Message):
 
 
 async def user_in_whitelist(user: str):
+    """
+    Проверка пользователя на наличе в списках на доступ
+
+    :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
+    :return: Булевое значение на наличие пользователя в списке
+    """
     user_json = json.loads(user)
     user_id = user_json['id']
     engine = create_engine(psql_engine)
@@ -636,6 +689,12 @@ async def user_in_whitelist(user: str):
 
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
+    """
+    Добавление нового пользователя в список на доступ
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user_raw = json.loads(message.from_user.as_json())
     email = ' '
@@ -660,6 +719,12 @@ async def user_to_whitelist(message: types.Message):
 
 
 async def check_your_right(user: dict):
+    """
+    Проверка прав пользователя
+
+    :param user: Словарь с информацией о пользователе
+    :return: Булевое значение на наличие прав администратора и выше
+    """
     user_id = user['id']
     engine = create_engine(config.psql_engine)
     user_series = pd.read_sql_query(f"select user_type from whitelist WHERE user_id='{user_id}'", con=engine)
