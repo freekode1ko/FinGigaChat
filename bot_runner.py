@@ -64,6 +64,11 @@ class Form(StatesGroup):
 
 
 def read_curdatetime():
+    """
+    Чтение даты последней сборки из базы данных
+
+    :return: Дата последней сборки
+    """
     # with open('sources/tables/time.txt', 'r') as f:
     #     curdatetime = f.read()
     engine = create_engine(psql_engine)
@@ -72,6 +77,16 @@ def read_curdatetime():
 
 
 async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048):
+    """
+    Разбиение сообщения на части по колличеству символов
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param text: Содержание отчета
+    :param name: Заголовок отчета
+    :param date: Дата сборки отчета
+    :param batch_size: Размер сообщения в символах. По стандарту это значение равно 2048 символов на сообщение
+    :return: None
+    """
     text_group = []
     # import dateutil.parser as dparser
     # date = dparser.parse(date, fuzzy=True)
@@ -97,7 +112,20 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
-                               month: str = '', title: str = '', source: str = '', protect_content: bool = True):
+                               month: str = '', title: str = '', source: str = '',
+                               protect_content: bool = True):
+    """
+    Отправка в чат пользователю сообщение с текстом и/или изображения
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param photo: Фотокарточка для отправки
+    :param day: Дневной отчет в формате текста
+    :param month: Месячный отчет в формате текста
+    :param title: Подпись к фотокарточке
+    :param source: Не используется на данный момент
+    :param protect_content: Булевое значение отвечающее за защиту от копирования сообщения и его текста/фотокарточки
+    :return: None
+    """
     batch_size = 3500
     if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
@@ -114,6 +142,12 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
 
 @dp.message_handler(commands=['start', 'help'])
 async def help_handler(message: types.Message):
+    """
+    Вывод приветственного окна, с описанием бота и люцами для связи
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     help_text = config.help_text
     if await user_in_whitelist(message.from_user.as_json()):
         to_pin = await bot.send_message(message.chat.id, help_text, protect_content=False)
@@ -124,6 +158,12 @@ async def help_handler(message: types.Message):
 # ['облигации', 'бонды', 'офз']
 @dp.message_handler(commands=['bonds'])
 async def bonds_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связаные с облигациями
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
@@ -159,6 +199,12 @@ async def bonds_info(message: types.Message):
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
 @dp.message_handler(commands=['eco'])
 async def economy_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связаные с экономикой (ключевая ставка)
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         engine = create_engine(psql_engine)
@@ -245,6 +291,12 @@ async def economy_info(message: types.Message):
 
 @dp.message_handler(commands=['view'])
 async def data_mart(message: types.Message):
+    """
+    Вывод в чат информации по ключевым экономическими показателям
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
@@ -346,6 +398,12 @@ async def data_mart(message: types.Message):
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
 async def exchange_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связаные с валютой и их курсом
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
@@ -395,6 +453,12 @@ async def exchange_info(message: types.Message):
 # ['Металлы', 'сырьевые товары', 'commodities']
 @dp.message_handler(commands=['commodities'])
 async def metal_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связаные с сырьевыми товарами (комодами)
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
@@ -464,10 +528,11 @@ async def metal_info(message: types.Message):
 
 def __replacer(data: str):
     """
-    if '.' > 1 and first object in data_list == 0 => '{}.{}{}'(*data_list)
+    Если '.' больше чем 1 в числовом значении фин. показателя
+    и первый объект равен 0, то форматируем так '{}.{}{}'(*data_list)
 
-    :param data: value from cell
-    :return: formatted data
+    :param data: Значение из ячейки таблицы с фин. показателями
+    :return: Форматированный текст
     """
     data_list = data.split('.')
     if len(data_list) > 2:
