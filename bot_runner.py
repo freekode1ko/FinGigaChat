@@ -797,6 +797,32 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         return False
 
 
+@dp.message_handler(commands=['week_result'])
+async def send_weekly_result_by_alias(message: types.Message):
+    """ Отправляет рассылку "Итоги недели" """
+
+    title, newsletter = dt.Newsletter.make_weekly_result()
+
+    user_raw = json.loads(message.from_user.as_json())
+    username = user_raw['username'] if 'username' in user_raw else 'без имени'
+
+    await bot.send_message(message.chat.id, text=newsletter, parse_mode='HTML', protect_content=True)
+    print(f'Пользователю {username} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+
+
+@dp.message_handler(commands=['week_event'])
+async def send_weekly_event_by_alias(message: types.Message):
+    """ Отправляет рассылку "Что нас ждет на этой неделе?" """
+
+    title, newsletter = dt.Newsletter.make_weekly_event()
+
+    user_raw = json.loads(message.from_user.as_json())
+    username = user_raw['username'] if 'username' in user_raw else 'без имени'
+
+    await bot.send_message(message.chat.id, text=newsletter, parse_mode='HTML', protect_content=True)
+    print(f'Пользователю {username} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     msg = '{} {}'.format(prompt, message.text)
@@ -942,10 +968,8 @@ async def send_weekly_result():
     time_to_wait = await get_waiting_time(sending_weekday, sending_hour, sending_minute)
     await asyncio.sleep(time_to_wait.total_seconds())
 
-    # формируем текст рассылки
-    title = 'Итоги недели'
-    newsletter = (f'<b>{title}</b>\n'
-                  f'')
+    # получаем текст рассылки
+    title, newsletter = dt.Newsletter.make_weekly_result()
 
     # отправляем пользователям
     engine = create_engine(psql_engine)
@@ -965,10 +989,8 @@ async def send_weekly_event():
     time_to_wait = await get_waiting_time(sending_weekday, sending_hour, sending_minute)
     await asyncio.sleep(time_to_wait.total_seconds())
 
-    # формируем текст рассылки
-    title = 'Что нас ждет на этой неделе?'
-    newsletter = (f'<b>{title}</b>\n'
-                  f'')
+    # получаем текст рассылки
+    title, newsletter = dt.Newsletter.make_weekly_event()
 
     # отправляем пользователям
     engine = create_engine(psql_engine)
