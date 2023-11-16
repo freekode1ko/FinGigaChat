@@ -1,13 +1,15 @@
-from pandas.plotting import table
-import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
-import six
 import datetime
-import config
 import copy
+
+import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import pandas as pd
+from pandas.plotting import table
+import six
+
 from bot_runner import read_curdatetime
+import config
 
 
 class Transformer:
@@ -341,3 +343,29 @@ class Transformer:
                 commodities[commodity]['links'][0] = commodities[commodity]['links'][0] \
                     .replace('date_date', unix_timestamp)
         return commodities
+
+
+class Newsletter:
+    """ Создает текста для рассылок """
+    __newsletter_dict = dict(weekly_result='Итоги недели', weekly_event='Что нас ждет на этой неделе?')
+
+    @classmethod
+    def get_newsletter_dict(cls):
+        return cls.__newsletter_dict
+
+    @classmethod
+    def make_weekly_result(cls):
+        """ Создает текст для рассылки "Итоги недели" """
+        title = 'Итоги недели'
+        newsletter = (f'<b>{title}</b>\n'
+                      f'')
+        return title, newsletter
+
+    @classmethod
+    def make_weekly_event(cls):
+        """ Создает текст для рассылки "Что нас ждет на этой неделе?" """
+        title = 'Что нас ждет на этой неделе?'
+        newsletter = (f'<b>{title}</b>\n'
+                      f'')
+        return title, newsletter
+
