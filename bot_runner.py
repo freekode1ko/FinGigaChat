@@ -6,6 +6,9 @@ import textwrap
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, text
+from datetime import datetime, timedelta
+import asyncio
+from typing import Dict
 
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -1089,6 +1092,42 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         return False
 
 
+@dp.message_handler(commands=['newsletter'])
+async def show_newsletter_buttons(message: types.Message):
+    """ Отображает кнопки с доступными рассылками """
+
+    newsletter_dict = dt.Newsletter.get_newsletter_dict()  # {тип рассылки: заголовок рассылки}
+    callback_func = 'send_newsletter_by_button'  # функция по отображению рассылки
+
+    keyboard = types.InlineKeyboardMarkup()
+    for type_, title in newsletter_dict.items():
+        callback = f'{callback_func}:{type_}'
+        keyboard.add(types.InlineKeyboardButton(text=title, callback_data=callback))
+
+    await message.answer("Какую информацию вы хотите получить?", reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('send_newsletter_by_button'))
+async def send_newsletter_by_button(callback_query: types.CallbackQuery):
+    """ Отправляет рассылку по кнопке """
+    # получаем данные
+    newsletter_type = callback_query.data.split(':')[1]
+    data_callback = dict(callback_query.values['from'])
+    username = data_callback.get('username', 'без имени')
+    print('{} - {}'.format(username, f'получение {newsletter_type} рассылки по кнопке'))
+
+    # получаем текст рассылки
+    if newsletter_type == 'weekly_result':
+        title, newsletter = dt.Newsletter.make_weekly_result()
+    elif newsletter_type == 'weekly_event':
+        title, newsletter = dt.Newsletter.make_weekly_event()
+    else:
+        return
+
+    await bot.send_message(data_callback['id'], text=newsletter, parse_mode='HTML', protect_content=True)
+    print(f'Пользователю {username} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     msg = '{} {}'.format(prompt, message.text)
@@ -1196,6 +1235,72 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
 
 
+async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_send: int = 0):
+    """
+    Рассчитаваем время ожидания перед отправкой рассылки
+    :param weekday_to_send: день недели, в который нужно отправить рассылку
+    :param hour_to_send: час, в который нужно отправить рассылку
+    :param minute_to_send: минуты, в которые нужно отправить рассылку
+    return время ожидания перед рассылкой
+    """
+
+    # получаем текущее датувремя и день недели
+    current_datetime = datetime.now()
+    current_weekday = current_datetime.isoweekday()
+
+    # рассчитываем разницу до дня недели, в который нужно отправить рассылку
+    days_until_sending = (weekday_to_send - current_weekday + 7) % 7
+
+    # определяем следующую дату рассылки
+    datetime_ = datetime(current_datetime.year, current_datetime.month, current_datetime.day, hour_to_send, minute_to_send)
+    datetime_for_sending = datetime_ + timedelta(days=days_until_sending)
+
+    # добавляем неделю, если дата прошла
+    if datetime_for_sending <= current_datetime:
+        datetime_for_sending += timedelta(weeks=1)
+
+    # определяем время ожидания
+    time_to_wait = datetime_for_sending - current_datetime
+
+    return time_to_wait
+
+
+async def send_newsletter(newsletter_data: Dict):
+    """  Отправляет рассылку  """
+
+    newsletter_type, sending_weekday, sending_hour, sending_minute = tuple(newsletter_data.values())
+
+    # ждем наступления нужной даты
+    time_to_wait = await get_waiting_time(sending_weekday, sending_hour, sending_minute)
+    await asyncio.sleep(time_to_wait.total_seconds())
+
+    # получаем текст рассылки
+    if newsletter_type == 'weekly_result':
+        title, newsletter = dt.Newsletter.make_weekly_result()
+    elif newsletter_type == 'weekly_event':
+        title, newsletter = dt.Newsletter.make_weekly_event()
+    else:
+        return
+
+    # отправляем пользователям
+    engine = create_engine(psql_engine)
+    with engine.connect() as conn:
+        users_data = conn.execute(text('select user_id, username from whitelist')).fetchall()
+    for user_data in users_data:
+        user_id, user_name = user_data[0], user_data[1]
+        await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+        print(f'Пользователю {user_name} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+    return
+
+
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
+
+    # запускам рассылки
+    loop = asyncio.get_event_loop()
+    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=5, minute=18)))
+    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
+
+    # запускаем бота
     executor.start_polling(dp, skip_updates=True)
+
