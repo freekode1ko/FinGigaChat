@@ -485,7 +485,7 @@ async def message_to_all(message: types.Message):
     if await user_in_whitelist(user_str):
         if await check_your_right(user):
             await Form.send_to_users.set()
-            await message.answer('Сформируйте сообщение для всех польхователей в следующем своем сообщении')
+            await message.answer('Сформируйте сообщение для всех пользователей в следующем своем сообщении')
         else:
             await message.answer('Недостаточно прав для этой команды!')
     else:
