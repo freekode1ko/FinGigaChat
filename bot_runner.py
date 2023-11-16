@@ -523,11 +523,11 @@ async def get_msg_from_admin(message, state: FSMContext):
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     await state.finish()
     users_ids = users['user_id'].tolist()
-    users_ids.remove(message.from_user.id)
+    # users_ids.remove(message.from_user.id)
     for user_id in users_ids:
         await send_msg_to(user_id, msg, file_name, file_type)
-        await message.answer('Отправлено пользователю: {}'.format(user_id))
-    await message.answer('Рассылка на пользователей успешно отправлена')
+        # await message.answer('Отправлено пользователю: {}'.format(user_id))
+    await message.answer('Рассылка на пользователей({}) успешно отправлена'.format(len(users_ids)))
     file_clener('sources/{}'.format(file_name))
     file_clener('sources/{}.jpg'.format(file_name))
 
