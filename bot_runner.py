@@ -556,7 +556,8 @@ async def message_to_all(message: types.Message):
     if await user_in_whitelist(user_str):
         if await check_your_right(user):
             await Form.send_to_users.set()
-            await message.answer('Сформируйте сообщение для всех пользователей в следующем своем сообщении')
+            await message.answer('Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
+                                 'или, если передумали, напишите слово "Отмена".')
         else:
             await message.answer('Недостаточно прав для этой команды!')
     else:
@@ -573,6 +574,10 @@ async def get_msg_from_admin(message, state: FSMContext):
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    if message.text.strip().lower() == 'отмена':
+        await state.finish()
+        await message.answer('Рассылка успешно отменена.')
+        return None
     message_jsn = json.loads(message.as_json())
     if 'text' in message_jsn:
         file_type = 'text'
@@ -659,7 +664,8 @@ async def add_new_subscriptions(message: types.Message):
         await Form.user_subscriptions.set()
         await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
                              'пассивную отпраку новостей по ним.\n'
-                             'Перечистлите их в одном сообщении каждую с новой строки.')
+                             'Перечистлите их в одном сообщении каждую с новой строки.\n'
+                             'Если передумали, то напишите "Отмена" в чат.')
     else:
         await message.answer('Вы не зарегистрированны в этом боте')
 
@@ -674,6 +680,10 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    if message.text.strip().lower() == 'отмена':
+        await state.finish()
+        await message.answer('Изменение списка подписка успешно отменено.')
+        return None
     await state.finish()
     subscriptions = []
     quotes = ['\"', '«', '»']
