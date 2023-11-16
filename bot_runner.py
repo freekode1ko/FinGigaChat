@@ -736,6 +736,14 @@ async def check_your_right(user: dict):
 
 
 async def __create_fin_table(message, client_name, client_fin_table):
+    """
+    Формирование таблицы под финансовые показалети и запись его изображения
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_name: Наименование клиента финансовых показателей
+    :param client_fin_table: Таблица финансовых показателей
+    :return: None
+    """
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
@@ -748,6 +756,12 @@ async def __create_fin_table(message, client_name, client_fin_table):
 
 @dp.message_handler(commands=['admin_help'])
 async def admin_help(message: types.Message):
+    """
+    Вывод в чат подсказки по командам для администратора
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
@@ -764,6 +778,12 @@ async def admin_help(message: types.Message):
 
 @dp.message_handler(commands=['show_article'])
 async def show_article(message: types.Message):
+    """
+    Вывод в чат новости по ссылке
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     await types.ChatActions.typing()
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
@@ -780,6 +800,13 @@ async def show_article(message: types.Message):
 
 @dp.message_handler(state=Form.link)
 async def continue_show_article(message: types.Message, state: FSMContext):
+    """
+    Вывод новости по ссылке от пользователя
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link=message.text)
@@ -808,6 +835,12 @@ async def continue_show_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['change_summary'])
 async def change_summary(message: types.Message):
+    """
+    Получение ссылки на новость для изменения ее короткой версии
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if not config.api_key_gpt:
         await message.answer('Данная команда пока недоступна.', protect_content=False)
@@ -829,6 +862,13 @@ async def change_summary(message: types.Message):
 
 @dp.message_handler(state=Form.link_change_summary)
 async def continue_change_summary(message: types.Message, state: FSMContext):
+    """
+    Изменение краткой версии новости
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
@@ -857,6 +897,12 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
 # TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
+    """
+    Получение ссылки на новость от пользователя для ее удаления
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :return: None
+    """
     await types.ChatActions.typing()
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
@@ -873,6 +919,13 @@ async def delete_article(message: types.Message):
 
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
+    """
+    Проверка что действите по удалению новости не случайное
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link_to_delete=message.text)
@@ -892,6 +945,13 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.permission_to_delete)
 async def finish_delete_article(message: types.Message, state: FSMContext):
+    """
+    Удаление новости
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    :return: None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(permission_to_delete=message.text)
@@ -918,6 +978,12 @@ async def analyse_bad_article(message: types.Message):
 
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
+    """
+    Вывод 5 новостей пользователю в чат
+
+    :param call: Объект(сообщение) для ответа
+    :return: None
+    """
     try:
         await call.message.answer(articles_l5, parse_mode='HTML',
                                   protect_content=False, disable_web_page_preview=True)
@@ -931,6 +997,14 @@ async def send_next_five_news(call: types.CallbackQuery):
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str) -> bool:
+    """
+    Вывод таблицы с финансовыми показателями в виде фотокарточки
+
+    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param s_id: ID клиента или комоды
+    :param msg_text: Текст сообщения
+    :return: Булевое значение об успешности создания таблицы
+    """
     client_name, client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, msg_text.strip().lower())
     if not client_fin_table.empty:
         await types.ChatActions.upload_photo()
