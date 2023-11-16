@@ -484,11 +484,11 @@ async def message_to_all(message: types.Message):
     if await user_in_whitelist(user_str):
         if await check_your_right(user):
             await Form.send_to_users.set()
-            await message.answer('Напишите что надо разослать на всех пользователей')
+            await message.answer('Сформируйте сообщение для всех польхователей в следующем своем сообщении')
         else:
             await message.answer('Недостаточно прав для этой команды!')
     else:
-        await message.answer('Вы не зарегистрированны в этом боте')
+        await message.answer('Неавторизированный пользователь')
 
 
 @dp.message_handler(state=Form.send_to_users, content_types=types.ContentTypes.ANY)
@@ -526,7 +526,7 @@ async def get_msg_from_admin(message, state: FSMContext):
     for user_id in users_ids:
         await send_msg_to(user_id, msg, file_name, file_type)
         await message.answer('Отправлено пользователю: {}'.format(user_id))
-    await message.answer('Рассылка успешно отправлена всем пользователям')
+    await message.answer('Рассылка на пользователей успешно отправлена')
 
 
 async def send_msg_to(user_id, message_text, file_name, file_type):
