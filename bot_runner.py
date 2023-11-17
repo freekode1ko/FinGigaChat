@@ -625,7 +625,7 @@ async def send_msg_to(user_id, message_text, file_name, file_type):
     :param user_id: ID пользователя для которого будет произведена отправка
     :param message_text: Текст для отправки или подпись к файлу
     :param file_name: Текст содержащий в себе название сохраненного файла
-    :param file_type: Тип файла для отправки. Может быть None, Document и Picture
+    :param file_type: Тип файла для отправки. Может быть None, str("Document") и str("Picture")
     return None
     """
     if file_name:
