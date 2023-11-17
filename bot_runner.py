@@ -643,7 +643,7 @@ async def send_msg_to(user_id, message_text, file_name, file_type):
 
 def file_clener(filename):
     """
-    Очистка сохраненный файлов после их отправки
+    Удаление файла по относительному или абсолютному пути
 
     :param filename: Путь от исполняемого файла (если он не рядом) и имя файла для удаления
     return None
