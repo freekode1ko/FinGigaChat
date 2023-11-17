@@ -1,4 +1,5 @@
 import re
+import os
 import json
 import warnings
 import textwrap
@@ -62,9 +63,15 @@ class Form(StatesGroup):
     link_to_delete = State()
     permission_to_delete = State()
     user_subscriptions = State()
+    send_to_users = State()
 
 
 def read_curdatetime():
+    """
+    Чтение даты последней сборки из базы данных
+
+    return Дата последней сборки
+    """
     # with open('sources/tables/time.txt', 'r') as f:
     #     curdatetime = f.read()
     engine = create_engine(psql_engine)
@@ -73,12 +80,22 @@ def read_curdatetime():
 
 
 async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048):
+    """
+    Разбиение сообщения на части по количеству символов
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param text: Содержание отчета
+    :param name: Заголовок отчета
+    :param date: Дата сборки отчета
+    :param batch_size: Размер сообщения в символах. По стандарту это значение равно 2048 символов на сообщение
+    return None
+    """
     text_group = []
     # import dateutil.parser as dparser
     # date = dparser.parse(date, fuzzy=True)
     # print(date)
 
-    # uncommet me if need summory #TODO: исправить порядок парметров и промпт
+    # uncommet me if need summory #TODO: исправить порядок параметров и промпт
     # ****************************
     # giga_ans = await giga_ask(message, prompt='{}\n {}'.format(summ_prompt, text), return_ans=True)
     # ****************************
@@ -98,7 +115,20 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 
 async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
-                               month: str = '', title: str = '', source: str = '', protect_content: bool = True):
+                               month: str = '', title: str = '', source: str = '',
+                               protect_content: bool = True):
+    """
+    Отправка в чат пользователю сообщение с текстом и/или изображения
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param photo: Фотокарточка для отправки
+    :param day: Дневной отчет в формате текста
+    :param month: Месячный отчет в формате текста
+    :param title: Подпись к фотокарточке
+    :param source: Не используется на данный момент
+    :param protect_content: Булевое значение отвечающее за защиту от копирования сообщения и его текста/фотокарточки
+    return None
+    """
     batch_size = 3500
     if month:  # 'Публикация месяца
         for month_rev in month[::-1]:
@@ -115,6 +145,12 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
 
 @dp.message_handler(commands=['start', 'help'])
 async def help_handler(message: types.Message):
+    """
+    Вывод приветственного окна, с описанием бота и лицами для связи
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     help_text = config.help_text
     if await user_in_whitelist(message.from_user.as_json()):
         to_pin = await bot.send_message(message.chat.id, help_text, protect_content=False)
@@ -125,6 +161,12 @@ async def help_handler(message: types.Message):
 # ['облигации', 'бонды', 'офз']
 @dp.message_handler(commands=['bonds'])
 async def bonds_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связанной с облигациями
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
@@ -160,6 +202,12 @@ async def bonds_info(message: types.Message):
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
 @dp.message_handler(commands=['eco'])
 async def economy_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         engine = create_engine(psql_engine)
@@ -246,6 +294,12 @@ async def economy_info(message: types.Message):
 
 @dp.message_handler(commands=['view'])
 async def data_mart(message: types.Message):
+    """
+    Вывод в чат информации по ключевым экономическим показателям
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
@@ -347,6 +401,12 @@ async def data_mart(message: types.Message):
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
 async def exchange_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связанной с валютой и их курсом
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
@@ -396,6 +456,12 @@ async def exchange_info(message: types.Message):
 # ['Металлы', 'сырьевые товары', 'commodities']
 @dp.message_handler(commands=['commodities'])
 async def metal_info(message: types.Message):
+    """
+    Вывод в чат информации по котировкам связанной с сырьем (комодами)
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
@@ -445,7 +511,7 @@ async def metal_info(message: types.Message):
             metal[key] = metal[key].round()
             metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
             metal[key] = metal[key].apply(lambda x: '{}%'.format(x) if x != 'nan' and key != 'Цена'
-                                                                    else str(x).replace("nan", "-"))
+            else str(x).replace("nan", "-"))
 
         metal.index = metal.index.astype('int')
         metal.sort_index(inplace=True)
@@ -465,10 +531,11 @@ async def metal_info(message: types.Message):
 
 def __replacer(data: str):
     """
-    if '.' > 1 and first object in data_list == 0 => '{}.{}{}'(*data_list)
+    Если '.' больше чем 1 в числовом значении фин.показателя
+    и первый объект равен 0, то форматируем так '{}.{}{}'(*data_list)
 
-    :param data: value from cell
-    :return: formatted data
+    :param data: Значение из ячейки таблицы с фин.показателями
+    return Форматированный текст
     """
     data_list = data.split('.')
     if len(data_list) > 2:
@@ -479,18 +546,147 @@ def __replacer(data: str):
     return data
 
 
+@dp.message_handler(commands=['sendtoall'])
+async def message_to_all(message: types.Message):
+    """
+    Входная точка для ручной рассылки новостей на всех пользователей
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    user_str = message.from_user.as_json()
+    user = json.loads(message.from_user.as_json())
+    if await user_in_whitelist(user_str):
+        if await check_your_right(user):
+            await Form.send_to_users.set()
+            await message.answer('Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
+                                 'или, если передумали, напишите слово "Отмена".')
+        else:
+            await message.answer('Недостаточно прав для этой команды!')
+    else:
+        await message.answer('Неавторизированный пользователь')
+
+
+@dp.message_handler(state=Form.send_to_users, content_types=types.ContentTypes.ANY)
+async def get_msg_from_admin(message, state: FSMContext):
+    """
+    Обработка сообщения и/или файла от пользователя и рассылка их на всех пользователей
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    return None
+    """
+    print('{} - {}'.format(message.from_user.full_name, message.text))
+    if message.text and (message.text.strip().lower() == 'отмена'):
+        await state.finish()
+        await message.answer('Рассылка успешно отменена.')
+        return None
+    message_jsn = json.loads(message.as_json())
+    if 'text' in message_jsn:
+        file_type = 'text'
+        file_name = None
+        msg = message.text
+    elif 'document' in message_jsn:
+        file_type = 'document'
+        file_name = message.document.file_name
+        msg = message.caption
+        await message.document.download(destination_file='sources/{}'.format(file_name))
+    elif 'photo' in message_jsn:
+        file_type = 'photo'
+        best_photo = message.photo[0]
+        for photo_file in message.photo[1:]:
+            if best_photo.file_size < photo_file.file_size:
+                best_photo = photo_file
+        file_name = best_photo.file_id
+        await best_photo.download(destination_file='sources/{}.jpg'.format(file_name))
+        msg = message.caption
+    else:
+        await state.finish()
+        await message.answer('Отправка не удалась')
+        return None
+
+    engine = create_engine(psql_engine)
+    users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
+    await state.finish()
+    users_ids = users['user_id'].tolist()
+    # users_ids.remove(message.from_user.id)
+    for user_id in users_ids:
+        await send_msg_to(user_id, msg, file_name, file_type)
+        # await message.answer('Отправлено пользователю: {}'.format(user_id))
+    await message.answer('Рассылка на пользователей({}) успешно отправлена'.format(len(users_ids)))
+    file_cleaner('sources/{}'.format(file_name))
+    file_cleaner('sources/{}.jpg'.format(file_name))
+
+
+async def send_msg_to(user_id, message_text, file_name, file_type):
+    """
+    Рассылка текста и/или файлов(документы и фотокарточки) на выбранного пользователя
+
+    :param user_id: ID пользователя для которого будет произведена отправка
+    :param message_text: Текст для отправки или подпись к файлу
+    :param file_name: Текст содержащий в себе название сохраненного файла
+    :param file_type: Тип файла для отправки. Может быть None, str("Document") и str("Picture")
+    return None
+    """
+    if file_name:
+        if file_type == 'photo':
+            file = types.InputFile('sources/{}.jpg'.format(file_name))
+            await bot.send_photo(photo=file, chat_id=user_id,
+                                 caption=message_text, parse_mode='HTML', protect_content=True)
+        elif file_type == 'document':
+            file = types.InputFile('sources/{}'.format(file_name))
+            await bot.send_document(document=file, chat_id=user_id,
+                                    caption=message_text, parse_mode='HTML', protect_content=True)
+    else:
+        await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+
+
+def file_cleaner(filename):
+    """
+    Удаление файла по относительному или абсолютному пути
+
+    :param filename: Путь от исполняемого файла (если он не рядом) и имя файла для удаления
+    return None
+    """
+    try:
+        os.remove(filename)
+    except OSError:
+        pass
+
+
 @dp.message_handler(commands=['addnewsubscriptions'])
 async def add_new_subscriptions(message: types.Message):
+    """
+    Входная точка для добавления подписок на новостные объекты себе для получения новостей
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
-    await Form.user_subscriptions.set()
-    await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
-                         'пассивную отпраку новостей по ним.\n'
-                         'Перечистлите их в одном сообщении каждую с новой строки.')
+    if await user_in_whitelist(message.from_user.as_json()):
+        await Form.user_subscriptions.set()
+        await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
+                             'пассивную отправку новостей по ним.\n'
+                             'Перечислите их в одном сообщении каждую с новой строки.\n'
+                             'Если передумали, то напишите "Отмена" в чат.')
+    else:
+        await message.answer('Вы не зарегистрированны в этом боте')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
+    """
+    Обработка сообщения от пользователя и запись известных объектов новстей в подписки
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    if message.text.strip().lower() == 'отмена':
+        await state.finish()
+        await message.answer('Изменение списка подписок успешно отменено.')
+        return None
     await state.finish()
     subscriptions = []
     quotes = ['\"', '«', '»']
@@ -528,6 +724,12 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['myactivesubscriptions'])
 async def get_user_subscriptions(message: types.Message):
+    """
+    Получение сообщением информации о своих подписках
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
@@ -547,6 +749,12 @@ async def get_user_subscriptions(message: types.Message):
 
 
 async def user_in_whitelist(user: str):
+    """
+    Проверка, пользователя на наличе в списках на доступ
+
+    :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
+    return Булевое значение на наличие пользователя в списке
+    """
     user_json = json.loads(user)
     user_id = user_json['id']
     engine = create_engine(psql_engine)
@@ -559,6 +767,12 @@ async def user_in_whitelist(user: str):
 
 @dp.message_handler(commands=['addmetowhitelist'])
 async def user_to_whitelist(message: types.Message):
+    """
+    Добавление нового пользователя в список на доступ
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user_raw = json.loads(message.from_user.as_json())
     email = ' '
@@ -583,6 +797,12 @@ async def user_to_whitelist(message: types.Message):
 
 
 async def check_your_right(user: dict):
+    """
+    Проверка прав пользователя
+
+    :param user: Словарь с информацией о пользователе
+    return Булевое значение на наличие прав администратора и выше
+    """
     user_id = user['id']
     engine = create_engine(config.psql_engine)
     user_series = pd.read_sql_query(f"select user_type from whitelist WHERE user_id='{user_id}'", con=engine)
@@ -594,6 +814,14 @@ async def check_your_right(user: dict):
 
 
 async def __create_fin_table(message, client_name, client_fin_table):
+    """
+    Формирование таблицы под финансовые показатели и запись его изображения
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_name: Наименование клиента финансовых показателей
+    :param client_fin_table: Таблица финансовых показателей
+    return None
+    """
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
     transformer.render_mpl_table(client_fin_table,
@@ -606,6 +834,12 @@ async def __create_fin_table(message, client_name, client_fin_table):
 
 @dp.message_handler(commands=['admin_help'])
 async def admin_help(message: types.Message):
+    """
+    Вывод в чат подсказки по командам для администратора
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
@@ -622,6 +856,12 @@ async def admin_help(message: types.Message):
 
 @dp.message_handler(commands=['show_article'])
 async def show_article(message: types.Message):
+    """
+    Вывод в чат новости по ссылке
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     await types.ChatActions.typing()
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
@@ -638,6 +878,13 @@ async def show_article(message: types.Message):
 
 @dp.message_handler(state=Form.link)
 async def continue_show_article(message: types.Message, state: FSMContext):
+    """
+    Вывод новости по ссылке от пользователя
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link=message.text)
@@ -666,6 +913,12 @@ async def continue_show_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['change_summary'])
 async def change_summary(message: types.Message):
+    """
+    Получение ссылки на новость для изменения ее короткой версии
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if not config.api_key_gpt:
         await message.answer('Данная команда пока недоступна.', protect_content=False)
@@ -687,6 +940,13 @@ async def change_summary(message: types.Message):
 
 @dp.message_handler(state=Form.link_change_summary)
 async def continue_change_summary(message: types.Message, state: FSMContext):
+    """
+    Изменение краткой версии новости
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
@@ -715,6 +975,12 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
 # TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
+    """
+    Получение ссылки на новость от пользователя для ее удаления
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     await types.ChatActions.typing()
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
@@ -731,6 +997,13 @@ async def delete_article(message: types.Message):
 
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
+    """
+    Проверка, что действите по удалению новости не случайное
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link_to_delete=message.text)
@@ -750,6 +1023,13 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=Form.permission_to_delete)
 async def finish_delete_article(message: types.Message, state: FSMContext):
+    """
+    Удаление новости
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    return None
+    """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(permission_to_delete=message.text)
@@ -776,6 +1056,12 @@ async def analyse_bad_article(message: types.Message):
 
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
+    """
+    Вывод 5 новостей пользователю в чат
+
+    :param call: Объект(сообщение) для ответа
+    return None
+    """
     try:
         await call.message.answer(articles_l5, parse_mode='HTML',
                                   protect_content=False, disable_web_page_preview=True)
@@ -789,6 +1075,14 @@ async def send_next_five_news(call: types.CallbackQuery):
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str) -> bool:
+    """
+    Вывод таблицы с финансовыми показателями в виде фотокарточки
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param s_id: ID клиента или комоды
+    :param msg_text: Текст сообщения
+    return Булевое значение об успешности создания таблицы
+    """
     client_name, client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, msg_text.strip().lower())
     if not client_fin_table.empty:
         await types.ChatActions.upload_photo()
@@ -943,7 +1237,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
 
 async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_send: int = 0):
     """
-    Рассчитаваем время ожидания перед отправкой рассылки
+    Рассчитываем время ожидания перед отправкой рассылки
+
     :param weekday_to_send: день недели, в который нужно отправить рассылку
     :param hour_to_send: час, в который нужно отправить рассылку
     :param minute_to_send: минуты, в которые нужно отправить рассылку
