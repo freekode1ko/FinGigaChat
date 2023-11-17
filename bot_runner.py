@@ -614,8 +614,8 @@ async def get_msg_from_admin(message, state: FSMContext):
         await send_msg_to(user_id, msg, file_name, file_type)
         # await message.answer('Отправлено пользователю: {}'.format(user_id))
     await message.answer('Рассылка на пользователей({}) успешно отправлена'.format(len(users_ids)))
-    file_clener('sources/{}'.format(file_name))
-    file_clener('sources/{}.jpg'.format(file_name))
+    file_cleaner('sources/{}'.format(file_name))
+    file_cleaner('sources/{}.jpg'.format(file_name))
 
 
 async def send_msg_to(user_id, message_text, file_name, file_type):
@@ -641,7 +641,7 @@ async def send_msg_to(user_id, message_text, file_name, file_type):
         await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
 
-def file_clener(filename):
+def file_cleaner(filename):
     """
     Удаление файла по относительному или абсолютному пути
 
