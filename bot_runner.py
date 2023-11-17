@@ -1291,7 +1291,9 @@ async def send_newsletter(newsletter_data: Dict):
         user_id, user_name = user_data[0], user_data[1]
         await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
         print(f'Пользователю {user_name} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
-    return
+
+    await asyncio.sleep(100)
+    return await send_newsletter(newsletter_data)
 
 
 if __name__ == '__main__':
@@ -1299,7 +1301,7 @@ if __name__ == '__main__':
 
     # запускам рассылки
     loop = asyncio.get_event_loop()
-    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=5, minute=18)))
+    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
 
     # запускаем бота
