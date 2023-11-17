@@ -613,7 +613,7 @@ async def get_msg_from_admin(message, state: FSMContext):
     for user_id in users_ids:
         await send_msg_to(user_id, msg, file_name, file_type)
         # await message.answer('Отправлено пользователю: {}'.format(user_id))
-    await message.answer('Рассылка на пользователей({}) успешно отправлена'.format(len(users_ids)))
+    await message.answer('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
     file_cleaner('sources/{}'.format(file_name))
     file_cleaner('sources/{}.jpg'.format(file_name))
 
