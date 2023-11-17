@@ -83,7 +83,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     """
     Разбиение сообщения на части по колличеству символов
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param text: Содержание отчета
     :param name: Заголовок отчета
     :param date: Дата сборки отчета
@@ -120,7 +120,7 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param photo: Фотокарточка для отправки
     :param day: Дневной отчет в формате текста
     :param month: Месячный отчет в формате текста
@@ -146,9 +146,9 @@ async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
 @dp.message_handler(commands=['start', 'help'])
 async def help_handler(message: types.Message):
     """
-    Вывод приветственного окна, с описанием бота и люцами для связи
+    Вывод приветственного окна, с описанием бота и лицами для связи
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     help_text = config.help_text
@@ -162,9 +162,9 @@ async def help_handler(message: types.Message):
 @dp.message_handler(commands=['bonds'])
 async def bonds_info(message: types.Message):
     """
-    Вывод в чат информации по котировкам связаные с облигациями
+    Вывод в чат информации по котировкам связанной с облигациями
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -203,9 +203,9 @@ async def bonds_info(message: types.Message):
 @dp.message_handler(commands=['eco'])
 async def economy_info(message: types.Message):
     """
-    Вывод в чат информации по котировкам связаные с экономикой (ключевая ставка)
+    Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -297,7 +297,7 @@ async def data_mart(message: types.Message):
     """
     Вывод в чат информации по ключевым экономическими показателям
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -402,9 +402,9 @@ async def data_mart(message: types.Message):
 @dp.message_handler(commands=['fx'])
 async def exchange_info(message: types.Message):
     """
-    Вывод в чат информации по котировкам связаные с валютой и их курсом
+    Вывод в чат информации по котировкам связанной с валютой и их курсом
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -457,9 +457,9 @@ async def exchange_info(message: types.Message):
 @dp.message_handler(commands=['commodities'])
 async def metal_info(message: types.Message):
     """
-    Вывод в чат информации по котировкам связаные с сырьевыми товарами (комодами)
+    Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -551,7 +551,7 @@ async def message_to_all(message: types.Message):
     """
     Входная точка для ручной рассылки новостей на всех пользователей
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     user_str = message.from_user.as_json()
@@ -572,12 +572,12 @@ async def get_msg_from_admin(message, state: FSMContext):
     """
     Обработка сообщения и/или файла от пользователя и рассылка их на всех пользователей
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
-    if message.text.strip().lower() == 'отмена':
+    if message.text and (message.text.strip().lower() == 'отмена'):
         await state.finish()
         await message.answer('Рассылка успешно отменена.')
         return None
@@ -620,7 +620,7 @@ async def get_msg_from_admin(message, state: FSMContext):
 
 async def send_msg_to(user_id, message_text, file_name, file_type):
     """
-    Рассылка текста и/или файлов(документы и фотокарточки) на выбраного польщователя
+    Рассылка текста и/или файлов(документы и фотокарточки) на выбраного пользователя
 
     :param user_id: ID пользователя для которого будет произведена отправка
     :param message_text: Текст для отправки или подпись к файлу
@@ -659,7 +659,7 @@ async def add_new_subscriptions(message: types.Message):
     """
     Входная точка для добавления подписок на новостные объекты себе для получения новостей
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -667,7 +667,7 @@ async def add_new_subscriptions(message: types.Message):
         await Form.user_subscriptions.set()
         await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
                              'пассивную отпраку новостей по ним.\n'
-                             'Перечистлите их в одном сообщении каждую с новой строки.\n'
+                             'Перечислите их в одном сообщении каждую с новой строки.\n'
                              'Если передумали, то напишите "Отмена" в чат.')
     else:
         await message.answer('Вы не зарегистрированны в этом боте')
@@ -678,14 +678,14 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
     Обработка сообщения от пользователя и запись известных объектов новстей в подписки
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     if message.text.strip().lower() == 'отмена':
         await state.finish()
-        await message.answer('Изменение списка подписка успешно отменено.')
+        await message.answer('Изменение списка подписок успешно отменено.')
         return None
     await state.finish()
     subscriptions = []
@@ -727,7 +727,7 @@ async def get_user_subscriptions(message: types.Message):
     """
     Получение сообщением информации о своих подписках
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -750,7 +750,7 @@ async def get_user_subscriptions(message: types.Message):
 
 async def user_in_whitelist(user: str):
     """
-    Проверка пользователя на наличе в списках на доступ
+    Проверка, пользователя на наличе в списках на доступ
 
     :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
     :return: Булевое значение на наличие пользователя в списке
@@ -770,7 +770,7 @@ async def user_to_whitelist(message: types.Message):
     """
     Добавление нового пользователя в список на доступ
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -817,7 +817,7 @@ async def __create_fin_table(message, client_name, client_fin_table):
     """
     Формирование таблицы под финансовые показалети и запись его изображения
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_name: Наименование клиента финансовых показателей
     :param client_fin_table: Таблица финансовых показателей
     :return: None
@@ -837,7 +837,7 @@ async def admin_help(message: types.Message):
     """
     Вывод в чат подсказки по командам для администратора
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -859,7 +859,7 @@ async def show_article(message: types.Message):
     """
     Вывод в чат новости по ссылке
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     await types.ChatActions.typing()
@@ -881,7 +881,7 @@ async def continue_show_article(message: types.Message, state: FSMContext):
     """
     Вывод новости по ссылке от пользователя
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     :return: None
     """
@@ -916,7 +916,7 @@ async def change_summary(message: types.Message):
     """
     Получение ссылки на новость для изменения ее короткой версии
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
@@ -943,7 +943,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     """
     Изменение краткой версии новости
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     :return: None
     """
@@ -978,7 +978,7 @@ async def delete_article(message: types.Message):
     """
     Получение ссылки на новость от пользователя для ее удаления
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: None
     """
     await types.ChatActions.typing()
@@ -998,9 +998,9 @@ async def delete_article(message: types.Message):
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
     """
-    Проверка что действите по удалению новости не случайное
+    Проверка, что действите по удалению новости не случайное
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     :return: None
     """
@@ -1026,7 +1026,7 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
     """
     Удаление новости
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     :return: None
     """
@@ -1078,7 +1078,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     """
     Вывод таблицы с финансовыми показателями в виде фотокарточки
 
-    :param message: Объект содержащий в себе информацию по отправителю, чату и сообщению
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param s_id: ID клиента или комоды
     :param msg_text: Текст сообщения
     :return: Булевое значение об успешности создания таблицы
