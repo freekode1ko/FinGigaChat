@@ -495,16 +495,19 @@ class ResearchParser:
         weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
         weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
 
-        while len(weeklies) < 1:
-            WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
-                                    and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
-            more = self.driver.find_element(By.XPATH,
-                                         '//*[@id="loadMorePublications"]')
-            self.driver.execute_script("arguments[0].scrollIntoView();", more)
-            more.click()
-            WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
-            weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
-            self.__sleep_some_time()
+        try:
+            while len(weeklies) < 1:
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
+                                        and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
+                more = self.driver.find_element(By.XPATH,
+                                            '//*[@id="loadMorePublications"]')
+                self.driver.execute_script("arguments[0].scrollIntoView();", more)
+                more.click()
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
+                weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
+                self.__sleep_some_time()
+        except Exception as e: 
+            print(e)
         
         weeklies[0].find_element(By.TAG_NAME,'a').click()
 
