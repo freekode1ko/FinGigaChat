@@ -510,6 +510,7 @@ class ResearchParser:
         except Exception as e: 
             print('Weekly Pulse Review..ERROR')
             print(e)
+            return
         
         weeklies[0].find_element(By.TAG_NAME,'a').click()
 
