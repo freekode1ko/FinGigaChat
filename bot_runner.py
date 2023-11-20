@@ -564,7 +564,7 @@ async def message_to_all(message: types.Message):
         else:
             await message.answer('Недостаточно прав для этой команды!')
     else:
-        await message.answer('Неавторизированный пользователь')
+        await message.answer('Неавторизованный пользователь')
 
 
 @dp.message_handler(state=Form.send_to_users, content_types=types.ContentTypes.ANY)
@@ -670,13 +670,13 @@ async def add_new_subscriptions(message: types.Message):
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
                              'Если передумали, то напишите "Отмена" в чат.')
     else:
-        await message.answer('Вы не зарегистрированны в этом боте')
+        await message.answer('Вы не зарегистрированы в этом боте')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
-    Обработка сообщения от пользователя и запись известных объектов новстей в подписки
+    Обработка сообщения от пользователя и запись известных объектов новостей в подписки
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
@@ -693,9 +693,10 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     engine = create_engine(psql_engine)
     user_id = json.loads(message.from_user.as_json())['id']
-    com_df = pd.read_sql_query('select * from "client_alternative"', con=engine)
-    client_df = pd.read_sql_query('select * from "commodity_alternative"', con=engine)
+    com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
+    client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
     df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
+    df_all = pd.DataFrame(df_all)  # pandas.core.series.Series -> pandas.core.frame.DataFrame
 
     message_text = message.text
     for quote in quotes:
@@ -705,7 +706,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     for subscription in user_request:
         for index, row in df_all.iterrows():
             # if subscription in row.split(';') - из-за разрядности такой варинт не всегда находит совпадение
-            for other_name in row.split(';'):
+            for other_name in row['other_names'].split(';'):
                 if subscription == other_name:
                     subscriptions.append(other_name)
 
@@ -848,7 +849,8 @@ async def admin_help(message: types.Message):
         # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
         help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
-                    '<b>/delete_article</b> - удалить новость из базы данных')
+                    '<b>/delete_article</b> - удалить новость из базы данных\n'
+                    '<b>/sendtoall</b> - Сделать рассылку сообщения на всех пользователей бота')
         await message.answer(help_msg, protect_content=False, parse_mode='HTML')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
@@ -998,7 +1000,7 @@ async def delete_article(message: types.Message):
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
     """
-    Проверка, что действите по удалению новости не случайное
+    Проверка, что действие по удалению новости не случайное
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
