@@ -464,7 +464,7 @@ class Main:
                                             name_of_review='Валютный рынок и процентные ставки',
                                             type_of_review='bonds', count_of_review=2)
         bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
-                                              name_of_review='Денежный рынок. Еженедельный обзор')
+                                              name_of_review='Обзор рынка процентных ставок')
         print('bonds...ok')
 
         # exchange
