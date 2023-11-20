@@ -12,6 +12,7 @@ import selenium.webdriver as wb
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
@@ -485,13 +486,16 @@ class ResearchParser:
         base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
         
         self.driver.get(base_url)
-        time.sleep(30)
+        time.sleep(5)
         weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
         weeklies = []
 
         while len(weeklies) < 1:
             weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
-            more = self.driver.find_element(By.XPATH,'//*[@id="loadMorePublications"]')
+
+            more = WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH,
+                                                                                           '//*[@id="loadMorePublications"]')))
+
             self.driver.execute_script("arguments[0].scrollIntoView();", more)
             more.click()
         
