@@ -505,9 +505,6 @@ class ResearchParser:
             WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
             weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
             self.__sleep_some_time()
-            if len(weeklies) > 5:
-                print('Ошибка в разделе обзоров')
-                raise ResearchError
         
         weeklies[0].find_element(By.TAG_NAME,'a').click()
 
