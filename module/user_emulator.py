@@ -476,8 +476,9 @@ class ResearchParser:
             try:
                 self.__get_industry_pdf(industry, industry_reviews[industry])
                 print(f'{industry_reviews[industry]}..ok')
-            except:
+            except Exception as e: 
                 print(f'{industry_reviews[industry]}..ERROR')
+                print(e)
     
     def get_weekly_review(self):
         """
