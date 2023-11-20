@@ -485,22 +485,29 @@ class ResearchParser:
         """
         base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
         self.driver.get(base_url)
-        time.sleep(5)
+
+        WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH,
+                    '//*[@id="all"]')) and EC.invisibility_of_element_located((By.ID, "all_loading")))
         
         self.driver.find_element(By.XPATH,
-                                        '//*[@id="all"]').click()
+                                         '//*[@id="all"]').click()
 
         weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
-        weeklies = []
+        weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
 
         while len(weeklies) < 1:
-            weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
-
-            more = WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH,
-                                                                                           '//*[@id="loadMorePublications"]')))
-
+            WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
+                                    and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
+            more = self.driver.find_element(By.XPATH,
+                                         '//*[@id="loadMorePublications"]')
             self.driver.execute_script("arguments[0].scrollIntoView();", more)
             more.click()
+            WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
+            weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
+            self.__sleep_some_time()
+            if len(weeklies) > 5:
+                print('Ошибка в разделе обзоров')
+                raise ResearchError
         
         weeklies[0].find_element(By.TAG_NAME,'a').click()
 
@@ -517,7 +524,7 @@ class ResearchParser:
             if len(old) > 0:
                 os.remove(os.path.join(weekly_dir, old[0]))
 
-        time.sleep(5)
+        self.__sleep_some_time(5, 6)
         download_report = self.driver.find_element(By.CLASS_NAME,
                                                     "file")
         href = download_report.get_attribute("href")
