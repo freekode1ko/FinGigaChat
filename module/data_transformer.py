@@ -347,7 +347,8 @@ class Transformer:
 
 class Newsletter:
     """ Создает текста для рассылок """
-    __newsletter_dict = dict(weekly_result='Итоги недели', weekly_event='Что нас ждет на этой неделе?')
+    __newsletter_dict = dict(weekly_result='Основные события прошедшей недели',
+                             weekly_event='Календарь и прогнозы текущей недели')
 
     @classmethod
     def get_newsletter_dict(cls):
