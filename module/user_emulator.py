@@ -526,7 +526,6 @@ class ResearchParser:
         images[9].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
         images[10].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
 
-        width, height = images[6].size
         left = 70
         top = 40
         right = left + 1280
