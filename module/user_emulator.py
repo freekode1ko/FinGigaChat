@@ -12,12 +12,11 @@ import selenium.webdriver as wb
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
-from PyPDF2 import PdfMerger, PdfFileReader
-from PIL import Image
-from natsort import natsorted
+from pdf2image import convert_from_path
 import config
 from module import data_transformer as Transformer
 
@@ -477,8 +476,82 @@ class ResearchParser:
             try:
                 self.__get_industry_pdf(industry, industry_reviews[industry])
                 print(f'{industry_reviews[industry]}..ok')
-            except:
+            except Exception as e: 
                 print(f'{industry_reviews[industry]}..ERROR')
+                print(e)
+    
+    def get_weekly_review(self):
+        """
+        Get Research Weekly Pulse review pdf
+        """
+        base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
+        self.driver.get(base_url)
+
+        WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH,
+                    '//*[@id="all"]')) and EC.invisibility_of_element_located((By.ID, "all_loading")))
+        
+        self.driver.find_element(By.XPATH,
+                                         '//*[@id="all"]').click()
+
+        weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
+        weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
+
+        try:
+            while len(weeklies) < 1:
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
+                                        and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
+                more = self.driver.find_element(By.XPATH,
+                                            '//*[@id="loadMorePublications"]')
+                self.driver.execute_script("arguments[0].scrollIntoView();", more)
+                more.click()
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
+                weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
+                self.__sleep_some_time()
+        except Exception as e: 
+            print('Weekly Pulse Review..ERROR')
+            print(e)
+            return
+        
+        weeklies[0].find_element(By.TAG_NAME,'a').click()
+
+        filename = f"{weeklies[0].text.replace(' ','_')}.pdf"
+        filename = '{}/{}'.format(weekly_dir, filename)
+
+        if not os.path.exists(weekly_dir):
+            os.makedirs(weekly_dir)
+
+        if os.path.exists(filename):
+                return
+        else:
+            old = [f for f in os.listdir(weekly_dir)]
+            if len(old) > 0:
+                os.remove(os.path.join(weekly_dir, old[0]))
+
+        self.__sleep_some_time(5, 6)
+        download_report = self.driver.find_element(By.CLASS_NAME,
+                                                    "file")
+        href = download_report.get_attribute("href")
+
+        session = self.get_emulator_cookies(self.driver)
+        response = session.get(href)
+            
+        with open(filename, 'wb') as file:
+            file.write(response.content)
+
+        images = convert_from_path(filename)
+        images[2].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
+        images[6].save('{}/{}'.format(weekly_dir, 'slide_6.png'))
+        images[9].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
+        images[10].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
+
+        left = 70
+        top = 40
+        right = left + 1280
+        bottom = top + 1250
+
+        image = images[6].crop((left, top, right, bottom))
+        image.save('{}/{}'.format(weekly_dir, 'slide_6.png'))
+        image.close()
 
 class InvestingAPIParser:
     """
