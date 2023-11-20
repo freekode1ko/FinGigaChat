@@ -824,13 +824,18 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
 
     # получаем текст рассылки
     if newsletter_type == 'weekly_result':
-        title, newsletter = dt.Newsletter.make_weekly_result()
+        title, newsletter, img_path_list = dt.Newsletter.make_weekly_result()
     elif newsletter_type == 'weekly_event':
-        title, newsletter = dt.Newsletter.make_weekly_event()
+        title, newsletter, img_path_list = dt.Newsletter.make_weekly_event()
     else:
         return
 
+    await types.ChatActions.typing()
+    media = types.MediaGroup()
+    for path in img_path_list:
+        media.attach_photo(types.InputFile(path))
     await bot.send_message(data_callback['id'], text=newsletter, parse_mode='HTML', protect_content=True)
+    await bot.send_media_group(data_callback['id'], media=media, protect_content=True)
     print(f'Пользователю {username} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
 
 
@@ -982,9 +987,9 @@ async def send_newsletter(newsletter_data: Dict):
 
     # получаем текст рассылки
     if newsletter_type == 'weekly_result':
-        title, newsletter = dt.Newsletter.make_weekly_result()
+        title, newsletter, img_path_list = dt.Newsletter.make_weekly_result()
     elif newsletter_type == 'weekly_event':
-        title, newsletter = dt.Newsletter.make_weekly_event()
+        title, newsletter, img_path_list = dt.Newsletter.make_weekly_event()
     else:
         return
 
@@ -994,7 +999,11 @@ async def send_newsletter(newsletter_data: Dict):
         users_data = conn.execute(text('select user_id, username from whitelist')).fetchall()
     for user_data in users_data:
         user_id, user_name = user_data[0], user_data[1]
+        media = types.MediaGroup()
+        for path in img_path_list:
+            media.attach_photo(types.InputFile(path))
         await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+        await bot.send_media_group(user_id, media=media, protect_content=True)
         print(f'Пользователю {user_name} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
     return
 
