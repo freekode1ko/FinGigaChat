@@ -489,7 +489,7 @@ class ResearchParser:
         weekly_dir = '{}/{}'.format(config.path_to_source, '/weeklies')
         weeklies = []
 
-        while weeklies.__len__() < 1:
+        while len(weeklies) < 1:
             weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
             more = self.driver.find_element(By.XPATH,'//*[@id="loadMorePublications"]')
             self.driver.execute_script("arguments[0].scrollIntoView();", more)
@@ -507,7 +507,7 @@ class ResearchParser:
                 return
         else:
             old = [f for f in os.listdir(weekly_dir)]
-            if old.__len__() > 0:
+            if len(old) > 0:
                 os.remove(os.path.join(weekly_dir, old[0]))
 
         time.sleep(5)
