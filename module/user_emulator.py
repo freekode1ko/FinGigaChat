@@ -508,6 +508,7 @@ class ResearchParser:
                 weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
         except Exception as e: 
+            print('Weekly Pulse Review..ERROR')
             print(e)
         
         weeklies[0].find_element(By.TAG_NAME,'a').click()
