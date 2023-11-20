@@ -849,7 +849,8 @@ async def admin_help(message: types.Message):
         # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
         help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
-                    '<b>/delete_article</b> - удалить новость из базы данных')
+                    '<b>/delete_article</b> - удалить новость из базы данных\n'
+                    '<b>/sendtoall</b> - Сделать рассылку сообщения на всех пользователей бота')
         await message.answer(help_msg, protect_content=False, parse_mode='HTML')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
