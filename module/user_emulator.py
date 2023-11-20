@@ -482,7 +482,7 @@ class ResearchParser:
         """
         Get Research Weekly Pulse review pdf
         """
-        base_url = '{}/{}'.format(config.research_base_url, 'group/guest/money')
+        base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
         
         self.driver.get(base_url)
         time.sleep(10)
