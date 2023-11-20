@@ -486,7 +486,7 @@ class ResearchParser:
         
         self.driver.get(base_url)
         time.sleep(10)
-        weekly_dir = '{}/{}'.format(config.path_to_source, '/weeklies')
+        weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
         weeklies = []
 
         while len(weeklies) < 1:
