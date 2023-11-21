@@ -507,7 +507,6 @@ class Main:
         print('industry reviews...ok')
 
         authed_user.get_weekly_review()
-        print('weekly review...ok')
 
         return reviews, companies_pages_html, key_eco_table, clients_table
 
