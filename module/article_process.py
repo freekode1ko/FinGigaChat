@@ -492,9 +492,9 @@ class ArticleProcess:
         client_dict = pd.read_sql_query("SELECT client_id, other_names FROM client_alternative", con=self.engine)
         comm_dict = pd.read_sql_query("SELECT commodity_id, other_names FROM commodity_alternative", con=self.engine)
         for index, client in client_dict.iterrows():
-            CAI_dict[client['client_id']] = client['other_names'].split(';')
+            CAI_dict['CLIENT_{}'.format(client['client_id'])] = client['other_names'].split(';')
         for index, comm in comm_dict.iterrows():
-            CAI_dict[comm['commodity_id']] = comm['other_names'].split(';')
+            CAI_dict['COMMODITY_{}'.format(comm['commodity_id'])] = comm['other_names'].split(';')
         # industry_dict = pd.read_sql_query("SELECT id, other_names FROM industry", con=self.engine)
         return CAI_dict
 
