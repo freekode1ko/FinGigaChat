@@ -1308,14 +1308,30 @@ async def send_newsletter(newsletter_data: Dict):
     return await send_newsletter(newsletter_data)
 
 
-async def translate_name_to_id()
+def translate_subscriptions_to_id(CAI_dict: dict, subscriptions: list):
+    """
+    Получает id новостных объектов (клиента/комоды/отрасли) из подписок пользователя
+
+    :param CAI_dict: Словарь новостных объектов {NewsType_NewsID: [OtherNames], ...}
+    :param subscriptions: Список подписок пользователя. Могут быть как названия, так и альтернативные названия
+    return Список id новостных объектов
+    """
+    return [key for word in subscriptions for key in CAI_dict if word in CAI_dict[key]]
 
 
+@dp.message_handler(commands=['newscomcli'])
 async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9):
-    # user_pref = {}
+    """
+    Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
+    :param client_hours: За какой период нужны новости по клиентам
+    :param commodity_hours: За какой период нужны новости по комодам
+    :param industry_hours: За какой период нужны новости по отраслям
+    return None
+    """
+    # TODO: отложенный режим отправки на каждые N часов
     AP_obj = ArticleProcess()
     engine = create_engine(psql_engine)
-    CAI_dict = AP_obj.get_client_article_industry_dictionary() #
+    CAI_dict = AP_obj.get_client_article_industry_dictionary()  # Словарь новостных объектов {id: [OtherNames], ...}
     clients_news = AP_obj.get_clients_news_by_time(client_hours)
     commodity_news = AP_obj.get_commodity_news_by_time(commodity_hours)
     db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
@@ -1324,13 +1340,38 @@ async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, indust
     users = pd.read_sql_query('SELECT user_id, subscriptions FROM whitelist '
                               'WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
-        pass
-        # user_pref = {user['user_id']: user['subscriptions'].split(', ')}
-        #for subscription in user['subscriptions'].split(', '):
+        user_id = user['user_id']
+        subscriptions = user['subscriptions'].split(', ')
+        translate_subscriptions_to_id(CAI_dict, subscriptions)
 
+        # Получить список интересующих id объектов новостей
+        news_id = translate_subscriptions_to_id(CAI_dict, subscriptions)
+        clients_id = [int(NC.split('_')[1]) for NC in news_id if NC.split('_')[0] == 'CLIENT']
+        comm_id = [int(NC.split('_')[1]) for NC in news_id if NC.split('_')[0] == 'COMMODITY']
 
-    # await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-    return
+        # Получить список новостей по id объекту
+        news_client = clients_news.loc[clients_news['client_id'].isin(clients_id)]
+        news_comm = commodity_news.loc[commodity_news['commodity_id'].isin(comm_id)]
+
+        # Разбить список новостей на блоки по объекту
+        news_client_splited = [part for _, part in news_client.groupby(news_client['client_id'])]
+        news_comm_splited = [part for _, part in news_comm.groupby(news_comm['commodity_id'])]
+
+        # Вывести новости пользователю по клиентам
+        for news_block in news_client_splited:
+            for df_index, row in news_block.head(20).iterrows():
+                # print('CLIENT', row['name'], row['article_id'], row['title'], row['date'])
+                await bot.send_message(user_id, text=sample_of_img_title.format(row['name'], row['link'], row['date']),
+                                       parse_mode='HTML', protect_content=True)
+
+        # Вывести новости пользователю по комодам
+        for news_block in news_comm_splited:
+            for df_index, row in news_block.head(20).iterrows():
+                # print('COMMODITY', row['name'], row['article_id'], row['title'], row['date'])
+                await bot.send_message(user_id, text=sample_of_img_title.format(row['name'], row['link'], row['date']),
+                                       parse_mode='HTML', protect_content=True)
+
+    # return await send_dailynews(client_hours, commodity_hours, industry_hours)
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
@@ -1339,7 +1380,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
-    loop.create_task(send_dailynews())
+    # loop.create_task(send_dailynews())
 
     # запускаем бота
     executor.start_polling(dp, skip_updates=True)
