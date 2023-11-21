@@ -75,7 +75,7 @@ def read_curdatetime():
     # with open('sources/tables/time.txt', 'r') as f:
     #     curdatetime = f.read()
     engine = create_engine(psql_engine)
-    curdatetime = pd.read_sql_query('select * from "date_of_last_build"', con=engine)
+    curdatetime = pd.read_sql_query('SELECT * FROM "date_of_last_build"', con=engine)
     return curdatetime['date_time'][0]
 
 
@@ -172,7 +172,7 @@ async def bonds_info(message: types.Message):
         # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
         columns = ['Название', 'Доходность', 'Изм, %']
         engine = create_engine(psql_engine)
-        bonds = pd.read_sql_query('select * from "bonds"', con=engine)
+        bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
         bonds = bonds[columns].dropna(axis=0)
         bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
         bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения', 'Доходность': 'Доходность, %'})
@@ -188,8 +188,8 @@ async def bonds_info(message: types.Message):
         #                           figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
         transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5, title='Доходности ОФЗ.')
         photo = open(png_path, 'rb')
-        day = pd.read_sql_query('select * from "report_bon_day"', con=engine).values.tolist()
-        month = pd.read_sql_query('select * from "report_bon_mon"', con=engine).values.tolist()
+        day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
+        month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
         # day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
         # month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         # print(month)
@@ -213,9 +213,9 @@ async def economy_info(message: types.Message):
         engine = create_engine(psql_engine)
         # eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
         #                    sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
-        world_bet = pd.read_sql_query('select * from "eco_global_stake"', con=engine)
+        world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
         # rus_infl = eco['Инфляция в России'][[]]
-        rus_infl = pd.read_sql_query('select * from "eco_rus_influence"', con=engine)
+        rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
         rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
         # world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
         #                                                                                      'Last': '',
@@ -257,8 +257,8 @@ async def economy_info(message: types.Message):
         transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0,
                                      col_width=2.2, title='Ключевые ставки ЦБ мира.')
         photo = open(png_path, 'rb')
-        day = pd.read_sql_query('select * from "report_eco_day"', con=engine).values.tolist()
-        month = pd.read_sql_query('select * from "report_eco_mon"', con=engine).values.tolist()
+        day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
+        month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
         title = 'Ключевые ставки ЦБ мира'
         data_source = 'ЦБ стран мира'
         curdatetime = read_curdatetime()
@@ -286,7 +286,7 @@ async def economy_info(message: types.Message):
                              caption=sample_of_img_title.format(title, data_source, curdatetime),
                              parse_mode='HTML', protect_content=False)
         # сообщение с текущими ставками
-        stat = pd.read_sql_query('select * from "eco_stake"', con=engine)
+        stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
@@ -304,7 +304,7 @@ async def data_mart(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
         engine = create_engine(psql_engine)
-        key_eco_table = pd.read_sql_query('select * from key_eco', con=engine)
+        key_eco_table = pd.read_sql_query('SELECT * FROM key_eco', con=engine)
         split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
         key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
 
@@ -411,7 +411,7 @@ async def exchange_info(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
         engine = create_engine(psql_engine)
-        exc = pd.read_sql_query('select * from exc', con=engine)
+        exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
         # exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
         # exc = exc.drop('Unnamed: 0', axis=1)
@@ -431,8 +431,8 @@ async def exchange_info(message: types.Message):
                                      col_width=2, title='Текущие курсы валют')
         # transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
         #                           figure_size=(5, 2), path_to_source=path_to_source, name='exc')
-        day = pd.read_sql_query('select * from "report_exc_day"', con=engine).values.tolist()
-        month = pd.read_sql_query('select * from "report_exc_mon"', con=engine).values.tolist()
+        day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
+        month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
         # day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
         # month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         photo = open(png_path, 'rb')
@@ -466,7 +466,7 @@ async def metal_info(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
         engine = create_engine(psql_engine)
-        metal = pd.read_sql_query('select * from metals', con=engine)
+        metal = pd.read_sql_query('SELECT * FROM metals', con=engine)
         metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
         metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
                                        'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
@@ -521,7 +521,7 @@ async def metal_info(message: types.Message):
         # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
         #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
-        day = pd.read_sql_query('select * from "report_met_day"', con=engine).values.tolist()
+        day = pd.read_sql_query('SELECT * FROM "report_met_day"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
         title = ' Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
@@ -759,7 +759,7 @@ async def user_in_whitelist(user: str):
     user_json = json.loads(user)
     user_id = user_json['id']
     engine = create_engine(psql_engine)
-    whitelist = pd.read_sql_query('select * from "whitelist"', con=engine)
+    whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
     else:
@@ -806,7 +806,7 @@ async def check_your_right(user: dict):
     """
     user_id = user['id']
     engine = create_engine(config.psql_engine)
-    user_series = pd.read_sql_query(f"select user_type from whitelist WHERE user_id='{user_id}'", con=engine)
+    user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
     user_type = user_series.values.tolist()[0][0]
     if user_type == 'admin' or user_type == 'owner':
         return True
@@ -1260,7 +1260,8 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
     days_until_sending = (weekday_to_send - current_weekday + 7) % 7
 
     # определяем следующую дату рассылки
-    datetime_ = datetime(current_datetime.year, current_datetime.month, current_datetime.day, hour_to_send, minute_to_send)
+    datetime_ = datetime(current_datetime.year, current_datetime.month,
+                         current_datetime.day, hour_to_send, minute_to_send)
     datetime_for_sending = datetime_ + timedelta(days=days_until_sending)
 
     # добавляем неделю, если дата прошла
@@ -1293,7 +1294,7 @@ async def send_newsletter(newsletter_data: Dict):
     # отправляем пользователям
     engine = create_engine(psql_engine)
     with engine.connect() as conn:
-        users_data = conn.execute(text('select user_id, username from whitelist')).fetchall()
+        users_data = conn.execute(text('SELECT user_id, username FROM whitelist')).fetchall()
     for user_data in users_data:
         user_id, user_name = user_data[0], user_data[1]
         media = types.MediaGroup()
@@ -1307,6 +1308,30 @@ async def send_newsletter(newsletter_data: Dict):
     return await send_newsletter(newsletter_data)
 
 
+async def translate_name_to_id()
+
+
+async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9):
+    # user_pref = {}
+    AP_obj = ArticleProcess()
+    engine = create_engine(psql_engine)
+    CAI_dict = AP_obj.get_client_article_industry_dictionary() #
+    clients_news = AP_obj.get_clients_news_by_time(client_hours)
+    commodity_news = AP_obj.get_commodity_news_by_time(commodity_hours)
+    db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
+    # TODO: Добавить в обработку industry
+    db_df_all.sort_values(by='date', ascending=False, inplace=True)
+    users = pd.read_sql_query('SELECT user_id, subscriptions FROM whitelist '
+                              'WHERE subscriptions IS NOT NULL', con=engine)
+    for index, user in users.iterrows():
+        pass
+        # user_pref = {user['user_id']: user['subscriptions'].split(', ')}
+        #for subscription in user['subscriptions'].split(', '):
+
+
+    # await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+    return
+
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
 
@@ -1314,6 +1339,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
+    loop.create_task(send_dailynews())
 
     # запускаем бота
     executor.start_polling(dp, skip_updates=True)
