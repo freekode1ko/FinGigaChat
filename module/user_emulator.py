@@ -425,10 +425,12 @@ class ResearchParser:
         old = []
         self.driver.get(url)
 
+        self.__sleep_some_time()
         time.sleep(10)
         reviews = self.driver.find_element(By.XPATH,
                                                 '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
 
+        self.__sleep_some_time()
         time.sleep(10)
         reviews_rows = self.driver.find_elements(By.XPATH,
                                                 f"//div[contains(@title, '{value}')]")
@@ -521,6 +523,7 @@ class ResearchParser:
             os.makedirs(weekly_dir)
 
         if os.path.exists(filename):
+                print('weekly review...ok')
                 return
         else:
             old = [f for f in os.listdir(weekly_dir)]
@@ -552,6 +555,7 @@ class ResearchParser:
         image = images[6].crop((left, top, right, bottom))
         image.save('{}/{}'.format(weekly_dir, 'slide_6.png'))
         image.close()
+        print('weekly review...ok')
 
 class InvestingAPIParser:
     """
