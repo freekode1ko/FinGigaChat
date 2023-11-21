@@ -1323,26 +1323,32 @@ def translate_subscriptions_to_id(CAI_dict: dict, subscriptions: list):
 async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
+
     :param client_hours: За какой период нужны новости по клиентам
     :param commodity_hours: За какой период нужны новости по комодам
     :param industry_hours: За какой период нужны новости по отраслям
     return None
     """
     # TODO: отложенный режим отправки на каждые N часов
+    print('Начинается ежедневная рассылка новостей по подпискам...')
+    row_number = 0
     AP_obj = ArticleProcess()
     engine = create_engine(psql_engine)
     CAI_dict = AP_obj.get_client_article_industry_dictionary()  # Словарь новостных объектов {id: [OtherNames], ...}
     clients_news = AP_obj.get_clients_news_by_time(client_hours)
     commodity_news = AP_obj.get_commodity_news_by_time(commodity_hours)
-    db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
+    # db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
     # TODO: Добавить в обработку industry
-    db_df_all.sort_values(by='date', ascending=False, inplace=True)
+    # db_df_all.sort_values(by='date', ascending=False, inplace=True)
     users = pd.read_sql_query('SELECT user_id, subscriptions FROM whitelist '
                               'WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
+        row_number += 1
         user_id = user['user_id']
+        user_name = user['username']
         subscriptions = user['subscriptions'].split(', ')
         translate_subscriptions_to_id(CAI_dict, subscriptions)
+        print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
 
         # Получить список интересующих id объектов новостей
         news_id = translate_subscriptions_to_id(CAI_dict, subscriptions)
@@ -1370,6 +1376,10 @@ async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, indust
                 # print('COMMODITY', row['name'], row['article_id'], row['title'], row['date'])
                 await bot.send_message(user_id, text=sample_of_img_title.format(row['name'], row['link'], row['date']),
                                        parse_mode='HTML', protect_content=True)
+
+        print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
+    print('Рассылка успешно завершена. Все пользователи получили свои новости. '
+          '\nПереходим в ожидание следующей рассылки.')
 
     # return await send_dailynews(client_hours, commodity_hours, industry_hours)
 
