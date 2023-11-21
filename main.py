@@ -506,6 +506,8 @@ class Main:
         authed_user.get_industry_reviews()
         print('industry reviews...ok')
 
+        authed_user.get_weekly_review()
+
         return reviews, companies_pages_html, key_eco_table, clients_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
