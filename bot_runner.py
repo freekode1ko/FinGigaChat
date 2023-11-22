@@ -742,7 +742,7 @@ async def get_user_subscriptions(message: types.Message):
         msg_txt = 'Нет активных подписок'
     else:
         buttons = []
-        for subscription in subscriptions:
+        for subscription in subscriptions[0].split(', '):
             buttons.append([types.KeyboardButton(text=subscription)])
         msg_txt = 'Выберите подписку'
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
