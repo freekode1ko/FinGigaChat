@@ -1098,7 +1098,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
     print(message.from_user.as_json())
-    await send_dailynews(160, 160, 160)
+    await send_dailynews(160, 160, 160, 1)
 
 
 @dp.message_handler(commands=['newsletter'])
@@ -1348,6 +1348,12 @@ async def news_prep(news_id: list, news: pd.DataFrame, news_obj: str):
 
 
 async def newsletter_scheduler(time_to_wait: int = 0):
+    """
+    Функция для расчета времени ожидания
+
+    :param time_to_wait: Параметр для пропуска ожидания. Для пропуска можно передать любое int значение кроме 0
+    return None
+    """
     if time_to_wait != 0:
         return None
     current_hour = datetime.now().hour
@@ -1370,16 +1376,17 @@ async def newsletter_scheduler(time_to_wait: int = 0):
     return None
 
 
-async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9):
+async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9, schedul: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
 
     :param client_hours: За какой период нужны новости по клиентам
     :param commodity_hours: За какой период нужны новости по комодам
     :param industry_hours: За какой период нужны новости по отраслям
+    :param schedul: Запуск без ожидания
     return None
     """
-    await newsletter_scheduler()  # Ожидание рассылки
+    await newsletter_scheduler(schedul)  # Ожидание рассылки
     print('Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     AP_obj = ArticleProcess()
@@ -1424,7 +1431,7 @@ async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, indust
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
           '\nПереходим в ожидание следующей рассылки.')
 
-    # return await send_dailynews(client_hours, commodity_hours, industry_hours)
+    return await send_dailynews(client_hours, commodity_hours, industry_hours)
 
 
 if __name__ == '__main__':
