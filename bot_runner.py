@@ -1145,6 +1145,19 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
     print('{} - {}'.format(message.from_user.full_name, msg))
     if await user_in_whitelist(message.from_user.as_json()):
         msg_text = message.text.replace('«', '"').replace('»', '"')
+        subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'industry'), 'industry'
+        if subject_ids:
+            industry_id = subject_ids[0]
+            reply_msg = ArticleProcess().process_user_industry_alias(industry_id)
+            try:
+                await message.answer(reply_msg, parse_mode='HTML',
+                                          protect_content=False, disable_web_page_preview=True)
+            except MessageIsTooLong:
+                articles = reply_msg.split('\n\n')
+                for article in articles:
+                    await message.answer(article, parse_mode='HTML',
+                                              protect_content=False, disable_web_page_preview=True)
+            return
         subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'client'), 'client'
         if not subject_ids:
             subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'commodity'), 'commodity'

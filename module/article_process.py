@@ -15,6 +15,15 @@ from module.model_pipe import deduplicate, model_func, model_func_online, add_te
 
 TIME_LIVE_ARTICLE = 100
 NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
+CONDITION_TOP = ("{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
+                 "({table}.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
+                 "OR {table}.link SIMILAR TO '%.interfax(|-russia).ru%' "
+                 "OR {table}.link SIMILAR TO '%www.kommersant.ru%' "
+                 "OR {table}.link SIMILAR TO '%www.vedomosti.ru%' "
+                 "OR {table}.link SIMILAR TO '%www.forbes.ru%' "
+                 "OR {table}.link SIMILAR TO '%(.|//)iz.ru/%' "
+                 "OR {table}.link SIMILAR TO '%//tass.(ru|com)%' "
+                 "OR {table}.link SIMILAR TO '%(realty.|//)ria.ru%')")
 
 
 class ArticleError(Exception):
@@ -46,7 +55,7 @@ class ArticleProcess:
                          "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
                          "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
                          "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
-                         "//(|www.)pronedra.ru") #TODO: дополнять
+                         "//(|www.)pronedra.ru")  # TODO: дополнять
 
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
@@ -72,11 +81,11 @@ class ArticleProcess:
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
         try:
             df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
-                                                                            'title': x['title'].iloc[0],
-                                                                            'date': x['date'].iloc[0],
-                                                                            'text': x['text'].iloc[0],
-                                                                            type_of_article: ';'.join(x[type_of_article]),
-                                                                            })).reset_index()
+                'title': x['title'].iloc[0],
+                'date': x['date'].iloc[0],
+                'text': x['text'].iloc[0],
+                type_of_article: ';'.join(x[type_of_article]),
+            })).reset_index()
             print(f'-- group by link, so len of articles is {len(df_subject)}')
         except Exception as e:
             print(f'-- Error: {e}')
@@ -187,7 +196,8 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
-        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
+        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][
+            df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
         # remove from df_client and df_commodity common links
@@ -281,7 +291,6 @@ class ArticleProcess:
         :return: name of client(commodity) and sorted sum articles
         """
         count_all, count_top = 10, 3
-        date_now = dt.datetime.now()
         query_temp = ('SELECT relation.article_id, relation.{subject}_score, '
                       'article_.title, article_.date, article_.link, article_.text_sum '
                       'FROM relation_{subject}_article AS relation '
@@ -294,15 +303,7 @@ class ArticleProcess:
                       '{condition} '
                       'ORDER BY date DESC, relation.{subject}_score DESC '
                       'LIMIT {count}')
-        condition_top = (f"AND '{date_now}' - article_.date < '15 day' AND "
-                         f"(article_.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
-                         f"OR article_.link SIMILAR TO '%.interfax(|-russia).ru%' "
-                         f"OR article_.link SIMILAR TO '%www.kommersant.ru%' "
-                         f"OR article_.link SIMILAR TO '%www.vedomosti.ru%' "
-                         f"OR article_.link SIMILAR TO '%www.forbes.ru%' "
-                         f"OR article_.link SIMILAR TO '%(.|//)iz.ru/%' "
-                         f"OR article_.link SIMILAR TO '%//tass.(ru|com)%' "
-                         f"OR article_.link SIMILAR TO '%(realty.|//)ria.ru%')")
+        condition_top = CONDITION_TOP.format(condition_word='AND', table='article_')
 
         with self.engine.connect() as conn:
 
@@ -409,14 +410,9 @@ class ArticleProcess:
 
         if articles:
             for index, article_data in enumerate(articles):
-                title, date, link, text_sum = article_data[0], article_data[1], article_data[2], article_data[3]
-                date = date.strftime('%d.%m.%Y')
-                link_phrase = f'<a href="{link}">Источник</a>'
-                text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
-                if title:
-                    articles[index] = f'{marker} <b>{title}</b>\n{text_sum} {link_phrase}\n<i>{date}</i>'
-                else:
-                    articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
+                format_text = FormatText(title=article_data[0], date=article_data[1], link=article_data[2],
+                                         text_sum=article_data[3])
+                articles[index] = format_text.make_subject_text()
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
         else:
@@ -470,6 +466,50 @@ class ArticleProcess:
             reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
         return com_cotirov, reply_msg, img_name_list
+
+    def process_user_industry_alias(self, industry_id):
+        format_msg = ''
+        query = ("SELECT * FROM "
+                 "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
+                 "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
+                 "CASE {condition} THEN 1 "
+                 "WHEN r.{subject}_score<>0 THEN 2 "
+                 "END, "
+                 "article.date desc, r.{subject}_score desc) rn "
+                 "FROM relation_{subject}_article r "
+                 "JOIN article ON r.article_id=article.id "
+                 "JOIN {subject} ON {subject}.id=r.{subject}_id "
+                 "JOIN industry ON industry.id={subject}.industry_id "
+                 "WHERE industry.id={industry_id}) t1 "
+                 "WHERE rn<=2")
+
+        condition = CONDITION_TOP.format(condition_word='WHEN', table='article')
+        q_client = query.format(subject='client', industry_id=industry_id, condition=condition)
+        q_commodity = query.format(subject='commodity', industry_id=industry_id, condition=condition)
+        with self.engine.connect() as conn:
+            articles_client = conn.execute(text(q_client)).fetchall()
+            articles_commodity = conn.execute(text(q_commodity)).fetchall()
+        articles = list(articles_client) + list(articles_commodity)
+
+        if articles:
+            articles_short = []
+            subject = ''
+            for article_data in articles:
+                format_text = FormatText(subject=article_data[1], date=article_data[2],
+                                         link=article_data[3], title=article_data[4], text_sum=article_data[5])
+                industry_text = format_text.make_industry_text()
+                if subject != format_text.subject:
+                    subject = format_text.subject
+                    articles_short.append(subject + industry_text)
+                else:
+                    articles_short.append(industry_text)
+            all_articles = '\n'.join(articles_short)
+            format_msg += f'{all_articles}'
+        else:
+            return True
+
+        format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
+        return format_msg
 
 
 class ArticleProcessAdmin:
@@ -576,4 +616,57 @@ class ArticleProcessAdmin:
             msgs.append(self.get_article_by_link(link))
         return msgs[:5]
 
+
+class FormatText:
+    """  Форматирует текст для передачи в Телеграмм  """
+    MARKER = '&#128204;'
+
+    def __init__(self, subject: str = '', date: dt.datetime = dt.datetime.now(), link: str = '',
+                 title: str = '', text_sum: str = ''):
+        self.__subject = subject  # имя клиента/товара
+        self.__title = title
+        self.__date = date
+        self.__link = link
+        self.__text_sum = text_sum
+
+    @property
+    def subject(self):
+        """ Возвращает отформатированное имя клиента/товара """
+        return f'\n<b>{self.__subject.capitalize()}</b>\n'
+
+    @property
+    def title(self):
+        title = self.__title
+        return title.split('.')[0] if not title else title
+
+    @property
+    def date(self):
+        return f'<i>{self.__date.strftime("%d.%m.%Y")}</i>'
+
+    @property
+    def link(self):
+        return f'<a href="{self.__link}">Источник</a>'
+
+    @property
+    def text_sum(self):
+        text_sum = self.__text_sum
+        return f'{text_sum}.' if text_sum[-1] != '.' else text_sum
+
+    def make_subject_text(self):
+        """ Возвращает новостной текст для клиента/товара """
+        if self.__title:
+            return f'{self.MARKER} <b>{self.__title}</b>\n{self.text_sum} {self.link}\n{self.date}'
+        else:
+            return f'{self.MARKER} {self.text_sum} {self.link}\n<i>{self.date}</i>'
+
+    def make_industry_text(self):
+        """ Возвращает новостной текст для просмотра новостей про индустрию """
+        msg = f'- {self.title} {self.link}\n{self.date}'
+        return msg
+
+    @staticmethod
+    def make_industry_msg(industry, format_msg):
+        """ Возвращает сообщение с новостями об индустрии """
+        industry = f'<b>{industry.upper()}</b>\n'
+        return '{}{}'.format(industry, format_msg)
 
