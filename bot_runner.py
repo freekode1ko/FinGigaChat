@@ -1,18 +1,18 @@
 import re
 import os
 import json
+import asyncio
 import warnings
 import textwrap
 import numpy as np
 import pandas as pd
+from typing import Dict
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
-import asyncio
-from typing import Dict
 
+from aiogram.utils.exceptions import MessageIsTooLong, ChatNotFound
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.utils.exceptions import MessageIsTooLong
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import FSMContext
 
@@ -48,6 +48,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
 # analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
+sample_of_news_title = '<b>{}</b>\nИсточник: {}\nНовость от: <i>{}</i>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -1094,6 +1095,12 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         return False
 
 
+@dp.message_handler(commands=['dailynews'])
+async def dailynews(message: types.Message):
+    print(message.from_user.as_json())
+    await send_dailynews(160, 160, 160)
+
+
 @dp.message_handler(commands=['newsletter'])
 async def show_newsletter_buttons(message: types.Message):
     """ Отображает кнопки с доступными рассылками """
@@ -1319,7 +1326,27 @@ def translate_subscriptions_to_id(CAI_dict: dict, subscriptions: list):
     return [key for word in subscriptions for key in CAI_dict if word in CAI_dict[key]]
 
 
-@dp.message_handler(commands=['newscomcli'])
+async def news_prep(news_id: list, news: pd.DataFrame, news_obj: str):
+    """
+    Подготовка новостей для отправки их пользователю.
+    Включает в себя: получение id новостей и разделение на блоки по темам
+
+    :param news_id: Список id интересных пользователю
+    :param news: Дата Фрейм с новостями за период времени
+    :param news_obj: Тип новости по направлению (клиенты/комоды/отрасли).
+    Может иметь 3 значения: 'client', 'commodity', *'industry' текст должен быть обязательно в нижнем регистре
+    return Список Дата Фраймов, где каждый ДФ относится к одной конкретной теме.
+    """
+    requested_news_id = [int(NC.split('_')[1]) for NC in news_id if NC.split('_')[0] == news_obj.upper()]
+
+    # Получить список новостей по id объекту
+    news_sorted = news.loc[news['{}_id'.format(news_obj)].isin(requested_news_id)]
+
+    # Разбить список новостей на блоки по объекту
+    news_splited = [part for _, part in news_sorted.groupby(news_sorted['{}_id'.format(news_obj)])]
+    return news_splited
+
+
 async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
@@ -1340,48 +1367,42 @@ async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, indust
     # db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
     # TODO: Добавить в обработку industry
     # db_df_all.sort_values(by='date', ascending=False, inplace=True)
-    users = pd.read_sql_query('SELECT user_id, subscriptions FROM whitelist '
+    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist '
                               'WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
         row_number += 1
         user_id = user['user_id']
         user_name = user['username']
         subscriptions = user['subscriptions'].split(', ')
-        translate_subscriptions_to_id(CAI_dict, subscriptions)
+        # translate_subscriptions_to_id(CAI_dict, subscriptions)
         print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
+        try:
+            await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
+                                   parse_mode='HTML', protect_content=True)
+        except ChatNotFound:
+            print(f'Чата с пользователем {user_id} {user_name} - не существует')
+            continue
 
         # Получить список интересующих id объектов новостей
         news_id = translate_subscriptions_to_id(CAI_dict, subscriptions)
-        clients_id = [int(NC.split('_')[1]) for NC in news_id if NC.split('_')[0] == 'CLIENT']
-        comm_id = [int(NC.split('_')[1]) for NC in news_id if NC.split('_')[0] == 'COMMODITY']
+        news_client_splited = await news_prep(news_id, clients_news, 'client')
+        news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
 
-        # Получить список новостей по id объекту
-        news_client = clients_news.loc[clients_news['client_id'].isin(clients_id)]
-        news_comm = commodity_news.loc[commodity_news['commodity_id'].isin(comm_id)]
-
-        # Разбить список новостей на блоки по объекту
-        news_client_splited = [part for _, part in news_client.groupby(news_client['client_id'])]
-        news_comm_splited = [part for _, part in news_comm.groupby(news_comm['commodity_id'])]
-
-        # Вывести новости пользователю по клиентам
-        for news_block in news_client_splited:
-            for df_index, row in news_block.head(20).iterrows():
-                # print('CLIENT', row['name'], row['article_id'], row['title'], row['date'])
-                await bot.send_message(user_id, text=sample_of_img_title.format(row['name'], row['link'], row['date']),
-                                       parse_mode='HTML', protect_content=True)
-
-        # Вывести новости пользователю по комодам
-        for news_block in news_comm_splited:
-            for df_index, row in news_block.head(20).iterrows():
-                # print('COMMODITY', row['name'], row['article_id'], row['title'], row['date'])
-                await bot.send_message(user_id, text=sample_of_img_title.format(row['name'], row['link'], row['date']),
-                                       parse_mode='HTML', protect_content=True)
+        # Вывести новости пользователю по клиентам и комодам
+        for news in (news_client_splited, news_comm_splited):
+            for news_block in news:
+                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n\n".upper()
+                for df_index, row in news_block.head(20).iterrows():
+                    message_block += sample_of_news_title.format(row['title'], row['link'], row['date'])
+                await bot.send_message(user_id, text=message_block, parse_mode='HTML',
+                                       protect_content=False, disable_web_page_preview=True)
 
         print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
           '\nПереходим в ожидание следующей рассылки.')
 
     # return await send_dailynews(client_hours, commodity_hours, industry_hours)
+
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
@@ -1394,4 +1415,3 @@ if __name__ == '__main__':
 
     # запускаем бота
     executor.start_polling(dp, skip_updates=True)
-
