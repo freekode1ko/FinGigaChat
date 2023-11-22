@@ -1347,6 +1347,29 @@ async def news_prep(news_id: list, news: pd.DataFrame, news_obj: str):
     return news_splited
 
 
+async def newsletter_scheduler(time_to_wait: int = 0):
+    if time_to_wait != 0:
+        return None
+    current_hour = datetime.now().hour
+    current_minute = datetime.now().minute
+    current_sec = datetime.now().second
+    current_time = round(current_hour / 0.000277778) + round(current_minute / 0.0166667) + current_sec
+    if (34200 < current_time) and (current_time < 64800):
+        time_to_wait = 64800 - current_time
+        print(f'В ожидании рассылки в {str(timedelta(seconds=64800))}. '
+              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    elif current_time > 64800:
+        time_to_wait = (86400 - current_time) + 34200
+        print(f'В ожидании рассылки в {str(timedelta(seconds=34200))}. '
+              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    elif 34200 > current_time:
+        time_to_wait = (34200 - current_time)
+        print(f'В ожидании рассылки в {str(timedelta(seconds=34200))}. '
+              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    await asyncio.sleep(time_to_wait)
+    return None
+
+
 async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
@@ -1356,7 +1379,7 @@ async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, indust
     :param industry_hours: За какой период нужны новости по отраслям
     return None
     """
-    # TODO: отложенный режим отправки на каждые N часов
+    await newsletter_scheduler()  # Ожидание рассылки
     print('Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     AP_obj = ArticleProcess()
@@ -1411,7 +1434,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
-    # loop.create_task(send_dailynews())
+    loop.create_task(send_dailynews())
 
     # запускаем бота
     executor.start_polling(dp, skip_updates=True)
