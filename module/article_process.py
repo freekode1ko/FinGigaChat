@@ -4,6 +4,7 @@ import numpy as np
 import re
 import urllib.parse
 import json
+from typing import List
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -325,6 +326,31 @@ class ArticleProcess:
 
             return name, article_data
 
+    def _get_industry_articles(self, industry_id) -> List:
+        query = ("SELECT * FROM "
+                 "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
+                 "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
+                 "CASE {condition} THEN 1 "
+                 "WHEN r.{subject}_score<>0 THEN 2 "
+                 "END, "
+                 "article.date desc, r.{subject}_score desc) rn "
+                 "FROM relation_{subject}_article r "
+                 "JOIN article ON r.article_id=article.id "
+                 "JOIN {subject} ON {subject}.id=r.{subject}_id "
+                 "JOIN industry ON industry.id={subject}.industry_id "
+                 "WHERE industry.id={industry_id}) t1 "
+                 "WHERE rn<=2")
+
+        condition = CONDITION_TOP.format(condition_word='WHEN', table='article')
+        q_client = query.format(subject='client', industry_id=industry_id, condition=condition)
+        q_commodity = query.format(subject='commodity', industry_id=industry_id, condition=condition)
+        with self.engine.connect() as conn:
+            articles_client = conn.execute(text(q_client)).fetchall()
+            articles_commodity = conn.execute(text(q_commodity)).fetchall()
+        articles = list(articles_client) + list(articles_commodity)
+
+        return articles
+
     def _get_commodity_pricing(self, subject_id):
         """
         Get pricing about commodity from db.
@@ -446,50 +472,9 @@ class ArticleProcess:
 
         return com_msg, format_msg, img_name_list
 
-    def process_user_alias(self, subject_id: int, subject: str = ''):
-        """ Process user alias and return reply for it """
-
-        com_data, reply_msg, img_name_list = None, '', []
-
-        if subject == 'client':
-            subject_name, articles = self._get_articles(subject_id, subject)
-        elif subject == 'commodity':
-            subject_name, articles = self._get_articles(subject_id, subject)
-            com_data = self._get_commodity_pricing(subject_id)
-        else:
-            print('user do not want articles')
-            return '', False, img_name_list
-
-        com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
-
-        if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
-            reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
-
-        return com_cotirov, reply_msg, img_name_list
-
-    def process_user_industry_alias(self, industry_id):
+    @staticmethod
+    def make_format_industry_msg(articles):
         format_msg = ''
-        query = ("SELECT * FROM "
-                 "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
-                 "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
-                 "CASE {condition} THEN 1 "
-                 "WHEN r.{subject}_score<>0 THEN 2 "
-                 "END, "
-                 "article.date desc, r.{subject}_score desc) rn "
-                 "FROM relation_{subject}_article r "
-                 "JOIN article ON r.article_id=article.id "
-                 "JOIN {subject} ON {subject}.id=r.{subject}_id "
-                 "JOIN industry ON industry.id={subject}.industry_id "
-                 "WHERE industry.id={industry_id}) t1 "
-                 "WHERE rn<=2")
-
-        condition = CONDITION_TOP.format(condition_word='WHEN', table='article')
-        q_client = query.format(subject='client', industry_id=industry_id, condition=condition)
-        q_commodity = query.format(subject='commodity', industry_id=industry_id, condition=condition)
-        with self.engine.connect() as conn:
-            articles_client = conn.execute(text(q_client)).fetchall()
-            articles_commodity = conn.execute(text(q_commodity)).fetchall()
-        articles = list(articles_client) + list(articles_commodity)
 
         if articles:
             articles_short = []
@@ -510,6 +495,31 @@ class ArticleProcess:
 
         format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
         return format_msg
+
+    def process_user_alias(self, subject_id: int, subject: str = ''):
+        """ Process user alias and return reply for it """
+
+        com_data, reply_msg, img_name_list = None, '', []
+
+        if subject == 'client':
+            subject_name, articles = self._get_articles(subject_id, subject)
+        elif subject == 'commodity':
+            subject_name, articles = self._get_articles(subject_id, subject)
+            com_data = self._get_commodity_pricing(subject_id)
+        elif subject == 'industry':
+            articles = self._get_industry_articles(subject_id)
+            reply_msg = self.make_format_industry_msg(articles)
+            return '', reply_msg, img_name_list
+        else:
+            print('user do not want articles')
+            return '', False, img_name_list
+
+        com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
+
+        if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+            reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
+
+        return com_cotirov, reply_msg, img_name_list
 
 
 class ArticleProcessAdmin:
