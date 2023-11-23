@@ -41,8 +41,8 @@ user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
-# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
-api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
+api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
+# api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
 
 psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
