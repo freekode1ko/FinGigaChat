@@ -243,6 +243,16 @@ class Main:
             rus_infl = pd.concat([rus_infl, table_eco[3]])
         return eco_frst_third, world_bet, rus_infl
 
+    @staticmethod
+    def find_number(data_list):
+        """ Находит первое число в списке """
+        for item in data_list[:20]:
+            try:
+                return float(item)
+            except ValueError:
+                pass
+        return None
+
     def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session):
         exchange_kot = []
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
@@ -262,20 +272,12 @@ class Main:
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
                 exchange_kot.append(row)
 
-        elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cny', 'usdollar']:
+        elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cnh', 'usdollar']:
             euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
             tree = html.fromstring(page_html)
-
-            # USDOLLAR
-            object_xpath = '//*[@id="__next"]/div[2]/div[3]/div[1]/div[1]/div[3]/div/div[1]/div[1]/div[1]'
-            # '//*[@id="__next"]/div[2]/div[2]/div[1]/div[1]/div[3]/div/div[1]/div[1]' -old
-            price = tree.xpath('{}/text()'.format(object_xpath))
-            # usd-cny
-            if not price:
-                object_xpath = '//*[@id="__next"]/div[2]/div/div/div[2]/main/div/div[1]/div[2]/div[1]'
-                price = tree.xpath('{}/span/text()'.format(object_xpath))
-
-            row = [exchange_page, *price]
+            data = tree.xpath('//*[@id="__next"]/div[2]/div//text()')
+            price = self.find_number(data)
+            row = [exchange_page, price]
             exchange_kot.append(row)
         return exchange_kot
 
