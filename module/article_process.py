@@ -647,7 +647,7 @@ class FormatText:
     @property
     def title(self):
         title = self.__title
-        return self.__text_sum.split('.')[0] if not title else title
+        return self.text_sum.split('.')[0] if not title else title
 
     @property
     def date(self):
