@@ -1098,7 +1098,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
     print(message.from_user.as_json())
-    await send_dailynews(160, 160, 160, 1)
+    await send_daily_news(160, 160, 160, 1)
 
 
 @dp.message_handler(commands=['newsletter'])
@@ -1337,63 +1337,69 @@ async def news_prep(news_id: list, news: pd.DataFrame, news_obj: str):
     Может иметь 3 значения: 'client', 'commodity', *'industry' текст должен быть обязательно в нижнем регистре
     return Список Дата Фраймов, где каждый ДФ относится к одной конкретной теме.
     """
-    requested_news_id = [int(NC.split('_')[1]) for NC in news_id if NC.split('_')[0] == news_obj.upper()]
+    requested_news_id = [int(news.split('_')[1]) for news in news_id if news.split('_')[0] == news_obj]
 
     # Получить список новостей по id объекту
     news_sorted = news.loc[news['{}_id'.format(news_obj)].isin(requested_news_id)]
 
     # Разбить список новостей на блоки по объекту
-    news_splited = [part for _, part in news_sorted.groupby(news_sorted['{}_id'.format(news_obj)])]
-    return news_splited
+    news_splitted = [part for _, part in news_sorted.groupby(news_sorted['{}_id'.format(news_obj)])]
+    return news_splitted
 
 
-async def newsletter_scheduler(time_to_wait: int = 0):
+async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 34300, last_time_to_send: int = 64200):
     """
     Функция для расчета времени ожидания
 
     :param time_to_wait: Параметр для пропуска ожидания. Для пропуска можно передать любое int значение кроме 0
+    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 34300  # 9:30
+    :param last_time_to_send: Время для отправки последней рассылки. Время в секундах. Default = 64200  # 18:00
     return None
     """
     if time_to_wait != 0:
         return None
-    current_hour = datetime.now().hour
-    current_minute = datetime.now().minute
-    current_sec = datetime.now().second
-    current_time = round(current_hour / 0.000277778) + round(current_minute / 0.0166667) + current_sec
-    if (34200 < current_time) and (current_time < 64800):
-        time_to_wait = 64800 - current_time
-        print(f'В ожидании рассылки в {str(timedelta(seconds=64800))}. '
+    end_of_the_day = 86400  # 86400(всего секунд)/3600(секунд в одном часе) = 24 (00:00 или 24:00)
+    current_day = datetime.now()
+    current_hour = current_day.hour
+    current_minute = current_day.minute
+    current_sec = current_day.second
+
+    current_time = (current_hour * 3600) + (current_minute * 60) + current_sec  # Настоящее Время в секундах
+    if (first_time_to_send < current_time) and (current_time < last_time_to_send):
+        time_to_wait = last_time_to_send - current_time
+        print(f'В ожидании рассылки в {str(timedelta(seconds=last_time_to_send))}. '
               f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
-    elif current_time > 64800:
-        time_to_wait = (86400 - current_time) + 34200
-        print(f'В ожидании рассылки в {str(timedelta(seconds=34200))}. '
+    elif current_time > last_time_to_send:
+        time_to_wait = (end_of_the_day - current_time) + first_time_to_send
+        print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
               f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     elif 34200 > current_time:
-        time_to_wait = (34200 - current_time)
-        print(f'В ожидании рассылки в {str(timedelta(seconds=34200))}. '
+        time_to_wait = (first_time_to_send - current_time)
+        print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
               f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
 
-async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9, schedul: int = 0):
+async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9, schedule: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
 
     :param client_hours: За какой период нужны новости по клиентам
     :param commodity_hours: За какой период нужны новости по комодам
     :param industry_hours: За какой период нужны новости по отраслям
-    :param schedul: Запуск без ожидания
+    :param schedule: Запуск без ожидания
     return None
     """
-    await newsletter_scheduler(schedul)  # Ожидание рассылки
+    await newsletter_scheduler(schedule)  # Ожидание рассылки
     print('Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
-    AP_obj = ArticleProcess()
+    ap_obj = ArticleProcess()
     engine = create_engine(psql_engine)
-    CAI_dict = AP_obj.get_client_article_industry_dictionary()  # Словарь новостных объектов {id: [OtherNames], ...}
-    clients_news = AP_obj.get_clients_news_by_time(client_hours)
-    commodity_news = AP_obj.get_commodity_news_by_time(commodity_hours)
+    # Словарь новостных объектов {тип_id: [альтернатив. названия], ...}
+    CAI_dict = ap_obj.get_client_comm_industry_article_dictionary()
+    clients_news = ap_obj.get_news_by_time(client_hours, 'client')
+    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity')
     # db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
     # TODO: Добавить в обработку industry
     # db_df_all.sort_values(by='date', ascending=False, inplace=True)
@@ -1431,7 +1437,7 @@ async def send_dailynews(client_hours: int = 9, commodity_hours: int = 9, indust
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
           '\nПереходим в ожидание следующей рассылки.')
 
-    return await send_dailynews(client_hours, commodity_hours, industry_hours)
+    return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
 
 if __name__ == '__main__':
@@ -1441,7 +1447,7 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
-    loop.create_task(send_dailynews())
+    loop.create_task(send_daily_news())
 
     # запускаем бота
     executor.start_polling(dp, skip_updates=True)

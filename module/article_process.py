@@ -471,31 +471,36 @@ class ArticleProcess:
 
         return com_cotirov, reply_msg, img_name_list
 
-    def get_clients_news_by_time(self, hours: int):
-        db_df_client = pd.read_sql_query("SELECT * FROM article "
-                                         "INNER JOIN relation_client_article ON "
-                                         "article.id = relation_client_article.article_id "
-                                         "INNER JOIN client ON relation_client_article.client_id = client.id "
-                                         "WHERE (date > now() - interval '{} hours')".format(hours), con=self.engine)
-        return db_df_client
+    def get_news_by_time(self, hours: int, table: str, columns: str = '*'):
+        """
+        Получить таблицу с новостями по клиенту/комоде/*индустрии за последние N часов
 
-    def get_commodity_news_by_time(self, hours: int):
-        db_df_comm = pd.read_sql_query("SELECT * FROM article "
-                                       "INNER JOIN relation_commodity_article ON "
-                                       "article.id = relation_commodity_article.article_id "
-                                       "INNER JOIN commodity ON relation_commodity_article.commodity_id = commodity.id "
-                                       "WHERE (date > now() - interval '{} hours')".format(hours), con=self.engine)
-        return db_df_comm
+        :param hours: За сколько последних часов собрать новости? Считается как: (t - N), где N - запрашиваемое число
+        :param table: Какая таблица интересует для сбора (commodity, client)?
+        :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
+        return Дата Фрейм с таблицей по объекту собранной из бд
+        """
+        table = [f'{table} ' * 6]
+        table = table[0].split()
+        return pd.read_sql_query("SELECT {} FROM article "
+                                 "INNER JOIN relation_{}_article ON "
+                                 "article.id = relation_{}_article.article_id "
+                                 "INNER JOIN {} ON relation_{}_article.{}_id = {}.id "
+                                 "WHERE (date > now() - interval '{} hours')"
+                                 .format(columns, *table, hours), con=self.engine)
 
-    def get_client_article_industry_dictionary(self):
+    def get_client_comm_industry_article_dictionary(self):
+        """
+        Составление словаря для новостных объектов и их альтернативных названий
+        """
         CAI_dict = {}
         client_dict = pd.read_sql_query("SELECT client_id, other_names FROM client_alternative", con=self.engine)
         comm_dict = pd.read_sql_query("SELECT commodity_id, other_names FROM commodity_alternative", con=self.engine)
         for index, client in client_dict.iterrows():
-            CAI_dict['CLIENT_{}'.format(client['client_id'])] = client['other_names'].split(';')
+            CAI_dict['client_{}'.format(client['client_id'])] = client['other_names'].split(';')
         for index, comm in comm_dict.iterrows():
-            CAI_dict['COMMODITY_{}'.format(comm['commodity_id'])] = comm['other_names'].split(';')
-        # industry_dict = pd.read_sql_query("SELECT id, other_names FROM industry", con=self.engine)
+            CAI_dict['commodity_{}'.format(comm['commodity_id'])] = comm['other_names'].split(';')
+        # get_commodity_news_by_timey_dict = pd.read_sql_query("SELECT id, other_names FROM industry", con=self.engine)
         return CAI_dict
 
 
