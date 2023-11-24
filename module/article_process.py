@@ -339,7 +339,7 @@ class ArticleProcess:
                  "JOIN {subject} ON {subject}.id=r.{subject}_id "
                  "JOIN industry ON industry.id={subject}.industry_id "
                  "WHERE industry.id={industry_id}) t1 "
-                 "WHERE rn<=2")
+                 "WHERE rn<=2 and CURRENT_DATE - date < '8 day' ")
 
         condition = CONDITION_TOP.format(condition_word='WHEN', table='article')
         q_client = query.format(subject='client', industry_id=industry_id, condition=condition)
@@ -647,7 +647,7 @@ class FormatText:
     @property
     def title(self):
         title = self.__title
-        return title.split('.')[0] if not title else title
+        return self.__text_sum.split('.')[0] if not title else title
 
     @property
     def date(self):
@@ -671,12 +671,13 @@ class FormatText:
 
     def make_industry_text(self):
         """ Возвращает новостной текст для просмотра новостей про индустрию """
-        msg = f'- {self.title} {self.link}\n{self.date}'
+        msg = f'{self.MARKER} {self.title} {self.link}\n{self.date}'
         return msg
 
     @staticmethod
     def make_industry_msg(industry, format_msg):
         """ Возвращает сообщение с новостями об индустрии """
         industry = f'<b>{industry.upper()}</b>\n'
-        return '{}{}'.format(industry, format_msg)
+        industry_description = '<b>Подборка новостей отрасли</b>\n'
+        return '{}{}{}'.format(industry, industry_description, format_msg)
 
