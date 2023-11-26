@@ -4,7 +4,7 @@ import numpy as np
 import re
 import urllib.parse
 import json
-from typing import List
+from typing import List, Dict
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -326,7 +326,46 @@ class ArticleProcess:
 
             return name, article_data
 
+    def _get_sorted_subject(self) -> (Dict, Dict):
+        """ Создание словарей для сортировки по топ клиентам/товарам
+        в зависимости от кол-ва новостей за период времени """
+        period = '3 months'
+        query_sort = ("select name from {subject_type} "
+                      "join relation_{subject_type}_article r_{subject_type} "
+                      "on r_{subject_type}.{subject_type}_id = {subject_type}.id "
+                      "join article on article.id=r_{subject_type}.article_id "
+                      "where current_date - article.date < '{period}' "
+                      "group by name order by count(r_{subject_type}.article_id) desc")
+        with self.engine.connect() as conn:
+            client_sorted = conn.execute(text(query_sort.format(subject_type='client', period=period))).fetchall()
+            commodity_sorted = conn.execute(text(query_sort.format(subject_type='commodity', period=period))).fetchall()
+
+        # словарь с именем объекта и его индексом
+        client_sorted_dict = {key[0]: val for key, val in zip(list(client_sorted), range(len(client_sorted)))}
+        commodity_sorted_dict = {key[0]: val for key, val in zip(list(commodity_sorted), range(len(commodity_sorted)))}
+
+        return client_sorted_dict, commodity_sorted_dict
+
+    @staticmethod
+    def _sort_by_top_subject(sorted_subject_name: Dict, articles) -> List:
+        """
+        Возвращает отсортированный по топ объектам список со статьями
+        :param sorted_subject_name: словарь {имя объекта: отсортированный индекс}
+        :param articles: данные по новостям, включая имена объектов
+        """
+        last_place = 1000000
+        article_sorted_dict = {}
+        for article in articles:
+            subject_name = article[1]
+            sorted_place = sorted_subject_name.get(subject_name, last_place)
+            article_sorted_dict[article] = sorted_place
+
+        article_sorted = sorted(article_sorted_dict.items(), key=lambda item: item[1])  # кортеж (ключ, значение)
+        article_sorted = [a[0] for a in article_sorted]  # список из ключей, т.е. только из данных по новостям
+        return article_sorted
+
     def _get_industry_articles(self, industry_id) -> List:
+        """ Получение отсортированных новостей по клиентам и товарам для выдачи новостей по отрасли """
         query = ("SELECT * FROM "
                  "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
                  "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
@@ -347,7 +386,14 @@ class ArticleProcess:
         with self.engine.connect() as conn:
             articles_client = conn.execute(text(q_client)).fetchall()
             articles_commodity = conn.execute(text(q_commodity)).fetchall()
-        articles = list(articles_client) + list(articles_commodity)
+
+        # получим словарь с отсортированными по кол-ву новостей за квартал клиентами/товарами
+        client_sorted_dict, commodity_sorted_dict = self._get_sorted_subject()
+        # отсортируем полученные статьи по топ клиентам/товарам
+        client_sorted = self._sort_by_top_subject(client_sorted_dict, articles_client)
+        commodity_sorted = self._sort_by_top_subject(commodity_sorted_dict, articles_commodity)
+
+        articles = list(client_sorted) + list(commodity_sorted)
 
         return articles
 
