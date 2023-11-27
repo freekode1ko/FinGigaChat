@@ -4,6 +4,7 @@ import numpy as np
 import re
 import urllib.parse
 import json
+from typing import List, Dict
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -15,6 +16,15 @@ from module.model_pipe import deduplicate, model_func, model_func_online, add_te
 
 TIME_LIVE_ARTICLE = 100
 NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
+CONDITION_TOP = ("{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
+                 "({table}.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
+                 "OR {table}.link SIMILAR TO '%.interfax(|-russia).ru%' "
+                 "OR {table}.link SIMILAR TO '%www.kommersant.ru%' "
+                 "OR {table}.link SIMILAR TO '%www.vedomosti.ru%' "
+                 "OR {table}.link SIMILAR TO '%www.forbes.ru%' "
+                 "OR {table}.link SIMILAR TO '%(.|//)iz.ru/%' "
+                 "OR {table}.link SIMILAR TO '%//tass.(ru|com)%' "
+                 "OR {table}.link SIMILAR TO '%(realty.|//)ria.ru%')")
 
 
 class ArticleError(Exception):
@@ -46,7 +56,7 @@ class ArticleProcess:
                          "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
                          "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
                          "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
-                         "//(|www.)pronedra.ru") #TODO: дополнять
+                         "//(|www.)pronedra.ru")  # TODO: дополнять
 
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
@@ -72,11 +82,11 @@ class ArticleProcess:
         df_subject[type_of_article] = df_subject[type_of_article].str.lower()
         try:
             df_subject = df_subject.groupby('link').apply(lambda x: pd.Series({
-                                                                            'title': x['title'].iloc[0],
-                                                                            'date': x['date'].iloc[0],
-                                                                            'text': x['text'].iloc[0],
-                                                                            type_of_article: ';'.join(x[type_of_article]),
-                                                                            })).reset_index()
+                'title': x['title'].iloc[0],
+                'date': x['date'].iloc[0],
+                'text': x['text'].iloc[0],
+                type_of_article: ';'.join(x[type_of_article]),
+            })).reset_index()
             print(f'-- group by link, so len of articles is {len(df_subject)}')
         except Exception as e:
             print(f'-- Error: {e}')
@@ -187,7 +197,8 @@ class ArticleProcess:
         :param df_commodity: df with commodity article
         """
         # find common link in client and commodity article, and take client from these article
-        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
+        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][
+            df_client['link'].isin(df_commodity['link'])]
         # make df bases on common links, which contains client and commodity name
         df_client_commodity = df_commodity.merge(df_link_client, on='link')
         # remove from df_client and df_commodity common links
@@ -281,7 +292,6 @@ class ArticleProcess:
         :return: name of client(commodity) and sorted sum articles
         """
         count_all, count_top = 10, 3
-        date_now = dt.datetime.now()
         query_temp = ('SELECT relation.article_id, relation.{subject}_score, '
                       'article_.title, article_.date, article_.link, article_.text_sum '
                       'FROM relation_{subject}_article AS relation '
@@ -294,15 +304,7 @@ class ArticleProcess:
                       '{condition} '
                       'ORDER BY date DESC, relation.{subject}_score DESC '
                       'LIMIT {count}')
-        condition_top = (f"AND '{date_now}' - article_.date < '15 day' AND "
-                         f"(article_.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
-                         f"OR article_.link SIMILAR TO '%.interfax(|-russia).ru%' "
-                         f"OR article_.link SIMILAR TO '%www.kommersant.ru%' "
-                         f"OR article_.link SIMILAR TO '%www.vedomosti.ru%' "
-                         f"OR article_.link SIMILAR TO '%www.forbes.ru%' "
-                         f"OR article_.link SIMILAR TO '%(.|//)iz.ru/%' "
-                         f"OR article_.link SIMILAR TO '%//tass.(ru|com)%' "
-                         f"OR article_.link SIMILAR TO '%(realty.|//)ria.ru%')")
+        condition_top = CONDITION_TOP.format(condition_word='AND', table='article_')
 
         with self.engine.connect() as conn:
 
@@ -323,6 +325,77 @@ class ArticleProcess:
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
             return name, article_data
+
+    def _get_sorted_subject(self) -> (Dict, Dict):
+        """ Создание словарей для сортировки по топ клиентам/товарам
+        в зависимости от кол-ва новостей за период времени """
+        period = '3 months'
+        query_sort = ("select name from {subject_type} "
+                      "join relation_{subject_type}_article r_{subject_type} "
+                      "on r_{subject_type}.{subject_type}_id = {subject_type}.id "
+                      "join article on article.id=r_{subject_type}.article_id "
+                      "where current_date - article.date < '{period}' "
+                      "group by name order by count(r_{subject_type}.article_id) desc")
+        with self.engine.connect() as conn:
+            client_sorted = conn.execute(text(query_sort.format(subject_type='client', period=period))).fetchall()
+            commodity_sorted = conn.execute(text(query_sort.format(subject_type='commodity', period=period))).fetchall()
+
+        # словарь с именем объекта и его индексом
+        client_sorted_dict = {key[0]: val for key, val in zip(list(client_sorted), range(len(client_sorted)))}
+        commodity_sorted_dict = {key[0]: val for key, val in zip(list(commodity_sorted), range(len(commodity_sorted)))}
+
+        return client_sorted_dict, commodity_sorted_dict
+
+    @staticmethod
+    def _sort_by_top_subject(sorted_subject_name: Dict, articles) -> List:
+        """
+        Возвращает отсортированный по топ объектам список со статьями
+        :param sorted_subject_name: словарь {имя объекта: отсортированный индекс}
+        :param articles: данные по новостям, включая имена объектов
+        """
+        last_place = 1000000
+        article_sorted_dict = {}
+        for article in articles:
+            subject_name = article[1]
+            sorted_place = sorted_subject_name.get(subject_name, last_place)
+            article_sorted_dict[article] = sorted_place
+
+        article_sorted = sorted(article_sorted_dict.items(), key=lambda item: item[1])  # кортеж (ключ, значение)
+        article_sorted = [a[0] for a in article_sorted]  # список из ключей, т.е. только из данных по новостям
+        return article_sorted
+
+    def _get_industry_articles(self, industry_id) -> List:
+        """ Получение отсортированных новостей по клиентам и товарам для выдачи новостей по отрасли """
+        query = ("SELECT * FROM "
+                 "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
+                 "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
+                 "CASE {condition} THEN 1 "
+                 "WHEN r.{subject}_score<>0 THEN 2 "
+                 "END, "
+                 "article.date desc, r.{subject}_score desc) rn "
+                 "FROM relation_{subject}_article r "
+                 "JOIN article ON r.article_id=article.id "
+                 "JOIN {subject} ON {subject}.id=r.{subject}_id "
+                 "JOIN industry ON industry.id={subject}.industry_id "
+                 "WHERE industry.id={industry_id}) t1 "
+                 "WHERE rn<=2 and CURRENT_DATE - date < '8 day' ")
+
+        condition = CONDITION_TOP.format(condition_word='WHEN', table='article')
+        q_client = query.format(subject='client', industry_id=industry_id, condition=condition)
+        q_commodity = query.format(subject='commodity', industry_id=industry_id, condition=condition)
+        with self.engine.connect() as conn:
+            articles_client = conn.execute(text(q_client)).fetchall()
+            articles_commodity = conn.execute(text(q_commodity)).fetchall()
+
+        # получим словарь с отсортированными по кол-ву новостей за квартал клиентами/товарами
+        client_sorted_dict, commodity_sorted_dict = self._get_sorted_subject()
+        # отсортируем полученные статьи по топ клиентам/товарам
+        client_sorted = self._sort_by_top_subject(client_sorted_dict, articles_client)
+        commodity_sorted = self._sort_by_top_subject(commodity_sorted_dict, articles_commodity)
+
+        articles = list(client_sorted) + list(commodity_sorted)
+
+        return articles
 
     def _get_commodity_pricing(self, subject_id):
         """
@@ -409,14 +482,9 @@ class ArticleProcess:
 
         if articles:
             for index, article_data in enumerate(articles):
-                title, date, link, text_sum = article_data[0], article_data[1], article_data[2], article_data[3]
-                date = date.strftime('%d.%m.%Y')
-                link_phrase = f'<a href="{link}">Источник</a>'
-                text_sum = f'{text_sum}.' if text_sum[-1] != '.' else text_sum
-                if title:
-                    articles[index] = f'{marker} <b>{title}</b>\n{text_sum} {link_phrase}\n<i>{date}</i>'
-                else:
-                    articles[index] = f'{marker} {text_sum} {link_phrase}\n<i>{date}</i>'
+                format_text = FormatText(title=article_data[0], date=article_data[1], link=article_data[2],
+                                         text_sum=article_data[3])
+                articles[index] = format_text.make_subject_text()
             all_articles = '\n\n'.join(articles)
             format_msg += f'\n\n{all_articles}'
         else:
@@ -450,6 +518,30 @@ class ArticleProcess:
 
         return com_msg, format_msg, img_name_list
 
+    @staticmethod
+    def make_format_industry_msg(articles):
+        format_msg = ''
+
+        if articles:
+            articles_short = []
+            subject = ''
+            for article_data in articles:
+                format_text = FormatText(subject=article_data[1], date=article_data[2],
+                                         link=article_data[3], title=article_data[4], text_sum=article_data[5])
+                industry_text = format_text.make_industry_text()
+                if subject != format_text.subject:
+                    subject = format_text.subject
+                    articles_short.append(subject + industry_text)
+                else:
+                    articles_short.append(industry_text)
+            all_articles = '\n'.join(articles_short)
+            format_msg += f'{all_articles}'
+        else:
+            return True
+
+        format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
+        return format_msg
+
     def process_user_alias(self, subject_id: int, subject: str = ''):
         """ Process user alias and return reply for it """
 
@@ -460,6 +552,10 @@ class ArticleProcess:
         elif subject == 'commodity':
             subject_name, articles = self._get_articles(subject_id, subject)
             com_data = self._get_commodity_pricing(subject_id)
+        elif subject == 'industry':
+            articles = self._get_industry_articles(subject_id)
+            reply_msg = self.make_format_industry_msg(articles)
+            return '', reply_msg, img_name_list
         else:
             print('user do not want articles')
             return '', False, img_name_list
@@ -576,4 +672,58 @@ class ArticleProcessAdmin:
             msgs.append(self.get_article_by_link(link))
         return msgs[:5]
 
+
+class FormatText:
+    """  Форматирует текст для передачи в Телеграмм  """
+    MARKER = '&#128204;'
+
+    def __init__(self, subject: str = '', date: dt.datetime = dt.datetime.now(), link: str = '',
+                 title: str = '', text_sum: str = ''):
+        self.__subject = subject  # имя клиента/товара
+        self.__title = title
+        self.__date = date
+        self.__link = link
+        self.__text_sum = text_sum
+
+    @property
+    def subject(self):
+        """ Возвращает отформатированное имя клиента/товара """
+        return f'\n<b>{self.__subject.capitalize()}</b>\n'
+
+    @property
+    def title(self):
+        title = self.__title
+        return self.text_sum.split('.')[0] if not title else title
+
+    @property
+    def date(self):
+        return f'<i>{self.__date.strftime("%d.%m.%Y")}</i>'
+
+    @property
+    def link(self):
+        return f'<a href="{self.__link}">Источник</a>'
+
+    @property
+    def text_sum(self):
+        text_sum = self.__text_sum
+        return f'{text_sum}.' if text_sum[-1] != '.' else text_sum
+
+    def make_subject_text(self):
+        """ Возвращает новостной текст для клиента/товара """
+        if self.__title:
+            return f'{self.MARKER} <b>{self.__title}</b>\n{self.text_sum} {self.link}\n{self.date}'
+        else:
+            return f'{self.MARKER} {self.text_sum} {self.link}\n<i>{self.date}</i>'
+
+    def make_industry_text(self):
+        """ Возвращает новостной текст для просмотра новостей про индустрию """
+        msg = f'{self.MARKER} {self.title} {self.link}\n{self.date}'
+        return msg
+
+    @staticmethod
+    def make_industry_msg(industry, format_msg):
+        """ Возвращает сообщение с новостями об индустрии """
+        industry = f'<b>{industry.upper()}</b>\n'
+        industry_description = '<b>Подборка новостей отрасли</b>\n'
+        return '{}{}{}'.format(industry, industry_description, format_msg)
 
