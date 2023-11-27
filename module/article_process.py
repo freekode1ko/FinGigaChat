@@ -585,7 +585,7 @@ class ArticleProcess:
                                  "WHERE (date > now() - interval '{} hours')"
                                  .format(columns, *table, hours), con=self.engine)
 
-    def get_client_comm_industry_article_dictionary(self):
+    def get_client_comm_industry_dictionary(self):
         """
         Составление словаря для новостных объектов и их альтернативных названий
         """

@@ -1338,24 +1338,24 @@ def translate_subscriptions_to_object_id(CAI_dict: dict, subscriptions: list):
     return [key for word in subscriptions for key in CAI_dict if word in CAI_dict[key]]
 
 
-async def news_prep(news_id: list, news: pd.DataFrame, news_obj: str):
+async def news_prep(subject_ids: list, news: pd.DataFrame, subject_type: str):
     """
     Подготовка новостей для отправки их пользователю.
     Включает в себя: получение id новостей и разделение на блоки по темам
 
-    :param news_id: Список id интересных пользователю
+    :param subject_ids: Список id интересных пользователю
     :param news: Дата Фрейм с новостями за период времени
-    :param news_obj: Тип новости по направлению (клиенты/комоды/отрасли).
+    :param subject_type: Тип новости по направлению (клиенты/комоды/отрасли).
     Может иметь 3 значения: 'client', 'commodity', *'industry' текст должен быть обязательно в нижнем регистре
     return Список Дата Фраймов, где каждый ДФ относится к одной конкретной теме.
     """
-    requested_news_id = [int(news.split('_')[1]) for news in news_id if news.split('_')[0] == news_obj]
+    requested_news_id = [int(news.split('_')[1]) for news in subject_ids if news.split('_')[0] == subject_type]
 
     # Получить список новостей по id объекту
-    news_sorted = news.loc[news['{}_id'.format(news_obj)].isin(requested_news_id)]
+    news_sorted = news.loc[news['{}_id'.format(subject_type)].isin(requested_news_id)]
 
     # Разбить список новостей на блоки по объекту
-    news_splitted = [part for _, part in news_sorted.groupby(news_sorted['{}_id'.format(news_obj)])]
+    news_splitted = [part for _, part in news_sorted.groupby(news_sorted['{}_id'.format(subject_type)])]
     return news_splitted
 
 
@@ -1385,7 +1385,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
         time_to_wait = (end_of_the_day - current_time) + first_time_to_send
         print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
               f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
-    elif 34200 > current_time:
+    elif first_time_to_send > current_time:
         time_to_wait = (first_time_to_send - current_time)
         print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
               f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
@@ -1411,7 +1411,7 @@ async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, indus
     ap_obj = ArticleProcess()
     engine = create_engine(psql_engine)
     # Словарь новостных объектов {тип_id: [альтернатив. названия], ...}
-    CAI_dict = ap_obj.get_client_comm_industry_article_dictionary()
+    CAI_dict = ap_obj.get_client_comm_industry_dictionary()
     clients_news = ap_obj.get_news_by_time(client_hours, 'client')
     commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity')
     # db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
