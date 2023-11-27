@@ -1,5 +1,5 @@
 log_file = 'logs/{}.log'
-log_lvl = 10
+log_lvl = 10  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 user_agents = \
     [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
