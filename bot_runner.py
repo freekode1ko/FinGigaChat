@@ -1327,13 +1327,13 @@ async def send_newsletter(newsletter_data: Dict):
     return await send_newsletter(newsletter_data)
 
 
-def translate_subscriptions_to_id(CAI_dict: dict, subscriptions: list):
+def translate_subscriptions_to_object_id(CAI_dict: dict, subscriptions: list):
     """
-    Получает id новостных объектов (клиента/комоды/отрасли) из подписок пользователя
+    Получает id объектов (клиента/комоды/отрасли) по названиям объектов из подписок пользователя
 
-    :param CAI_dict: Словарь новостных объектов {NewsType_NewsID: [OtherNames], ...}
+    :param CAI_dict: Словарь объектов {ObjectType_ObjectID: [Object_Names], ...}
     :param subscriptions: Список подписок пользователя. Могут быть как названия, так и альтернативные названия
-    return Список id новостных объектов
+    return Список id объектов
     """
     return [key for word in subscriptions for key in CAI_dict if word in CAI_dict[key]]
 
@@ -1359,12 +1359,12 @@ async def news_prep(news_id: list, news: pd.DataFrame, news_obj: str):
     return news_splitted
 
 
-async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 34300, last_time_to_send: int = 64200):
+async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 34200, last_time_to_send: int = 64200):
     """
     Функция для расчета времени ожидания
 
     :param time_to_wait: Параметр для пропуска ожидания. Для пропуска можно передать любое int значение кроме 0
-    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 34300  # 9:30
+    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 34200  # 9:30
     :param last_time_to_send: Время для отправки последней рассылки. Время в секундах. Default = 64200  # 18:00
     return None
     """
@@ -1393,6 +1393,8 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
 
 
+# TODO: Добавить синхронизацию времени с методом на ожидание (newsletter_scheduler)
+# TODO: Учитывать, что временные интервалы могут быть не равны между first.start -> first.last -> second.first
 async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9, schedule: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
@@ -1431,8 +1433,8 @@ async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, indus
             print(f'Чата с пользователем {user_id} {user_name} - не существует')
             continue
 
-        # Получить список интересующих id объектов новостей
-        news_id = translate_subscriptions_to_id(CAI_dict, subscriptions)
+        # Получить список интересующих id объектов
+        news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
 
