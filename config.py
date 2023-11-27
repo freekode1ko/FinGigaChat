@@ -1,3 +1,5 @@
+log_file = 'logs/{}.log'
+log_lvl = 10
 user_agents = \
     [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
