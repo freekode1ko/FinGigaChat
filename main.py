@@ -456,33 +456,39 @@ class Main:
 
         # economy
         key_eco_table = authed_user.get_key_econ_ind_table()
-        eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+        eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные')
+        eco_month = authed_user.get_reviews(url_part=economy, tab='Все',
                                             name_of_review='Экономика России. Ежемесячный обзор')
         print('economy...ok')
 
         # bonds
-        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
+        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные',
                                             name_of_review='Валютный рынок и процентные ставки',
                                             type_of_review='bonds', count_of_review=2)
-        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
-                                              name_of_review='Обзор рынка процентных ставок')
+        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', name_of_review='Обзор рынка процентных ставок')
         print('bonds...ok')
 
         # exchange
-        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-                                               name_of_review='Валютный рынок и процентные ставки',
-                                               type_of_review='exchange', count_of_review=2)
-        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', type_of_review='exchange',
+                                               name_of_review='Валютный рынок и процентные ставки', count_of_review=2)
+        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все',
                                                      name_of_review='Ежемесячный обзор по юаню')
-        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
+        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все',
                                                       name_of_review='Ежемесячный дайджест по мягким валютам')
         print('exchange...ok')
 
         # commodity
-        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
-                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', name_of_review='Сырьевые рынки',
+                                                type_of_review='commodity')
         print('commodity...ok')
+
+        # отрасли
+        # получим информацию отраслевых обзоров из бд
+        engine = create_engine(self.psql_engine)
+        old_industry = pd.read_sql_query('SELECT title, date, send_flag from report_industry', con=engine)
+        # получим превью из отраслевых обзоров, а также сохраним пдф обзоров
+        industry_reviews = authed_user.get_industry_reviews(old_industry)
+        print('industry reviews...ok')
 
         exchange_month = exchange_month_uan + exchange_month_soft
         reviews = {
@@ -492,7 +498,8 @@ class Main:
             'Bonds month': bonds_month,
             'Exchange day': exchange_day,
             'Exchange month': exchange_month,
-            'Commodity day': commodity_day
+            'Commodity day': commodity_day,
+            'Industries reviews': industry_reviews
         }
 
         # companies
@@ -505,21 +512,18 @@ class Main:
         clients_table = authed_user.get_companies_financial_indicators_table()
         print('clients table...ok')
 
-        authed_user.get_industry_reviews()
-        print('industry reviews...ok')
-
         authed_user.get_weekly_review()
 
         return reviews, companies_pages_html, key_eco_table, clients_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
-        Save all reviews into the database.
-        :param reviews_to_save: dict of list of the reviews
+        Сохраняет все обзоры в базу данных.
+        :param reviews_to_save: dict из названия обзоров и их данными
         """
-        # TODO: мб сделать одну таблицу для обзоров ?
-
         engine = create_engine(self.psql_engine)
+        cols = ['title', 'text', 'date']
+        industry_cols = ['title', 'text', 'date', 'send_flag']
         table_name_for_review = {
             'Economy day': 'report_eco_day',
             'Economy month': 'report_eco_mon',
@@ -527,13 +531,15 @@ class Main:
             'Bonds month': 'report_bon_mon',
             'Exchange day': 'report_exc_day',
             'Exchange month': 'report_exc_mon',
-            'Commodity day': 'report_met_day'
+            'Commodity day': 'report_met_day',
+            'Industries reviews': 'report_industry'
         }
 
         for review_name in table_name_for_review:
             table_name = table_name_for_review.get(review_name)
             reviews_list = reviews_to_save.get(review_name)
-            pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
+            cols = industry_cols if review_name == 'Industries reviews' else cols
+            pd.DataFrame(reviews_list, columns=cols).to_sql(table_name, if_exists='replace', index=False, con=engine)
 
         print('SAVE REVIEWS...ok')
 
@@ -556,7 +562,6 @@ class Main:
         Process and save fin mark of the companies.
         :param company_pages_html: html page with fin mark from CIB Research
         """
-        # TODO: изменить сохранение ?
 
         list_of_companies_df = pd.DataFrame(self.list_of_companies, columns=['ID', 'Name', 'URL'])
         comp_size = len(self.list_of_companies)

@@ -194,7 +194,7 @@ class ResearchParser:
 
         return date, text
 
-    def get_reviews(self, url_part: str, tab: str, title: str, name_of_review: str = '',
+    def get_reviews(self, url_part: str, tab: str, name_of_review: str = '',
                     count_of_review: int = 1, type_of_review: str = '') -> List[tuple]:
         """
         Get data of reviews from CIB Research
@@ -211,7 +211,6 @@ class ResearchParser:
         url = f'{self.home_page}/group/guest/{url_part}'
         self.driver.get(url)
         self.__sleep_some_time()
-        assert title in self.driver.title
 
         # click on tab
         tab_element = self.find_tab(tab)
@@ -467,21 +466,44 @@ class ResearchParser:
         if old.__len__() > 0:
             os.remove(os.path.join(pdf_dir, old[0]))
         
-    def get_industry_reviews(self):  
+    def get_industry_reviews(self, old_industry):
         """
-        Get all industry reviews
+        Получает отраслевые обзоры, задает им флаг отправки обзора пользователям. Сохраняет пдф отраслевых обзоров.
+        :param old_industry: датафрейм с отраслевыми обзорами из базы данных.
+        :return отраслевые обзоры с Research.
         """
-
         print('---industry reviews---')
-        industry_reviews = config.industry_reviews
-        for industry in industry_reviews:
+
+        # инициализируем переменные
+        industry_reviews_dict = config.industry_reviews  # dict(параметр_в_ссылке=название обзора)
+        industry_url = 'equities?sector='
+        industry_reviews = []  # список для хранения данных обо всех отраслевых обзорах
+
+        # получим данные по каждому обзору
+        for url_param, name_of_reviews in industry_reviews_dict.items():
             try:
-                self.__get_industry_pdf(industry, industry_reviews[industry])
-                print(f'{industry_reviews[industry]}..ok')
-            except Exception as e: 
-                print(f'{industry_reviews[industry]}..ERROR')
-                print(e)
-    
+
+                url = f'{industry_url}{url_param}'
+                industry_review = self.get_reviews(url_part=url, tab='Обзоры', name_of_review=name_of_reviews)
+
+                # получим значение флага об отправке спаршенного обзора пользователям
+                old_send_flag = old_industry.loc[((old_industry['title'] == industry_review[0][0]) &
+                                                  (old_industry['date'] == industry_review[0][2]))]['send_flag'].tolist()
+
+                # если обзор новый (его не было в БД), то флаг по отправке пользователям - False
+                send_flag = old_send_flag[0] if old_send_flag else False
+                industry_review = [(*industry_review[0], send_flag)]
+                industry_reviews += industry_review
+
+                # сохраним пдф по отраслевому обзору
+                self.__get_industry_pdf(url_param, name_of_reviews)
+
+                print(f'{name_of_reviews}..ok')
+            except Exception as e:
+                print(f'{name_of_reviews}..ERROR: {e}')
+
+        return industry_reviews
+
     def get_weekly_review(self):
         """
         Get Research Weekly Pulse review pdf
@@ -543,7 +565,6 @@ class ResearchParser:
 
         images = convert_from_path(filename)
         images[2].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
-        images[6].save('{}/{}'.format(weekly_dir, 'slide_6.png'))
         images[9].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
         images[10].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
 
