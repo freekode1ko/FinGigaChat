@@ -1450,6 +1450,7 @@ async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, indus
         print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
           '\nПереходим в ожидание следующей рассылки.')
+    await asyncio.sleep(100)
 
     return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
