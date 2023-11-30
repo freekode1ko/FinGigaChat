@@ -1432,20 +1432,23 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
+        if (len(news_client_splited) > 0) or (len(news_comm_splited) > 0):
+            try:
+                await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
+                                       parse_mode='HTML', protect_content=True)
+            except ChatNotFound:
+                print(f'Чата с пользователем {user_id} {user_name} - не существует')
+                continue
 
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
-                message_block = f"<b>Новости из подписке по {news_block['name'].values.tolist()[0]}</b>\n\n\n".upper()
+                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n\n".upper()
                 for df_index, row in news_block.head(20).iterrows():
                     base_url = urlparse(row['link']).netloc.split('www.')[-1]  # Базовая ссылка на источник
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
-                try:
-                    await bot.send_message(user_id, text=message_block, parse_mode='HTML',
-                                           protect_content=False, disable_web_page_preview=True)
-                except ChatNotFound:
-                    print(f'Чата с пользователем {user_id} {user_name} - не существует')
-                    break
+                await bot.send_message(user_id, text=message_block, parse_mode='HTML',
+                                       protect_content=False, disable_web_page_preview=True)
 
         print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
