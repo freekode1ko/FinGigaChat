@@ -1439,7 +1439,8 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
             except ChatNotFound:
                 print(f'Чата с пользователем {user_id} {user_name} - не существует')
                 continue
-
+        else:
+            print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
