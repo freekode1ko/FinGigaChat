@@ -15,7 +15,7 @@ class Logger:
         self.log_file = log_file.format(log_name)
 
         logging.basicConfig(filename=self.log_file, filemode="a", format=self.log_format,
-                            datefmt=self.log_datefmt, level=level)
+                            datefmt=self.log_datefmt, level=level, encoding='utf-8')
 
 
 def logger(module_logger: str):

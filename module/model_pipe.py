@@ -13,6 +13,7 @@ from sqlalchemy import create_engine, text
 from config import summarization_prompt, psql_engine
 from module.gigachat import GigaChat
 from module.chatgpt import ChatGPT
+from module.logger_base import Logger
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_binary_best2.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
@@ -388,26 +389,27 @@ def union_name(p_row: str, r_row: str) -> str:
     return ';'.join(common_set)
 
 
-def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
+def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str, text: str) -> str:
     """
-    Make summary of article text by GigaChat.
-    :param giga_chat: instance of GigaChat.
-    :param token: token of GigaChat chat.
-    :param text: text of article for summarization.
-    :return: summarization text.
+    Создание краткой версии новостного текста с помощью GigaChat
+    :param logger: экземпляр класса логер для логирования процесса
+    :param giga_chat: экземпляр класса GigaChat
+    :param token: токен авторизации в GigaChat
+    :param text: текст новости
+    :return: суммаризированный текст
     """
 
     try:
         giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except ConnectionError:
-        print('ConnectionResetError while summarization by GigaChat')
         giga_chat = GigaChat()
         token = giga_chat.get_user_token()
         giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except Exception as e:
-        print(e)
+        logger.error(e)
+        print(f'Error while make summary: {e}')
         giga_answer = ''
 
     paragraphs = giga_answer.split('\n\n')
@@ -419,33 +421,32 @@ def summarization_by_giga(giga_chat: GigaChat, token: str, text: str) -> str:
     return giga_answer
 
 
-def change_bad_summary(row: pd.Series) -> str:
-    """ Change summary if it is not exist """
+def change_bad_summary(logger: Logger.logger, row: pd.Series) -> str:
+    """ Изменение краткой версии текста, если ее нет """
     if row['text_sum']:
         return row['text_sum']
-    # TODO: если заголовки не будут отображаться в боте, то раскомментировать
     # elif row['title']:
     #     return row['title']
     else:
-        print(f'GigaChat did not make summary for {row["link"]}')
+        print(f'GigaChat не сгенерировал саммари для новости  {row["link"]}')
+        logger.error(f'GigaChat не сгенерировал саммари для новости {row["link"]}')
         first_sentence = row['text'][:row['text'].find('.') + 1]
         return first_sentence
 
 
-def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
+def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
     """
-    Find subject names which contain in article and make score for these articles
-    :param df: dataframe with article
-    :param type_of_article: type of article (client or commodity)
-    :return: df with subject name and score
+    Нахождение имен объектов в тексте новости и назначение баллов значимости новости
+    :param logger: экземпляр класса логер для логирования процесса
+    :param df: датафрейм с новостями
+    :param type_of_article: тип новости (client или commodity)
+    :return: датафрейм с найденными в новостях объектами и баллами значимости
     """
 
-    # add column with clean text
-    print('-- cleaned data')
+    logger.debug('Приведение текста новостей в нормальную форму')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
-    # find subject name in text
-    print(f'-- find {type_of_article} names in article')
+    logger.debug(f'Нахождение {type_of_article} в тексте новости')
 
     if type_of_article == 'client':
         df[['found_client', 'client_impact']] = df['text'].apply(
@@ -454,8 +455,7 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         df[type_of_article] = df.apply(lambda row: union_name(row['client'], row['found_client']), axis=1)
         df[type_of_article] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
 
-        # make rating for article
-        print(f'-- rate client articles')
+        logger.debug('Сортировка новостей о клиентах')
         df = rate_client(df, client_rating_system_dict)
 
     else:
@@ -465,71 +465,71 @@ def model_func(df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
         df['found_commodity'] = df.apply(lambda row: find_bad_gas(row['found_commodity'], row['cleaned_data']), axis=1)
         df[type_of_article] = df['found_commodity']
 
-        # make rating for article
-        print(f'-- rate commodity articles')
+        logger.debug('Сортировка новостей о товарах')
         df = rate_commodity(df, commodity_rating_system_dict)
 
-    # sum cluster labels
+    # суммирование баллов значимости
     df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
         lambda x: sum(list(map(int, list(x.split(';'))))))
 
-    # delete unnecessary columns
+    # удаление ненужных колонок
     df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
 
     return df
 
 
-def model_func_online(df: pd.DataFrame) -> pd.DataFrame:
+def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """
-    Find subject names which contain in article and make score for these articles
-    :param df: dataframe with article
-    :return: df with subject name and score
+    Нахождение имен объектов в тексте новости и назначение баллов значимости новости
+    :param logger: экземпляр класса логер для логирования процесса
+    :param df: датафрейм с новостями
+    :return: датафрейм с найденными в новостях объектами и баллами значимости
     """
 
-    # add column with clean text
-    print('-- cleaned data')
+    logger.debug('Приведение текста новостей в нормальную форму')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
     # find subject name in text
-    print('-- find client names in article online')
+    logger.debug(f'Нахождение client в тексте новости')
     df[['client', 'client_impact']] = df.apply(
         lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)), axis=1)
     df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
 
-    print('-- find commodity names in article online')
+    logger.debug(f'Нахождение commodity в тексте новости')
     df[['commodity', 'commodity_impact']] = df.apply(
         lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1)
     df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
 
     # make rating for article
-    print(f'-- rate client articles online')
+    logger.debug('Сортировка новостей о клиентах')
     df = rate_client(df, client_rating_system_dict)
-    print(f'-- rate commodity articles online')
+    logger.debug('Сортировка новостей о товарах')
     df = rate_commodity(df, commodity_rating_system_dict)
 
-    # sum cluster labels
+    # суммирование баллов значимости
     df['client_score'] = df['client_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
     df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
 
-    # delete unnecessary columns
+    # удаление ненужных колонок
     df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
 
     return df
 
 
-def add_text_sum_column(df: pd.DataFrame) -> pd.DataFrame:
+def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """ Make summary for dataframe with articles """
-    print(f'-- make summary for article')
+    logger.debug('Создание саммари')
     giga_chat = GigaChat()
     token = giga_chat.get_user_token()
-    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(giga_chat, token, text))
-    df['text_sum'] = df.apply(lambda row: change_bad_summary(row), axis=1)
+    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(logger, giga_chat, token, text))
+    df['text_sum'] = df.apply(lambda row: change_bad_summary(logger, row), axis=1)
     return df
 
 
-def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
     """
-    Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной.
+    Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
+    :param logger: экземпляр класса логер для логирования процесса
     :param df: датафрейм с только что полученными новостями
     :param df_previous: датафрейс с новостями из БД
     :param threshold: граница отсечения новости
@@ -540,8 +540,8 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df.query('not client_score.isnull() and client_score != 0 or '
                   'not commodity_score.isnull() and commodity_score != 0')
     now_len = len(df)
-    print(f'-- remove {old_len - now_len} not relevant articles')
-    print('-- new article before deduplicate =', now_len)
+    logger.info(f'Удаление нерелевантных новостей, количество новостей - {old_len - now_len}')
+    logger.info(f'Количество новостей перед удалением дублей - {now_len}')
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
     df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
@@ -610,8 +610,8 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
     df = df[df['unique']]
     df.drop(columns=['unique'], inplace=True)
 
-    print(f'len of articles in database (last 14 days) -- {len(df_previous)}')
-    print('-- new article after deduplicate =', len(df))
+    logger.info(f'Количество новостей из базы данных за последние 14 дней - {len(df_previous)}')
+    logger.info(f'Количество новостей после удаления дублей - {len(df)}')
 
     return df
 
