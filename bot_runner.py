@@ -1432,7 +1432,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
-        if (len(news_client_splited) > 0) or (len(news_comm_splited) > 0):
+        if news_client_splited or news_comm_splited:
             try:
                 await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
                                        parse_mode='HTML', protect_content=True)
