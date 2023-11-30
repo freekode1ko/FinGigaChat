@@ -1360,12 +1360,12 @@ async def news_prep(subject_ids: list, news: pd.DataFrame, subject_type: str):
     return news_splitted
 
 
-async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 37080, last_time_to_send: int = 61200):
+async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 37800, last_time_to_send: int = 61200):
     """
     Функция для расчета времени ожидания
 
     :param time_to_wait: Параметр для пропуска ожидания. Для пропуска можно передать любое int значение кроме 0
-    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 37080  # 10:30
+    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 37800  # 10:30
     :param last_time_to_send: Время для отправки последней рассылки. Время в секундах. Default = 61200  # 17:00
     return None
     """
@@ -1427,18 +1427,20 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         subscriptions = user['subscriptions'].split(', ')
         # translate_subscriptions_to_id(CAI_dict, subscriptions)
         print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
-        try:
-            await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
-                                   parse_mode='HTML', protect_content=True)
-        except ChatNotFound:
-            print(f'Чата с пользователем {user_id} {user_name} - не существует')
-            continue
 
         # Получить список интересующих id объектов
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
-
+        if news_client_splited or news_comm_splited:
+            try:
+                await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
+                                       parse_mode='HTML', protect_content=True)
+            except ChatNotFound:
+                print(f'Чата с пользователем {user_id} {user_name} - не существует')
+                continue
+        else:
+            print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
@@ -1453,7 +1455,6 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
           '\nПереходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
-
     return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
 
