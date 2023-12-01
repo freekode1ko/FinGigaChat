@@ -607,8 +607,9 @@ def deduplicate(df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 
         df['unique'][actual_pos - start] = flag_unique
 
     # удаляем дубли из нового батча
-    df = df[df['unique']]
-    df.drop(columns=['unique'], inplace=True)
+    if not df.empty:
+        df = df[df['unique']]
+        df.drop(columns=['unique'], inplace=True)
 
     print(f'len of articles in database (last 14 days) -- {len(df_previous)}')
     print('-- new article after deduplicate =', len(df))
