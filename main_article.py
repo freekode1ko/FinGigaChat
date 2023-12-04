@@ -7,7 +7,7 @@ import pandas as pd
 
 from module.article_process import ArticleProcess
 from module.mail_parse import ImapParse
-from module import logger_base
+from module.logger_base import selector_logger
 from config import mail_username, mail_password, mail_imap_server
 
 CLIENT_FOLDER_DIR = "data/articles/client"
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem
-    logger = logger_base.logger(log_name)
+    logger = selector_logger(log_name)
     # запускаем ежедневное получение/обработку новостей от полианалиста
     while True:
         # высчитываем время ожидания
