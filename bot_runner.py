@@ -1121,7 +1121,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. *МЕТОД НЕ РАЗРЕШЕН!*')
+    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
     await send_daily_news(20, 20, 20, 1)
 
 
