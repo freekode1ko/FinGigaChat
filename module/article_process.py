@@ -537,7 +537,7 @@ class ArticleProcess:
             all_articles = '\n'.join(articles_short)
             format_msg += f'{all_articles}'
         else:
-            return True
+            return 'Пока нет новостей на эту тему'
 
         format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
         return format_msg

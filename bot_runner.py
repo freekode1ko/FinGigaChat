@@ -1112,7 +1112,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
     print(message.from_user.as_json())
-    await send_daily_news(160, 160, 160, 1)
+    await send_daily_news(20, 20, 20, 1)
 
 
 @dp.message_handler(commands=['newsletter'])
@@ -1476,7 +1476,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
-                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n\n".upper()
+                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n".upper()
                 for df_index, row in news_block.head(20).iterrows():
                     base_url = urlparse(row['link']).netloc.split('www.')[-1]  # Базовая ссылка на источник
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
