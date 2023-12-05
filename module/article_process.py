@@ -607,15 +607,22 @@ class ArticleProcessAdmin:
     def __init__(self):
         self.engine = create_engine(psql_engine)
 
+    def get_article_id_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                article_id = conn.execute(text(f"SELECT id FROM article WHERE link='{link}'")).fetchone()[0]
+            return article_id
+        except (TypeError, ProgrammingError):
+            return ''
+
     def get_article_text_by_link(self, link: str):
         try:
             with self.engine.connect() as conn:
                 article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
                 full_text, text_sum = article[4], article[5]
+            return full_text, text_sum
         except (TypeError, ProgrammingError):
             return '', ''
-        else:
-            return full_text, text_sum
 
     def get_article_by_link(self, link: str):
         dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
@@ -669,15 +676,15 @@ class ArticleProcessAdmin:
         except Exception as e:
             return e
 
-    def delete_article_by_link(self, link: str):
+    def delete_article_by_id(self, id_: int):
         try:
             with self.engine.connect() as conn:
-                conn.execute(text(f"DELETE FROM article WHERE link='{link}'"))
+                link = conn.execute(text(f"SELECT link FROM article WHERE id={id_}")).fetchone()[0]
+                conn.execute(text(f"DELETE FROM article WHERE id={id_}"))
                 conn.commit()
+                return link
         except (TypeError, ProgrammingError):
             return False
-        else:
-            return True
 
     def insert_new_gpt_summary(self, new_text_summary, link):
         """ Insert new gpt summary into database """
