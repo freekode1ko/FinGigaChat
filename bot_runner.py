@@ -7,6 +7,7 @@ import textwrap
 import numpy as np
 import pandas as pd
 from typing import Dict
+from urllib.parse import urlparse
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -49,7 +50,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
-sample_of_news_title = '<b>{}</b>\nИсточник: {}\nНовость от: <i>{}</i>\n\n'
+sample_of_news_title = '<b>{}</b>\n<a href="{}">{}</a>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -1391,13 +1392,13 @@ async def news_prep(subject_ids: list, news: pd.DataFrame, subject_type: str):
     return news_splitted
 
 
-async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 34200, last_time_to_send: int = 64200):
+async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 37800, last_time_to_send: int = 61200):
     """
     Функция для расчета времени ожидания
 
     :param time_to_wait: Параметр для пропуска ожидания. Для пропуска можно передать любое int значение кроме 0
-    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 34200  # 9:30
-    :param last_time_to_send: Время для отправки последней рассылки. Время в секундах. Default = 64200  # 18:00
+    :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 37800  # 10:30
+    :param last_time_to_send: Время для отправки последней рассылки. Время в секундах. Default = 61200  # 17:00
     return None
     """
     if time_to_wait != 0:
@@ -1427,7 +1428,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
 
 # TODO: Добавить синхронизацию времени с методом на ожидание (newsletter_scheduler)
 # TODO: Учитывать, что временные интервалы могут быть не равны между first.start -> first.last -> second.first
-async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, industry_hours: int = 9, schedule: int = 0):
+async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, industry_hours: int = 7, schedule: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
 
@@ -1458,31 +1459,34 @@ async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, indus
         subscriptions = user['subscriptions'].split(', ')
         # translate_subscriptions_to_id(CAI_dict, subscriptions)
         print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
-        try:
-            await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
-                                   parse_mode='HTML', protect_content=True)
-        except ChatNotFound:
-            print(f'Чата с пользователем {user_id} {user_name} - не существует')
-            continue
 
         # Получить список интересующих id объектов
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
-
+        if news_client_splited or news_comm_splited:
+            try:
+                await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
+                                       parse_mode='HTML', protect_content=True)
+            except ChatNotFound:
+                print(f'Чата с пользователем {user_id} {user_name} - не существует')
+                continue
+        else:
+            print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
                 message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n\n".upper()
                 for df_index, row in news_block.head(20).iterrows():
-                    message_block += sample_of_news_title.format(row['title'], row['link'], row['date'])
+                    base_url = urlparse(row['link']).netloc.split('www.')[-1]  # Базовая ссылка на источник
+                    message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
 
         print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
     print('Рассылка успешно завершена. Все пользователи получили свои новости. '
           '\nПереходим в ожидание следующей рассылки.')
-
+    await asyncio.sleep(100)
     return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
 
@@ -1496,8 +1500,8 @@ if __name__ == '__main__':
 
     # запускам рассылки
     loop = asyncio.get_event_loop()
-    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=1, hour=11, minute=24)))
-    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=11, minute=23)))
+    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
+    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
     loop.create_task(send_daily_news())
 
     # запускаем бота
