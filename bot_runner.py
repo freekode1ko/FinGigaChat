@@ -668,14 +668,16 @@ async def add_new_subscriptions(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if await user_in_whitelist(message.from_user.as_json()):
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
         await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
                              'пассивную отправку новостей по ним.\n'
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
                              'Если передумали, то напишите "Отмена" в чат.')
     else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
         await message.answer('Вы не зарегистрированы в этом боте')
 
 
@@ -688,8 +690,10 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if message.text.strip().lower() == 'отмена':
+        user_logger.info('Отмена действия - /addnewsubscriptions')
         await state.finish()
         await message.answer('Изменение списка подписок успешно отменено.')
         return None
@@ -711,22 +715,25 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     for subscription in user_request:
         for index, row in df_all.iterrows():
-            # if subscription in row.split(';') - из-за разрядности такой варинт не всегда находит совпадение
+            # if subscription in row.split(';') - из-за разрядности такой вариант не всегда находит совпадение
             for other_name in row['other_names'].split(';'):
                 if subscription == other_name:
                     subscriptions.append(other_name)
 
     if (len(subscriptions) < len(user_request)) and subscriptions:
-        await message.reply(f'{", ".join(list(set(user_request) - set(subscriptions)))} '
-                            f'- Эти объекты новостей нам неизвестны')
+        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
+        user_logger.debug(f'*{user_id}* Запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
+        await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
         subscriptions = ", ".join(subscriptions)
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
         await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
+        user_logger.info(f'*{user_id}* Подписался на : {subscriptions}')
     else:
         await message.reply('Перечисленные выше объекты не были найдены')
+        user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты не были найдены')
 
 
 @dp.message_handler(commands=['myactivesubscriptions'])
@@ -737,7 +744,8 @@ async def get_user_subscriptions(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
@@ -745,6 +753,7 @@ async def get_user_subscriptions(message: types.Message):
     if not subscriptions:
         keyboard = types.ReplyKeyboardRemove()
         msg_txt = 'Нет активных подписок'
+        user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок - но их нет')
     else:
         buttons = []
         for subscription in subscriptions[0].split(', '):
@@ -1111,7 +1120,8 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
-    print(message.from_user.as_json())
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. *МЕТОД НЕ РАЗРЕШЕН!*')
     await send_daily_news(20, 20, 20, 1)
 
 
@@ -1402,6 +1412,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
     """
     if time_to_wait != 0:
+        user_logger.critical(f'Ручная рассылка')
         return None
     end_of_the_day = 86400  # 86400(всего секунд)/3600(секунд в одном часе) = 24 (00:00 или 24:00)
     current_day = datetime.now()
@@ -1412,16 +1423,16 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     current_time = (current_hour * 3600) + (current_minute * 60) + current_sec  # Настоящее Время в секундах
     if (first_time_to_send < current_time) and (current_time < last_time_to_send):
         time_to_wait = last_time_to_send - current_time
-        print(f'В ожидании рассылки в {str(timedelta(seconds=last_time_to_send))}. '
-              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        user_logger.info(f'В ожидании рассылки в {str(timedelta(seconds=last_time_to_send))}. '
+                         f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     elif current_time > last_time_to_send:
         time_to_wait = (end_of_the_day - current_time) + first_time_to_send
-        print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
-              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        user_logger.info(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
+                         f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     elif first_time_to_send > current_time:
         time_to_wait = (first_time_to_send - current_time)
-        print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
-              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        user_logger.info(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
+                         f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
@@ -1439,7 +1450,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     return None
     """
     await newsletter_scheduler(schedule)  # Ожидание рассылки
-    print('Начинается ежедневная рассылка новостей по подпискам...')
+    user_logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     ap_obj = ArticleProcess(logger)
     engine = create_engine(psql_engine)
@@ -1458,9 +1469,11 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         user_name = user['username']
         subscriptions = user['subscriptions'].split(', ')
         # translate_subscriptions_to_id(CAI_dict, subscriptions)
-        print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
+        user_logger.debug(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
+        # print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
 
         # Получить список интересующих id объектов
+        user_logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}({user_id})')
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
@@ -1469,10 +1482,12 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                 await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
                                        parse_mode='HTML', protect_content=True)
             except ChatNotFound:
-                print(f'Чата с пользователем {user_id} {user_name} - не существует')
+                user_logger.error(f'Чата с пользователем {user_id} {user_name} - не существует')
+                # print(f'Чата с пользователем {user_id} {user_name} - не существует')
                 continue
         else:
-            print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
+            user_logger.info(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
+            # print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
@@ -1482,10 +1497,12 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
-
-        print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
-    print('Рассылка успешно завершена. Все пользователи получили свои новости. '
-          '\nПереходим в ожидание следующей рассылки.')
+        user_logger.debug(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
+        # print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
+    user_logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
+                     '\nПереходим в ожидание следующей рассылки.')
+    # print('Рассылка успешно завершена. Все пользователи получили свои новости. '
+    #       '\nПереходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
     return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
