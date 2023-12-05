@@ -1512,7 +1512,7 @@ if __name__ == '__main__':
 
     # инициализируем обработчик и логгер
     handler = get_handler(psql_engine)
-    user_logger = get_db_logger(__name__, handler)  # логгер для сохранения пользовательских действий
+    user_logger = get_db_logger(Path(__file__).stem, handler)  # логгер для сохранения пользовательских действий
     logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
 
     # запускам рассылки
