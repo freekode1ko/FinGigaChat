@@ -624,6 +624,7 @@ async def get_msg_from_admin(message, state: FSMContext):
         user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
 
     await message.answer('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
+    logger.info('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
 
     file_cleaner('sources/{}'.format(file_name))
     file_cleaner('sources/{}.jpg'.format(file_name))
@@ -1512,7 +1513,7 @@ if __name__ == '__main__':
     # инициализируем обработчик и логгер
     handler = get_handler(psql_engine)
     user_logger = get_db_logger(__name__, handler)  # логгер для сохранения пользовательских действий
-    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы
+    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
 
     # запускам рассылки
     loop = asyncio.get_event_loop()

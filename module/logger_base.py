@@ -1,13 +1,16 @@
 import re
 import datetime
+import os
 
 import logging
+from logging.handlers import RotatingFileHandler
 from sqlalchemy import create_engine, text
 
-from config import log_file, log_lvl
+from config import log_lvl
 
 
 LOG_FORMAT = '%(asctime)s,%(msecs)d %(levelname)-8s [%(module)s:%(lineno)d in %(funcName)s] %(message)s'
+MAX_BYTES = 100000
 
 
 class Logger:
@@ -18,12 +21,14 @@ class Logger:
         :param log_name: В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
         :param level: Установить уровень логирования
         """
+        self.log_dir = 'logs/{}/{}.log'.format(log_name, log_name)
         self.log_format = LOG_FORMAT
         self.log_datefmt = '%d-%m-%Y %H:%M:%S'
-        self.log_file = log_file.format(log_name)
+        self.handler = RotatingFileHandler(self.log_dir, maxBytes=MAX_BYTES, encoding='utf-8',
+                                           delay=False, backupCount=1)
 
-        logging.basicConfig(filename=self.log_file, filemode="a", format=self.log_format,
-                            datefmt=self.log_datefmt, level=level, encoding='utf-8')
+        logging.basicConfig(format=self.log_format, datefmt=self.log_datefmt, level=level,
+                            encoding='utf-8', handlers=[self.handler])
 
 
 class DBHandler(logging.Handler):
@@ -65,18 +70,10 @@ def selector_logger(module_logger: str, level: int = log_lvl):
     :param level: уровень логирования
     return Класс логера
     """
-    if module_logger == 'main':
-        return Logger('Main', level).logger
-    elif module_logger == 'main_article':
-        return Logger('Main_Article', level).logger
-    elif module_logger == 'main_article_online':
-        return Logger('Main_Article_Online', level).logger
-    elif module_logger == 'bot_runner':
-        return Logger('Bot_Runner', level).logger
-    elif module_logger == 'test':
-        return Logger('TEST', 10).logger
-    else:
-        print('Не найден сценарий для логирования')
+
+    if os.path.exists('logs/{}'.format(module_logger)):
+        return Logger(module_logger, level).logger
+    raise Exception('Не найден сценарий для логирования')
 
 
 def get_handler(url_engine, level: int = log_lvl):
