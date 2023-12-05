@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from module.article_process import ArticleProcess
-from module import logger_base
+from module.logger_base import selector_logger
 from config import BASE_GIGAPARSER_URL
 
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem
-    logger = logger_base.logger(log_name)
+    logger = selector_logger(log_name)
     try:
         # запускаем периодическое получение/обработку новостей
         while True:

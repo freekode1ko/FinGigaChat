@@ -9,6 +9,7 @@ import pandas as pd
 from typing import Dict
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from aiogram.utils.exceptions import MessageIsTooLong, ChatNotFound
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -20,6 +21,7 @@ from module.article_process import ArticleProcess, ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
 import module.data_transformer as dt
 import module.gigachat as gig
+from module.logger_base import get_db_logger, get_handler, selector_logger
 import config
 
 path_to_source = config.path_to_source
@@ -47,7 +49,6 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
-# analysis_text = pd.read_excel('{}/tables/text.xlsx'.format(path_to_source), sheet_name=None)
 sample_of_news_title = '<b>{}</b>\nИсточник: {}\nНовость от: <i>{}</i>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
@@ -73,8 +74,6 @@ def read_curdatetime():
 
     return Дата последней сборки
     """
-    # with open('sources/tables/time.txt', 'r') as f:
-    #     curdatetime = f.read()
     engine = create_engine(psql_engine)
     curdatetime = pd.read_sql_query('SELECT * FROM "date_of_last_build"', con=engine)
     return curdatetime['date_time'][0]
@@ -153,10 +152,16 @@ async def help_handler(message: types.Message):
     return None
     """
     help_text = config.help_text
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.as_json()):
-        to_pin = await bot.send_message(message.chat.id, help_text, protect_content=False)
+        to_pin = await bot.send_message(chat_id, help_text, protect_content=False)
         msg_id = to_pin.message_id
-        await bot.pin_chat_message(chat_id=message.chat.id, message_id=msg_id)
+        await bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
+
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 # ['облигации', 'бонды', 'офз']
@@ -169,8 +174,9 @@ async def bonds_info(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.as_json()):
-        # bonds = pd.read_excel('{}/tables/bonds.xlsx'.format(path_to_source))
         columns = ['Название', 'Доходность', 'Изм, %']
         engine = create_engine(psql_engine)
         bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
@@ -182,22 +188,20 @@ async def bonds_info(message: types.Message):
         for num, name in enumerate(bond_ru['Cрок до погашения'].values):
             bond_ru['Cрок до погашения'].values[num] = years[num]
 
-        # df transformation
         transformer = dt.Transformer()
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'bonds')
-        # transformer.save_df_as_png(df=bond_ru, column_width=[0.11] * len(bond_ru.columns),
-        #                           figure_size=(15.5, 3), path_to_source=path_to_source, name='bonds')
         transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5, title='Доходности ОФЗ.')
         photo = open(png_path, 'rb')
         day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
         month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
-        # day = analysis_text['Облиигации. День'].drop('Unnamed: 0', axis=1).values.tolist()
-        # month = analysis_text['Облиигации. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
-        # print(month)
         title = 'ОФЗ'
         data_source = 'investing.com'
         await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, read_curdatetime()))
+
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -210,17 +214,13 @@ async def economy_info(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.as_json()):
         engine = create_engine(psql_engine)
-        # eco = pd.read_excel('{}/tables/eco.xlsx'.format(path_to_source),
-        #                    sheet_name=['Ставка', 'Инфляция в России', 'Ключевые ставки ЦБ мира'])
         world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
-        # rus_infl = eco['Инфляция в России'][[]]
         rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
         rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
-        # world_bet = eco['Ключевые ставки ЦБ мира'].drop('Unnamed: 0', axis=1).rename(columns={'Country': '',
-        #                                                                                      'Last': '',
-        #                                                                                      'Previous': ''})
         world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
         countries = {
             'Japan': 'Япония',
@@ -246,14 +246,8 @@ async def economy_info(message: types.Message):
         world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
         for num, country in enumerate(world_bet['Страна'].values):
             world_bet.Страна[world_bet.Страна == country] = countries[country]
-        # world_bet['Страна'] = world_bet.apply(lambda x: row: model.translate(row["Страна"], target_lang="rus"),
-        # axis=1)
-
-        # df transformation
         transformer = dt.Transformer()
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'world_bet')
-        # transformer.save_df_as_png(df=world_bet, column_width=[0.25] * len(world_bet.columns),
-        #                           figure_size=(8, 6), path_to_source=path_to_source, name='world_bet')
         world_bet = world_bet.round(2)
         transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0,
                                      col_width=2.2, title='Ключевые ставки ЦБ мира.')
@@ -265,8 +259,6 @@ async def economy_info(message: types.Message):
         curdatetime = read_curdatetime()
         await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, curdatetime))
-        # transformer.save_df_as_png(df=rus_infl, column_width=[0.41] * len(rus_infl.columns),
-        #                           figure_size=(5, 2), path_to_source=path_to_source, name='rus_infl')
 
         month_dict = {
             1: "Январь", 2: "Февраль", 3: "Март",
@@ -292,6 +284,10 @@ async def economy_info(message: types.Message):
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
 
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
 
 @dp.message_handler(commands=['view'])
 async def data_mart(message: types.Message):
@@ -302,6 +298,8 @@ async def data_mart(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
         engine = create_engine(psql_engine)
@@ -398,6 +396,10 @@ async def data_mart(message: types.Message):
                 with open(png_path, "rb") as photo:
                     await __sent_photo_and_msg(message, photo, title="")
 
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
 
 # ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @dp.message_handler(commands=['fx'])
@@ -409,15 +411,14 @@ async def exchange_info(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
         engine = create_engine(psql_engine)
         exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
-        # exc = pd.read_excel('{}/tables/exc.xlsx'.format(path_to_source))
-        # exc = exc.drop('Unnamed: 0', axis=1)
 
-        # df transformation
         transformer = dt.Transformer()
         for num, currency in enumerate(exc['Валюта'].values):
             if currency.lower() == 'usdollar':
@@ -425,17 +426,12 @@ async def exchange_info(message: types.Message):
             else:
                 cur = currency.upper().split('-')
                 exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
-        # exc.loc[2.5] = [' ', ' ']
         exc = exc.sort_index().reset_index(drop=True)
 
         transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0,
                                      col_width=2, title='Текущие курсы валют')
-        # transformer.save_df_as_png(df=exc, column_width=[0.42] * len(exc.columns),
-        #                           figure_size=(5, 2), path_to_source=path_to_source, name='exc')
         day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
         month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
-        # day = analysis_text['Курсы. День'].drop('Unnamed: 0', axis=1).values.tolist()
-        # month = analysis_text['Курсы. Месяц'].drop('Unnamed: 0', axis=1).values.tolist()
         photo = open(png_path, 'rb')
         title = 'Курсы валют'
         data_source = 'investing.com'
@@ -453,6 +449,10 @@ async def exchange_info(message: types.Message):
         photo = open(png_path, 'rb')
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
 
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
 
 # ['Металлы', 'сырьевые товары', 'commodities']
 @dp.message_handler(commands=['commodities'])
@@ -464,6 +464,8 @@ async def metal_info(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
         engine = create_engine(psql_engine)
@@ -500,7 +502,6 @@ async def metal_info(message: types.Message):
         metal.sort_index(inplace=True)
         metal = metal.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
         for key in metal.columns[2:]:
-            # metal[key] = metal[key].apply(lambda x: re.sub(r"\.00$", "", str(x)))
             metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
             metal[key] = metal[key].apply(lambda x: __replacer(x))
             metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
@@ -519,8 +520,6 @@ async def metal_info(message: types.Message):
         transformer.render_mpl_table(metal, 'metal', header_columns=0,
                                      col_width=1.5, title='Цены на ключевые сырьевые товары.')
 
-        # transformer.save_df_as_png(df=metal, column_width=[0.13] * len(metal.columns),
-        #                           figure_size=(15.5, 4), path_to_source=path_to_source, name='metal')
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
         day = pd.read_sql_query('SELECT * FROM "report_met_day"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
@@ -528,6 +527,10 @@ async def metal_info(message: types.Message):
         data_source = 'LME, Bloomberg, investing.com'
         await __sent_photo_and_msg(message, photo, day, protect_content=False,
                                    title=sample_of_img_title.format(title, data_source, read_curdatetime()))
+
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 def __replacer(data: str):
@@ -557,15 +560,20 @@ async def message_to_all(message: types.Message):
     """
     user_str = message.from_user.as_json()
     user = json.loads(message.from_user.as_json())
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(user_str):
         if await check_your_right(user):
             await Form.send_to_users.set()
             await message.answer('Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
                                  'или, если передумали, напишите слово "Отмена".')
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         else:
             await message.answer('Недостаточно прав для этой команды!')
+            user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
     else:
         await message.answer('Неавторизованный пользователь')
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 @dp.message_handler(state=Form.send_to_users, content_types=types.ContentTypes.ANY)
@@ -581,6 +589,7 @@ async def get_msg_from_admin(message, state: FSMContext):
     if message.text and (message.text.strip().lower() == 'отмена'):
         await state.finish()
         await message.answer('Рассылка успешно отменена.')
+        user_logger.info('Отмена действия - /sendtoall')
         return None
     message_jsn = json.loads(message.as_json())
     if 'text' in message_jsn:
@@ -606,15 +615,17 @@ async def get_msg_from_admin(message, state: FSMContext):
         await message.answer('Отправка не удалась')
         return None
 
+    await state.finish()
     engine = create_engine(psql_engine)
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
-    await state.finish()
     users_ids = users['user_id'].tolist()
-    # users_ids.remove(message.from_user.id)
     for user_id in users_ids:
         await send_msg_to(user_id, msg, file_name, file_type)
-        # await message.answer('Отправлено пользователю: {}'.format(user_id))
+        user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+
     await message.answer('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
+    logger.info('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
+
     file_cleaner('sources/{}'.format(file_name))
     file_cleaner('sources/{}.jpg'.format(file_name))
 
@@ -752,10 +763,10 @@ async def get_user_subscriptions(message: types.Message):
 
 async def user_in_whitelist(user: str):
     """
-    Проверка, пользователя на наличе в списках на доступ
+    Проверка, пользователя на наличие в списках на доступ
 
     :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
-    return Булевое значение на наличие пользователя в списке
+    return Булево значение на наличие пользователя в списке
     """
     user_json = json.loads(user)
     user_id = user_json['id']
@@ -777,25 +788,29 @@ async def user_to_whitelist(message: types.Message):
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
     user_raw = json.loads(message.from_user.as_json())
-    email = ' '
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if not await user_in_whitelist(message.from_user.as_json()):
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
-        user = pd.DataFrame([[user_id, user_username, email, 'user', 'active', None]],
-                            columns=['user_id', 'username', 'email', 'user_type', 'user_status', 'subscriptions'])
+        user = pd.DataFrame([[user_id, user_username, full_name, 'user', 'active', None]],
+                            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'])
         try:
             engine = create_engine(psql_engine)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-            await message.answer(f'Добро пожаловать {email}!', protect_content=False)
+            await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
+            user_logger.info(f"*{chat_id}* {full_name} - {user_msg}: новый пользователь")
         except Exception as e:
-            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже '
+            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. '
                                  f'\n\n{e}', protect_content=False)
             print('Во время авторизации произошла ошибка, попробуйте позже: {}'.format(e))
+            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
     else:
-        await message.answer(f'{email} - уже существует', protect_content=False)
+        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: уже добавлен')
 
 
 async def check_your_right(user: dict):
@@ -843,6 +858,7 @@ async def admin_help(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
 
@@ -853,8 +869,10 @@ async def admin_help(message: types.Message):
                     '<b>/delete_article</b> - удалить новость из базы данных\n'
                     '<b>/sendtoall</b> - Сделать рассылку сообщения на всех пользователей бота')
         await message.answer(help_msg, protect_content=False, parse_mode='HTML')
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
 @dp.message_handler(commands=['show_article'])
@@ -867,6 +885,7 @@ async def show_article(message: types.Message):
     """
     await types.ChatActions.typing()
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
 
@@ -875,8 +894,10 @@ async def show_article(message: types.Message):
         await Form.link.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
                                protect_content=False, disable_web_page_preview=True)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
 @dp.message_handler(state=Form.link)
@@ -898,12 +919,14 @@ async def continue_show_article(message: types.Message, state: FSMContext):
     if not full_text:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
         await state.finish()
+        user_logger.warning(f"/show_article : не получилось найти новость по ссылке {data['link']}")
         return
 
     data_article_dict = apd_obj.get_article_by_link(data['link'])
     if not isinstance(data_article_dict, dict):
         await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
                              protect_content=False)
+        user_logger.critical(f'/show_article : {data_article_dict}')
         return
 
     format_msg = ''
@@ -923,8 +946,11 @@ async def change_summary(message: types.Message):
     return None
     """
     print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if not config.api_key_gpt:
         await message.answer('Данная команда пока недоступна.', protect_content=False)
+        user_logger.critical('Нет токена доступа к chatGPT')
         return
 
     await types.ChatActions.typing()
@@ -937,8 +963,10 @@ async def change_summary(message: types.Message):
         await Form.link_change_summary.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
                                protect_content=False, disable_web_page_preview=True)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
 @dp.message_handler(state=Form.link_change_summary)
@@ -953,26 +981,36 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
+    await state.finish()
 
     apd_obj = ArticleProcessAdmin()
     full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
+
     if not full_text:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
-        await state.finish()
+        user_logger.warning(f"/change_summary : не получилось найти новость по ссылке - {data['link_change_summary']}")
         return
 
     await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=False)
     await types.ChatActions.typing()
-    new_text_sum = summarization_by_chatgpt(full_text)
-    apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
+
     try:
+        new_text_sum = summarization_by_chatgpt(full_text)
+        apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
         await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=False)
+
     except MessageIsTooLong:
-        # TODO: показывать батчами при необходимости
-        await message.answer(f"<b>Старое саммари не помещается в одно сообщение.</b>",
-                             parse_mode='HTML', protect_content=False)
-    await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=False)
-    await state.finish()
+        await message.answer(f"<b>Старое саммари не помещается в одно сообщение.</b>", parse_mode='HTML')
+        user_logger.critical(f"/change_summary : старое саммари оказалось слишком длинным "
+                             f"({data['link_change_summary']}\n{old_text_sum})")
+
+    except:
+        user_logger.critical(f'/change_summary : ошибка при создании саммари с помощью chatGPT')
+        await message.answer('Произошла ошибка при создании саммари. Разработчики уже решают проблему.',
+                             protect_content=False)
+
+    else:
+        await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=False)
 
 
 # TODO: Убрать проверку удаления новости
@@ -1048,15 +1086,6 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
     await state.finish()
 
 
-@dp.message_handler(commands=['analyse_bad_article'])
-async def analyse_bad_article(message: types.Message):
-    # TODO: реализовать при необходимости
-    print('{} - {}'.format(message.from_user.full_name, message.text))
-    await types.ChatActions.typing()
-    await message.answer('Пока команда недоступна.', protect_content=False)
-    return
-
-
 @dp.callback_query_handler(text='next_5_news')
 async def send_next_five_news(call: types.CallbackQuery):
     """
@@ -1077,16 +1106,17 @@ async def send_next_five_news(call: types.CallbackQuery):
         await call.message.edit_reply_markup()
 
 
-async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str) -> bool:
+async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
     """
     Вывод таблицы с финансовыми показателями в виде фотокарточки
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param s_id: ID клиента или комоды
     :param msg_text: Текст сообщения
+    :param ap_obj: экземпляр класса ArticleProcess
     return Булевое значение об успешности создания таблицы
     """
-    client_name, client_fin_table = ArticleProcess().get_client_fin_indicators(s_id, msg_text.strip().lower())
+    client_name, client_fin_table = ap_obj.get_client_fin_indicators(s_id, msg_text.strip().lower())
     if not client_fin_table.empty:
         await types.ChatActions.upload_photo()
         await __create_fin_table(message, client_name, client_fin_table)
@@ -1105,15 +1135,22 @@ async def dailynews(message: types.Message):
 async def show_newsletter_buttons(message: types.Message):
     """ Отображает кнопки с доступными рассылками """
 
-    newsletter_dict = dt.Newsletter.get_newsletter_dict()  # {тип рассылки: заголовок рассылки}
-    callback_func = 'send_newsletter_by_button'  # функция по отображению рассылки
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    keyboard = types.InlineKeyboardMarkup()
-    for type_, title in newsletter_dict.items():
-        callback = f'{callback_func}:{type_}'
-        keyboard.add(types.InlineKeyboardButton(text=title, callback_data=callback))
+    if await user_in_whitelist(message.from_user.as_json()):
+        newsletter_dict = dt.Newsletter.get_newsletter_dict()  # {тип рассылки: заголовок рассылки}
+        callback_func = 'send_newsletter_by_button'  # функция по отображению рассылки
 
-    await message.answer("Какую информацию вы хотите получить?", reply_markup=keyboard)
+        keyboard = types.InlineKeyboardMarkup()
+        for type_, title in newsletter_dict.items():
+            callback = f'{callback_func}:{type_}'
+            keyboard.add(types.InlineKeyboardButton(text=title, callback_data=callback))
+
+        await message.answer("Какую информацию вы хотите получить?", reply_markup=keyboard)
+
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('send_newsletter_by_button'))
@@ -1144,19 +1181,27 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
+    """ Обработка пользовательского сообщения """
+
     msg = '{} {}'.format(prompt, message.text)
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
+
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     print('{} - {}'.format(message.from_user.full_name, msg))
+
     if await user_in_whitelist(message.from_user.as_json()):
         await types.ChatActions.typing()
+        ap_obj = ArticleProcess(logger)
         msg_text = message.text.replace('«', '"').replace('»', '"')
-        subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'industry'), 'industry'
+
+        # проверка пользовательского сообщения на запрос новостей по отраслям
+        subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
         if subject_ids:
             industry_id = subject_ids[0]
-            not_use, reply_msg, not_use_ = ArticleProcess().process_user_alias(industry_id, subject)
+            not_use, reply_msg, not_use_ = ap_obj.process_user_alias(industry_id, subject)
             try:
                 await message.answer(reply_msg, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
             except MessageIsTooLong:
@@ -1164,14 +1209,16 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 for article in articles:
                     await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
             return
-        subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'client'), 'client'
+
+        # проверка пользовательского сообщения на запрос новостей по клиентам/товарам
+        subject_ids, subject = ap_obj.find_subject_id(msg_text, 'client'), 'client'
         if not subject_ids:
-            subject_ids, subject = ArticleProcess().find_subject_id(msg_text, 'commodity'), 'commodity'
+            subject_ids, subject = ap_obj.find_subject_id(msg_text, 'commodity'), 'commodity'
 
         for subject_id in subject_ids:
-            com_price, reply_msg, img_name_list = ArticleProcess().process_user_alias(subject_id, subject)
+            com_price, reply_msg, img_name_list = ap_obj.process_user_alias(subject_id, subject)
 
-            return_ans = await show_client_fin_table(message, subject_id, '')
+            return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
 
             if reply_msg:
 
@@ -1209,10 +1256,11 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                                                      disable_web_page_preview=True)
                             else:
                                 print(f"MessageIsTooLong ERROR: {article}")
+
                 return_ans = True
 
         if not return_ans:
-            return_ans = await show_client_fin_table(message, 0, msg_text)
+            return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
 
         if not return_ans:
             await types.ChatActions.typing()
@@ -1254,11 +1302,14 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 except KeyError:
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()
+                    user_logger.critical(f'*{chat_id}* {user_msg} : KeyError (некорректная выдача ответа GigaChat)')
 
                 await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=False)
                 print('{} - {}'.format('GigaChat_say', giga_js))
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_send: int = 0):
@@ -1321,7 +1372,9 @@ async def send_newsletter(newsletter_data: Dict):
             media.attach_photo(types.InputFile(path))
         await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
         await bot.send_media_group(user_id, media=media, protect_content=True)
-        print(f'Пользователю {user_name} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+
+    print(f'{len(users_data)} пользователям пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}')
 
     await asyncio.sleep(100)
     return await send_newsletter(newsletter_data)
@@ -1408,7 +1461,7 @@ async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, indus
     await newsletter_scheduler(schedule)  # Ожидание рассылки
     print('Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
-    ap_obj = ArticleProcess()
+    ap_obj = ArticleProcess(logger)
     engine = create_engine(psql_engine)
     # Словарь новостных объектов {тип_id: [альтернатив. названия], ...}
     CAI_dict = ap_obj.get_client_comm_industry_dictionary()
@@ -1457,10 +1510,15 @@ async def send_daily_news(client_hours: int = 9, commodity_hours: int = 9, indus
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
 
+    # инициализируем обработчик и логгер
+    handler = get_handler(psql_engine)
+    user_logger = get_db_logger(Path(__file__).stem, handler)  # логгер для сохранения пользовательских действий
+    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
+
     # запускам рассылки
     loop = asyncio.get_event_loop()
-    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
-    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
+    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=1, hour=11, minute=24)))
+    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=11, minute=23)))
     loop.create_task(send_daily_news())
 
     # запускаем бота

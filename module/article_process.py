@@ -563,6 +563,7 @@ class ArticleProcess:
         com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
         if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+            self._logger.warning(f'По {subject_name} не найдены новости')
             reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
         return com_cotirov, reply_msg, img_name_list
