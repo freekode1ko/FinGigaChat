@@ -1077,15 +1077,15 @@ async def end_del_article(callback_query: types.CallbackQuery):
         await bot.send_message(chat_id, text='Хорошо, удалим в следующий раз.', protect_content=True)
         user_logger.info('Отмена действия - /delete_article')
     else:
-        link = apd_obj.delete_article_by_id(article_id_to_delete)
-        if link:
+        result = apd_obj.change_score_article_by_id(article_id_to_delete)
+        if result:
             await bot.send_message(chat_id, text='Новость удалена.', protect_content=True)
             user_logger.info(f"*{chat_id}* {user_first_name} - /delete_article : "
-                             f"админ удалил новость по причине {reason_to_delete} - ({link})")
+                             f"админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}")
         else:
             await bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.', protect_content=True)
             user_logger.critical(f"*{chat_id}* {user_first_name} - /delete_article : "
-                                 f"не получилось удалить новость с id {article_id_to_delete}")
+                                 f"не получилось понизить значимость новости с id {article_id_to_delete}")
 
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Команда использована', callback_data='none'))

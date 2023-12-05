@@ -676,13 +676,14 @@ class ArticleProcessAdmin:
         except Exception as e:
             return e
 
-    def delete_article_by_id(self, id_: int):
+    def change_score_article_by_id(self, id_: int):
         try:
             with self.engine.connect() as conn:
-                link = conn.execute(text(f"SELECT link FROM article WHERE id={id_}")).fetchone()[0]
-                conn.execute(text(f"DELETE FROM article WHERE id={id_}"))
+                query = 'update relation_{subject}_article set {subject}_score=0 where article_id={id}'
+                conn.execute(text(query.format(subject='client', id=id_)))
+                conn.execute(text(query.format(subject='commodity', id=id_)))
                 conn.commit()
-                return link
+                return True
         except (TypeError, ProgrammingError):
             return False
 
