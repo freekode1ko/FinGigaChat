@@ -557,6 +557,7 @@ class ArticleProcess:
             reply_msg = self.make_format_industry_msg(articles)
             return '', reply_msg, img_name_list
         else:
+            # данный случай не вызывается
             print('user do not want articles')
             return '', False, img_name_list
 
@@ -683,27 +684,6 @@ class ArticleProcessAdmin:
         with self.engine.connect() as conn:
             conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link='{link}'"))
             conn.commit()
-
-    @staticmethod
-    def find_not_relevant_news(article: str):
-        for expression in NOT_RELEVANT_EXPRESSION:
-            article = article.lower()
-            regular = f'{expression}'
-            if re.search(regular, article):
-                return False
-            else:
-                return True
-
-    def get_bad_article(self):
-        """ Get article data if it contains bad word """
-        df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
-        df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
-        df = df[~df['relevant']]
-        bad_links = df['link'].values.tolist()
-        msgs = []
-        for link in bad_links:
-            msgs.append(self.get_article_by_link(link))
-        return msgs[:5]
 
 
 class FormatText:

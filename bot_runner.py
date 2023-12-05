@@ -93,7 +93,6 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     text_group = []
     # import dateutil.parser as dparser
     # date = dparser.parse(date, fuzzy=True)
-    # print(date)
 
     # uncommet me if need summory #TODO: исправить порядок параметров и промпт
     # ****************************
@@ -173,7 +172,6 @@ async def bonds_info(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
@@ -213,7 +211,6 @@ async def economy_info(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
@@ -297,7 +294,6 @@ async def data_mart(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
@@ -410,7 +406,6 @@ async def exchange_info(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
@@ -463,7 +458,6 @@ async def metal_info(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
@@ -585,7 +579,6 @@ async def get_msg_from_admin(message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     if message.text and (message.text.strip().lower() == 'отмена'):
         await state.finish()
         await message.answer('Рассылка успешно отменена.')
@@ -786,7 +779,6 @@ async def user_to_whitelist(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     user_raw = json.loads(message.from_user.as_json())
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
@@ -806,7 +798,6 @@ async def user_to_whitelist(message: types.Message):
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. '
                                  f'\n\n{e}', protect_content=False)
-            print('Во время авторизации произошла ошибка, попробуйте позже: {}'.format(e))
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
@@ -857,7 +848,6 @@ async def admin_help(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
@@ -884,7 +874,6 @@ async def show_article(message: types.Message):
     return None
     """
     await types.ChatActions.typing()
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
@@ -909,7 +898,6 @@ async def continue_show_article(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link=message.text)
     data = await state.get_data()
@@ -945,7 +933,6 @@ async def change_summary(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if not config.api_key_gpt:
@@ -978,7 +965,6 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
     await state.finish()
@@ -1023,7 +1009,6 @@ async def delete_article(message: types.Message):
     return None
     """
     await types.ChatActions.typing()
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
 
@@ -1045,7 +1030,6 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(link_to_delete=message.text)
     data = await state.get_data()
@@ -1071,7 +1055,6 @@ async def finish_delete_article(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
     await types.ChatActions.typing()
     await state.update_data(permission_to_delete=message.text)
     data = await state.get_data()
@@ -1159,8 +1142,6 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     # получаем данные
     newsletter_type = callback_query.data.split(':')[1]
     data_callback = dict(callback_query.values['from'])
-    username = data_callback.get('username', 'без имени')
-    print('{} - {}'.format(username, f'получение {newsletter_type} рассылки по кнопке'))
 
     # получаем текст рассылки
     if newsletter_type == 'weekly_result':
@@ -1176,26 +1157,25 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
         media.attach_photo(types.InputFile(path))
     await bot.send_message(data_callback['id'], text=newsletter, parse_mode='HTML', protect_content=True)
     await bot.send_media_group(data_callback['id'], media=media, protect_content=True)
-    print(f'Пользователю {username} пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}.')
+    user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     """ Обработка пользовательского сообщения """
 
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     msg = '{} {}'.format(prompt, message.text)
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
     msg = msg.replace('/fx', '')
 
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    print('{} - {}'.format(message.from_user.full_name, msg))
-
     if await user_in_whitelist(message.from_user.as_json()):
         await types.ChatActions.typing()
         ap_obj = ArticleProcess(logger)
         msg_text = message.text.replace('«', '"').replace('»', '"')
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
         # проверка пользовательского сообщения на запрос новостей по отраслям
         subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
@@ -1255,7 +1235,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                                 await message.answer(article, parse_mode='HTML', protect_content=False,
                                                      disable_web_page_preview=True)
                             else:
-                                print(f"MessageIsTooLong ERROR: {article}")
+                                logger.error(f"MessageIsTooLong ERROR: {article}")
 
                 return_ans = True
 
@@ -1285,7 +1265,6 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     if giga_answer.status_code == 200:
                         giga_js = giga_answer.json()['choices'][0]['message']['content']
                     elif giga_answer.status_code == 401:
-                        print('Token {}...{} is dead.'.format(token[:10], token[-10:]))
                         raise AttributeError
                     else:
                         raise KeyError
@@ -1293,20 +1272,20 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 except AttributeError:
                     chat = gig.GigaChat()
                     token = chat.get_user_token()
-                    print('{}...{} - {}({}) | Перевыпуск'.format(token[:10], token[-10:],
-                                                                 message.from_user.full_name,
-                                                                 message.from_user.username))
+                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
 
                 except KeyError:
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()
-                    user_logger.critical(f'*{chat_id}* {user_msg} : KeyError (некорректная выдача ответа GigaChat)')
+                    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : '
+                                         f'KeyError (некорректная выдача ответа GigaChat)')
 
                 await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=False)
-                print('{} - {}'.format('GigaChat_say', giga_js))
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+                user_logger.debug(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
@@ -1374,7 +1353,7 @@ async def send_newsletter(newsletter_data: Dict):
         await bot.send_media_group(user_id, media=media, protect_content=True)
         user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
 
-    print(f'{len(users_data)} пользователям пришла рассылка "{title}" в {datetime.now().replace(microsecond=0)}')
+    logger.info(f'{len(users_data)} пользователям пришла рассылка "{title}"')
 
     await asyncio.sleep(100)
     return await send_newsletter(newsletter_data)
