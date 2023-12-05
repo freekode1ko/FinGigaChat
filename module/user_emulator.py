@@ -526,7 +526,7 @@ class ResearchParser:
                 print('weekly review...ok')
                 return
         else:
-            old = [f for f in os.listdir(weekly_dir)]
+            old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
             if len(old) > 0:
                 os.remove(os.path.join(weekly_dir, old[0]))
 

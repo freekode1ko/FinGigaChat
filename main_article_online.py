@@ -9,7 +9,7 @@ from module.article_process import ArticleProcess
 from config import BASE_GIGAPARSER_URL
 
 
-PERIOD = 3
+PERIOD = 1
 
 
 def get_article() -> pd.DataFrame:
