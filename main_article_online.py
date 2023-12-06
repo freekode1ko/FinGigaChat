@@ -19,7 +19,6 @@ def get_article() -> pd.DataFrame:
     df_article = pd.DataFrame()
     try:
         url = BASE_GIGAPARSER_URL.format('get_articles/all')
-        # url = 'http://gigaparsernews.ru:8000/get_articles/tg'
         req = requests.post(url)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
@@ -89,7 +88,7 @@ if __name__ == '__main__':
             logger.info('Запуск pipeline с новостями')
             print('Запуск pipeline с новостями')
             gotten_ids = regular_func()
-            # post_ids(gotten_ids)
+            post_ids(gotten_ids)
             print('Конец pipeline с новостями \nОжидайте\n')
             logger.info('Конец pipeline с новостями\n')
             for i in range(PERIOD):
