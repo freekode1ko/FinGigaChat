@@ -1495,6 +1495,11 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     # print('Рассылка успешно завершена. Все пользователи получили свои новости. '
     #       '\nПереходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
+
+    client_hours = 18 if client_hours == 7 else 7
+    commodity_hours = 18 if commodity_hours == 7 else 7
+    industry_hours = 18 if industry_hours == 7 else 7
+
     return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
 
