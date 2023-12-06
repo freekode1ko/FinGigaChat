@@ -1005,8 +1005,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
     """
-    Получение ссылки на новость от пользователя для ее удаления
-
+    Получение ссылки на новость от пользователя для ее удаления (снижения значимости)
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
@@ -1029,8 +1028,7 @@ async def delete_article(message: types.Message):
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
     """
-    Проверка, что действие по удалению новости не случайное
-
+    Проверка, что действие по удалению новости не случайное и выбор причины удаления (снижения значимости)
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     return None

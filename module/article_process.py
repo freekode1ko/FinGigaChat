@@ -613,13 +613,13 @@ class ArticleProcessAdmin:
                 article_id = conn.execute(text(f"SELECT id FROM article WHERE link='{link}'")).fetchone()[0]
             return article_id
         except (TypeError, ProgrammingError):
-            return ''
+            return
 
     def get_article_text_by_link(self, link: str):
         try:
             with self.engine.connect() as conn:
-                article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
-                full_text, text_sum = article[4], article[5]
+                article = conn.execute(text(f"SELECT text, text_sum FROM article WHERE link='{link}'")).fetchone()
+                full_text, text_sum = article[0], article[1]
             return full_text, text_sum
         except (TypeError, ProgrammingError):
             return '', ''
