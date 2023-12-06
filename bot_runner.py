@@ -1412,18 +1412,18 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     current_sec = current_day.second
 
     current_time = (current_hour * 3600) + (current_minute * 60) + current_sec  # Настоящее Время в секундах
-    if (first_time_to_send < current_time) and (current_time < last_time_to_send):
+    if first_time_to_send <= current_time <= last_time_to_send:
         time_to_wait = last_time_to_send - current_time
-        user_logger.info(f'В ожидании рассылки в {str(timedelta(seconds=last_time_to_send))}. '
-                         f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        next_send_time = str(timedelta(seconds=last_time_to_send))
     elif current_time > last_time_to_send:
         time_to_wait = (end_of_the_day - current_time) + first_time_to_send
-        user_logger.info(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
-                         f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        next_send_time = str(timedelta(seconds=first_time_to_send))
     elif first_time_to_send > current_time:
         time_to_wait = (first_time_to_send - current_time)
-        user_logger.info(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
-                         f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        next_send_time = str(timedelta(seconds=first_time_to_send))
+
+    user_logger.info(f'В ожидании рассылки в {next_send_time}.'
+                     f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
