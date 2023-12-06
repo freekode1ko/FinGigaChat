@@ -1001,14 +1001,9 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
         await state.finish()
 
 
-# TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
-    """
-    Получение ссылки на новость от пользователя для ее удаления (снижения значимости)
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    return None
-    """
+    """ Получение ссылки на новость от пользователя для ее удаления (снижения значимости) """
     await types.ChatActions.typing()
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
@@ -1061,7 +1056,7 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(lambda c: c.data.startswith('end_del_article'))
 async def end_del_article(callback_query: types.CallbackQuery):
-    """ Удаление новости """
+    """ Понижение значимости новости """
     await types.ChatActions.typing()
     # получаем данные
     callback_data = callback_query.data.split(':')
@@ -1085,6 +1080,7 @@ async def end_del_article(callback_query: types.CallbackQuery):
             user_logger.critical(f"*{chat_id}* {user_first_name} - /delete_article : "
                                  f"не получилось понизить значимость новости с id {article_id_to_delete}")
 
+    # обновляем кнопки на одну не активную
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Команда использована', callback_data='none'))
     await bot.edit_message_reply_markup(chat_id, callback_query.message.message_id, reply_markup=keyboard)
