@@ -750,7 +750,8 @@ async def get_user_subscriptions(message: types.Message):
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
-    if not subscriptions:
+    print(subscriptions)
+    if not subscriptions:  # TODO: Пропускает людей у которых нет подписок дальше
         keyboard = types.ReplyKeyboardRemove()
         msg_txt = 'Нет активных подписок'
         user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок - но их нет')
@@ -1403,7 +1404,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
     """
     if time_to_wait != 0:
-        user_logger.critical(f'Ручная рассылка')
+        logger.info(f'Запуск ручной рассылки новостей по подписке!')
         return None
     end_of_the_day = 86400  # 86400(всего секунд)/3600(секунд в одном часе) = 24 (00:00 или 24:00)
     current_day = datetime.now()
@@ -1422,8 +1423,8 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
         time_to_wait = (first_time_to_send - current_time)
         next_send_time = str(timedelta(seconds=first_time_to_send))
 
-    user_logger.info(f'В ожидании рассылки в {next_send_time}.'
-                     f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    logger.info(f'В ожидании рассылки в {next_send_time}.'
+                f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
@@ -1441,7 +1442,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     return None
     """
     await newsletter_scheduler(schedule)  # Ожидание рассылки
-    user_logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
+    logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     ap_obj = ArticleProcess(logger)
     engine = create_engine(psql_engine)
@@ -1460,8 +1461,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         user_name = user['username']
         subscriptions = user['subscriptions'].split(', ')
         # translate_subscriptions_to_id(CAI_dict, subscriptions)
-        user_logger.debug(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
-        # print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
+        logger.debug(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
 
         # Получить список интересующих id объектов
         user_logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}({user_id})')
@@ -1478,7 +1478,6 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                 continue
         else:
             user_logger.info(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
-            # print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
@@ -1489,11 +1488,8 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
         user_logger.debug(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
-        # print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
-    user_logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
-                     '\nПереходим в ожидание следующей рассылки.')
-    # print('Рассылка успешно завершена. Все пользователи получили свои новости. '
-    #       '\nПереходим в ожидание следующей рассылки.')
+    logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
+                '\nПереходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
 
     client_hours = 18 if client_hours == 7 else 7
