@@ -1257,44 +1257,35 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             await types.ChatActions.typing()
             global chat
             global token
+            aliases_dict = {
+                **{alias: bonds_info for alias in bonds_aliases},
+                **{alias: economy_info for alias in eco_aliases},
+                **{alias: metal_info for alias in metal_aliases},
+                **{alias: exchange_info for alias in exchange_aliases},
+                **{alias: data_mart for alias in view_aliases}
+            }
             message_text = message.text.lower().strip()
-            if message_text in bonds_aliases:
-                await bonds_info(message)
-            elif message_text in eco_aliases:
-                await economy_info(message)
-            elif message_text in metal_aliases:
-                await metal_info(message)
-            elif message_text in exchange_aliases:
-                await exchange_info(message)
-            elif message_text in view_aliases:
-                await data_mart(message)
-            # elif message_text in ['test']:
-            #    await draw_all_tables(message)
+            function_to_call = aliases_dict.get(message_text)
+            if function_to_call:
+                await function_to_call(message)
             else:
                 try:
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    if giga_answer.status_code == 200:
-                        giga_js = giga_answer.json()['choices'][0]['message']['content']
-                    elif giga_answer.status_code == 401:
-                        raise AttributeError
-                    else:
-                        raise KeyError
-
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
                 except AttributeError:
                     chat = gig.GigaChat()
                     token = chat.get_user_token()
                     logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
-
                 except KeyError:
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()
-                    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : '
-                                         f'KeyError (некорректная выдача ответа GigaChat)')
+                    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
+                                         f' KeyError (некорректная выдача ответа GigaChat)')
 
-                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=False)
+                response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
+                await message.answer(response, protect_content=False)
                 user_logger.debug(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
 
     else:
