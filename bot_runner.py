@@ -1012,11 +1012,10 @@ async def delete_article(message: types.Message):
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
         await Form.link_to_delete.set()
-        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=False, disable_web_page_preview=True)
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        await message.answer('У Вас недостаточно прав для использования данной команды.')
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
@@ -1035,7 +1034,7 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
     apd_obj = ArticleProcessAdmin()
     article_id = apd_obj.get_article_id_by_link(data['link_to_delete'])
     if not article_id:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.')
         await state.finish()
         user_logger.warning(f"/delete_article : не получилось найти новость по ссылке - {data['link_to_delete']}")
         return
@@ -1050,7 +1049,7 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
             callback = f'{callback_func}:{reason}:{article_id}'  # макс. длина 64 символа
             keyboard.add(types.InlineKeyboardButton(text=label, callback_data=callback))
 
-        await message.answer("По какой причине вы хотите удалить новость?", reply_markup=keyboard)
+        await message.answer("Выберите причину удаления новости:", reply_markup=keyboard)
         await state.finish()
 
 
@@ -1067,16 +1066,16 @@ async def end_del_article(callback_query: types.CallbackQuery):
 
     apd_obj = ArticleProcessAdmin()
     if reason_to_delete == 'cancel':
-        await bot.send_message(chat_id, text='Хорошо, удалим в следующий раз.', protect_content=True)
+        await bot.send_message(chat_id, text='Удаление отменено.')
         user_logger.info('Отмена действия - /delete_article')
     else:
         result = apd_obj.change_score_article_by_id(article_id_to_delete)
         if result:
-            await bot.send_message(chat_id, text='Новость удалена.', protect_content=True)
+            await bot.send_message(chat_id, text='Новость удалена.')
             user_logger.info(f"*{chat_id}* {user_first_name} - /delete_article : "
                              f"админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}")
         else:
-            await bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.', protect_content=True)
+            await bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.')
             user_logger.critical(f"*{chat_id}* {user_first_name} - /delete_article : "
                                  f"не получилось понизить значимость новости с id {article_id_to_delete}")
 

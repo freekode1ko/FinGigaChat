@@ -676,12 +676,12 @@ class ArticleProcessAdmin:
         except Exception as e:
             return e
 
-    def change_score_article_by_id(self, id_: int):
+    def change_score_article_by_id(self, article_id: int):
         try:
             with self.engine.connect() as conn:
                 query = 'update relation_{subject}_article set {subject}_score=0 where article_id={id}'
-                conn.execute(text(query.format(subject='client', id=id_)))
-                conn.execute(text(query.format(subject='commodity', id=id_)))
+                conn.execute(text(query.format(subject='client', id=article_id)))
+                conn.execute(text(query.format(subject='commodity', id=article_id)))
                 conn.commit()
                 return True
         except (TypeError, ProgrammingError):
