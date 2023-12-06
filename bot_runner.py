@@ -904,8 +904,8 @@ async def continue_show_article(message: types.Message, state: FSMContext):
     data = await state.get_data()
 
     apd_obj = ArticleProcessAdmin()
-    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link'])
-    if not full_text:
+    article_id = apd_obj.get_article_id_by_link(data['link'])
+    if not article_id:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
         await state.finish()
         user_logger.warning(f"/show_article : не получилось найти новость по ссылке {data['link']}")
@@ -968,13 +968,13 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     """
     await state.update_data(link_change_summary=message.text)
     data = await state.get_data()
-    await state.finish()
 
     apd_obj = ArticleProcessAdmin()
     full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
 
     if not full_text:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+        await state.finish()
         user_logger.warning(f"/change_summary : не получилось найти новость по ссылке - {data['link_change_summary']}")
         return
 
@@ -998,35 +998,31 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
 
     else:
         await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=False)
+        await state.finish()
 
 
-# TODO: Убрать проверку удаления новости
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
-    """
-    Получение ссылки на новость от пользователя для ее удаления
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    return None
-    """
+    """ Получение ссылки на новость от пользователя для ее удаления (снижения значимости) """
     await types.ChatActions.typing()
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
         await Form.link_to_delete.set()
-        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=False, disable_web_page_preview=True)
+        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        await message.answer('У Вас недостаточно прав для использования данной команды.')
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
 @dp.message_handler(state=Form.link_to_delete)
 async def continue_delete_article(message: types.Message, state: FSMContext):
     """
-    Проверка, что действие по удалению новости не случайное
-
+    Проверка, что действие по удалению новости не случайное и выбор причины удаления (снижения значимости)
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     return None
@@ -1036,38 +1032,57 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
     data = await state.get_data()
 
     apd_obj = ArticleProcessAdmin()
-    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_to_delete'])
-    if not full_text:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+    article_id = apd_obj.get_article_id_by_link(data['link_to_delete'])
+    if not article_id:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.')
         await state.finish()
+        user_logger.warning(f"/delete_article : не получилось найти новость по ссылке - {data['link_to_delete']}")
         return
     else:
-        permission_answer = f'Вы уверены, что хотите удалить данную новость ?\nЕсли да, то напишите: "Удалить новость".'
-        await Form.permission_to_delete.set()
-        await message.reply(permission_answer, protect_content=False)
+        del_buttons_data_dict = dict(cancel='Отменить удаление', duplicate='Удалить дубль',
+                                     usless='Удалить незначимую новость', not_relevant='Удалить нерелевантную новость',
+                                     another='Удалить по другой причине')
+        callback_func = 'end_del_article'
+        keyboard = types.InlineKeyboardMarkup()
+
+        for reason, label in del_buttons_data_dict.items():
+            callback = f'{callback_func}:{reason}:{article_id}'  # макс. длина 64 символа
+            keyboard.add(types.InlineKeyboardButton(text=label, callback_data=callback))
+
+        await message.answer("Выберите причину удаления новости:", reply_markup=keyboard)
+        await state.finish()
 
 
-@dp.message_handler(state=Form.permission_to_delete)
-async def finish_delete_article(message: types.Message, state: FSMContext):
-    """
-    Удаление новости
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: конечный автомат о состоянии
-    return None
-    """
+@dp.callback_query_handler(lambda c: c.data.startswith('end_del_article'))
+async def end_del_article(callback_query: types.CallbackQuery):
+    """ Понижение значимости новости """
     await types.ChatActions.typing()
-    await state.update_data(permission_to_delete=message.text)
-    data = await state.get_data()
+    # получаем данные
+    callback_data = callback_query.data.split(':')
+    reason_to_delete = callback_data[1]
+    article_id_to_delete = int(callback_data[2])
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
 
     apd_obj = ArticleProcessAdmin()
-    if data["permission_to_delete"].lower().strip().replace('"', '').replace('.', '') == 'удалить новость':
-        apd_obj.delete_article_by_link(data['link_to_delete'])
-        await message.answer('Новость удалена.', protect_content=False)
+    if reason_to_delete == 'cancel':
+        await bot.send_message(chat_id, text='Удаление отменено.')
+        user_logger.info('Отмена действия - /delete_article')
     else:
-        await message.answer('Хорошо, удалим в следующий раз.', protect_content=False)
+        result = apd_obj.change_score_article_by_id(article_id_to_delete)
+        if result:
+            await bot.send_message(chat_id, text='Новость удалена.')
+            user_logger.info(f"*{chat_id}* {user_first_name} - /delete_article : "
+                             f"админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}")
+        else:
+            await bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.')
+            user_logger.critical(f"*{chat_id}* {user_first_name} - /delete_article : "
+                                 f"не получилось понизить значимость новости с id {article_id_to_delete}")
 
-    await state.finish()
+    # обновляем кнопки на одну не активную
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Команда использована', callback_data='none'))
+    await bot.edit_message_reply_markup(chat_id, callback_query.message.message_id, reply_markup=keyboard)
 
 
 @dp.callback_query_handler(text='next_5_news')
