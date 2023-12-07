@@ -584,7 +584,8 @@ class ArticleProcess:
                                  "INNER JOIN relation_{}_article ON "
                                  "article.id = relation_{}_article.article_id "
                                  "INNER JOIN {} ON relation_{}_article.{}_id = {}.id "
-                                 "WHERE (date > now() - interval '{} hours')"
+                                 "WHERE (date > now() - interval '{} hours') and {}_score > 0"
+                                 "ORDER BY {}_score desc, date asc;"
                                  .format(columns, *table, hours), con=self.engine)
 
     def get_client_comm_industry_dictionary(self):
