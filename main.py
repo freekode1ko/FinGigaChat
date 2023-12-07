@@ -1,3 +1,4 @@
+from module.logger_base import get_db_logger, get_handler, selector_logger
 from dateutil.relativedelta import relativedelta
 import module.data_transformer as dt
 import module.user_emulator as ue
@@ -10,6 +11,7 @@ from sqlalchemy import create_engine
 from typing import List, Tuple, Dict
 from selenium import webdriver
 
+from pathlib import Path
 import requests as req
 from lxml import html
 import pandas as pd
@@ -450,7 +452,7 @@ class Main:
         :return: dict with data reviews, dict with html page
         """
 
-        print('research start')
+        logger.info('Начало сборки с research')
         economy, money, comm = 'econ', 'money', 'comm'
         authed_user = ue.ResearchParser(driver)
 
@@ -459,7 +461,7 @@ class Main:
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                             name_of_review='Экономика России. Ежемесячный обзор')
-        print('economy...ok')
+        logger.info('Блок по экономике собран')
 
         # bonds
         bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
@@ -467,7 +469,7 @@ class Main:
                                             type_of_review='bonds', count_of_review=2)
         bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
                                               name_of_review='Обзор рынка процентных ставок')
-        print('bonds...ok')
+        logger.info('Блок по ставкам собран')
 
         # exchange
         exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
@@ -477,12 +479,12 @@ class Main:
                                                      name_of_review='Ежемесячный обзор по юаню')
         exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
                                                       name_of_review='Ежемесячный дайджест по мягким валютам')
-        print('exchange...ok')
+        logger.info('Блок по курсам валют собран')
 
         # commodity
         commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
                                                 name_of_review='Сырьевые рынки', type_of_review='commodity')
-        print('commodity...ok')
+        logger.info('Блок по сырью собран')
 
         exchange_month = exchange_month_uan + exchange_month_soft
         reviews = {
@@ -500,15 +502,19 @@ class Main:
         for company in self.list_of_companies:
             page_html = authed_user.get_company_html_page(url_part=company[0])
             companies_pages_html[company[1]] = page_html
-        print('companies page...ok')
+        logger.info('Страница с компаниями собрана')
+        # print('companies page...ok')
 
         clients_table = authed_user.get_companies_financial_indicators_table()
-        print('clients table...ok')
+        logger.info('Страница с клиентами собрана')
+        # print('clients table...ok')
 
         authed_user.get_industry_reviews()
-        print('industry reviews...ok')
+        logger.info('Страница с отчетами по направлениям собрана')
+        # print('industry reviews...ok')
 
         authed_user.get_weekly_review()
+        logger.info('Weekly pulse собран')
 
         return reviews, companies_pages_html, key_eco_table, clients_table
 
@@ -534,22 +540,26 @@ class Main:
             table_name = table_name_for_review.get(review_name)
             reviews_list = reviews_to_save.get(review_name)
             pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
+            logger.debug(f'Таблица {reviews_list} записана')
 
-        print('SAVE REVIEWS...ok')
+        logger.info('Все собранные отчеты с research записаны')
 
     def save_clients_financial_indicators(self, clients_table):
         engine = create_engine(self.psql_engine)
         clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица financial_indicators записана')
 
     def save_key_eco_table(self, key_eco_table):
         engine = create_engine(self.psql_engine)
         key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица key_eco записана')
 
     def save_date_of_last_build(self):
         engine = create_engine(self.psql_engine)
         cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица date_of_last_build записана')
 
     def process_companies_data(self, company_pages_html) -> None:
         """
@@ -562,8 +572,10 @@ class Main:
         comp_size = len(self.list_of_companies)
         page_tables = []
 
+        logger.info('Начало процесса обработки фин.показателей компаний')
         for comp_num, company in enumerate(company_pages_html):
-            print('{}/{}'.format(comp_num + 1, comp_size))
+            # print('{}/{}'.format(comp_num + 1, comp_size))
+            logger.debug('{}/{}'.format(comp_num + 1, comp_size))
             page_html = company_pages_html.get(company)
             tables = self.transformer_obj.get_table_from_html(True, page_html)
             pd.set_option('display.max_columns', None)
@@ -579,52 +591,65 @@ class Main:
                 df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
                 page_tables.append([tables_names[i], company, df])
 
-            companies_writer = pd.ExcelWriter('sources/tables/companies.xlsx')
+            path_to_companies = 'sources/tables/companies.xlsx'
+            companies_writer = pd.ExcelWriter(path_to_companies)
             list_of_companies_df.to_excel(companies_writer, sheet_name='head')
             for df in page_tables:
                 df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
-            print('companies block is saved')
+            logger.info(f'Блок с компаниями записан в {path_to_companies}')
             companies_writer.close()
 
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
+    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
     while True:
+        logger.debug('Инициализация сборщика котировок')
         runner = Main()
+        logger.debug('Загрузка прокси')
         runner.parser_obj.get_proxy_addresses()
+        logger.info('Начало сборки котировок')
         runner.main()
 
         # collect and save research data
+        logger.debug('Подключение к контейнеру selenium')
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
         driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
 
         try:
+            logger.info('Начало сборки отчетов с research')
             reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+            logger.info('Сохранение собранных данных')
             runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
             runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
-            print(f'Some error with Research, check: {e}')
+            logger.error(f'Ошибка при сборке отчетов с Research: {e}')
 
         try:
+            logger.debug('Поднятие новой сессии')
             session = req.Session()
             # print('session started')
+            logger.info('Сборки графиков')
             runner.commodities_plot_collect(session, driver)
             # print('com writed')
         except Exception as e:
-            print(f'Some error with commodity parsing, check: {e}')
+            logger.error(f'Ошибка при парсинге источников по сырью: {e}')
         finally:
             driver.close()
 
         i = 0
+        logger.debug('Запись даты и времени последней успешной сборки')
         runner.save_date_of_last_build()
         # with open('sources/tables/time.txt', 'w') as f:
         #    f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Wait 4 hours before recollect data...')
+        print('Ожидание 4 часов перед следующей сборкой...')
+        logger.debug(f'Ожидание 4 часов перед следующей сборкой...')
 
         while i <= 3:
             i += 1
             time.sleep(3600)
-            print('In waiting. \n{}/4 hours'.format(4 - i+1))
+            print('Ожидание сборки. \n{}/4 часа'.format(4 - i+1))
+            logger.debug('Ожидание сборки. \n{}/4 часа'.format(4 - i+1))
