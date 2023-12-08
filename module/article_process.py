@@ -56,7 +56,10 @@ class ArticleProcess:
                          "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
                          "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
                          "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
-                         "//(|www.)pronedra.ru")  # TODO: дополнять
+                         "//(|www.)pronedra.ru|metallplace.ru|rzd-partner.ru|morvesti.ru|morport.com|gudok.ru|"
+                         "eprussia.ru|metallicheckiy-portal.ru|gmk.center|bigpowernews.ru|metaltorg.ru|new-retail.ru|"
+                         "agroinvestor.ru|comnews.ru|telecomdaily.ru|vestnik-sviazy.ru|neftegaz.ru|chemicalnews.ru|"
+                         "ru.tradingview.com|osnmedia.ru|forbes.ru|expert.ru|rupec.ru")  # TODO: дополнять
 
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
