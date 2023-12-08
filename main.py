@@ -222,27 +222,33 @@ class Main:
         bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
         if table_bonds[0] == 'Облигации' and table_bonds[1] == 'Блок котировки':
             bonds_kot = pd.concat([bonds_kot, table_bonds[3]])
+            logger.debug('Таблица Облигации (Котировки) собрана')
         return bonds_kot
 
     @staticmethod
     def economic_block(table_eco: list, page_eco: str):
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(
-            columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых',
+                                         'Инфляция, % г/г', 'Цель по инфляции, %'])
         if table_eco[0] == 'Экономика' and page_eco == 'KeyRate':
             eco_frst_third.append(['Текущая ключевая ставка Банка России', table_eco[3]['Ставка'][0]])
+            logger.debug('Таблица Экономика (KeyRate) собрана')
 
         elif table_eco[0] == 'Экономика' and page_eco == 'ruonia':
             ruonia = table_eco[3].loc[table_eco[3][0] == 'Ставка RUONIA, %'][2].values.tolist()[0]
             eco_frst_third.append(['Текущая ставка RUONIA', ruonia])
+            logger.debug('Таблица Экономика (ruonia) собрана')
         elif table_eco[0] == 'Экономика' and page_eco == 'interest-rate':
             if 'Actual' in table_eco[3]:
                 eco_frst_third.append(['LPR Китай', table_eco[3]['Actual'][0]])
+                logger.debug('Таблица interest-rate (LPR Китай) собрана')
             elif 'Country' in table_eco[3]:
                 world_bet = pd.concat([world_bet, table_eco[3]])
+                logger.debug('Таблица interest-rate (Country) собрана')
         elif table_eco[0] == 'Экономика' and page_eco == 'infl':
             rus_infl = pd.concat([rus_infl, table_eco[3]])
+            logger.debug('Таблица Экономика (infl) собрана')
         return eco_frst_third, world_bet, rus_infl
 
     @staticmethod
@@ -266,6 +272,7 @@ class Main:
                         row = ['usd-rub', table.loc[table['Exchange'] ==
                                                     'Real-time Currencies']['Last'].values.tolist()[0]]
                         exchange_kot.append(row)
+                        logger.debug('Таблица exchange_kot (usd-rub) собрана')
                         break
                     except:
                         print('Not correct table')
@@ -273,6 +280,7 @@ class Main:
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
                 exchange_kot.append(row)
+                logger.debug('Таблица exchange_kot (Exchange) собрана')
 
         elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cnh', 'usdollar']:
             euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
@@ -281,6 +289,7 @@ class Main:
             price = self.find_number(data)
             row = [exchange_page, price]
             exchange_kot.append(row)
+            logger.debug('Таблица exchange_kot (usd-cnh) собрана')
         return exchange_kot
 
     def metal_block(self, table_metals: list, page_metals: str, session: req.sessions.Session):
@@ -292,31 +301,30 @@ class Main:
         if table_metals[0] == 'Металлы' and page_metals == 'LMCADS03:COM':
             euro_standart, page_html = self.parser_obj.get_html(table_metals[2], session)
             tree = html.fromstring(page_html)
-            # object_xpath = '//*[@id="root"]/div/div/section/section[1]/div/div[2]/section[1]/section/section/section'
-            # price = tree.xpath('{}/div[1]/span[1]/text()'.format(object_xpath))
-            # price_diff = tree.xpath('{}/div[2]/span[2]/text()'.format(object_xpath))
             object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div/main/div/div[1]/div[4]/div'
-            #              '//*[@id="__next"]/div/div[2]/div[6]/div[1]/main/div/div[1]/div[4]/div'
             price = tree.xpath('{}/div[1]/text()'.format(object_xpath))
             price_diff = tree.xpath('{}/div[2]/span/span/text()'.format(object_xpath))
             try:
                 row = ['Медь', price[0], price_diff[0]]
                 temp_df = pd.DataFrame([row], columns=['Metals', 'Price', 'Day'])
             except:
-                print('Cannot find Copper Table!!!')
+                logger.error('Ошибка получения таблицы с медью!')
                 temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
             metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
+            logger.debug('Таблица metals_bloom собрана')
 
         elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
             if {'Last', 'Change'}.issubset(table_metals[3].columns):
                 jap_coal = table_metals[3][table_metals[3].Symbol.str.contains('U7.23')]
                 U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
+                logger.debug('Таблица U7N23 собрана')
 
         elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
             if 'Metals' in table_metals[3].columns:
                 temp = table_metals[3].loc[table_metals[3]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz',
                                                                            'Platinum USD/t,oz', 'Lithium CNY/T'])]
                 metals_kot.append(temp)
+                logger.debug('Таблица metals_kot (Metals) собрана')
 
             elif 'Industrial' in table_metals[3].columns:
                 temp = table_metals[3].loc[table_metals[3]['Industrial'].isin(['Aluminum USD/T', 'Nickel USD/T',
@@ -324,10 +332,12 @@ class Main:
                                                                                'Palladium USD/t,oz', 'Cobalt USD/T',
                                                                                'Iron Ore 62% fe USD/T'])]
                 metals_kot.append(temp.rename(columns={'Industrial': 'Metals'}))
+                logger.debug('Таблица metals_kot (Industrial) собрана')
 
             elif 'Energy' in table_metals[3].columns:
                 temp = table_metals[3].loc[table_metals[3]['Energy'].isin(['Coal USD/T'])]
                 metals_kot.append(temp.rename(columns={'Energy': 'Metals'}))
+                logger.debug('Таблица metals_kot (Energy) собрана')
 
         elif table_metals[0] == 'Металлы' and page_metals == 'coal-(api2)-cif-ara-futures-historical-data':
             if 'Price' in table_metals[3].columns:
@@ -341,8 +351,8 @@ class Main:
                 week_table = table_metals[3].loc[table_metals[3]['Date'] == str(week_day).split()[0]]
                 month_table = table_metals[3].loc[table_metals[3]['Date'] == str(month_day).split()[0]]
                 year_table = table_metals[3].loc[table_metals[3]['Date'] == str(year_day).split()[0]]
-                temp_table = pd.concat([table_metals[3].head(1), week_table, month_table, year_table],
-                                       ignore_index=True)
+                temp_table = pd.concat([table_metals[3].head(1), week_table,
+                                        month_table, year_table], ignore_index=True)
 
                 temp_table['Metals'] = 'Эн. уголь'
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
@@ -350,39 +360,39 @@ class Main:
                 try:
                     metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
                                             *temp_table['%'].tolist()[1:], str(temp_table['Date'][0]).split()[0]])
+                    logger.debug('Таблица metals_coal_kot собрана')
                 except ValueError:
                     metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
                                             *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
+                    logger.warning('Сдвиг в таблице с котировками (metals_coal_kot)')
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
     def main(self) -> None:
         session = req.Session()
         all_tables = self.table_collector(session)
         engine = create_engine(self.psql_engine)
-        print('All collected')
-        all_tables.append(
-            ['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
-        bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
-
+        logger.info('Котировки собраны, запускаем обработку')
+        all_tables.append(['Металлы', 'Блок котировки',
+                           'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
+        bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,',
+                                          'Мин,', 'Изм,', 'Изм, %', 'Время'])
         exchange_kot = []
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(
-            columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
-
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых',
+                                         'Инфляция, % г/г', 'Цель по инфляции, %'])
         U7N23 = []
         metals_kot = []
         metals_coal_kot = []
         metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
 
         size_tables = len(all_tables)
+        logger.info(f'Обработка собранных таблиц ({size_tables}).')
         for enum, tables_row in enumerate(all_tables):
-            print('{}/{}'.format(enum + 1, size_tables))
-            if tables_row[2].split('/')[-1]:
-                source_page = tables_row[2].split('/')[-1]
-            else:
-                source_page = tables_row[2].split('/')[-2]
-
+            logger.debug('{}/{}'.format(enum + 1, size_tables))
+            url_index = -1 if tables_row[2].split('/')[-1] else url_index = -2
+            source_page = tables_row[2].split('/')[url_index]
+            logger.debug(f'Сборка таблицы {source_page} из блока {tables_row[0]}')
             # BONDS BLOCK
             bonds_kot = pd.concat([bonds_kot, self.bond_block(tables_row)])
 
@@ -402,6 +412,7 @@ class Main:
             metals_kot += metal_cat_ls
             metals_bloom = pd.concat([metals_bloom, metal_bloom_df])
 
+        # Запись Металов и Сырья в БД и Локальное хранилище
         metal_writer = pd.ExcelWriter('sources/tables/metal.xlsx')
         big_table = pd.DataFrame(columns=['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date'])
         metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Weekly', 'Date'])
@@ -411,33 +422,45 @@ class Main:
         big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)
 
         big_table.to_excel(metal_writer, sheet_name='Металы')
-        # Write to metals DB
+        logger.debug('Записана страница с Металлами')
         big_table.to_sql('metals', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица metals записана')
 
+        # Запись Курсов в БД и Локальное хранилище
         exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
         fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
             .drop_duplicates(subset=['Валюта'], ignore_index=True)
         fx_df.to_excel(exchange_writer, sheet_name='Курсы валют')
+        logger.debug('Записана страница с Курсами')
         # Write to fx DB
         fx_df.to_sql('exc', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица exc записана')
 
+        # Запись Экономики в БД и Локальное хранилище
         eco_writer = pd.ExcelWriter('sources/tables/eco.xlsx')
         eco_stake = pd.DataFrame(eco_frst_third)
         eco_stake.to_excel(eco_writer, sheet_name='Ставка')
+        logger.debug('Записана страница с Ставкой')
         world_bet.to_excel(eco_writer, sheet_name='Ключевые ставки ЦБ мира')
+        logger.debug('Записана страница с КС ЦБ')
         rus_infl.to_excel(eco_writer, sheet_name='Инфляция в России')
-        # write to eco_stake DB
-        eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=engine)
-        # write to eco_global_stake DB
-        world_bet.to_sql('eco_global_stake', if_exists='replace', index=False, con=engine)
-        # write to eco_rus_influence DB
-        rus_infl.to_sql('eco_rus_influence', if_exists='replace', index=False, con=engine)
+        logger.debug('Записана страница с Инфляцией')
 
+        eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица eco_stake записана')
+        world_bet.to_sql('eco_global_stake', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица eco_global_stake записана')
+        rus_infl.to_sql('eco_rus_influence', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица eco_rus_influence записана')
+
+        # Запись Котировок в БД и Локальное хранилище
         bonds_writer = pd.ExcelWriter('sources/tables/bonds.xlsx')
         bonds_kot.to_excel(bonds_writer, sheet_name='Блок котировки')
-        # write to bonds DB
+        logger.debug('Записана страница с Котировками')
         bonds_kot.to_sql('bonds', if_exists='replace', index=False, con=engine)
+        logger.debug('Таблица bonds записана')
 
+        logger.debug('Закрытие записи локальных бэкапов')
         bonds_writer.close()
         eco_writer.close()
         exchange_writer.close()
