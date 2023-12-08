@@ -11,7 +11,7 @@ from module.logger_base import selector_logger
 from config import BASE_GIGAPARSER_URL
 
 
-PERIOD = 3
+PERIOD = 1
 
 
 def get_article() -> pd.DataFrame:

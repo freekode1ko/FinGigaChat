@@ -50,7 +50,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
-sample_of_news_title = '<b>{}</b>\n<a href="{}">{}</a>\n\n'
+sample_of_news_title = '{}\n<i><a href="{}"></i>{}</a>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -668,14 +668,17 @@ async def add_new_subscriptions(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if await user_in_whitelist(message.from_user.as_json()):
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
         await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
                              'пассивную отправку новостей по ним.\n'
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
+                             '\n\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
                              'Если передумали, то напишите "Отмена" в чат.')
     else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
         await message.answer('Вы не зарегистрированы в этом боте')
 
 
@@ -688,8 +691,10 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
     if message.text.strip().lower() == 'отмена':
+        user_logger.info('Отмена действия - /addnewsubscriptions')
         await state.finish()
         await message.answer('Изменение списка подписок успешно отменено.')
         return None
@@ -711,22 +716,25 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     for subscription in user_request:
         for index, row in df_all.iterrows():
-            # if subscription in row.split(';') - из-за разрядности такой варинт не всегда находит совпадение
+            # if subscription in row.split(';') - из-за разрядности такой вариант не всегда находит совпадение
             for other_name in row['other_names'].split(';'):
                 if subscription == other_name:
                     subscriptions.append(other_name)
 
     if (len(subscriptions) < len(user_request)) and subscriptions:
-        await message.reply(f'{", ".join(list(set(user_request) - set(subscriptions)))} '
-                            f'- Эти объекты новостей нам неизвестны')
+        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
+        user_logger.debug(f'*{user_id}* Запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
+        await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
         subscriptions = ", ".join(subscriptions)
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
         await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
+        user_logger.info(f'*{user_id}* Подписался на : {subscriptions}')
     else:
         await message.reply('Перечисленные выше объекты не были найдены')
+        user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты ({list_of_unknown}) не были найдены')
 
 
 @dp.message_handler(commands=['myactivesubscriptions'])
@@ -737,14 +745,17 @@ async def get_user_subscriptions(message: types.Message):
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     return None
     """
-    print('{} - {}'.format(message.from_user.full_name, message.text))
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
-    if not subscriptions:
+    print(subscriptions)
+    if not subscriptions:  # TODO: Пропускает людей у которых нет подписок дальше
         keyboard = types.ReplyKeyboardRemove()
         msg_txt = 'Нет активных подписок'
+        user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок, но их нет')
     else:
         buttons = []
         for subscription in subscriptions[0].split(', '):
@@ -1126,8 +1137,9 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
-    print(message.from_user.as_json())
-    await send_daily_news(160, 160, 160, 1)
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
+    await send_daily_news(20, 20, 20, 1)
 
 
 @dp.message_handler(commands=['newsletter'])
@@ -1262,44 +1274,35 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             await types.ChatActions.typing()
             global chat
             global token
+            aliases_dict = {
+                **{alias: bonds_info for alias in bonds_aliases},
+                **{alias: economy_info for alias in eco_aliases},
+                **{alias: metal_info for alias in metal_aliases},
+                **{alias: exchange_info for alias in exchange_aliases},
+                **{alias: data_mart for alias in view_aliases}
+            }
             message_text = message.text.lower().strip()
-            if message_text in bonds_aliases:
-                await bonds_info(message)
-            elif message_text in eco_aliases:
-                await economy_info(message)
-            elif message_text in metal_aliases:
-                await metal_info(message)
-            elif message_text in exchange_aliases:
-                await exchange_info(message)
-            elif message_text in view_aliases:
-                await data_mart(message)
-            # elif message_text in ['test']:
-            #    await draw_all_tables(message)
+            function_to_call = aliases_dict.get(message_text)
+            if function_to_call:
+                await function_to_call(message)
             else:
                 try:
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    if giga_answer.status_code == 200:
-                        giga_js = giga_answer.json()['choices'][0]['message']['content']
-                    elif giga_answer.status_code == 401:
-                        raise AttributeError
-                    else:
-                        raise KeyError
-
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
                 except AttributeError:
                     chat = gig.GigaChat()
                     token = chat.get_user_token()
                     logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
-
                 except KeyError:
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()
-                    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : '
-                                         f'KeyError (некорректная выдача ответа GigaChat)')
+                    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
+                                         f' KeyError (некорректная выдача ответа GigaChat)')
 
-                await message.answer('{}\n\n{}'.format(giga_js, giga_ans_footer), protect_content=False)
+                response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
+                await message.answer(response, protect_content=False)
                 user_logger.debug(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
 
     else:
@@ -1417,6 +1420,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
     """
     if time_to_wait != 0:
+        logger.info(f'Запуск ручной рассылки новостей по подписке!')
         return None
     end_of_the_day = 86400  # 86400(всего секунд)/3600(секунд в одном часе) = 24 (00:00 или 24:00)
     current_day = datetime.now()
@@ -1425,18 +1429,18 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     current_sec = current_day.second
 
     current_time = (current_hour * 3600) + (current_minute * 60) + current_sec  # Настоящее Время в секундах
-    if (first_time_to_send < current_time) and (current_time < last_time_to_send):
+    if first_time_to_send <= current_time <= last_time_to_send:
         time_to_wait = last_time_to_send - current_time
-        print(f'В ожидании рассылки в {str(timedelta(seconds=last_time_to_send))}. '
-              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        next_send_time = str(timedelta(seconds=last_time_to_send))
     elif current_time > last_time_to_send:
         time_to_wait = (end_of_the_day - current_time) + first_time_to_send
-        print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
-              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        next_send_time = str(timedelta(seconds=first_time_to_send))
     elif first_time_to_send > current_time:
         time_to_wait = (first_time_to_send - current_time)
-        print(f'В ожидании рассылки в {str(timedelta(seconds=first_time_to_send))}. '
-              f'До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+        next_send_time = str(timedelta(seconds=first_time_to_send))
+
+    logger.info(f'В ожидании рассылки в {next_send_time}.'
+                f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
@@ -1454,7 +1458,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     return None
     """
     await newsletter_scheduler(schedule)  # Ожидание рассылки
-    print('Начинается ежедневная рассылка новостей по подпискам...')
+    logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     ap_obj = ArticleProcess(logger)
     engine = create_engine(psql_engine)
@@ -1473,9 +1477,10 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         user_name = user['username']
         subscriptions = user['subscriptions'].split(', ')
         # translate_subscriptions_to_id(CAI_dict, subscriptions)
-        print(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
+        logger.debug(f'Отправка подписок для: {user_name}*{user_id}*. {row_number}/{users.shape[0]}')
 
         # Получить список интересующих id объектов
+        logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
@@ -1484,24 +1489,29 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                 await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
                                        parse_mode='HTML', protect_content=True)
             except ChatNotFound:
-                print(f'Чата с пользователем {user_id} {user_name} - не существует')
+                user_logger.error(f'Чата с пользователем *{user_id}* {user_name} не существует')
+                # print(f'Чата с пользователем {user_id} {user_name} - не существует')
                 continue
         else:
-            print(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
+            user_logger.info(f'Нет новых новостей по подпискам для: {user_name}*{user_id}*')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
-                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n\n".upper()
+                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n".upper()
                 for df_index, row in news_block.head(20).iterrows():
                     base_url = urlparse(row['link']).netloc.split('www.')[-1]  # Базовая ссылка на источник
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
-
-        print(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
-    print('Рассылка успешно завершена. Все пользователи получили свои новости. '
-          '\nПереходим в ожидание следующей рассылки.')
+        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка ({subscriptions})')
+    logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
+                'Переходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
+
+    client_hours = 18 if client_hours == 7 else 7
+    commodity_hours = 18 if commodity_hours == 7 else 7
+    industry_hours = 18 if industry_hours == 7 else 7
+
     return await send_daily_news(client_hours, commodity_hours, industry_hours)
 
 
