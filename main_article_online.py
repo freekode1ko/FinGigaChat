@@ -89,7 +89,7 @@ if __name__ == '__main__':
             logger.info('Запуск pipeline с новостями')
             print('Запуск pipeline с новостями')
             gotten_ids = regular_func()
-            post_ids(gotten_ids)
+            # post_ids(gotten_ids)
             print('Конец pipeline с новостями \nОжидайте\n')
             logger.info('Конец pipeline с новостями\n')
             for i in range(PERIOD):
