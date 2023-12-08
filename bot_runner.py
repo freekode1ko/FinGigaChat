@@ -1462,10 +1462,10 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
         user_name = user['username']
         subscriptions = user['subscriptions'].split(', ')
         # translate_subscriptions_to_id(CAI_dict, subscriptions)
-        logger.debug(f'Отправка подписок для: {user_name}({user_id}). {row_number}/{users.shape[0]}')
+        logger.debug(f'Отправка подписок для: {user_name}(*{user_id}*). {row_number}/{users.shape[0]}')
 
         # Получить список интересующих id объектов
-        user_logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}({user_id})')
+        user_logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}(*{user_id}*)')
         news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
         news_client_splited = await news_prep(news_id, clients_news, 'client')
         news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
@@ -1474,11 +1474,11 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                 await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
                                        parse_mode='HTML', protect_content=True)
             except ChatNotFound:
-                user_logger.error(f'Чата с пользователем {user_id} {user_name} - не существует')
+                user_logger.error(f'Чата с пользователем *{user_id}* {user_name} - не существует')
                 # print(f'Чата с пользователем {user_id} {user_name} - не существует')
                 continue
         else:
-            user_logger.info(f'Нет новых новостей по подпискам для: {user_name}({user_id})')
+            user_logger.info(f'Нет новых новостей по подпискам для: {user_name}(*{user_id}*)')
         # Вывести новости пользователю по клиентам и комодам
         for news in (news_client_splited, news_comm_splited):
             for news_block in news:
@@ -1488,7 +1488,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
-        user_logger.debug(f"({user_id}){user_name} - получил свои подписки ({subscriptions})")
+        user_logger.debug(f"(*{user_id}*){user_name} - получил свои подписки ({subscriptions})")
     logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
                 '\nПереходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
