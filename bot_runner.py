@@ -734,6 +734,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         user_logger.info(f'*{user_id}* Подписался на : {subscriptions}')
     else:
         await message.reply('Перечисленные выше объекты не были найдены')
+        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
         user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты ({list_of_unknown}) не были найдены')
 
 
