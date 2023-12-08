@@ -1503,7 +1503,10 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
             for news_block in news:
                 message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n".upper()
                 for df_index, row in news_block.head(20).iterrows():
-                    base_url = urlparse(row['link']).netloc.split('www.')[-1]  # Базовая ссылка на источник
+                    parsed_url = urlparse(row['link'])
+                    base_url = parsed_url.netloc.split('www.')[-1]  # Базовая ссылка на источник
+                    if base_url == 't.me':
+                        base_url = f"{base_url}/{parsed_url.path.split('/')[1]}"  # Базовая ссылка на источник если ТГ
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
