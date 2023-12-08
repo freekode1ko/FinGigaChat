@@ -58,17 +58,19 @@ class Main:
                 tables = self.transformer_obj.get_table_from_html(euro_standard, page_html)
                 for table in tables:
                     all_tables.append([url[0].split('/')[0], *url[1:], table])
-                print('Tables added {}'.format(len(tables)))
+                # print('Tables added {}'.format(len(tables)))
+                logger.info(f'Таблиц добавлено: {len(tables)}')
             except ValueError as val_err:
                 # print(url[2])
-                print('No tables found: {} : {}'.format(val_err, page_html[:100]))
+                logger.error(f'Таблицы не найдены. {val_err}: {page_html[:100]}')
+                # print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
 
     def graph_collector(self, url, session: req.sessions.Session, driver, name=''):
+        logger.debug(f'Сборка графиков. Источник: {url}')
         if 'api.investing' in url:
             InvAPI_obj = ue.InvestingAPIParser(driver)
             data = InvAPI_obj.get_graph_investing(url)
-
             self.transformer_obj.five_year_graph(data, name)
 
         elif 'metals-wire' in url:
@@ -112,15 +114,14 @@ class Main:
     def commodities_plot_collect(self, session: req.sessions.Session, driver):
         self.get_metals_wire_table_data(driver)
         commodity_pricing = pd.DataFrame()
-
+        logger.info(f'Сборка по сырью {len(self.commodities)}')
         for commodity in self.commodities:
             link = self.commodities[commodity]['links'][0]
             name = self.commodities[commodity]['naming']
-            print(commodity)
-            print(self.commodities[commodity]['links'][0])
+            logger.debug(commodity)
+            logger.debug(self.commodities[commodity]['links'][0])
 
             self.graph_collector(link, session, driver, commodity)
-
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
                 InvAPI_obj = ue.InvestingAPIParser(driver)
@@ -160,7 +161,7 @@ class Main:
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
         engine = create_engine(self.psql_engine)
-        commodity = pd.read_sql_query("select * from commodity", con=engine)
+        commodity = pd.read_sql_query("SELECT * FROM commodity", con=engine)
         commodity_ids = pd.DataFrame()
 
         for i, row in commodity_pricing.iterrows():
@@ -239,16 +240,20 @@ class Main:
             ruonia = table_eco[3].loc[table_eco[3][0] == 'Ставка RUONIA, %'][2].values.tolist()[0]
             eco_frst_third.append(['Текущая ставка RUONIA', ruonia])
             logger.debug('Таблица Экономика (ruonia) собрана')
+
         elif table_eco[0] == 'Экономика' and page_eco == 'interest-rate':
             if 'Actual' in table_eco[3]:
                 eco_frst_third.append(['LPR Китай', table_eco[3]['Actual'][0]])
                 logger.debug('Таблица interest-rate (LPR Китай) собрана')
+
             elif 'Country' in table_eco[3]:
                 world_bet = pd.concat([world_bet, table_eco[3]])
                 logger.debug('Таблица interest-rate (Country) собрана')
+
         elif table_eco[0] == 'Экономика' and page_eco == 'infl':
             rus_infl = pd.concat([rus_infl, table_eco[3]])
             logger.debug('Таблица Экономика (infl) собрана')
+
         return eco_frst_third, world_bet, rus_infl
 
     @staticmethod
@@ -275,6 +280,7 @@ class Main:
                         logger.debug('Таблица exchange_kot (usd-rub) собрана')
                         break
                     except:
+                        logger.warning('Не та таблица попала на обработку')
                         print('Not correct table')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
