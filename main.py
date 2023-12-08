@@ -1,5 +1,5 @@
-from module.logger_base import get_db_logger, get_handler, selector_logger
 from dateutil.relativedelta import relativedelta
+from module.logger_base import selector_logger
 import module.data_transformer as dt
 import module.user_emulator as ue
 import module.crawler as crawler
@@ -53,17 +53,12 @@ class Main:
         urls = df_urls.values.tolist()
         for url in urls:
             euro_standard, page_html = self.parser_obj.get_html(url[2], session)
-            # print(euro_standard, url[2])
             try:
                 tables = self.transformer_obj.get_table_from_html(euro_standard, page_html)
-                for table in tables:
-                    all_tables.append([url[0].split('/')[0], *url[1:], table])
-                # print('Tables added {}'.format(len(tables)))
+                all_tables.extend([[url[0].split('/')[0], *url[1:], table] for table in tables])
                 logger.info(f'Таблиц добавлено: {len(tables)}')
             except ValueError as val_err:
-                # print(url[2])
                 logger.error(f'Таблицы не найдены. {val_err}: {page_html[:100]}')
-                # print('No tables found: {} : {}'.format(val_err, page_html[:100]))
         return all_tables
 
     def graph_collector(self, url, session: req.sessions.Session, driver, name=''):
@@ -274,14 +269,16 @@ class Main:
                 tables = pd.read_html(page_html)
                 for table in tables:
                     try:
-                        row = ['usd-rub', table.loc[table['Exchange'] ==
-                                                    'Real-time Currencies']['Last'].values.tolist()[0]]
-                        exchange_kot.append(row)
-                        logger.debug('Таблица exchange_kot (usd-rub) собрана')
-                        break
-                    except:
+                        exchange_table = table[table['Exchange'] == 'Real-time Currencies']
+                        if not exchange_table.empty:
+                            row = ['usd-rub', exchange_table['Last'].values[0]]
+                            exchange_kot.append(row)
+                            logger.debug('Таблица exchange_kot (usd-rub) собрана')
+                            break
+                    except IndexError:
                         logger.warning('Не та таблица попала на обработку')
-                        print('Not correct table')
+                    except Exception as ex:
+                        logger.error(f'Ошибка при обработке таблицы: {ex}')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
                 row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
                                                             'Real-time Currencies']['Last'].values.tolist()[0]]
