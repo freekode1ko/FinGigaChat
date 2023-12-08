@@ -1,24 +1,25 @@
-import re
-import random
-import time
-import json
-import os
-import requests
-from typing import List
-from io import BytesIO
-import copy
-import selenium
-import selenium.webdriver as wb
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from module import data_transformer as Transformer
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from bs4 import BeautifulSoup
-import pandas as pd
-import numpy as np
+
 from pdf2image import convert_from_path
+from module.logger_base import Logger
+import selenium.webdriver as wb
+from bs4 import BeautifulSoup
+from typing import List
+import pandas as pd
+
+import selenium
+import requests
+import random
 import config
-from module import data_transformer as Transformer
+import copy
+import json
+import time
+import re
+import os
 
 
 class ResearchError(Exception):
@@ -31,17 +32,17 @@ class ResearchParser:
     Class for parse pages from CIB Research
     """
 
-    def __init__(self, driver):
+    def __init__(self, driver, logger: Logger.logger):
         home_page = 'https://research.sberbank-cib.com'
         login = config.research_cred[0]
         password = config.research_cred[1]
 
+        self._logger = logger
         self.driver = driver
         self.home_page = home_page
         self.auth(login, password)
 
-    @staticmethod
-    def __sleep_some_time(start: float = 1.0, end: float = 2.0):
+    def __sleep_some_time(self, start: float = 1.0, end: float = 2.0):
         """
         Send user emulator to sleep.
         Fake user delay and wait to load HTML elements
@@ -49,10 +50,11 @@ class ResearchParser:
         :param end: Wait to...
         :return: None
         """
-        time.sleep(random.uniform(start, end))
+        sleep_time = random.uniform(start, end)
+        self._logger.debug(f'Уходим в ожидание на: {sleep_time}')
+        time.sleep(sleep_time)
 
-    @staticmethod
-    def process_bonds_exchange_text(text_rows, start, end=None) -> str:
+    def process_bonds_exchange_text(self, text_rows, start, end=None) -> str:
         """
         Get necessary part of the money review.
         :param text_rows: rows of text of money review
@@ -65,8 +67,8 @@ class ResearchParser:
         pattern = rf'{start}(.*?)$' if end is None else rf'{start}(.*?)(?=\s*{end})'
         match = re.search(pattern, text, flags=re.DOTALL)
         if not match:
+            self._logger.warning('Не найден ежедневный финансовый отчет')
             raise ResearchError('Did not match in money everyday review.')
-
         return match.group(0)
 
     @staticmethod
@@ -91,7 +93,7 @@ class ResearchParser:
         """
         Authorization in Sberbank CIB Research
         """
-
+        self._logger.info('Авторизация на Sberbank CIB Research')
         self.driver.get(self.home_page)
         login_field = self.driver.find_element('xpath', "//input[@type='text']")
         password_field = self.driver.find_element('xpath', "//input[@type='password']")
@@ -109,11 +111,12 @@ class ResearchParser:
         :param tab: name of tab where place reviews
         :return: web element or error if element didn't find
         """
-
+        self._logger.info(f'Поиск вкладки {tab}')
         li_elements = self.driver.find_elements('tag name', 'li')
         li_element = next((li_elem for li_elem in li_elements if li_elem.text == tab), None)
 
         if li_element is None:
+            self._logger.warning(f'Вкладка {tab} не найдена')
             raise ResearchError('Did not find necessary tab')
         else:
             return li_element
@@ -125,7 +128,7 @@ class ResearchParser:
         :param count: necessary count of reviews
         :return: list of reviews' elements
         """
-
+        self._logger.info(f'Поиск отчета {name}')
         # if no name for filter take top reviews
         if name == '':
             reviews_elements = self.driver.find_elements('class name', 'title.fading-container')
@@ -149,12 +152,13 @@ class ResearchParser:
                     break
                 else:
                     # load more reviews
+                    self._logger.debug(f'Загрузка больше отчетов')
                     button_show_more = self.driver.find_element('id', 'loadMorePublications')
                     button_show_more.click()
                     self.__sleep_some_time(3, 6)
 
                 start = len(elements) - 1
-
+            self._logger.info(f'Отчет {name} найден')
             return reviews_elements[:count]
 
     def get_date_and_text_of_review(self, element: wb.remote.webelement.WebElement, type_of_review: str) -> (str, str):
@@ -164,7 +168,7 @@ class ResearchParser:
         :param element: web element of the review
         :return: clear text of the review
         """
-
+        self._logger.info('Получаем дату и текст отчета')
         element.find_element('tag name', 'a').click()
         self.__sleep_some_time()
 
@@ -172,9 +176,11 @@ class ResearchParser:
         dates = self.driver.find_elements('css selector', 'span.date')
         date = next((date.text for date in dates if date.text != ''), None)
         if date is None:
+            self._logger.error('Дата отчета не найдена')
             raise ResearchError('Did not find date of the review')
 
         # get text
+        self._logger.info('Получаем текст отчета и очищаем его')
         rows = self.driver.find_elements('tag name', 'p')
         text_rows = [row.text.replace('> ', '') for row in rows if row.text.strip() != '' and '@sber' not in row.text]
         if type_of_review == 'commodity':
@@ -185,13 +191,12 @@ class ResearchParser:
             text = self.process_bonds_exchange_text(text_rows, start='Валютный рынок', end='Процентные ставки')
         else:
             text = '\n\n'.join(text_rows)
-
         # close review page
         try:
             element.send_keys(Keys.ESCAPE)
         except selenium.common.exceptions.ElementNotInteractableException:
             self.driver.find_element('class name', 'fancybox-item.fancybox-close').click()
-
+        self._logger.info('Получили дату и текст отчета')
         return date, text
 
     def get_reviews(self, url_part: str, tab: str, title: str, name_of_review: str = '',
@@ -209,16 +214,19 @@ class ResearchParser:
 
         # open page
         url = f'{self.home_page}/group/guest/{url_part}'
+        self._logger.info(f'Открываем страницу {url}')
         self.driver.get(url)
         self.__sleep_some_time()
         assert title in self.driver.title
 
         # click on tab
+        self._logger.info(f'Открываем вкладку {tab}')
         tab_element = self.find_tab(tab)
         tab_element.click()
         self.__sleep_some_time()
 
         # find necessary reviews
+        self._logger.info(f'Ищем отчет {name_of_review}')
         reviews_elements = self.find_reviews_by_name(name_of_review, count_of_review)
 
         # get data of all reviews
@@ -236,8 +244,8 @@ class ResearchParser:
         :param url_part: id company for search by url
         :return: page in html format
         """
-
         url = f'{self.home_page}/group/guest/companies?companyId={url_part}'
+        self._logger.info(f'Открываем страницу компании: {url}')
         self.driver.get(url)
         page_html = self.driver.page_source
 
@@ -250,6 +258,7 @@ class ResearchParser:
         """
 
         url = f'{self.home_page}/group/guest/econ'
+        self._logger.info(f'Открываем страницу о ключевых показателях компании: {url}')
         self.driver.implicitly_wait(5)
         self.driver.get(url)
         time.sleep(60)
@@ -276,6 +285,7 @@ class ResearchParser:
                 elif len(data_row) == 6:
                     data.append(data_row)
 
+        self._logger.debug('Собираем таблицу')
         df = pd.DataFrame(data, columns=headers)
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
         df = df.drop(index=0).reset_index(drop=True)
@@ -557,13 +567,15 @@ class ResearchParser:
         image.close()
         print('weekly review...ok')
 
+
 class InvestingAPIParser:
     """
     Class for InvestingAPI parsing
     """
 
-    def __init__(self, driver):
+    def __init__(self, driver, logger: Logger.logger):
         self.driver = driver
+        self._logger = logger
 
     def get_graph_investing(self, url: str):
         """
@@ -605,8 +617,9 @@ class MetalsWireParser:
     Class for MetalsWire table data parsing
     """
 
-    def __init__(self, driver):
+    def __init__(self, driver, logger: Logger.logger):
         table_link = config.table_link
+        self._logger = logger
         self.driver = driver
         self.table_link = table_link
 
