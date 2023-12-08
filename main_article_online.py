@@ -40,6 +40,7 @@ def regular_func():
 
     if not df_article.empty:
         try:
+            logger.info(f'Получено {len(df_article)} новостей')
             print(f'Получено {len(df_article)} новостей')
             ap_obj_online = ArticleProcess(logger)
             df_article, ids = ap_obj_online.preprocess_article_online(df_article)

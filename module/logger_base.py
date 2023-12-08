@@ -4,13 +4,14 @@ import os
 
 import logging
 from logging.handlers import RotatingFileHandler
+from logging import Handler, Formatter, LogRecord
 from sqlalchemy import create_engine, text
 
 from config import log_lvl
 
 
 LOG_FORMAT = '%(asctime)s,%(msecs)d %(levelname)-8s [%(module)s:%(lineno)d in %(funcName)s] %(message)s'
-MAX_BYTES = 100000
+MAX_BYTES = 10 * 1024 * 1024
 
 
 class Logger:
@@ -27,20 +28,19 @@ class Logger:
         self.handler = RotatingFileHandler(self.log_dir, maxBytes=MAX_BYTES, encoding='utf-8',
                                            delay=False, backupCount=1)
 
-        logging.basicConfig(format=self.log_format, datefmt=self.log_datefmt, level=level,
-                            encoding='utf-8', handlers=[self.handler])
+        logging.basicConfig(format=self.log_format, datefmt=self.log_datefmt, level=level, handlers=[self.handler])
 
 
-class DBHandler(logging.Handler):
+class DBHandler(Handler):
     """ Обработчик для сохранения журнальных сообщений в базу данных """
 
     def __init__(self, url_engine: str, level: int, log_format: str):
         super().__init__()
         self.engine = create_engine(url_engine, pool_pre_ping=True)
         self.setLevel(level)
-        self.setFormatter(logging.Formatter(log_format))
+        self.setFormatter(Formatter(log_format))
 
-    def emit(self, record: logging.LogRecord, *args) -> None:
+    def emit(self, record: LogRecord, *args) -> None:
         """ Записывает в таблицу user_log атрибуты лога """
         level = record.levelname
         date = datetime.datetime.fromtimestamp(record.created).replace(microsecond=0)
