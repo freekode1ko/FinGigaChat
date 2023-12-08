@@ -26,8 +26,8 @@ import re
 
 class Main:
     def __init__(self):
-        parser_obj = crawler.Parser()
-        # user_object = ue.ResearchParser()
+        parser_obj = crawler.Parser(logger)
+        # user_obj = ue.ResearchParser()
         # rebase = config.research_base_url
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
@@ -64,7 +64,7 @@ class Main:
     def graph_collector(self, url, session: req.sessions.Session, driver, name=''):
         logger.debug(f'Сборка графиков. Источник: {url}')
         if 'api.investing' in url:
-            InvAPI_obj = ue.InvestingAPIParser(driver)
+            InvAPI_obj = ue.InvestingAPIParser(driver, logger)
             data = InvAPI_obj.get_graph_investing(url)
             self.transformer_obj.five_year_graph(data, name)
 
@@ -103,7 +103,7 @@ class Main:
             self.transformer_obj.five_year_graph(data, name)
 
     def get_metals_wire_table_data(self, driver):
-        metals_wire_parser_obj = ue.MetalsWireParser(driver)
+        metals_wire_parser_obj = ue.MetalsWireParser(driver, logger)
         self.metals_wire_table = metals_wire_parser_obj.get_table_data()
 
     def commodities_plot_collect(self, session: req.sessions.Session, driver):
@@ -119,7 +119,7 @@ class Main:
             self.graph_collector(link, session, driver, commodity)
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
-                InvAPI_obj = ue.InvestingAPIParser(driver)
+                InvAPI_obj = ue.InvestingAPIParser(driver, logger)
                 streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
 
                 ''' What's the difference?
@@ -480,7 +480,7 @@ class Main:
 
         logger.info('Начало сборки с research')
         economy, money, comm = 'econ', 'money', 'comm'
-        authed_user = ue.ResearchParser(driver)
+        authed_user = ue.ResearchParser(driver, logger)
 
         # economy
         key_eco_table = authed_user.get_key_econ_ind_table()
