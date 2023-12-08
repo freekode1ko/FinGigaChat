@@ -675,7 +675,7 @@ async def add_new_subscriptions(message: types.Message):
         await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
                              'пассивную отправку новостей по ним.\n'
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
-                             '\n\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
+                             '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
                              'Если передумали, то напишите "Отмена" в чат.')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
@@ -723,7 +723,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     if (len(subscriptions) < len(user_request)) and subscriptions:
         list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
-        user_logger.debug(f'*{user_id}* Запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
+        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
         subscriptions = ", ".join(subscriptions)
@@ -731,7 +731,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
         await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
-        user_logger.info(f'*{user_id}* Подписался на : {subscriptions}')
+        user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions}')
     else:
         await message.reply('Перечисленные выше объекты не были найдены')
         user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты ({list_of_unknown}) не были найдены')
@@ -751,8 +751,8 @@ async def get_user_subscriptions(message: types.Message):
     engine = create_engine(psql_engine)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
-    print(subscriptions)
-    if not subscriptions:  # TODO: Пропускает людей у которых нет подписок дальше
+
+    if not subscriptions[0]:
         keyboard = types.ReplyKeyboardRemove()
         msg_txt = 'Нет активных подписок'
         user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок, но их нет')
@@ -806,14 +806,14 @@ async def user_to_whitelist(message: types.Message):
             engine = create_engine(psql_engine)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
-            user_logger.info(f"*{chat_id}* {full_name} - {user_msg}: новый пользователь")
+            user_logger.info(f"*{chat_id}* {full_name} - {user_msg} : новый пользователь")
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. '
                                  f'\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: уже добавлен')
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
 
 
 async def check_your_right(user: dict):
@@ -869,7 +869,7 @@ async def admin_help(message: types.Message):
         help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
                     '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
                     '<b>/delete_article</b> - удалить новость из базы данных\n'
-                    '<b>/sendtoall</b> - Сделать рассылку сообщения на всех пользователей бота')
+                    '<b>/sendtoall</b> - отправить сообщение на всех пользователей')
         await message.answer(help_msg, protect_content=False, parse_mode='HTML')
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -919,7 +919,7 @@ async def continue_show_article(message: types.Message, state: FSMContext):
     if not article_id:
         await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
         await state.finish()
-        user_logger.warning(f"/show_article : не получилось найти новость по ссылке {data['link']}")
+        user_logger.warning(f"/show_article : не получилось найти новость по ссылке '{data['link']}'")
         return
 
     data_article_dict = apd_obj.get_article_by_link(data['link'])
@@ -1203,7 +1203,6 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         await types.ChatActions.typing()
         ap_obj = ArticleProcess(logger)
         msg_text = message.text.replace('«', '"').replace('»', '"')
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
         # проверка пользовательского сообщения на запрос новостей по отраслям
         subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
@@ -1216,6 +1215,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                 articles = reply_msg.split('\n\n')
                 for article in articles:
                     await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
             return
 
         # проверка пользовательского сообщения на запрос новостей по клиентам/товарам
@@ -1265,12 +1265,15 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                             else:
                                 logger.error(f"MessageIsTooLong ERROR: {article}")
 
-                return_ans = True
+                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
+                return
 
         if not return_ans:
             return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
 
-        if not return_ans:
+        if return_ans:
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
+        else:
             await types.ChatActions.typing()
             global chat
             global token

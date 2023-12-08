@@ -104,7 +104,7 @@ for group in commodity_rating_system_dict:
 
 def find_bad_gas(names: str, clean_text: str) -> str:
     if 'газ' in names:
-        if search('парниковый|углекислый| сектор газ ', clean_text):
+        if search('газета|парниковый|углекислый| сектор газ ', clean_text):
             names_list = names.split(';')
             names_list.remove('газ')
             names = ';'.join(names_list)
@@ -408,14 +408,15 @@ def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str
         giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except Exception as e:
-        logger.error(e)
-        print(f'Error while make summary: {e}')
+        logger.error(f'Ошибка при создании саммари: {e}')
+        print(f'Ошибка при создании саммари: {e}')
         giga_answer = ''
 
     paragraphs = giga_answer.split('\n\n')
     giga_answer = '\n'.join([p for p in paragraphs if p.strip()])
 
     if giga_answer in BAD_GIGA_ANSWERS:
+        logger.error(f'GigaChat отказался генерировать саммари из-за цензуры')
         giga_answer = ''
 
     return giga_answer
@@ -490,12 +491,12 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
     # find subject name in text
-    logger.debug(f'Нахождение client в тексте новости')
+    logger.debug(f'Нахождение клиентов в тексте новости')
     df[['client', 'client_impact']] = df.apply(
         lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)), axis=1)
     df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
 
-    logger.debug(f'Нахождение commodity в тексте новости')
+    logger.debug(f'Нахождение товаров в тексте новости')
     df[['commodity', 'commodity_impact']] = df.apply(
         lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1)
     df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
@@ -540,7 +541,7 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     df = df.query('not client_score.isnull() and client_score != 0 or '
                   'not commodity_score.isnull() and commodity_score != 0')
     now_len = len(df)
-    logger.info(f'Удаление нерелевантных новостей, количество новостей - {old_len - now_len}')
+    logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
@@ -607,8 +608,9 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
         df['unique'][actual_pos - start] = flag_unique
 
     # удаляем дубли из нового батча
-    df = df[df['unique']]
-    df.drop(columns=['unique'], inplace=True)
+    if not df.empty:
+        df = df[df['unique']]
+        df.drop(columns=['unique'], inplace=True)
 
     logger.info(f'Количество новостей из базы данных за последние 14 дней - {len(df_previous)}')
     logger.info(f'Количество новостей после удаления дублей - {len(df)}')

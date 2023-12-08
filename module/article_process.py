@@ -1,9 +1,8 @@
 import os
 import datetime as dt
 import numpy as np
-import re
-import urllib.parse
 import json
+from urllib.parse import unquote, urlparse
 from typing import List, Dict
 
 import pandas as pd
@@ -124,7 +123,7 @@ class ArticleProcess:
         df['text'] = df['text'].str.replace('»', '"')
         df['title'] = df['title'].str.replace('«', '"')
         df['title'] = df['title'].str.replace('»', '"')
-        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms'))
+        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms') + pd.to_timedelta(3, unit='h'))
         try:
             df = df.groupby('link').apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0],
                                                                'text': x['text'].iloc[0]})).reset_index()
@@ -217,12 +216,13 @@ class ArticleProcess:
         """
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
-        links_value = ", ".join([f"'{urllib.parse.unquote(link)}'" for link in self.df_article["link"].values.tolist()])
+        links_value = ", ".join([f"'{unquote(link)}'" for link in self.df_article["link"].values.tolist()])
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
-            self._logger.warning(f'В выгрузке содержатся старые новости! Количество выгрузки после их удаления - {self.df_article}')
+            self._logger.warning(f'В выгрузке содержатся старые новости! Количество новостей после их удаления - '
+                                 f'{len(self.df_article)}')
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
@@ -459,7 +459,6 @@ class ArticleProcess:
             return client_name, client
 
         return client_name, new_df
-        
 
     @staticmethod
     def _make_place_number(number):
@@ -723,7 +722,11 @@ class FormatText:
 
     @property
     def link(self):
-        return f'<a href="{self.__link}">Источник</a>'
+        url = urlparse(self.__link)
+        base_url = url.netloc.split('www.')[-1]
+        if base_url == 't.me':
+            base_url = f"{base_url}/{url.path.split('/')[1]}"
+        return f'<a href="{self.__link}">{base_url}</a>'
 
     @property
     def text_sum(self):
