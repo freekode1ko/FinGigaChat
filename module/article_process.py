@@ -1,9 +1,8 @@
 import os
 import datetime as dt
 import numpy as np
-import re
-import urllib.parse
 import json
+from urllib.parse import unquote, urlparse
 from typing import List, Dict
 
 import pandas as pd
@@ -12,6 +11,7 @@ from sqlalchemy.exc import ProgrammingError
 
 from config import psql_engine
 from module.model_pipe import deduplicate, model_func, model_func_online, add_text_sum_column
+from module.logger_base import Logger
 
 
 TIME_LIVE_ARTICLE = 100
@@ -32,7 +32,8 @@ class ArticleError(Exception):
 
 
 class ArticleProcess:
-    def __init__(self):
+    def __init__(self, logger: Logger.logger):
+        self._logger = logger
         self.engine = create_engine(psql_engine, pool_pre_ping=True)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
@@ -42,8 +43,7 @@ class ArticleProcess:
         filename = '' if not list_of_files else list_of_files[0]
         return filename
 
-    @staticmethod
-    def load_file(filepath: str, type_of_article: str) -> pd.DataFrame:
+    def load_file(self, filepath: str, type_of_article: str) -> pd.DataFrame:
         """
         Load and process articles file.
         :param filepath: file path to Excel file with articles
@@ -56,7 +56,10 @@ class ArticleProcess:
                          "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
                          "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
                          "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
-                         "//(|www.)pronedra.ru")  # TODO: дополнять
+                         "//(|www.)pronedra.ru|metallplace.ru|rzd-partner.ru|morvesti.ru|morport.com|gudok.ru|"
+                         "eprussia.ru|metallicheckiy-portal.ru|gmk.center|bigpowernews.ru|metaltorg.ru|new-retail.ru|"
+                         "agroinvestor.ru|comnews.ru|telecomdaily.ru|vestnik-sviazy.ru|neftegaz.ru|chemicalnews.ru|"
+                         "ru.tradingview.com|osnmedia.ru|forbes.ru|expert.ru|rupec.ru")  # TODO: дополнять
 
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
@@ -69,9 +72,9 @@ class ArticleProcess:
         df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
         df_subject = df_subject[columns]
 
-        print(f'-- got {len(df_subject)} {type_of_article} articles')
+        self._logger.info(f'Получено {len(df_subject)} {type_of_article} новостей')
         df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
-        print(f'-- remove some sources, so len is {len(df_subject)}')
+        self._logger.info(f'Убраны некоторые источники, количество новостей - {len(df_subject)}')
 
         df_subject['text'] = df_subject['text'].str.replace('«', '"')
         df_subject['text'] = df_subject['text'].str.replace('»', '"')
@@ -87,14 +90,13 @@ class ArticleProcess:
                 'text': x['text'].iloc[0],
                 type_of_article: ';'.join(x[type_of_article]),
             })).reset_index()
-            print(f'-- group by link, so len of articles is {len(df_subject)}')
+            self._logger.info(f'Объединение новостей по одинаковым ссылкам, количество новостей - {len(df_subject)}')
         except Exception as e:
-            print(f'-- Error: {e}')
+            self._logger.error(f'Ошибка при объединении ссылок: {e}')
 
         return df_subject
 
-    @staticmethod
-    def preprocess_article_online(df: pd.DataFrame):
+    def preprocess_article_online(self, df: pd.DataFrame):
         """
         Preprocess articles dataframe and set df.
         :param df: df with articles
@@ -108,13 +110,13 @@ class ArticleProcess:
         df = df.rename(columns=new_name_columns)
 
         df = df[~df['source'].isin(source_filter)]
-        print(f'-- remove foreign source, so len of articles is {len(df)}')
+        self._logger.info(f'Удаление иностранных ресурсов, количество новостей - {len(df)}')
 
         df = df.dropna(subset='text')
-        print(f'-- remove empty text, so len of articles is {len(df)}')
+        self._logger.info(f'Удаление новостей с пустым текстом, количество новостей - {len(df)}')
 
         df = df[~df['text'].str.contains(not_finish_article_filter, case=False)]
-        print(f'-- remove not finish article, so len of articles is {len(df)}')
+        self._logger.info(f'Удаление незаконченных новостей, количество новостей - {len(df)}')
 
         gotten_ids = dict(id=df['id'].values.tolist())
         gotten_ids = json.dumps(gotten_ids)
@@ -124,20 +126,19 @@ class ArticleProcess:
         df['text'] = df['text'].str.replace('»', '"')
         df['title'] = df['title'].str.replace('«', '"')
         df['title'] = df['title'].str.replace('»', '"')
-        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms'))
+        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms') + pd.to_timedelta(3, unit='h'))
         try:
             df = df.groupby('link').apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0],
                                                                'text': x['text'].iloc[0]})).reset_index()
-            print(f'-- group by link, so len of articles is {len(df)}')
+            self._logger.info(f'Объединение новостей по одинаковым ссылкам, количество новостей - {len(df)}')
         except Exception as e:
-            print(e)
+            self._logger.error(f'Ошибка при объединении ссылок: {e}')
 
         return df, gotten_ids
 
-    @staticmethod
-    def throw_the_models(df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
+    def throw_the_models(self, df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
         """ Call model pipe func """
-        df = model_func_online(df) if online_flag else model_func(df, name)
+        df = model_func_online(self._logger, df) if online_flag else model_func(self._logger, df, name)
         return df
 
     def drop_duplicate(self):
@@ -156,11 +157,11 @@ class ArticleProcess:
                      f"WHERE '{dt_now}' - a.date < '15 day' "
                      f"GROUP BY a.id, ani.cleaned_data")
         old_articles = pd.read_sql(old_query, con=self.engine)
-        self.df_article = deduplicate(self.df_article, old_articles)
+        self.df_article = deduplicate(self._logger, self.df_article, old_articles)
 
     def make_text_sum(self):
         """ Call summary func """
-        self.df_article = add_text_sum_column(self.df_article)
+        self.df_article = add_text_sum_column(self._logger, self.df_article)
 
     def delete_old_article(self):
         """ Delete from db article if there are 10 articles for each subject """
@@ -182,12 +183,12 @@ class ArticleProcess:
             conn.execute(text(query_delete))
             conn.commit()
             len_after = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
-            print(f'-- delete {len_before[0] - len_after[0]} articles')
+            self._logger.info(f'Удалено {len_before[0] - len_after[0]} новостей')
             dt_now = dt.datetime.now()
             conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
             conn.commit()
             len_finish = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
-            print(f'-- delete {len_after[0] - len_finish[0]} articles with date > 100 days ago')
+            self._logger.info(f'Удалено {len_after[0] - len_finish[0]} новостей с датой публикации больше 100 дней назад')
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
@@ -208,7 +209,8 @@ class ArticleProcess:
         df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
         self.df_article = df_article[['link', 'title', 'date', 'text', 'client', 'commodity', 'client_impact',
                                       'commodity_impact', 'client_score', 'commodity_score', 'cleaned_data']]
-        print(f'-- common article in commodity and client files is {len(df_client_commodity)}')
+        self._logger.info(f'Количество одинаковых новостей в выгрузках по клиентам и товарам - {len(df_client_commodity)}')
+        self._logger.info(f'Количество новостей после объединения выгрузок - {len(df_article)}')
 
     def save_tables(self) -> None:
         """
@@ -217,17 +219,18 @@ class ArticleProcess:
         """
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
-        links_value = ", ".join([f"'{urllib.parse.unquote(link)}'" for link in self.df_article["link"].values.tolist()])
+        links_value = ", ".join([f"'{unquote(link)}'" for link in self.df_article["link"].values.tolist()])
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
-            print('-- there are old articles in these batch !!!')
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
+            self._logger.warning(f'В выгрузке содержатся старые новости! Количество новостей после их удаления - '
+                                 f'{len(self.df_article)}')
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
-        print(f'-- save {len(article)} articles in database')
+        self._logger.info(f'Сохранено {len(article)} новостей')
 
         # add ids to df_article from article table from db
         query_ids = f"SELECT id, link FROM article WHERE link IN ({links_value})"
@@ -240,7 +243,7 @@ class ArticleProcess:
         article_name_impact = self.df_article[['id', 'cleaned_data', 'client_impact', 'commodity_impact']].rename(
             columns={'id': 'article_id'})
         article_name_impact.to_sql('article_name_impact', con=self.engine, if_exists='append', index=False)
-        print('-- save article impact in database')
+        self._logger.debug('Сохранены вхождения объектов')
 
         # make relation tables between articles and client and commodity
         self._make_save_relation_article_table('client')
@@ -266,7 +269,7 @@ class ArticleProcess:
                                                                                   f'{name}_score']]
         # save relation df to database
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
-        print(f'-- relation_{name}_article is {len(df_relation_subject_article)}')
+        self._logger.info(f'В таблицу relation_{name}_article добавлено {len(df_relation_subject_article)} строк')
 
     def find_subject_id(self, message: str, subject: str):
         """
@@ -459,7 +462,6 @@ class ArticleProcess:
             return client_name, client
 
         return client_name, new_df
-        
 
     @staticmethod
     def _make_place_number(number):
@@ -557,12 +559,14 @@ class ArticleProcess:
             reply_msg = self.make_format_industry_msg(articles)
             return '', reply_msg, img_name_list
         else:
+            # данный случай не вызывается
             print('user do not want articles')
             return '', False, img_name_list
 
         com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
 
         if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+            self._logger.warning(f'По {subject_name} не найдены новости')
             reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
         return com_cotirov, reply_msg, img_name_list
@@ -582,7 +586,8 @@ class ArticleProcess:
                                  "INNER JOIN relation_{}_article ON "
                                  "article.id = relation_{}_article.article_id "
                                  "INNER JOIN {} ON relation_{}_article.{}_id = {}.id "
-                                 "WHERE (date > now() - interval '{} hours')"
+                                 "WHERE (date > now() - interval '{} hours') and {}_score > 0"
+                                 "ORDER BY {}_score desc, date asc;"
                                  .format(columns, *table, hours), con=self.engine)
 
     def get_client_comm_industry_dictionary(self):
@@ -605,15 +610,22 @@ class ArticleProcessAdmin:
     def __init__(self):
         self.engine = create_engine(psql_engine)
 
+    def get_article_id_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                article_id = conn.execute(text(f"SELECT id FROM article WHERE link='{link}'")).fetchone()[0]
+            return article_id
+        except (TypeError, ProgrammingError):
+            return
+
     def get_article_text_by_link(self, link: str):
         try:
             with self.engine.connect() as conn:
-                article = conn.execute(text(f"SELECT * FROM article WHERE link='{link}'")).fetchone()
-                full_text, text_sum = article[4], article[5]
+                article = conn.execute(text(f"SELECT text, text_sum FROM article WHERE link='{link}'")).fetchone()
+                full_text, text_sum = article[0], article[1]
+            return full_text, text_sum
         except (TypeError, ProgrammingError):
             return '', ''
-        else:
-            return full_text, text_sum
 
     def get_article_by_link(self, link: str):
         dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
@@ -667,42 +679,22 @@ class ArticleProcessAdmin:
         except Exception as e:
             return e
 
-    def delete_article_by_link(self, link: str):
+    def change_score_article_by_id(self, article_id: int):
         try:
             with self.engine.connect() as conn:
-                conn.execute(text(f"DELETE FROM article WHERE link='{link}'"))
+                query = 'update relation_{subject}_article set {subject}_score=0 where article_id={id}'
+                conn.execute(text(query.format(subject='client', id=article_id)))
+                conn.execute(text(query.format(subject='commodity', id=article_id)))
                 conn.commit()
+                return True
         except (TypeError, ProgrammingError):
             return False
-        else:
-            return True
 
     def insert_new_gpt_summary(self, new_text_summary, link):
         """ Insert new gpt summary into database """
         with self.engine.connect() as conn:
             conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link='{link}'"))
             conn.commit()
-
-    @staticmethod
-    def find_not_relevant_news(article: str):
-        for expression in NOT_RELEVANT_EXPRESSION:
-            article = article.lower()
-            regular = f'{expression}'
-            if re.search(regular, article):
-                return False
-            else:
-                return True
-
-    def get_bad_article(self):
-        """ Get article data if it contains bad word """
-        df = pd.read_sql("SELECT link, text FROM article ORDER BY date DESC", con=self.engine)
-        df['relevant'] = df['text'].apply(lambda x: ArticleProcessAdmin.find_not_relevant_news(x))
-        df = df[~df['relevant']]
-        bad_links = df['link'].values.tolist()
-        msgs = []
-        for link in bad_links:
-            msgs.append(self.get_article_by_link(link))
-        return msgs[:5]
 
 
 class FormatText:
@@ -733,7 +725,11 @@ class FormatText:
 
     @property
     def link(self):
-        return f'<a href="{self.__link}">Источник</a>'
+        url = urlparse(self.__link)
+        base_url = url.netloc.split('www.')[-1]
+        if base_url == 't.me':
+            base_url = f"{base_url}/{url.path.split('/')[1]}"
+        return f'<a href="{self.__link}">{base_url}</a>'
 
     @property
     def text_sum(self):
