@@ -1307,7 +1307,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
 
                 response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
                 await message.answer(response, protect_content=False)
-                user_logger.debug(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+                user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
 
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)

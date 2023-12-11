@@ -56,7 +56,10 @@ class ArticleProcess:
                          "www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|"
                          "//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|"
                          "//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|"
-                         "//(|www.)pronedra.ru")  # TODO: дополнять
+                         "//(|www.)pronedra.ru|metallplace.ru|rzd-partner.ru|morvesti.ru|morport.com|gudok.ru|"
+                         "eprussia.ru|metallicheckiy-portal.ru|gmk.center|bigpowernews.ru|metaltorg.ru|new-retail.ru|"
+                         "agroinvestor.ru|comnews.ru|telecomdaily.ru|vestnik-sviazy.ru|neftegaz.ru|chemicalnews.ru|"
+                         "ru.tradingview.com|osnmedia.ru|forbes.ru|expert.ru|rupec.ru")  # TODO: дополнять
 
         if type_of_article == 'client':
             new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'New Topic Confidence': 'coef',
@@ -577,15 +580,12 @@ class ArticleProcess:
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
         return Дата Фрейм с таблицей по объекту собранной из бд
         """
-        table = [f'{table} ' * 6]
-        table = table[0].split()
-        return pd.read_sql_query("SELECT {} FROM article "
-                                 "INNER JOIN relation_{}_article ON "
-                                 "article.id = relation_{}_article.article_id "
-                                 "INNER JOIN {} ON relation_{}_article.{}_id = {}.id "
-                                 "WHERE (date > now() - interval '{} hours') and {}_score > 0"
-                                 "ORDER BY {}_score desc, date asc;"
-                                 .format(columns, *table, hours), con=self.engine)
+        return pd.read_sql_query(f"SELECT {columns} FROM article "
+                                 f"INNER JOIN relation_{table}_article ON "
+                                 f"article.id = relation_{table}_article.article_id "
+                                 f"INNER JOIN {table} ON relation_{table}_article.{table}_id = {table}.id "
+                                 f"WHERE (date > now() - interval '{hours} hours') and {table}_score > 0 "
+                                 f"ORDER BY {table}_score desc, date asc;", con=self.engine)
 
     def get_client_comm_industry_dictionary(self):
         """
