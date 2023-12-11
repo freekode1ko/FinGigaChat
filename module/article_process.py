@@ -580,15 +580,15 @@ class ArticleProcess:
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
         return Дата Фрейм с таблицей по объекту собранной из бд
         """
-        table = [f'{table} ' * 6]
+        table = [f'{table} ' * 7]
         table = table[0].split()
         return pd.read_sql_query("SELECT {} FROM article "
                                  "INNER JOIN relation_{}_article ON "
                                  "article.id = relation_{}_article.article_id "
                                  "INNER JOIN {} ON relation_{}_article.{}_id = {}.id "
-                                 "WHERE (date > now() - interval '{} hours') and {}_score > 0"
+                                 "WHERE (date > now() - interval '{} hours') and {}_score > 0 "
                                  "ORDER BY {}_score desc, date asc;"
-                                 .format(columns, *table, hours), con=self.engine)
+                                 .format(columns, *table[:-1],  hours, *table[-2:]), con=self.engine)
 
     def get_client_comm_industry_dictionary(self):
         """
