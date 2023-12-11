@@ -50,7 +50,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
-sample_of_news_title = '{}\n<i><a href="{}"></i>{}</a>\n\n'
+sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -1510,7 +1510,8 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
                     message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
                 await bot.send_message(user_id, text=message_block, parse_mode='HTML',
                                        protect_content=False, disable_web_page_preview=True)
-        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка ({subscriptions})')
+        user_logger.debug(f"*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. "
+                          f"Активные подписки на момент рассылки: {user['subscriptions']}")
     logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
                 'Переходим в ожидание следующей рассылки.')
     await asyncio.sleep(100)
