@@ -69,7 +69,7 @@ class Main:
             self.transformer_obj.five_year_graph(data, name)
 
         elif 'metals-wire' in url:
-            euro_standart, page_html = self.parser_obj.get_html(url, session)
+            euro_standard, page_html = self.parser_obj.get_html(url, session)
             page_html = json.loads(page_html)
             data = pd.DataFrame()
             for day in page_html:
@@ -90,7 +90,7 @@ class Main:
                 f.write(response.content)
         else:
             name = url.split('/')[-1]
-            euro_standart, page_html = self.parser_obj.get_html(url, session)
+            euro_standard, page_html = self.parser_obj.get_html(url, session)
             auth = re.findall(r"TESecurify = ('.+');", page_html)
             graph_url = '{}chart?s=lmahds03:com&' \
                         'span=5y&' \
@@ -265,7 +265,7 @@ class Main:
         exchange_kot = []
         if table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
             if exchange_page == 'usd-rub':
-                euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
+                euro_standard, page_html = self.parser_obj.get_html(table_exchange[2], session)
                 tables = pd.read_html(page_html)
                 for table in tables:
                     try:
@@ -286,7 +286,7 @@ class Main:
                 logger.debug('Таблица exchange_kot (Exchange) собрана')
 
         elif table_exchange[0] == 'Курсы валют' and exchange_page in ['usd-cnh', 'usdollar']:
-            euro_standart, page_html = self.parser_obj.get_html(table_exchange[2], session)
+            euro_standard, page_html = self.parser_obj.get_html(table_exchange[2], session)
             tree = html.fromstring(page_html)
             data = tree.xpath('//*[@id="__next"]/div[2]/div//text()')
             price = self.find_number(data)
@@ -302,17 +302,17 @@ class Main:
         metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
 
         if table_metals[0] == 'Металлы' and page_metals == 'LMCADS03:COM':
-            euro_standart, page_html = self.parser_obj.get_html(table_metals[2], session)
+            euro_standard, page_html = self.parser_obj.get_html(table_metals[2], session)
             tree = html.fromstring(page_html)
             object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div/main/div/div[1]/div[4]/div'
             price = tree.xpath('{}/div[1]/text()'.format(object_xpath))
             price_diff = tree.xpath('{}/div[2]/span/span/text()'.format(object_xpath))
+            temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
             try:
                 row = ['Медь', price[0], price_diff[0]]
                 temp_df = pd.DataFrame([row], columns=['Metals', 'Price', 'Day'])
-            except:
-                logger.error('Ошибка получения таблицы с медью!')
-                temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
+            except Exception as ex:
+                logger.error(f'Ошибка ({ex}) получения таблицы с медью!')
             metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
             logger.debug('Таблица metals_bloom собрана')
 

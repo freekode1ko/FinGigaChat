@@ -22,14 +22,14 @@ class Transformer:
         return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
 
     @staticmethod
-    def get_table_from_html(euro_standart: bool, html: str):
+    def get_table_from_html(euro_standard: bool, html: str):
         """
         Take all tables from html code
-        :param euro_standart: Bool value for separators of decimals and thousands
+        :param euro_standard: Bool value for separators of decimals and thousands
         :param html: HTML codes as text
         :return: list with DataFrames
         """
-        # if euro_standart:
+        # if euro_standard:
         #     return pd.read_html(html)
         html_rep = html.replace('.', ',')
         return pd.read_html(html_rep, decimal=',', thousands='.')
