@@ -580,8 +580,6 @@ class ArticleProcess:
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
         return Дата Фрейм с таблицей по объекту собранной из бд
         """
-        table = [f'{table} ' * 7]
-        table = table[0].split()
         return pd.read_sql_query(f"SELECT {columns} FROM article "
                                  f"INNER JOIN relation_{table}_article ON "
                                  f"article.id = relation_{table}_article.article_id "
