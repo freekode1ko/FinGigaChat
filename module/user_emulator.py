@@ -33,7 +33,7 @@ class ResearchParser:
     """
 
     def __init__(self, driver, logger: Logger.logger):
-        home_page = 'https://research.sberbank-cib.com'
+        home_page = config.research_base_url[:-1]  # 'https://research.sberbank-cib.com'
         login = config.research_cred[0]
         password = config.research_cred[1]
 
@@ -103,7 +103,8 @@ class ResearchParser:
         password_field.send_keys(password)
         password_field.send_keys(Keys.ENTER)
         # TODO: check that I go into research
-        time.sleep(5)
+        self.__sleep_some_time(5.0, 6.0)
+        # time.sleep(5)
 
     def find_tab(self, tab: str):
         """
@@ -195,6 +196,7 @@ class ResearchParser:
         try:
             element.send_keys(Keys.ESCAPE)
         except selenium.common.exceptions.ElementNotInteractableException:
+            self._logger.error('Проблема в работе selenium. Не удалось закрыть окно.')
             self.driver.find_element('class name', 'fancybox-item.fancybox-close').click()
         self._logger.info('Получили дату и текст отчета')
         return date, text
@@ -231,8 +233,11 @@ class ResearchParser:
 
         # get data of all reviews
         reviews_data = []
-        for review_element in reviews_elements:
+        reviews_elements_size = len(reviews_elements)
+        self._logger.info(f'Собираем содержимое для всех отчетов. Всего в обработке {reviews_elements_size} отчетов')
+        for review_num, review_element in enumerate(reviews_elements):
             title = review_element.text
+            self._logger.debug(f'Отчет {title} в обработке. {review_num+1} из {reviews_elements_size}')
             date, text = self.get_date_and_text_of_review(review_element, type_of_review)
             reviews_data.append((title, text, date))
 
@@ -261,12 +266,14 @@ class ResearchParser:
         self._logger.info(f'Открываем страницу о ключевых показателях компании: {url}')
         self.driver.implicitly_wait(5)
         self.driver.get(url)
-        time.sleep(60)
+        self.__sleep_some_time(60.0, 65.0)
+        # time.sleep(60)
 
         page_html = self.driver.page_source
-        
+
+        self._logger.info(f'Ищем в html нужную таблицу')
         soup = BeautifulSoup(page_html, "html.parser")
-        table_soup = soup.find('table', attrs={'class':"grid container black right victim"})
+        table_soup = soup.find('table', attrs={'class': "grid container black right victim"})
         headers = []
         head = table_soup.find('thead').find('tr')
         for td in head:
@@ -290,14 +297,15 @@ class ResearchParser:
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
         df = df.drop(index=0).reset_index(drop=True)
 
-        table_soup_al_name = soup.find('table', attrs={'class':"grid container black right"})
+        table_soup_al_name = soup.find('table', attrs={'class': "grid container black right"})
         aliases = []
         names = []
         aliases_longevity = []
+
         for elem in table_soup_al_name:
             col_text = elem.find('td').text.strip()
-            if col_text != '' :
-                if 'name'in elem.find('td').get('class') and 'Норма' not in col_text:
+            if col_text != '':
+                if 'name' in elem.find('td').get('class') and 'Норма' not in col_text:
                     names.append(col_text)
                     aliases_longevity.append(1)
                 else:
@@ -305,7 +313,7 @@ class ResearchParser:
                     aliases_longevity.append(0)
 
         df['name'] = names
-                
+
         counts = []
         counter = 0
 
@@ -318,14 +326,14 @@ class ResearchParser:
 
         counts.append(counter)
         del counts[0]
-        
+
         aliases_series = pd.Series(aliases)
         aliases_series = aliases_series.repeat(counts).reset_index(drop=True)
 
         df['id'] = range(1, df.shape[0] + 1)
         df['alias'] = aliases_series
         idx_name = list(df.columns).index('name')
-        cols = df.columns[idx_name-4:idx_name+1]
+        cols = df.columns[idx_name - 4:idx_name + 1]
         df_new = df[cols]
         numeric_cols = []
         for col in df_new.columns:
@@ -334,22 +342,22 @@ class ResearchParser:
         df_new = df[['id'] + ['name'] + numeric_cols + ['alias']].copy()
 
         return df_new
-    
-    @staticmethod
-    def __get_client_fin_indicators(page_html, company):
+
+    def __get_client_fin_indicators(self, page_html, company):
         """
-        Get singe compay financial indicators table
+        Get singe company financial indicators table
         :param page_html: html page of company
         :param company: company name
         :return: table in DataFrame format
         """
-
+        self._logger.info(f'Получение таблицы финансовых показателей для компании: {company}')
         soup = BeautifulSoup(page_html, "html.parser")
-        table_soup = soup.find('div', attrs={'class':"report company-summary-financials"}).\
-        find('div', attrs={'class':'grid_container grid-bottom-border'}).\
-        find('div', attrs={'class':'table-scroll'}).\
-        find('table', attrs={'class':'grid container black right'})
+        table_soup = soup.find('div', attrs={'class': "report company-summary-financials"}). \
+            find('div', attrs={'class': 'grid_container grid-bottom-border'}). \
+            find('div', attrs={'class': 'table-scroll'}). \
+            find('table', attrs={'class': 'grid container black right'})
 
+        self._logger.debug(f'Обработка найденной таблицы для компании {company}')
         tables = pd.read_html(str(table_soup), thousands='', decimal=',')
         df = tables[0]
         df['Unnamed: 0'].fillna(method='ffill', inplace=True)
@@ -358,9 +366,9 @@ class ResearchParser:
         df = df.dropna(how='all', subset=df.columns.difference(['alias']))
         df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace('\xa0', ''))
         df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace(',', '.'))
-
         df = df.rename(columns={'Unnamed: 1': 'name'})
 
+        self._logger.debug(f'Выборка нужных значений из собранной таблицы для {company}')
         cols_to_convert = df.columns[~df.columns.isin(['alias', 'name'])]
         mask = ~df.apply(lambda x: 'IFRS' in x.values, axis=1)
         df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
@@ -369,29 +377,32 @@ class ResearchParser:
         df_new = df.loc[:, numeric_cols]
         df_new = df[['name'] + numeric_cols + ['alias']].copy()
         df_new['company'] = company.lower()
-
         return df_new
 
     def get_companies_financial_indicators_table(self):
         """
-        Get financial indicators table for all companies
+        Get financial indicators' table for all companies
         :return: table in dataframe format
         """
-
+        self._logger.info('Получение таблиц с фин.показателями для всех компаний')
         companies = copy.deepcopy(config.dict_of_companies)
-        companies_research_link = 'https://research.sberbank-cib.com/group/guest/companies?companyId=id_id'
+        companies_research_link = f'{config.research_base_url}group/guest/companies?companyId=id_id'
 
         fin_indicators_tables = {}
         for company in companies:
+
             link = copy.deepcopy(companies_research_link)
             link = link.replace('id_id', companies[company]['company_id'])
-            time.sleep(3)
+            self.__sleep_some_time(3.0, 4.0)
+            # time.sleep(3)
             self.driver.get(link)
 
             page_html = self.driver.page_source
             fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
             fin_indicators_tables[company] = fin_indicators_table
+            self._logger.info(f'Таблица для {company} - получена')
 
+        self._logger.info('Предварительная обработка таблиц')
         result = pd.concat(list(fin_indicators_tables.values()))
         result['id'] = range(1, result.shape[0] + 1)
         result = result.replace('Рентабельность', 'Рентабельность, %')
@@ -404,16 +415,17 @@ class ResearchParser:
 
         return result
 
-    @staticmethod
-    def get_emulator_cookies(driver) -> requests.Session():
+    def get_emulator_cookies(self, driver) -> requests.Session():
         """
         Sets selenium session params to requests.Session() object
         :param driver: driver to retrieve session params
         :return session:
         """
-
+        self._logger.debug('Загрузка и установка параметров драйвера для selenium')
         cookies = driver.get_cookies()
-        headers = {header["name"]: header["value"] for header in driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming") if header.get("name")}
+        headers = {header["name"]: header["value"] for header in
+                   driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming") if
+                   header.get("name")}
         session = requests.Session()
         session.verify = False
         session.headers.update(headers)
@@ -427,130 +439,138 @@ class ResearchParser:
         :param id: id of industry in SberResearch
         :param value: name of industry in SberResearch
         """
-
-        url = config.industry_base_url.format(id)
         pdf_dir = f'{config.path_to_source}/reviews'
+        self._logger.info(f'Скачивание отчета по индустриям с Research в {pdf_dir}')
+        url = config.industry_base_url.format(id)
         filename = None
         date = None
         old = []
         self.driver.get(url)
-
-        self.__sleep_some_time()
-        time.sleep(10)
-        reviews = self.driver.find_element(By.XPATH,
-                                                '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
-
-        self.__sleep_some_time()
-        time.sleep(10)
-        reviews_rows = self.driver.find_elements(By.XPATH,
-                                                f"//div[contains(@title, '{value}')]")
-
-        for review in reviews_rows:
-            link = review.find_element(By.XPATH,"./a[1]")
+        self.__sleep_some_time(10.0, 12.0)
+        reviews = self.driver.find_element(By.XPATH, '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
+        self.__sleep_some_time(10.0, 12.0)
+        reviews_rows = self.driver.find_elements(By.XPATH, f"//div[contains(@title, '{value}')]")
+        reviews_size = len(reviews_rows)
+        self._logger.debug(f'Обработка отчетов по индустриям ({reviews_size})')
+        for review_num, review in enumerate(reviews_rows):
+            self._logger.debug(f'Начало обработки отчет по индустриям № {review_num+1} из {reviews_size}')
+            link = review.find_element(By.XPATH, "./a[1]")
             self.driver.execute_script("arguments[0].scrollIntoView();", link)
-            filename = review.get_attribute('title').replace(' ','_')
-            date = review.find_element(By.XPATH,'..').\
-                find_element(By.XPATH,'..').\
-                find_element(By.CLASS_NAME,'date').text
+            filename = review.get_attribute('title').replace(' ', '_')
+            self._logger.debug(f'Установлено название обрабатываемого отчета: {filename}')
+            date = review.find_element(By.XPATH, '..'). \
+                find_element(By.XPATH, '..'). \
+                find_element(By.CLASS_NAME, 'date').text
+            self._logger.debug(f'Установлена дата ({date}) для {filename}')
             filename = f'{filename}__{date}.pdf'
             filename = '{}/{}'.format(pdf_dir, filename)
             link.click()
-            break 
-        
+            self._logger.info(f'{filename} - Скачан')
+            break
+
         if not os.path.exists(pdf_dir):
             os.makedirs(pdf_dir)
         old = [f for f in os.listdir(pdf_dir) if value in f]
         if os.path.exists(filename):
             return
 
-        time.sleep(5)
-        download_report = self.driver.find_element(By.CLASS_NAME,
-                                                "file")
+        # time.sleep(5)
+        self.__sleep_some_time(5.0, 6.0)
+        download_report = self.driver.find_element(By.CLASS_NAME, "file")
         href = download_report.get_attribute("href")
 
         session = self.get_emulator_cookies(self.driver)
         response = session.get(href)
-        
+
         with open(filename, 'wb') as file:
             file.write(response.content)
 
         if old.__len__() > 0:
             os.remove(os.path.join(pdf_dir, old[0]))
-        
-    def get_industry_reviews(self):  
+
+    def get_industry_reviews(self):
         """
         Get all industry reviews
         """
-
-        print('---industry reviews---')
+        self._logger.info('Сборка отчетов по индустриям (отрасли)')
+        print('Сборка отчетов по индустриям (отрасли)')
         industry_reviews = config.industry_reviews
         for industry in industry_reviews:
             try:
+                self._logger.info(f'Получение отчета по {industry}')
                 self.__get_industry_pdf(industry, industry_reviews[industry])
-                print(f'{industry_reviews[industry]}..ok')
-            except Exception as e: 
-                print(f'{industry_reviews[industry]}..ERROR')
-                print(e)
-    
+                self._logger.info(f'Отчет по {industry} получен')
+                print(f'{industry_reviews[industry]}..ОК')
+            except Exception as e:
+                self._logger.error(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
+                print(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
+
     def get_weekly_review(self):
         """
         Get Research Weekly Pulse review pdf
         """
+        self._logger.info('Сборка Weekly Pulse')
         base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
         self.driver.get(base_url)
-
-        WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH,
-                    '//*[@id="all"]')) and EC.invisibility_of_element_located((By.ID, "all_loading")))
-        
-        self.driver.find_element(By.XPATH,
-                                         '//*[@id="all"]').click()
-
+        self._logger.debug('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
+        WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and
+                                             EC.invisibility_of_element_located((By.ID, "all_loading")))
+        self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
+        self._logger.debug('Поиск "Weekly Pulse" объектов')
         weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
         weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
 
         try:
+            self._logger.info('Начало обработки "Weekly Pulse" отчетов')
             while len(weeklies) < 1:
-                WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
-                                        and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
-                more = self.driver.find_element(By.XPATH,
-                                            '//*[@id="loadMorePublications"]')
+                self._logger.debug('Ожидание активации отчета')
+                WebDriverWait(self.driver, 30).until(
+                    EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
+                    and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
+                self._logger.debug('Поиск объекта для загрузки большего количества публикаций')
+                more = self.driver.find_element(By.XPATH, '//*[@id="loadMorePublications"]')
                 self.driver.execute_script("arguments[0].scrollIntoView();", more)
+                self._logger.debug('Загрузка следующих публикаций')
                 more.click()
-                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
+                self._logger.debug('Ожидание активации дополнительных отчетов')
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected(
+                    (By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
                 weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
-        except Exception as e: 
-            print('Weekly Pulse Review..ERROR')
-            print(e)
+        except Exception as e:
+            self._logger.error(f'Ошибка ({e}) в загрузке Weekly Pulse')
+            print(f'Ошибка ({e}) в загрузке Weekly Pulse')
             return
-        
-        weeklies[0].find_element(By.TAG_NAME,'a').click()
 
-        filename = f"{weeklies[0].text.replace(' ','_')}.pdf"
+        weeklies[0].find_element(By.TAG_NAME, 'a').click()
+
+        filename = f"{weeklies[0].text.replace(' ', '_')}.pdf"
         filename = '{}/{}'.format(weekly_dir, filename)
+        self._logger.debug('Проверка путей до Weekly Pulse')
 
         if not os.path.exists(weekly_dir):
             os.makedirs(weekly_dir)
 
         if os.path.exists(filename):
-                print('weekly review...ok')
-                return
+            self._logger.info('Weekly Pulse отчеты собраны')
+            print('Weekly Pulse отчеты собраны')
+            return
         else:
             old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
             if len(old) > 0:
                 os.remove(os.path.join(weekly_dir, old[0]))
 
-        self.__sleep_some_time(5, 6)
-        download_report = self.driver.find_element(By.CLASS_NAME,
-                                                    "file")
+        self.__sleep_some_time(5.0, 6.0)
+        download_report = self.driver.find_element(By.CLASS_NAME, "file")
         href = download_report.get_attribute("href")
 
         session = self.get_emulator_cookies(self.driver)
         response = session.get(href)
-            
+
         with open(filename, 'wb') as file:
             file.write(response.content)
 
+        self._logger.info('Сохранение ключевых слайдов с weekly review')
         images = convert_from_path(filename)
         images[2].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
         images[6].save('{}/{}'.format(weekly_dir, 'slide_6.png'))
@@ -565,7 +585,8 @@ class ResearchParser:
         image = images[6].crop((left, top, right, bottom))
         image.save('{}/{}'.format(weekly_dir, 'slide_6.png'))
         image.close()
-        print('weekly review...ok')
+        self._logger.info('Weekly review готов')
+        print('Weekly review готов')
 
 
 class InvestingAPIParser:
@@ -583,11 +604,11 @@ class InvestingAPIParser:
         :param url: investing.com api url
         :return: price chart df
         """
-
+        self._logger.info('Начала загрузки данных для графика с investing.com')
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'json').text
         json_obj = json.loads(data)
-
+        self._logger.debug('Обработка данных для графика с investing.com')
         df = pd.DataFrame()
         for day in json_obj['data']:
             date = Transformer.Transformer.unix_to_default(day[0])
@@ -595,7 +616,7 @@ class InvestingAPIParser:
             y = day[4]
             row = {'date': date, 'x': x, 'y': y}
             df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-
+        self._logger.info('Данных для графика готовы')
         return df
 
     def get_streaming_chart_investing(self, url: str):
@@ -604,7 +625,7 @@ class InvestingAPIParser:
         :param url: rows of text of money review
         :return: price chart df
         """
-
+        self._logger.info('Обработка данных для стримингового графика с investing.com')
         url = f'{url}-streaming-chart'
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
@@ -628,11 +649,12 @@ class MetalsWireParser:
         Get table data of MetalsWire
         :return: commodities price chart df
         """
+        self._logger.info('Сборка табличных данных для MetalsWire')
         self.driver.get(self.table_link)
         time.sleep(5)
         page_html = self.driver.page_source
         soup = BeautifulSoup(page_html, "html.parser")
-
+        self._logger.debug('Разметка табличных данных для MetalsWire')
         elems = soup.find(class_='table__container').find_all(class_='sticky-col')
         df = pd.DataFrame()
         for elem in elems:
@@ -643,5 +665,5 @@ class MetalsWireParser:
                 row = {'Resource': row_data[0].strip(), 'SPOT': row_data[4], '1M diff.': row_data[7],
                        'YTD diff.': row_data[8], "Cons-s'23": row_data[12]}
                 df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-
+        self._logger.info('Табличные данные для MetalsWire собраны и обработаны')
         return df
