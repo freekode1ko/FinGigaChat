@@ -61,9 +61,10 @@ class Parser:
         html = '<!doctype html><head><title></title></head><body><header>EMPTY PAGE</header></body></html>'
         if '.ru' in url:
             euro_standard = True
-        self._logger.debug(f'Сайт евростандарта: {euro_standard}')
+        self._logger.debug(f'Сайт {url} евростандарта: {euro_standard}')
 
         try:
+            self._logger.debug(f'Генерируем User-Agent для запроса')
             random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
             header = {'Accept': '*/*',
                       'User-Agent': random_user_agent,
@@ -73,8 +74,8 @@ class Parser:
             self._logger.info(f'{url} - Прокси УСПЕХ')
 
             if 'ddos-guard' in req_page.text.lower():
-                print('DDOS Guard found - trying to surpass metal gear...')
-                self._logger.warning('DDOS Guard found - trying to surpass metal gear...')
+                print('DDOS Guard found, trying to surpass metal gear...')
+                self._logger.warning('DDOS Guard found, trying to surpass metal gear...')
                 raise req.exceptions.ConnectionError
 
         except req.exceptions.ConnectionError:
@@ -85,7 +86,7 @@ class Parser:
                       'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header)
             html = req_page.text
-            self._logger.info(f'{url} - Прокси ПРОВАЛ')
+            self._logger.info(f'{url} Прокси ПРОВАЛ')
 
         except Exception as ex:
             self._logger.error(f'During collecting data from: {url}, except error: {ex}')
