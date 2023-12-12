@@ -171,13 +171,13 @@ class ArticleProcess:
                         f"(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn "
                         f"from relation_client_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep} and t1.client_score <> 0"
+                        f"where rn <= {count_to_keep} and t1.client_score > 0"
                         f"UNION "
                         f"select distinct article_id from "
                         f"(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn "
                         f"from relation_commodity_article r "
                         f"join article a on r.article_id = a.id) t1 "
-                        f"where rn <= {count_to_keep} and t1.commodity_score <> 0)")
+                        f"where rn <= {count_to_keep} and t1.commodity_score > 0)")
         with self.engine.connect() as conn:
             len_before = conn.execute(text("SELECT COUNT(id) FROM article")).fetchone()
             conn.execute(text(query_delete))
@@ -303,7 +303,7 @@ class ArticleProcess:
                       'FROM article '
                       ') AS article_ '
                       'ON article_.id = relation.article_id '
-                      'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score <> 0 '
+                      'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score > 0 '
                       '{condition} '
                       'ORDER BY date DESC, relation.{subject}_score DESC '
                       'LIMIT {count}')
@@ -373,7 +373,7 @@ class ArticleProcess:
                  "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
                  "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
                  "CASE {condition} THEN 1 "
-                 "WHEN r.{subject}_score<>0 THEN 2 "
+                 "WHEN r.{subject}_score >0 THEN 2 "
                  "END, "
                  "article.date desc, r.{subject}_score desc) rn "
                  "FROM relation_{subject}_article r "

@@ -104,7 +104,7 @@ for group in commodity_rating_system_dict:
 
 def find_bad_gas(names: str, clean_text: str) -> str:
     if 'газ' in names:
-        if search('газета|парниковый|углекислый| сектор газ ', clean_text):
+        if search('магазин|газета|парниковый|углекислый| сектор газ ', clean_text):
             names_list = names.split(';')
             names_list.remove('газ')
             names = ';'.join(names_list)
@@ -169,7 +169,9 @@ def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_art
     names_pattern = get_names_pattern(names, type_of_article)
 
     # Get new labels score based on rules
-    if title and isinstance(title, str) and search(stock_pattern, clean_text):
+    if labels == '-1':
+        return labels
+    elif title and isinstance(title, str) and search(stock_pattern, clean_text):
         clean_title = clean_data(title)
         if search(stock_pattern, clean_title):
             return '0'
@@ -293,7 +295,9 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
 
 
 def search_keywords(relevance, subject, clean_text, labels, rating_dict):
-    if not relevance or not subject:
+    if not subject:
+        labels = '-1'
+    elif not relevance:
         labels = '0'
     else:
         labels = str(labels)
@@ -538,8 +542,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df.query('not client_score.isnull() and client_score != 0 or '
-                  'not commodity_score.isnull() and commodity_score != 0')
+    df = df.query('not client_score.isnull() and client_score != -1 or '
+                  'not commodity_score.isnull() and commodity_score != -1')
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
