@@ -373,14 +373,13 @@ class ArticleProcess:
                  "(SELECT industry.name, {subject}.name, article.date, article.link, article.title, article.text_sum, "
                  "ROW_NUMBER() OVER(PARTITION BY {subject}.name ORDER BY "
                  "CASE {condition} THEN 1 "
-                 "WHEN r.{subject}_score >0 THEN 2 "
                  "END, "
                  "article.date desc, r.{subject}_score desc) rn "
                  "FROM relation_{subject}_article r "
                  "JOIN article ON r.article_id=article.id "
                  "JOIN {subject} ON {subject}.id=r.{subject}_id "
                  "JOIN industry ON industry.id={subject}.industry_id "
-                 "WHERE industry.id={industry_id}) t1 "
+                 "WHERE industry.id={industry_id} AND r.{subject}_score > 0 ) t1 "
                  "WHERE rn<=2 and CURRENT_DATE - date < '8 day' ")
 
         condition = CONDITION_TOP.format(condition_word='WHEN', table='article')
