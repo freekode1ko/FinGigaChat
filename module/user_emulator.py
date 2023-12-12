@@ -517,12 +517,12 @@ class ResearchParser:
         WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and
                                              EC.invisibility_of_element_located((By.ID, "all_loading")))
         self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
-        self._logger.debug('Поиск "Weekly Pulse" объектов')
+        self._logger.debug('Поиск Weekly Pulse отчета')
         weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
         weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
 
         try:
-            self._logger.info('Начало обработки "Weekly Pulse" отчетов')
+            self._logger.info('Начало обработки "Weekly Pulse" отчета')
             while len(weeklies) < 1:
                 self._logger.debug('Ожидание доступности отчета для открытия')
                 WebDriverWait(self.driver, 30).until(
