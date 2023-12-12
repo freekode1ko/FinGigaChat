@@ -393,7 +393,7 @@ class Main:
         logger.info(f'Обработка собранных таблиц ({size_tables}).')
         for enum, tables_row in enumerate(all_tables):
             logger.debug('{}/{}'.format(enum + 1, size_tables))
-            url_index = -1 if tables_row[2].split('/')[-1] else url_index = -2
+            url_index = -1 if tables_row[2].split('/')[-1] else -2
             source_page = tables_row[2].split('/')[url_index]
             logger.debug(f'Сборка таблицы {source_page} из блока {tables_row[0]}')
             # BONDS BLOCK
