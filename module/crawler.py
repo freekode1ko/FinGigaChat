@@ -1,8 +1,6 @@
-import requests.exceptions
-
+from module.logger_base import Logger
 from config import user_agents
 import requests as req
-import pandas as pd
 import random
 
 
@@ -25,10 +23,12 @@ proxy = Dictlist()
 
 
 class Parser:
+    def __init__(self, logger: Logger.logger):
+        self._logger = logger
+
     user_agents = user_agents
 
-    @staticmethod
-    def get_proxy_addresses() -> None:
+    def get_proxy_addresses(self) -> None:
         """
         Method to get free proxy list from web
         and load it to package variable
@@ -39,25 +39,7 @@ class Parser:
         proxy['https'] = ['socks5h://135.125.212.24:10034']
         proxy['https'] = ['socks5h://141.95.93.35:10112']
         proxy['https'] = ['socks5h://54.37.194.34:10526']
-        '''
-        try:
-            ip_table = pd.DataFrame()
-            html = req.get('https://free-proxy-list.net/', verify=False)
-
-            for table in pd.read_html(html.text):
-                if 'IP Address' in table.keys():
-                    ip_table = table
-            proxy['https'] = ['https://190.61.88.147:8080']
-            proxy['http'] = ['http://185.218.125.70:80']
-            for ip in ip_table.values.tolist():
-                if ip[1] in [443, 4849, 5443, 5989, 5990, 6443, 6771, 1080, 7677]:
-                    proxy['https'] = 'https://{}:{}'.format(ip[0], ip[1])
-                elif ip in [80, 280, 777, 3128, 1001, 1183, 2688, 8080, 8088, 8008]:
-                    proxy['http'] = 'http://{}:{}'.format(ip[0], ip[1])
-        except req.exceptions.MissingSchema:
-            proxy['https'] = ['https://190.61.88.147:8080']
-            proxy['http'] = ['http://185.218.125.70:80']
-        '''
+        self._logger.info('Прокси инициализировано')
 
     def get_html(self, url: str, session: req.sessions.Session):
         """
@@ -75,21 +57,25 @@ class Parser:
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}
+
         html = '<!doctype html><head><title></title></head><body><header>EMPTY PAGE</header></body></html>'
         if '.ru' in url:
             euro_standard = True
+        self._logger.debug(f'Сайт {url} евростандарта: {euro_standard}')
 
         try:
+            self._logger.debug(f'Генерируем User-Agent для запроса')
             random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
             header = {'Accept': '*/*',
                       'User-Agent': random_user_agent,
                       'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header, proxies=proxies)
             html = req_page.text
-            print(url, ' - with proxy')
+            self._logger.info(f'{url} - Прокси УСПЕХ')
 
             if 'ddos-guard' in req_page.text.lower():
-                print('DDOS Guard found - trying to surpass metal gear...')
+                print('При сборке нас обнаружил DDoS Guard, попытка другим методом сбора')
+                self._logger.warning('При сборке нас обнаружил DDoS Guard, попытка другим методом сбора')
                 raise req.exceptions.ConnectionError
 
         except req.exceptions.ConnectionError:
@@ -100,9 +86,9 @@ class Parser:
                       'Accept-Encoding': 'gzip, deflate'}
             req_page = session.get(url, verify=False, headers=header)
             html = req_page.text
-            print(url, ' - with OUT proxy, second try')
+            self._logger.info(f'{url} Прокси ПРОВАЛ')
 
         except Exception as ex:
-            print('During collecting data from: {}, except error: {}'.format(url, ex))
+            self._logger.error(f'При сборке данных с{url}, возникла ошибка: {ex}')
 
         return euro_standard, html
