@@ -45,6 +45,8 @@ class Transformer:
             f = float(f)
         except ValueError:
             return str(f)
+        except:
+            pass
 
         if pd.isna(f):
             return 'NaN'

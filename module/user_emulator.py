@@ -136,6 +136,7 @@ class ResearchParser:
             # but now economy month locate in everyday tab so there is processing this
             # TODO: если ежемесячный уберут из вкладки ежедневные, то удалить строчку
             reviews_elements = [elem for elem in reviews_elements if 'Ежемесячный обзор' not in elem.text]
+            self._logger.info(f'Ежедневный экономический отчет найден')
             return reviews_elements[:count]
         else:
             # TODO: если наладится поиск по поисковой строке, то переделать
@@ -523,16 +524,16 @@ class ResearchParser:
         try:
             self._logger.info('Начало обработки "Weekly Pulse" отчетов')
             while len(weeklies) < 1:
-                self._logger.debug('Ожидание активации отчета')
+                self._logger.debug('Ожидание доступности отчета для открытия')
                 WebDriverWait(self.driver, 30).until(
                     EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
                     and EC.invisibility_of_element_located((By.ID, "loadMorePublications_loading")))
-                self._logger.debug('Поиск объекта для загрузки большего количества публикаций')
+                self._logger.debug('Загрузка большего количества публикаций для поиска там отчета')
                 more = self.driver.find_element(By.XPATH, '//*[@id="loadMorePublications"]')
                 self.driver.execute_script("arguments[0].scrollIntoView();", more)
                 self._logger.debug('Загрузка следующих публикаций')
                 more.click()
-                self._logger.debug('Ожидание активации дополнительных отчетов')
+                self._logger.debug('Ожидание доступности дополнительных отчетов для открытия')
                 WebDriverWait(self.driver, 30).until(EC.element_to_be_selected(
                     (By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
                 weeklies = self.driver.find_elements(By.XPATH, f"//div[contains(@title, 'Weekly Pulse')]")
@@ -552,8 +553,8 @@ class ResearchParser:
             os.makedirs(weekly_dir)
 
         if os.path.exists(filename):
-            self._logger.info('Weekly Pulse отчеты собраны')
-            print('Weekly Pulse отчеты собраны')
+            self._logger.info('Weekly Pulse отчет собран')
+            print('Weekly Pulse отчет собран')
             return
         else:
             old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
@@ -615,7 +616,7 @@ class InvestingAPIParser:
             y = day[4]
             row = {'date': date, 'x': x, 'y': y}
             df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-        self._logger.info('Данных для графика готовы')
+        self._logger.info('Данные для графика готовы')
         return df
 
     def get_streaming_chart_investing(self, url: str):

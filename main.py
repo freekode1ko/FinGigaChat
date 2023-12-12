@@ -628,7 +628,7 @@ class Main:
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
+    logger = selector_logger(Path(__file__).stem, 10)  # логгер для сохранения действий программы + пользователей
     while True:
         logger.debug('Инициализация сборщика котировок')
         runner = Main()

@@ -74,8 +74,8 @@ class Parser:
             self._logger.info(f'{url} - Прокси УСПЕХ')
 
             if 'ddos-guard' in req_page.text.lower():
-                print('DDOS Guard found, trying to surpass metal gear...')
-                self._logger.warning('DDOS Guard found, trying to surpass metal gear...')
+                print('При сборке нас обнаружил DDoS Guard, попытка другим методом сбора')
+                self._logger.warning('При сборке нас обнаружил DDoS Guard, попытка другим методом сбора')
                 raise req.exceptions.ConnectionError
 
         except req.exceptions.ConnectionError:
@@ -89,6 +89,6 @@ class Parser:
             self._logger.info(f'{url} Прокси ПРОВАЛ')
 
         except Exception as ex:
-            self._logger.error(f'During collecting data from: {url}, except error: {ex}')
+            self._logger.error(f'При сборке данных с{url}, возникла ошибка: {ex}')
 
         return euro_standard, html
