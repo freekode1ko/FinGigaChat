@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from aiogram.utils.exceptions import MessageIsTooLong, ChatNotFound
+from aiogram.utils.exceptions import MessageIsTooLong, ChatNotFound, BotBlocked
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram import Bot, Dispatcher, executor, types
@@ -614,8 +614,14 @@ async def get_msg_from_admin(message, state: FSMContext):
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
     for user_id in users_ids:
-        await send_msg_to(user_id, msg, file_name, file_type)
-        user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+        try:
+            user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
+            await send_msg_to(user_id, msg, file_name, file_type)
+            user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+        except BotBlocked:
+            user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
+        except Exception as ex:
+            user_logger.error(f'*{user_id}* Пользователь не получил сообщения из-за ошибки: {ex}')
 
     await message.answer('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
     logger.info('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
@@ -1052,7 +1058,7 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
         return
     else:
         del_buttons_data_dict = dict(cancel='Отменить удаление', duplicate='Удалить дубль',
-                                     usless='Удалить незначимую новость', not_relevant='Удалить нерелевантную новость',
+                                     useless='Удалить незначимую новость', not_relevant='Удалить нерелевантную новость',
                                      another='Удалить по другой причине')
         callback_func = 'end_del_article'
         keyboard = types.InlineKeyboardMarkup()
