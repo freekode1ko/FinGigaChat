@@ -613,18 +613,20 @@ async def get_msg_from_admin(message, state: FSMContext):
     engine = create_engine(psql_engine)
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
+    successful_sending = 0
     for user_id in users_ids:
         try:
             user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
             await send_msg_to(user_id, msg, file_name, file_type)
             user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+            successful_sending += 1
         except BotBlocked:
             user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
         except Exception as ex:
             user_logger.error(f'*{user_id}* Пользователь не получил сообщения из-за ошибки: {ex}')
 
-    await message.answer('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
-    logger.info('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
+    await message.answer('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
+    logger.info('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
 
     file_cleaner('sources/{}'.format(file_name))
     file_cleaner('sources/{}.jpg'.format(file_name))
