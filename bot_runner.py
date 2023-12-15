@@ -1275,7 +1275,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                                 logger.error(f"MessageIsTooLong ERROR: {article}")
 
                 user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
-                return
+                return_ans = True
 
         if not return_ans:
             return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
