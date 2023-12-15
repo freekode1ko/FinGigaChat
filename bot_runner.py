@@ -51,6 +51,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
 sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
+handbook_format = '<b>{}</b>\n\n{}'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -790,6 +791,91 @@ async def user_in_whitelist(user: str):
         return True
     else:
         return False
+
+
+async def show_ref_book_by_request(chat_id, subject: str):
+    logger.info(f"Сборка справочника для *{chat_id}* на тему {subject}")
+    engine = create_engine(psql_engine)
+    handbooks = []
+    if (subject == 'client') or (subject == 'commodity'):
+        handbook = pd.read_sql_query(f'SELECT {subject}.name AS object, industry_id, '
+                                     f'industry.name AS industry_name FROM {subject} '
+                                     f'LEFT JOIN industry ON {subject}.industry_id = industry.id', con=engine)
+        industry_ids = handbook['industry_id'].tolist()
+        for industry_id in list(set(industry_ids)):
+            handbooks.append(handbook[handbook['industry_id'] == industry_id])
+    else:
+        handbook = pd.read_sql_query(f"SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+                                     f"client.industry_id, industry.name AS industry_name FROM client_alternative "
+                                     f"INNER JOIN client ON client_alternative.client_id = client.id "
+                                     f"INNER JOIN industry ON client.industry_id = industry.id", con=engine)
+        industry_ids = handbook['industry_id'].tolist()
+        for industry_id in list(set(industry_ids)):
+            handbooks.append(handbook[handbook['industry_id'] == industry_id])
+
+    return handbooks
+
+
+@dp.message_handler(commands=['referencebook'])
+async def reference_book(message: types.Message):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f"*{chat_id}* {full_name} - Запросил справочник")
+
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data=f'ref_books:client'))
+    keyboard.add(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data=f'ref_books:beneficiaries'))
+    keyboard.add(types.InlineKeyboardButton(text='Commodities', callback_data=f'ref_books:commodity'))
+
+    await message.answer("Выберите какой справочник вам интересен:", reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('ref_books'))
+async def ref_books(callback_query: types.CallbackQuery):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    book = callback_data[1]
+    user_logger.info(f"*{chat_id}* {user_first_name} - Запросил справочник по {book}")
+    handbooks = [pd.DataFrame(columns=['object'])]
+    if book == 'client':
+        await bot.send_message(chat_id, text='Справочник по клиентам:')
+        handbooks = await show_ref_book_by_request(chat_id, book)
+    elif book == 'beneficiaries':
+        await bot.send_message(chat_id, text='Справочник по бенефициаров и ЛПР:')
+        handbooks = await show_ref_book_by_request(chat_id, '')
+    elif book == 'commodity':
+        await bot.send_message(chat_id, text='Справочник по commodities:')
+        handbooks = await show_ref_book_by_request(chat_id, book)
+
+    for handbook in handbooks:
+        block_head = handbook['industry_name'].tolist()[0]
+        block_body = '\n'.join(handbook['object'].tolist())
+
+        await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=f'isthisall:yes'))
+    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=f'isthisall:no'))
+    await bot.send_message(chat_id, text='Все ли Ваши клиенты (холдинги) содержатся в справочнике?\n'
+                                         'Все ли интересующие Вас бенефициары и ЛПР/'
+                                         'commodities содержатся в справочнике?', reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('isthisall'))
+async def isthisall(callback_query: types.CallbackQuery):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    need_new = callback_data[1]
+    user_logger.info(f"*{chat_id}* {user_first_name} - Пользователю надо добавить еще в справочник?  {need_new}")
+    if need_new == 'no':
+        await bot.send_message(chat_id, text='Если вы не нашли интересующего вас клиента (холдинг), '
+                                             'бенефициара, ЛПР или commodity в списке, напишите его наименование в чат.'
+                                             '\nВы также можете написать его альтернативные названия и синонимы. '
+                                             'Мы добавим их в справочник в ближайшее время.\n'
+                                             'При возникновении дополнительных вопросов можно '
+                                             'обращаться к Максиму Королькову')
+    else:
+        await bot.send_message(chat_id, text='Спасибо за обратную связь!')
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
