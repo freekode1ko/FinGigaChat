@@ -1394,11 +1394,14 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
                 except KeyError:
+                    chat = gig.GigaChat()
+                    token = chat.get_user_token()
+                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
                     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
-                                         f' KeyError (некорректная выдача ответа GigaChat)')
-
+                                         f' KeyError (некорректная выдача ответа GigaChat),'
+                                         f' ответ после переформирования запроса')
                 response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
                 await message.answer(response, protect_content=False)
                 user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
@@ -1544,7 +1547,6 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
 
 
 # TODO: Добавить синхронизацию времени с методом на ожидание (newsletter_scheduler)
-# TODO: Учитывать, что временные интервалы могут быть не равны между first.start -> first.last -> second.first
 async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, industry_hours: int = 7, schedule: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
