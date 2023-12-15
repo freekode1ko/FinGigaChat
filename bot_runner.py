@@ -1380,9 +1380,12 @@ async def send_newsletter(newsletter_data: Dict):
         media = types.MediaGroup()
         for path in img_path_list:
             media.attach_photo(types.InputFile(path))
-        await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-        await bot.send_media_group(user_id, media=media, protect_content=True)
-        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+        try:
+            await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+            await bot.send_media_group(user_id, media=media, protect_content=True)
+            user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+        except BotBlocked:
+            user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
 
     logger.info(f'{len(users_data)} пользователям пришла рассылка "{title}"')
 
