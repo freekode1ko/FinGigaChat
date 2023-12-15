@@ -681,10 +681,14 @@ async def add_new_subscriptions(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
-        await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
-                             'пассивную отправку новостей по ним.\n'
+        await message.answer('Сформируйте полный список интересующих клиентов или commodities '
+                             'для подписки на пассивную отправку новостей по ним.\n'
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
                              '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
+                             'Вы также можете воспользоваться готовыми подборками клиентов, '
+                             'бенефициаров, ЛПР и commodities, которые отсортированы по отраслям. '
+                             'Скопируйте готовую подборку, исключите лишние наименования или добавьте дополнительные.\n'
+                             'Вы хотите воспользоваться готовыми подборками? Напишите "Да" для вывода готовых подборок.'
                              'Если передумали, то напишите "Отмена" в чат.')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
@@ -702,11 +706,24 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
+    message_text = ''
     if message.text.strip().lower() == 'отмена':
         user_logger.info('Отмена действия - /addnewsubscriptions')
         await state.finish()
         await message.answer('Изменение списка подписок успешно отменено.')
         return None
+    elif message.text.strip().lower() == 'да':
+        engine = create_engine(psql_engine)
+        user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
+        industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
+        buttons = []
+        for industry in industries:
+            buttons.append([types.KeyboardButton(text=industry)])
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+        await message.answer('По какой отрасли вы бы хотели получить список клиентов, бенефициаров, ЛПР и commodities?',
+                             reply_markup=keyboard)
+        # TODO add await user action
+        # TODO save selected prebuild to @message_text
     await state.finish()
     subscriptions = []
     quotes = ['\"', '«', '»']
@@ -718,7 +735,9 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
     df_all = pd.DataFrame(df_all)  # pandas.core.series.Series -> pandas.core.frame.DataFrame
 
-    message_text = message.text
+    if not message_text:
+        message_text = message.text
+
     for quote in quotes:
         message_text = message_text.replace(quote, '')
     user_request = [i.strip().lower() for i in message_text.split('\n')]
