@@ -681,6 +681,9 @@ async def add_new_subscriptions(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=f'showmeindustry:yes'))
+        keyboard.add(types.InlineKeyboardButton(text='Отмена', callback_data=f'showmeindustry:no'))
         await message.answer('Сформируйте полный список интересующих клиентов или commodities '
                              'для подписки на пассивную отправку новостей по ним.\n'
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
@@ -688,11 +691,49 @@ async def add_new_subscriptions(message: types.Message):
                              'Вы также можете воспользоваться готовыми подборками клиентов, '
                              'бенефициаров, ЛПР и commodities, которые отсортированы по отраслям. '
                              'Скопируйте готовую подборку, исключите лишние наименования или добавьте дополнительные.\n'
-                             'Вы хотите воспользоваться готовыми подборками? Напишите "Да" для вывода готовых подборок.'
-                             'Если передумали, то напишите "Отмена" в чат.')
+                             'Вы хотите воспользоваться готовыми подборками? Нажмите "Да" для вывода готовых подборок. '
+                             'Если передумали, то выберете "Отмена".', reply_markup=keyboard)
+
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-        await message.answer('Вы не зарегистрированы в этом боте')
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('showmeindustry'), state=Form.user_subscriptions)
+async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    show_ref_book = callback_data[1]
+    if show_ref_book == 'yes':
+        engine = create_engine(psql_engine)
+        keyboard = types.InlineKeyboardMarkup()
+        user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
+        industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
+        for industry in industries:
+            keyboard.add(types.InlineKeyboardButton(text=industry, callback_data=f'whatinthisindustry:{industry}'))
+        await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов, '
+                                        'бенефициаров, ЛПР и commodities?', reply_markup=keyboard)
+    else:
+        user_logger.info('Отмена действия - /addnewsubscriptions')
+        await state.finish()
+        await bot.send_message(chat_id, 'Отмена действия - /addnewsubscriptions',
+                               parse_mode='HTML', protect_content=True)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('whatinthisindustry'), state=Form.user_subscriptions)
+async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMContext):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    ref_book = callback_data[1]
+    user_logger.info(f'Пользователь *{chat_id}* {user_first_name} смотрит список по {ref_book}')
+    engine = create_engine(psql_engine)
+    industry_id = pd.read_sql_query(f"SELECT id FROM industry where name = '{ref_book}'", con=engine)['id'].tolist()[0]
+    clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
+    commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
+    all_objects = pd.concat([clients, commodity], ignore_index=True)
+    await bot.send_message(chat_id, handbook_format.format(ref_book, '\n'.join(all_objects['name'].tolist())),
+                           parse_mode='HTML')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
@@ -707,23 +748,6 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
     message_text = ''
-    if message.text.strip().lower() == 'отмена':
-        user_logger.info('Отмена действия - /addnewsubscriptions')
-        await state.finish()
-        await message.answer('Изменение списка подписок успешно отменено.')
-        return None
-    elif message.text.strip().lower() == 'да':
-        engine = create_engine(psql_engine)
-        user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
-        industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
-        buttons = []
-        for industry in industries:
-            buttons.append([types.KeyboardButton(text=industry)])
-        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
-        await message.answer('По какой отрасли вы бы хотели получить список клиентов, бенефициаров, ЛПР и commodities?',
-                             reply_markup=keyboard)
-        # TODO add await user action
-        # TODO save selected prebuild to @message_text
     await state.finish()
     subscriptions = []
     quotes = ['\"', '«', '»']
