@@ -573,16 +573,16 @@ class ResearchParser:
 
         self._logger.info('Сохранение ключевых слайдов с weekly review')
         images = convert_from_path(filename)
-        images[1].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
-        images[8].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
-        images[9].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
+        images[2].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
+        images[10].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
+        images[11].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
 
         left = 70
         top = 40
         right = left + 1280
         bottom = top + 1250
 
-        image = images[5].crop((left, top, right, bottom))
+        image = images[7].crop((left, top, right, bottom))
         image.save('{}/{}'.format(weekly_dir, 'slide_6.png'))
         image.close()
         self._logger.info('Weekly review готов')

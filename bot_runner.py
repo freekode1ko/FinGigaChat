@@ -1275,7 +1275,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                                 logger.error(f"MessageIsTooLong ERROR: {article}")
 
                 user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
-                return
+                return_ans = True
 
         if not return_ans:
             return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
@@ -1380,9 +1380,12 @@ async def send_newsletter(newsletter_data: Dict):
         media = types.MediaGroup()
         for path in img_path_list:
             media.attach_photo(types.InputFile(path))
-        await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-        await bot.send_media_group(user_id, media=media, protect_content=True)
-        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+        try:
+            await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+            await bot.send_media_group(user_id, media=media, protect_content=True)
+            user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+        except BotBlocked:
+            user_logger.warning(f'*{user_id}* Пользователь не получил рассылку "{title}" : бот в блоке')
 
     logger.info(f'{len(users_data)} пользователям пришла рассылка "{title}"')
 
