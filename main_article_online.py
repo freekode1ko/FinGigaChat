@@ -30,6 +30,10 @@ def get_article() -> pd.DataFrame:
         logger.error('Ошибка при получении новостей: ConnectionError')
         print('Ошибка при получении новостей: ConnectionError')
 
+    except Exception as e:
+        logger.error(f'Ошибка при получении новостей: {e}')
+        print(f'Ошибка при получении новостей: {e}')
+
     return df_article
 
 
