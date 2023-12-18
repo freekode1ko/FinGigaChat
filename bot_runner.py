@@ -68,6 +68,7 @@ class Form(StatesGroup):
     permission_to_delete = State()
     user_subscriptions = State()
     send_to_users = State()
+    please_add_this = State()
 
 
 def read_curdatetime():
@@ -710,13 +711,14 @@ async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext)
         user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
         industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
         for industry in industries:
-            keyboard.add(types.InlineKeyboardButton(text=industry, callback_data=f'whatinthisindustry:{industry}'))
+            keyboard.add(types.InlineKeyboardButton(text=industry.capitalize(),
+                                                    callback_data=f'whatinthisindustry:{industry}'))
         await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов, '
                                         'бенефициаров, ЛПР и commodities?', reply_markup=keyboard)
     else:
         user_logger.info('Отмена действия - /addnewsubscriptions')
         await state.finish()
-        await bot.send_message(chat_id, 'Отмена действия - /addnewsubscriptions',
+        await bot.send_message(chat_id, 'Действие успешно отменено',
                                parse_mode='HTML', protect_content=True)
 
 
@@ -732,7 +734,8 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
     commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
     all_objects = pd.concat([clients, commodity], ignore_index=True)
-    await bot.send_message(chat_id, handbook_format.format(ref_book, '\n'.join(all_objects['name'].tolist())),
+    await bot.send_message(chat_id, handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in
+                                                                                        all_objects['name'].tolist()])),
                            parse_mode='HTML')
 
 
@@ -775,7 +778,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     if (len(subscriptions) < len(user_request)) and subscriptions:
         list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
-        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
+        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные '
+                          f'объекты на подписку: {list_of_unknown}')
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
         subscriptions = ", ".join(subscriptions)
@@ -836,27 +840,28 @@ async def user_in_whitelist(user: str):
         return False
 
 
+async def get_industries_id(handbook: pd.DataFrame):
+    handbooks = []
+    industry_ids = handbook['industry_id'].tolist()
+    for industry_id in list(set(industry_ids)):
+        handbooks.append(handbook[handbook['industry_id'] == industry_id].drop_duplicates())
+    return handbooks
+
+
 async def show_ref_book_by_request(chat_id, subject: str):
     logger.info(f"Сборка справочника для *{chat_id}* на тему {subject}")
     engine = create_engine(psql_engine)
-    handbooks = []
+
     if (subject == 'client') or (subject == 'commodity'):
         handbook = pd.read_sql_query(f'SELECT {subject}.name AS object, industry_id, '
                                      f'industry.name AS industry_name FROM {subject} '
                                      f'LEFT JOIN industry ON {subject}.industry_id = industry.id', con=engine)
-        industry_ids = handbook['industry_id'].tolist()
-        for industry_id in list(set(industry_ids)):
-            handbooks.append(handbook[handbook['industry_id'] == industry_id])
     else:
         handbook = pd.read_sql_query(f"SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
                                      f"client.industry_id, industry.name AS industry_name FROM client_alternative "
                                      f"INNER JOIN client ON client_alternative.client_id = client.id "
                                      f"INNER JOIN industry ON client.industry_id = industry.id", con=engine)
-        industry_ids = handbook['industry_id'].tolist()
-        for industry_id in list(set(industry_ids)):
-            handbooks.append(handbook[handbook['industry_id'] == industry_id])
-
-    return handbooks
+    return await get_industries_id(handbook)
 
 
 @dp.message_handler(commands=['referencebook'])
@@ -874,6 +879,7 @@ async def reference_book(message: types.Message):
 
 @dp.callback_query_handler(lambda c: c.data.startswith('ref_books'))
 async def ref_books(callback_query: types.CallbackQuery):
+    await Form.please_add_this.set()
     callback_values = dict(callback_query.values['from'])
     chat_id, user_first_name = callback_values['id'], callback_values['first_name']
     callback_data = callback_query.data.split(':')
@@ -884,15 +890,15 @@ async def ref_books(callback_query: types.CallbackQuery):
         await bot.send_message(chat_id, text='Справочник по клиентам:')
         handbooks = await show_ref_book_by_request(chat_id, book)
     elif book == 'beneficiaries':
-        await bot.send_message(chat_id, text='Справочник по бенефициаров и ЛПР:')
+        await bot.send_message(chat_id, text='Справочник по бенефициарам и ЛПР:')
         handbooks = await show_ref_book_by_request(chat_id, '')
     elif book == 'commodity':
         await bot.send_message(chat_id, text='Справочник по commodities:')
         handbooks = await show_ref_book_by_request(chat_id, book)
 
     for handbook in handbooks:
-        block_head = handbook['industry_name'].tolist()[0]
-        block_body = '\n'.join(handbook['object'].tolist())
+        block_head = handbook['industry_name'].tolist()[0].upper()
+        block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
 
         await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
     keyboard = types.InlineKeyboardMarkup()
@@ -903,8 +909,8 @@ async def ref_books(callback_query: types.CallbackQuery):
                                          'commodities содержатся в справочнике?', reply_markup=keyboard)
 
 
-@dp.callback_query_handler(lambda c: c.data.startswith('isthisall'))
-async def isthisall(callback_query: types.CallbackQuery):
+@dp.callback_query_handler(lambda c: c.data.startswith('isthisall'), state=Form.please_add_this)
+async def isthisall(callback_query: types.CallbackQuery, state: FSMContext):
     callback_values = dict(callback_query.values['from'])
     chat_id, user_first_name = callback_values['id'], callback_values['first_name']
     callback_data = callback_query.data.split(':')
@@ -917,8 +923,20 @@ async def isthisall(callback_query: types.CallbackQuery):
                                              'Мы добавим их в справочник в ближайшее время.\n'
                                              'При возникновении дополнительных вопросов можно '
                                              'обращаться к Максиму Королькову')
+        await continue_isthisall(state)
     else:
         await bot.send_message(chat_id, text='Спасибо за обратную связь!')
+        await state.finish()
+
+
+@dp.message_handler(state=Form.please_add_this)
+async def continue_isthisall(message: types.Message, state: FSMContext):
+    await state.update_data(please_add_this=message.text)
+    data = await state.get_data()
+    user_logger.info(f"Пользовать {message.from_user.full_name} "
+                     f"просит добавить в справочник: {data.get('please_add_this')}")
+    await state.finish()
+    await message.answer("Спасибо за обратную связь, мы добавим их как можно скорее")
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
