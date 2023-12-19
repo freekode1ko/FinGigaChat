@@ -694,7 +694,6 @@ async def add_new_subscriptions(message: types.Message):
                              'Скопируйте готовую подборку, исключите лишние наименования или добавьте дополнительные.\n'
                              'Вы хотите воспользоваться готовыми подборками? Нажмите "Да" для вывода готовых подборок. '
                              'Если передумали, то выберете "Отмена".', reply_markup=keyboard)
-
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -713,8 +712,8 @@ async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext)
         for industry in industries:
             keyboard.add(types.InlineKeyboardButton(text=industry.capitalize(),
                                                     callback_data=f'whatinthisindustry:{industry}'))
-        await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов, '
-                                        'бенефициаров, ЛПР и commodities?', reply_markup=keyboard)
+        await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов и commodities?',
+                               reply_markup=keyboard)
     else:
         user_logger.info('Отмена действия - /addnewsubscriptions')
         await state.finish()
@@ -737,6 +736,8 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     await bot.send_message(chat_id, handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in
                                                                                         all_objects['name'].tolist()])),
                            parse_mode='HTML')
+    await bot.send_message(chat_id, text='Вы можете скопировать список выше, отредактировать, если это необходимо и '
+                                         'отправить в бота следующем сообщением, чтобы список сохранился')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
@@ -885,28 +886,41 @@ async def ref_books(callback_query: types.CallbackQuery):
     callback_data = callback_query.data.split(':')
     book = callback_data[1]
     user_logger.info(f"*{chat_id}* {user_first_name} - Запросил справочник по {book}")
-    handbooks = [pd.DataFrame(columns=['object'])]
+    handbooks = [pd.DataFrame(columns=['industry_name', 'object'])]
+    what_is_this = ''
     if book == 'client':
         await bot.send_message(chat_id, text='Справочник по клиентам:')
         handbooks = await show_ref_book_by_request(chat_id, book)
+        what_is_this = 'клиенты (холдинги)'
     elif book == 'beneficiaries':
-        await bot.send_message(chat_id, text='Справочник по бенефициарам и ЛПР:')
-        handbooks = await show_ref_book_by_request(chat_id, '')
+        what_is_this = 'бенефициары и ЛПР'
+        pass
+        # await bot.send_message(chat_id, text='Справочник по бенефициарам и ЛПР:')
+        # handbooks = await show_ref_book_by_request(chat_id, '')
     elif book == 'commodity':
+        what_is_this = 'commodities'
         await bot.send_message(chat_id, text='Справочник по commodities:')
         handbooks = await show_ref_book_by_request(chat_id, book)
 
     for handbook in handbooks:
-        block_head = handbook['industry_name'].tolist()[0].upper()
-        block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
+        head = handbook['industry_name'].tolist()
+        if len(head) > 0:
+            block_head = head[0].upper()
+            block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
+        else:
+            block_head = ''
+            block_body = 'Справочник по бенефициарам и ЛПР находится в процессе обновления, '\
+                         'приносим извинения за неудобства. Функционал активной и пассивной '\
+                         'рассылки по бенефициарам остается активным, для этого сформируйте '\
+                         'новый список рассылки, вставив фамилии интересующих лиц и клиентов '\
+                         'или просто введите их диалоговую строку, чтобы получить текущие новости.'
 
         await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=f'isthisall:yes'))
     keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=f'isthisall:no'))
-    await bot.send_message(chat_id, text='Все ли Ваши клиенты (холдинги) содержатся в справочнике?\n'
-                                         'Все ли интересующие Вас бенефициары и ЛПР/'
-                                         'commodities содержатся в справочнике?', reply_markup=keyboard)
+    await bot.send_message(chat_id, text=f'Все ли Ваши {what_is_this} содержатся в справочнике?\n',
+                           reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('isthisall'), state=Form.please_add_this)
