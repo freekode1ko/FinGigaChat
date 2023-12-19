@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict
 from urllib.parse import urlparse
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, NullPool
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -51,6 +51,7 @@ view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'ден
                 'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
 
 sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
+handbook_format = '<b>{}</b>\n\n{}'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -67,6 +68,7 @@ class Form(StatesGroup):
     permission_to_delete = State()
     user_subscriptions = State()
     send_to_users = State()
+    please_add_this = State()
 
 
 def read_curdatetime():
@@ -75,7 +77,7 @@ def read_curdatetime():
 
     return Дата последней сборки
     """
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     curdatetime = pd.read_sql_query('SELECT * FROM "date_of_last_build"', con=engine)
     return curdatetime['date_time'][0]
 
@@ -177,7 +179,7 @@ async def bonds_info(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         columns = ['Название', 'Доходность', 'Изм, %']
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
         bonds = bonds[columns].dropna(axis=0)
         bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
@@ -215,7 +217,7 @@ async def economy_info(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
         rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
         rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -299,7 +301,7 @@ async def data_mart(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         key_eco_table = pd.read_sql_query('SELECT * FROM key_eco', con=engine)
         split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
         key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
@@ -411,7 +413,7 @@ async def exchange_info(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
 
@@ -463,7 +465,7 @@ async def metal_info(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         metal = pd.read_sql_query('SELECT * FROM metals', con=engine)
         metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
         metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
@@ -610,21 +612,23 @@ async def get_msg_from_admin(message, state: FSMContext):
         return None
 
     await state.finish()
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
+    successful_sending = 0
     for user_id in users_ids:
         try:
             user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
             await send_msg_to(user_id, msg, file_name, file_type)
             user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+            successful_sending += 1
         except BotBlocked:
             user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
         except Exception as ex:
             user_logger.error(f'*{user_id}* Пользователь не получил сообщения из-за ошибки: {ex}')
 
-    await message.answer('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
-    logger.info('Рассылка на {} пользователей успешно отправлена'.format(len(users_ids)))
+    await message.answer('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
+    logger.info('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
 
     file_cleaner('sources/{}'.format(file_name))
     file_cleaner('sources/{}.jpg'.format(file_name))
@@ -678,14 +682,60 @@ async def add_new_subscriptions(message: types.Message):
     if await user_in_whitelist(message.from_user.as_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
-        await message.answer('Сформируйте полный список интересующих клиентов или сырья для подписки на '
-                             'пассивную отправку новостей по ним.\n'
-                             'Перечислите их в одном сообщении каждую с новой строки.\n'
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data=f'showmeindustry:yes'))
+        keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data=f'showmeindustry:no'))
+        await message.answer('Сформируйте полный список интересующих клиентов или commodities '
+                             'для подписки на пассивную отправку новостей по ним.\n'
+                             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
                              '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
-                             'Если передумали, то напишите "Отмена" в чат.')
+                             'Вы также можете воспользоваться готовыми подборками клиентов и commodities, '
+                             'которые отсортированы по отраслям. Скопируйте готовую подборку, исключите '
+                             'лишние наименования или добавьте дополнительные.\n', reply_markup=keyboard)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-        await message.answer('Вы не зарегистрированы в этом боте')
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('showmeindustry'), state=Form.user_subscriptions)
+async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    show_ref_book = callback_data[1]
+    if show_ref_book == 'yes':
+        engine = create_engine(psql_engine, poolclass=NullPool)
+        keyboard = types.InlineKeyboardMarkup()
+        user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
+        industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
+        for industry in industries:
+            keyboard.add(types.InlineKeyboardButton(text=industry.capitalize(),
+                                                    callback_data=f'whatinthisindustry:{industry}'))
+        await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов и commodities?',
+                               reply_markup=keyboard)
+    else:
+        user_logger.info('Отмена действия - /addnewsubscriptions')
+        await state.finish()
+        await bot.send_message(chat_id, 'Действие успешно отменено',
+                               parse_mode='HTML', protect_content=True)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('whatinthisindustry'), state=Form.user_subscriptions)
+async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMContext):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    ref_book = callback_data[1]
+    user_logger.info(f'Пользователь *{chat_id}* {user_first_name} смотрит список по {ref_book}')
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    industry_id = pd.read_sql_query(f"SELECT id FROM industry where name = '{ref_book}'", con=engine)['id'].tolist()[0]
+    clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
+    commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
+    all_objects = pd.concat([clients, commodity], ignore_index=True)
+    await bot.send_message(chat_id, handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in
+                                                                                        all_objects['name'].tolist()])),
+                           parse_mode='HTML')
+    await bot.send_message(chat_id, text='Вы можете скопировать список выше, отредактировать, если это необходимо и '
+                                         'отправить в бота следующем сообщением, чтобы список сохранился')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
@@ -699,23 +749,21 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
-    if message.text.strip().lower() == 'отмена':
-        user_logger.info('Отмена действия - /addnewsubscriptions')
-        await state.finish()
-        await message.answer('Изменение списка подписок успешно отменено.')
-        return None
+    message_text = ''
     await state.finish()
     subscriptions = []
     quotes = ['\"', '«', '»']
 
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     user_id = json.loads(message.from_user.as_json())['id']
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
     client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
     df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
     df_all = pd.DataFrame(df_all)  # pandas.core.series.Series -> pandas.core.frame.DataFrame
 
-    message_text = message.text
+    if not message_text:
+        message_text = message.text
+
     for quote in quotes:
         message_text = message_text.replace(quote, '')
     user_request = [i.strip().lower() for i in message_text.split('\n')]
@@ -729,7 +777,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     if (len(subscriptions) < len(user_request)) and subscriptions:
         list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
-        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
+        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные '
+                          f'объекты на подписку: {list_of_unknown}')
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
         subscriptions = ", ".join(subscriptions)
@@ -755,7 +804,7 @@ async def get_user_subscriptions(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
 
@@ -782,12 +831,124 @@ async def user_in_whitelist(user: str):
     """
     user_json = json.loads(user)
     user_id = user_json['id']
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
     else:
         return False
+
+
+async def get_industries_id(handbook: pd.DataFrame):
+    handbooks = []
+    industry_ids = handbook['industry_id'].tolist()
+    for industry_id in list(set(industry_ids)):
+        handbooks.append(handbook[handbook['industry_id'] == industry_id].drop_duplicates())
+    return handbooks
+
+
+async def show_ref_book_by_request(chat_id, subject: str):
+    logger.info(f"Сборка справочника для *{chat_id}* на тему {subject}")
+    engine = create_engine(psql_engine, poolclass=NullPool)
+
+    if (subject == 'client') or (subject == 'commodity'):
+        handbook = pd.read_sql_query(f'SELECT {subject}.name AS object, industry_id, '
+                                     f'industry.name AS industry_name FROM {subject} '
+                                     f'LEFT JOIN industry ON {subject}.industry_id = industry.id', con=engine)
+    else:
+        handbook = pd.read_sql_query(f"SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+                                     f"client.industry_id, industry.name AS industry_name FROM client_alternative "
+                                     f"INNER JOIN client ON client_alternative.client_id = client.id "
+                                     f"INNER JOIN industry ON client.industry_id = industry.id", con=engine)
+    return await get_industries_id(handbook)
+
+
+@dp.message_handler(commands=['referencebook'])
+async def reference_book(message: types.Message):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f"*{chat_id}* {full_name} - Запросил справочник")
+
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data=f'ref_books:client'))
+    keyboard.add(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data=f'ref_books:beneficiaries'))
+    keyboard.add(types.InlineKeyboardButton(text='Commodities', callback_data=f'ref_books:commodity'))
+
+    await message.answer("Выберите какой справочник вам интересен:", reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('ref_books'))
+async def ref_books(callback_query: types.CallbackQuery):
+    await Form.please_add_this.set()
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    book = callback_data[1]
+    user_logger.info(f"*{chat_id}* {user_first_name} - Запросил справочник по {book}")
+    handbooks = [pd.DataFrame(columns=['industry_name', 'object'])]
+    what_is_this = ''
+    if book == 'client':
+        await bot.send_message(chat_id, text='Справочник по клиентам:')
+        handbooks = await show_ref_book_by_request(chat_id, book)
+        what_is_this = 'клиенты (холдинги)'
+    elif book == 'beneficiaries':
+        what_is_this = 'бенефициары и ЛПР'
+        pass
+        # await bot.send_message(chat_id, text='Справочник по бенефициарам и ЛПР:')
+        # handbooks = await show_ref_book_by_request(chat_id, '')
+    elif book == 'commodity':
+        what_is_this = 'commodities'
+        await bot.send_message(chat_id, text='Справочник по commodities:')
+        handbooks = await show_ref_book_by_request(chat_id, book)
+
+    for handbook in handbooks:
+        head = handbook['industry_name'].tolist()
+        if len(head) > 0:
+            block_head = head[0].upper()
+            block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
+        else:
+            block_head = ''
+            block_body = 'Справочник по бенефициарам и ЛПР находится в процессе обновления, '\
+                         'приносим извинения за неудобства. Функционал активной и пассивной '\
+                         'рассылки по бенефициарам остается активным, для этого сформируйте '\
+                         'новый список рассылки, вставив фамилии интересующих лиц и клиентов '\
+                         'или просто введите их диалоговую строку, чтобы получить текущие новости.'
+
+        await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=f'isthisall:yes'))
+    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=f'isthisall:no'))
+    await bot.send_message(chat_id, text=f'Все ли Ваши {what_is_this} содержатся в справочнике?\n',
+                           reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('isthisall'), state=Form.please_add_this)
+async def isthisall(callback_query: types.CallbackQuery, state: FSMContext):
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    callback_data = callback_query.data.split(':')
+    need_new = callback_data[1]
+    user_logger.info(f"*{chat_id}* {user_first_name} - Пользователь удовлетворен наполнением справочника?  {need_new}")
+    if need_new == 'no':
+        await bot.send_message(chat_id, text='Если вы не нашли интересующего вас клиента (холдинг), '
+                                             'бенефициара, ЛПР или commodity в списке, напишите его наименование в чат.'
+                                             '\nВы также можете написать его альтернативные названия и синонимы. '
+                                             'Мы добавим их в справочник в ближайшее время.\n'
+                                             'При возникновении дополнительных вопросов можно '
+                                             'обращаться к Максиму Королькову')
+        await continue_isthisall(state)
+    else:
+        await bot.send_message(chat_id, text='Спасибо за обратную связь!')
+        await state.finish()
+
+
+@dp.message_handler(state=Form.please_add_this)
+async def continue_isthisall(message: types.Message, state: FSMContext):
+    await state.update_data(please_add_this=message.text)
+    data = await state.get_data()
+    user_logger.info(f"Пользовать {message.from_user.full_name} "
+                     f"просит добавить в справочник: {data.get('please_add_this')}")
+    await state.finish()
+    await message.answer("Спасибо за обратную связь, мы добавим их как можно скорее")
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
@@ -810,7 +971,7 @@ async def user_to_whitelist(message: types.Message):
         user = pd.DataFrame([[user_id, user_username, full_name, 'user', 'active', None]],
                             columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'])
         try:
-            engine = create_engine(psql_engine)
+            engine = create_engine(psql_engine, poolclass=NullPool)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
             user_logger.info(f"*{chat_id}* {full_name} - {user_msg} : новый пользователь")
@@ -831,7 +992,7 @@ async def check_your_right(user: dict):
     return Булевое значение на наличие прав администратора и выше
     """
     user_id = user['id']
-    engine = create_engine(config.psql_engine)
+    engine = create_engine(config.psql_engine, poolclass=NullPool)
     user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
     user_type = user_series.values.tolist()[0][0]
     if user_type == 'admin' or user_type == 'owner':
@@ -1273,7 +1434,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                                 logger.error(f"MessageIsTooLong ERROR: {article}")
 
                 user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
-                return
+                return_ans = True
 
         if not return_ans:
             return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
@@ -1306,11 +1467,14 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
                     giga_js = giga_answer.json()['choices'][0]['message']['content']
                 except KeyError:
+                    chat = gig.GigaChat()
+                    token = chat.get_user_token()
+                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
                     giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()
+                    giga_js = giga_answer.json()['choices'][0]['message']['content']
                     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
-                                         f' KeyError (некорректная выдача ответа GigaChat)')
-
+                                         f' KeyError (некорректная выдача ответа GigaChat),'
+                                         f' ответ после переформирования запроса')
                 response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
                 await message.answer(response, protect_content=False)
                 user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
@@ -1370,7 +1534,7 @@ async def send_newsletter(newsletter_data: Dict):
         return
 
     # отправляем пользователям
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     with engine.connect() as conn:
         users_data = conn.execute(text('SELECT user_id, username FROM whitelist')).fetchall()
     for user_data in users_data:
@@ -1378,9 +1542,12 @@ async def send_newsletter(newsletter_data: Dict):
         media = types.MediaGroup()
         for path in img_path_list:
             media.attach_photo(types.InputFile(path))
-        await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-        await bot.send_media_group(user_id, media=media, protect_content=True)
-        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+        try:
+            await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+            await bot.send_media_group(user_id, media=media, protect_content=True)
+            user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
+        except BotBlocked:
+            user_logger.warning(f'*{user_id}* Пользователь не получил рассылку "{title}" : бот в блоке')
 
     logger.info(f'{len(users_data)} пользователям пришла рассылка "{title}"')
 
@@ -1456,7 +1623,6 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
 
 
 # TODO: Добавить синхронизацию времени с методом на ожидание (newsletter_scheduler)
-# TODO: Учитывать, что временные интервалы могут быть не равны между first.start -> first.last -> second.first
 async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, industry_hours: int = 7, schedule: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
@@ -1471,7 +1637,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     ap_obj = ArticleProcess(logger)
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     # Словарь новостных объектов {тип_id: [альтернатив. названия], ...}
     CAI_dict = ap_obj.get_client_comm_industry_dictionary()
     clients_news = ap_obj.get_news_by_time(client_hours, 'client')
