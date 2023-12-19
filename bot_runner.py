@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict
 from urllib.parse import urlparse
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, NullPool
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -77,7 +77,7 @@ def read_curdatetime():
 
     return Дата последней сборки
     """
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     curdatetime = pd.read_sql_query('SELECT * FROM "date_of_last_build"', con=engine)
     return curdatetime['date_time'][0]
 
@@ -179,7 +179,7 @@ async def bonds_info(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         columns = ['Название', 'Доходность', 'Изм, %']
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
         bonds = bonds[columns].dropna(axis=0)
         bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
@@ -217,7 +217,7 @@ async def economy_info(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
         rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
         rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -301,7 +301,7 @@ async def data_mart(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         key_eco_table = pd.read_sql_query('SELECT * FROM key_eco', con=engine)
         split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
         key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
@@ -413,7 +413,7 @@ async def exchange_info(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
 
@@ -465,7 +465,7 @@ async def metal_info(message: types.Message):
 
     if await user_in_whitelist(message.from_user.as_json()):
         transformer = dt.Transformer()
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         metal = pd.read_sql_query('SELECT * FROM metals', con=engine)
         metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
         metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
@@ -612,7 +612,7 @@ async def get_msg_from_admin(message, state: FSMContext):
         return None
 
     await state.finish()
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
     successful_sending = 0
@@ -703,7 +703,7 @@ async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext)
     callback_data = callback_query.data.split(':')
     show_ref_book = callback_data[1]
     if show_ref_book == 'yes':
-        engine = create_engine(psql_engine)
+        engine = create_engine(psql_engine, poolclass=NullPool)
         keyboard = types.InlineKeyboardMarkup()
         user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
         industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
@@ -726,7 +726,7 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     callback_data = callback_query.data.split(':')
     ref_book = callback_data[1]
     user_logger.info(f'Пользователь *{chat_id}* {user_first_name} смотрит список по {ref_book}')
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     industry_id = pd.read_sql_query(f"SELECT id FROM industry where name = '{ref_book}'", con=engine)['id'].tolist()[0]
     clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
     commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
@@ -754,7 +754,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     subscriptions = []
     quotes = ['\"', '«', '»']
 
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     user_id = json.loads(message.from_user.as_json())['id']
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
     client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
@@ -804,7 +804,7 @@ async def get_user_subscriptions(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
 
@@ -831,7 +831,7 @@ async def user_in_whitelist(user: str):
     """
     user_json = json.loads(user)
     user_id = user_json['id']
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
@@ -849,7 +849,7 @@ async def get_industries_id(handbook: pd.DataFrame):
 
 async def show_ref_book_by_request(chat_id, subject: str):
     logger.info(f"Сборка справочника для *{chat_id}* на тему {subject}")
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
 
     if (subject == 'client') or (subject == 'commodity'):
         handbook = pd.read_sql_query(f'SELECT {subject}.name AS object, industry_id, '
@@ -971,7 +971,7 @@ async def user_to_whitelist(message: types.Message):
         user = pd.DataFrame([[user_id, user_username, full_name, 'user', 'active', None]],
                             columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'])
         try:
-            engine = create_engine(psql_engine)
+            engine = create_engine(psql_engine, poolclass=NullPool)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
             user_logger.info(f"*{chat_id}* {full_name} - {user_msg} : новый пользователь")
@@ -992,7 +992,7 @@ async def check_your_right(user: dict):
     return Булевое значение на наличие прав администратора и выше
     """
     user_id = user['id']
-    engine = create_engine(config.psql_engine)
+    engine = create_engine(config.psql_engine, poolclass=NullPool)
     user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
     user_type = user_series.values.tolist()[0][0]
     if user_type == 'admin' or user_type == 'owner':
@@ -1534,7 +1534,7 @@ async def send_newsletter(newsletter_data: Dict):
         return
 
     # отправляем пользователям
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     with engine.connect() as conn:
         users_data = conn.execute(text('SELECT user_id, username FROM whitelist')).fetchall()
     for user_data in users_data:
@@ -1637,7 +1637,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, indus
     logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
     row_number = 0
     ap_obj = ArticleProcess(logger)
-    engine = create_engine(psql_engine)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     # Словарь новостных объектов {тип_id: [альтернатив. названия], ...}
     CAI_dict = ap_obj.get_client_comm_industry_dictionary()
     clients_news = ap_obj.get_news_by_time(client_hours, 'client')
