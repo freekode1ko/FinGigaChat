@@ -40,7 +40,7 @@ def imap_func(type_of_article, folder_name):
     return filepath
 
 
-def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
+def model_func(type_of_article, folder_dir):
 
     filepath = imap_func(type_of_article, folder_dir)
     if filepath:
@@ -66,17 +66,16 @@ def model_func(ap_obj: ArticleProcess, type_of_article, folder_dir):
 
 def daily_func():
 
-    ap_obj = ArticleProcess(logger)
     client_flag = commodity_flag = False
     client_filepath = commodity_filepath = ''
     count_of_attempt = 9
     for attempt in range(count_of_attempt):
 
         if not client_flag:
-            client_flag, client_filepath = model_func(ap_obj, 'client', CLIENT_FOLDER_DIR)
+            client_flag, client_filepath = model_func('client', CLIENT_FOLDER_DIR)
 
         if not commodity_flag:
-            commodity_flag, commodity_filepath = model_func(ap_obj, 'commodity', COMMODITY_FOLDER_DIR)
+            commodity_flag, commodity_filepath = model_func('commodity', COMMODITY_FOLDER_DIR)
 
         if client_flag and commodity_flag:
             break
@@ -127,6 +126,7 @@ if __name__ == '__main__':
     log_name = Path(__file__).stem
     logger = selector_logger(log_name)
     # запускаем ежедневное получение/обработку новостей от полианалиста
+    ap_obj = ArticleProcess(logger)
     while True:
         # высчитываем время ожидания
         current_time = dt.datetime.now().time()

@@ -6,6 +6,7 @@ from urllib.parse import unquote, urlparse
 from typing import List, Dict
 
 import pandas as pd
+from sqlalchemy.pool import NullPool
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 
@@ -34,7 +35,7 @@ class ArticleError(Exception):
 class ArticleProcess:
     def __init__(self, logger: Logger.logger):
         self._logger = logger
-        self.engine = create_engine(psql_engine, pool_pre_ping=True)
+        self.engine = create_engine(psql_engine, poolclass=NullPool)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
@@ -604,7 +605,7 @@ class ArticleProcess:
 class ArticleProcessAdmin:
 
     def __init__(self):
-        self.engine = create_engine(psql_engine)
+        self.engine = create_engine(psql_engine, poolclass=NullPool)
 
     def get_article_id_by_link(self, link: str):
         try:
