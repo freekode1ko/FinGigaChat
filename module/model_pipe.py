@@ -8,6 +8,8 @@ from typing import Dict
 import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
+
+from sqlalchemy.pool import NullPool
 from sqlalchemy import create_engine, text
 
 from config import summarization_prompt, psql_engine
@@ -363,7 +365,7 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
     probs = binary_model.predict_proba(df['cleaned_data'])
 
     res = []
-    engine = create_engine(psql_engine, pool_pre_ping=True)
+    engine = create_engine(psql_engine, poolclass=NullPool)
     for index, pair in enumerate(probs):
         commodity_names = df['commodity'].iloc[index].split(';')
         local_threshold = down_threshold(engine, 'commodity', commodity_names, threshold)

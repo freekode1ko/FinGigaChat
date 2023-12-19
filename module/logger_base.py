@@ -5,6 +5,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from logging import Handler, Formatter, LogRecord
+from sqlalchemy.pool import NullPool
 from sqlalchemy import create_engine, text
 
 from config import log_lvl
@@ -36,7 +37,7 @@ class DBHandler(Handler):
 
     def __init__(self, url_engine: str, level: int, log_format: str):
         super().__init__()
-        self.engine = create_engine(url_engine, pool_pre_ping=True)
+        self.engine = create_engine(url_engine, poolclass=NullPool)
         self.setLevel(level)
         self.setFormatter(Formatter(log_format))
 

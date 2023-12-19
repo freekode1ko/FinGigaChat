@@ -46,7 +46,6 @@ def regular_func():
         try:
             logger.info(f'Получено {len(df_article)} новостей')
             print(f'Получено {len(df_article)} новостей')
-            ap_obj_online = ArticleProcess(logger)
             df_article, ids = ap_obj_online.preprocess_article_online(df_article)
             if not df_article.empty:
                 logger.info('Старт обработки новостей с помощью моделей')
@@ -89,6 +88,7 @@ if __name__ == '__main__':
     logger = selector_logger(log_name)
     try:
         # запускаем периодическое получение/обработку новостей
+        ap_obj_online = ArticleProcess(logger)
         while True:
             logger.info('Запуск pipeline с новостями')
             print('Запуск pipeline с новостями')
