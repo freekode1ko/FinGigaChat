@@ -737,7 +737,7 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
                                                                                         all_objects['name'].tolist()])),
                            parse_mode='HTML')
     await bot.send_message(chat_id, text='Вы можете скопировать список выше, отредактировать, если это необходимо и '
-                                         'отправить в бота следующем сообщением чтобы список сохранился')
+                                         'отправить в бота следующем сообщением, чтобы список сохранился')
 
 
 @dp.message_handler(state=Form.user_subscriptions)
