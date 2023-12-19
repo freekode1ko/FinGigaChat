@@ -7,7 +7,7 @@ import module.crawler as crawler
 from sql_model.commodity_pricing import CommodityPricing
 from sql_model.commodity import Commodity
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, NullPool
 from typing import List, Tuple, Dict
 from selenium import webdriver
 
@@ -155,7 +155,7 @@ class Main:
                 dict_row['Resource'] = commodity.split(',')[0]
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         commodity = pd.read_sql_query("SELECT * FROM commodity", con=engine)
         commodity_ids = pd.DataFrame()
 
@@ -172,7 +172,7 @@ class Main:
         df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
         df_combined = df_combined.drop(columns=['alias'])
 
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         Session = sessionmaker(bind=engine)
         session = Session()
         q = session.query(CommodityPricing)
@@ -373,7 +373,7 @@ class Main:
     def main(self) -> None:
         session = req.Session()
         all_tables = self.table_collector(session)
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         logger.info('Котировки собраны, запускаем обработку')
         all_tables.append(['Металлы', 'Блок котировки',
                            'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
@@ -551,7 +551,7 @@ class Main:
         """
         # TODO: мб сделать одну таблицу для обзоров ?
 
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         table_name_for_review = {
             'Economy day': 'report_eco_day',
             'Economy month': 'report_eco_mon',
@@ -571,17 +571,17 @@ class Main:
         logger.info('Все собранные отчеты с research записаны')
 
     def save_clients_financial_indicators(self, clients_table):
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
         logger.debug('Таблица financial_indicators записана')
 
     def save_key_eco_table(self, key_eco_table):
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
         logger.debug('Таблица key_eco записана')
 
     def save_date_of_last_build(self):
-        engine = create_engine(self.psql_engine)
+        engine = create_engine(self.psql_engine, poolclass=NullPool)
         cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
