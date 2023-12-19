@@ -683,8 +683,8 @@ async def add_new_subscriptions(message: types.Message):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=f'showmeindustry:yes'))
-        keyboard.add(types.InlineKeyboardButton(text='Отмена', callback_data=f'showmeindustry:no'))
+        keyboard.add(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data=f'showmeindustry:yes'))
+        keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data=f'showmeindustry:no'))
         await message.answer('Сформируйте полный список интересующих клиентов или commodities '
                              'для подписки на пассивную отправку новостей по ним.\n'
                              'Перечислите их в одном сообщении каждую с новой строки.\n'
@@ -693,7 +693,7 @@ async def add_new_subscriptions(message: types.Message):
                              'бенефициаров, ЛПР и commodities, которые отсортированы по отраслям. '
                              'Скопируйте готовую подборку, исключите лишние наименования или добавьте дополнительные.\n'
                              'Вы хотите воспользоваться готовыми подборками? Нажмите "Да" для вывода готовых подборок. '
-                             'Если передумали, то выберете "Отмена".', reply_markup=keyboard)
+                             'Если передумали, то выберите "Отмена".', reply_markup=keyboard)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -929,7 +929,7 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext):
     chat_id, user_first_name = callback_values['id'], callback_values['first_name']
     callback_data = callback_query.data.split(':')
     need_new = callback_data[1]
-    user_logger.info(f"*{chat_id}* {user_first_name} - Пользователю надо добавить еще в справочник?  {need_new}")
+    user_logger.info(f"*{chat_id}* {user_first_name} - Пользователь удовлетворен наполнением справочника?  {need_new}")
     if need_new == 'no':
         await bot.send_message(chat_id, text='Если вы не нашли интересующего вас клиента (холдинг), '
                                              'бенефициара, ЛПР или commodity в списке, напишите его наименование в чат.'
