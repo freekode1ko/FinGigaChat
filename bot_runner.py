@@ -781,7 +781,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
                           f'объекты на подписку: {list_of_unknown}')
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
-        subscriptions = ", ".join(subscriptions)
+        subscriptions = ", ".join(subscriptions).replace("'", "''")
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()

@@ -52,7 +52,7 @@ class DBHandler(Handler):
         search_result = re.search(r'\*(.*?)\*', message)  # поиск айди пользователя в сообщении
         if search_result:
             user_id = search_result.group(1)
-            message = message.replace(f'*{user_id}*', '')
+            message = message.replace(f'*{user_id}*', '').replace("'", "''")
         else:
             user_id = 'NULL'
 
