@@ -127,7 +127,7 @@ class ArticleProcess:
         df['text'] = df['text'].str.replace('»', '"')
         df['title'] = df['title'].str.replace('«', '"')
         df['title'] = df['title'].str.replace('»', '"')
-        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='ms') + pd.to_timedelta(3, unit='h'))
+        df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='s') + pd.to_timedelta(3, unit='h'))
         try:
             df = df.groupby('link').apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0],
                                                                'text': x['text'].iloc[0]})).reset_index()
