@@ -573,7 +573,7 @@ class ResearchParser:
 
         self._logger.info('Сохранение ключевых слайдов с weekly review')
         images = convert_from_path(filename)
-        images[2].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
+        images[3].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
         images[10].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
         images[11].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
 
