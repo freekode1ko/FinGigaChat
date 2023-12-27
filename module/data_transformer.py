@@ -313,8 +313,8 @@ class Newsletter:
     def make_weekly_result(cls):
         """ Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
-        slide_path_text = 'sources/weeklies/slide_2.png'
-        slide_path_table = 'sources/weeklies/slide_6.png'
+        slide_path_text = 'sources/weeklies/week_results.png'
+        slide_path_table = 'sources/weeklies/rialto_pulse.png'
         img_path_list = [slide_path_text, slide_path_table]
         newsletter = (f'<b>{title}</b>\n'
                       f'')
@@ -324,8 +324,8 @@ class Newsletter:
     def make_weekly_event(cls):
         """ Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
-        slide_path_text = 'sources/weeklies/slide_9.png'
-        slide_path_table = 'sources/weeklies/slide_10.png'
+        slide_path_text = 'sources/weeklies/important_events.png'
+        slide_path_table = 'sources/weeklies/exc_rate_prediction.png'
         img_path_list = [slide_path_text, slide_path_table]
         newsletter = (f'<b>{title}</b>\n'
                       f'')
