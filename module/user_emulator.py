@@ -580,19 +580,19 @@ class ResearchParser:
         self._logger.info('Сохранение ключевых слайдов с weekly review')
         images = convert_from_path(filename)
         # PARSE PDF TO GET SPECIAL SLIDES
-        weekly_pulse_parser = weekly_pulse_parse.ParsePDF()
-        spec_slides_meta = weekly_pulse_parser.get_weekly_pulse_special_slides_meta()
-        spec_slides = weekly_pulse_parser.get_special_slides(filename)
+        weekly_pulse_parser = weekly_pulse_parse.ParsePresentationPDF()
+        slides_meta = weekly_pulse_parser.get_slides_meta()
+        slides = weekly_pulse_parser.parse(filename)
 
-        for slide_meta in spec_slides_meta:
-            slide_info = spec_slides[slide_meta['title']]
+        for slide_meta in slides_meta:
+            slide_info = slides[slide_meta['title']]
             if slide_info['page_number'] < 0:
                 continue
 
             with images[slide_info['page_number']] as img:
                 if slide_meta['crop']:
                     img = self.crop_image(img)
-                img.save(f"{weekly_dir}/{slide_info['eng_name']}.png")
+                img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
 
         self._logger.info('Weekly review готов')
         print('Weekly review готов')

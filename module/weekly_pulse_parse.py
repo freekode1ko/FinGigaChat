@@ -3,6 +3,7 @@ import os
 import re
 
 from collections import defaultdict
+from enum import Enum
 from pathlib import Path
 from typing import List, Union, Iterable, Optional
 
@@ -11,7 +12,7 @@ import pandas
 
 from module.logger_base import Logger
 
-__all__ = ['ParsePDF']
+__all__ = ['ParsePresentationPDF', 'ReportTypes']
 
 
 HEADER_MAX_LEN = 256
@@ -87,7 +88,6 @@ def get_special_slides(filename: str, slides_titles: Union[List[dict], Iterable[
                     continue
 
                 slides_titles_data[title]['page_number'] = page_num
-                slides_titles_data[title]['eng_name'] = slide_meta['eng_name']
                 slides_titles_data[title]['text'] = crop_slide_text(text)  # crop some first and some last lines
 
                 if slide_meta.get('table', False):
@@ -100,21 +100,42 @@ def get_special_slides(filename: str, slides_titles: Union[List[dict], Iterable[
     return slides_titles_data
 
 
-class ParsePDF:
+class ReportTypes(Enum):
+    """ Типы отчетов для пользователя по weekly pulse """
+    weekly_results = 0
+    weekly_event = 1
+
+
+class ParsePresentationPDF:
+    """ Обрабатывает файл презентации weekly pulse в pdf формате """
 
     @staticmethod
-    def get_weekly_pulse_special_slides_meta() -> List[dict]:
+    def get_slides_meta() -> List[dict]:
+        """
+        Возвращает мета-информацию о слайдах, которые вынимаются из презентации weekly_pulse
+        Мета-информация содержит следующий набор данных:
+        title: Заголовок слайда, используется в качестве критерия для определения номера слайда
+        eng_name: название слайда на английском, используется для сохранения слайда в виде png
+        crop: флаг необходимости обрезки сохраненного изображения
+        report_type: тип отчетной информации, используется для группировки слайдов при выдаче пользователю (data_transfer)
+        table: флаг указания наличия таблицы на слайде
+        Optional[area]: область слайда, которая содержит таблицу (top, left, bottom, right)
+        Optional[relative_area]: флаг указания, что area указывает область в процентах (True) или в абсолютных единицах (False)
+        return: list[dict] список словарей с мета-информацией по каждому слайду
+        """
         special_slides_meta = [
             {
                 'title': 'Основные события недели',
                 'eng_name': 'week_results',
                 'crop': False,
+                'report_type': ReportTypes.weekly_results,
                 'table': False,
             },
             {
                 'title': 'Пульс рынка',
                 'eng_name': 'rialto_pulse',
                 'crop': True,
+                'report_type': ReportTypes.weekly_results,
                 'table': False,  # True
                 'area': (15, 0, 90, 50),  # top, left, bottom, right in %
                 'relative_area': True,
@@ -123,12 +144,14 @@ class ParsePDF:
                 'title': 'Следите за важным',
                 'eng_name': 'important_events',
                 'crop': False,
+                'report_type': ReportTypes.weekly_event,
                 'table': False,
             },
             {
                 'title': 'Прогноз валютных курсов',
                 'eng_name': 'exc_rate_prediction',
                 'crop': False,
+                'report_type': ReportTypes.weekly_event,
                 'table': False,  # True
                 'area': (15, 0, 90, 100),
                 'relative_area': True,
@@ -136,9 +159,27 @@ class ParsePDF:
         ]
         return special_slides_meta
 
+    @classmethod
+    def get_fnames_by_type(cls, report_type=None) -> List[str]:
+        """
+        Возвращает список названий слайдов, сохраненных в виде png, для определенного типа report_type
+        :param report_type: тип из Types
+        return: List[str]
+        """
+        s_meta = cls.get_slides_meta()
+        return [f"{i['eng_name']}.png" for i in s_meta if i['report_type'] == report_type]
+
     @staticmethod
-    def get_page_table(pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None,
-                       relative_area: bool = False) -> Optional[pandas.DataFrame]:
+    def parse_table(pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None,
+                    relative_area: bool = False) -> Optional[pandas.DataFrame]:
+        """
+        Возвращает найденную на слайде первую таблицу
+        :param pdf_file: Имя презентации с расширением pdf
+        :param page_number: Номер слайда (int, str)
+        :param area: Область нахождения таблицы (по умолчанию весь слайд)
+        :param relative_area: Флаг указания, что область area в процентах
+        return: None или DataFrame с табличными данными со слайда
+        """
         try:
             return get_page_table(pdf_file, page_number, area, relative_area)
         except Exception:
@@ -146,9 +187,18 @@ class ParsePDF:
 
         return None
 
-    def get_special_slides(self, filename: str, slides_titles: Optional[Union[List[dict], Iterable[dict]]]) -> defaultdict:
+    def parse(self, filename: str, slides_titles: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
+        """
+        Возвращает словарь, где ключом является заголовок слайда, а по заголовку содержится информация:
+        page_number: номер слайда с заданным заголовком int, -1 если не найден
+        text: текст слайда str
+        table: таблица со слайда DataFrame или None
+        :param filename: Путь к файлу, который необходимо распарсить
+        :param slides_titles: Мета информация вынимаемых слайдов
+        return: defaultdict[str: dict]
+        """
         if not slides_titles:
-            slides_titles = self.get_weekly_pulse_special_slides_meta()
+            slides_titles = self.get_slides_meta()
 
         try:
             return get_special_slides(filename, slides_titles)
