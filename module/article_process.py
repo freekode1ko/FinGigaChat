@@ -28,10 +28,6 @@ CONDITION_TOP = ("{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
                  "OR {table}.link SIMILAR TO '%(realty.|//)ria.ru%')")
 
 
-class ArticleError(Exception):
-    pass
-
-
 class ArticleProcess:
     def __init__(self, logger: Logger.logger):
         self._logger = logger
@@ -476,7 +472,6 @@ class ArticleProcess:
         :param com_data: data about commodity pricing
         :return: formatted text
         """
-        marker = '&#128204;'
         # TODO: 23 (year) автоматически обновлять ?
         com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
         format_msg = f'<b>{subject_name.capitalize()}</b>'
@@ -587,19 +582,55 @@ class ArticleProcess:
                                  f"WHERE (date > now() - interval '{hours} hours') and {table}_score > 0 "
                                  f"ORDER BY {table}_score desc, date asc;", con=self.engine)
 
-    def get_client_comm_industry_dictionary(self):
+    def get_industry_client_com_dict(self) -> List[Dict]:
         """
-        Составление словаря для новостных объектов и их альтернативных названий
+        Составление словарей для новостных объектов и их альтернативных названий
+        return: список со словарями клиентов, товаров и отраслей dict(id=List[other_names])
         """
-        CAI_dict = {}
-        client_dict = pd.read_sql_query("SELECT client_id, other_names FROM client_alternative", con=self.engine)
-        comm_dict = pd.read_sql_query("SELECT commodity_id, other_names FROM commodity_alternative", con=self.engine)
-        for index, client in client_dict.iterrows():
-            CAI_dict['client_{}'.format(client['client_id'])] = client['other_names'].split(';')
-        for index, comm in comm_dict.iterrows():
-            CAI_dict['commodity_{}'.format(comm['commodity_id'])] = comm['other_names'].split(';')
-        # get_commodity_news_by_timey_dict = pd.read_sql_query("SELECT id, other_names FROM industry", con=self.engine)
-        return CAI_dict
+        icc_dict = []
+        subjects = ('industry', 'client', 'commodity')
+        query = 'SELECT {subject}_id, other_names FROM {subject}_alternative'
+
+        for subject in subjects:
+            subject_df = pd.read_sql_query(query.format(subject=subject), con=self.engine)
+            subject_df['other_names'] = subject_df['other_names'].str.split(';')
+            subject_dict = subject_df.set_index('{}_id'.format(subject))['other_names'].to_dict()
+            icc_dict.append(subject_dict)
+
+        return icc_dict
+
+    @staticmethod
+    def get_user_article(client_article, commodity_article, industry_ids, client_ids, commodity_ids, industry_name):
+        """
+        Формирует два df со свежими новостями про объекты, на которые подписан пользователь.
+        :param client_article: df со свежими новостями про клиентов
+        :param commodity_article: df со свежими новостями про коммоды
+        :param industry_ids: id отраслей, на которые подписан пользователь
+        :param client_ids: id клиентов, на которых подписан пользователь
+        :param commodity_ids: id коммодов, на которые подписан пользователь
+        :param industry_name: dict с id отрасли в качества ключа и названия отрасли в качестве значения
+        return: df с отраслевыми новостями, df с новостями по клиентам и коммодам
+        """
+
+        # получим новости по отраслям, на которые подписан пользователь
+        cols = ['name', 'date', 'link', 'title', 'text_sum', 'industry_id']
+        all_article = pd.concat([client_article[cols], commodity_article[cols]], ignore_index=True)
+        industry_article_df = all_article[all_article['industry_id'].isin(industry_ids)].drop_duplicates(subset='link')
+        industry_article_df.insert(0, 'industry', industry_article_df['industry_id'].apply(lambda x: industry_name[x]))
+        industry_article_df['date'] = ''
+
+        # получим новости по клиентам и коммодам, на которые подписан пользователь
+        cols = ['title', 'date', 'link', 'text_sum', 'name']
+        client_article_df = client_article.loc[client_article['client_id'].isin(client_ids)][cols]
+        commodity_article_df = commodity_article.loc[commodity_article['commodity_id'].isin(commodity_ids)][cols]
+        client_commodity_article_df = pd.concat([client_article_df, commodity_article_df], ignore_index=True)
+
+        # удалим из клиентов_коммодов новости, которые есть в отраслевых новостях, а также дубли
+        common_links = client_commodity_article_df['link'].isin(industry_article_df['link'])
+        client_commodity_article_df = client_commodity_article_df[~common_links].drop_duplicates(subset='link')
+        client_commodity_article_df[['date', 'text_sum']] = ''
+
+        return industry_article_df, client_commodity_article_df
 
 
 class ArticleProcessAdmin:
@@ -698,7 +729,7 @@ class FormatText:
     """  Форматирует текст для передачи в Телеграмм  """
     MARKER = '&#128204;'
 
-    def __init__(self, subject: str = '', date: dt.datetime = dt.datetime.now(), link: str = '',
+    def __init__(self, subject: str = '', date: dt.datetime | str = '', link: str = '',
                  title: str = '', text_sum: str = ''):
         self.__subject = subject  # имя клиента/товара
         self.__title = title
@@ -718,7 +749,10 @@ class FormatText:
 
     @property
     def date(self):
-        return f'<i>{self.__date.strftime("%d.%m.%Y")}</i>'
+        if self.__date:
+            return f'\n<i>{self.__date.strftime("%d.%m.%Y")}</i>'
+        else:
+            return self.__date
 
     @property
     def link(self):
@@ -735,14 +769,18 @@ class FormatText:
 
     def make_subject_text(self):
         """ Возвращает новостной текст для клиента/товара """
-        if self.__title:
-            return f'{self.MARKER} <b>{self.__title}</b>\n{self.text_sum} {self.link}\n{self.date}'
+        if self.__title and self.__text_sum:
+            return f'{self.MARKER} <b>{self.__title}</b>\n{self.text_sum} {self.link}{self.date}'
+        elif self.__title and not self.__text_sum:
+            return f'{self.MARKER} {self.__title} {self.link}{self.date}'
+        elif not self.__title and self.__text_sum:
+            return f'{self.MARKER} {self.text_sum} {self.link}{self.date}'
         else:
-            return f'{self.MARKER} {self.text_sum} {self.link}\n<i>{self.date}</i>'
+            raise Exception(f'У новости нет заголовка и саммари, ссылка: {self.__link}')
 
     def make_industry_text(self):
         """ Возвращает новостной текст для просмотра новостей про индустрию """
-        msg = f'{self.MARKER} {self.title} {self.link}\n{self.date}'
+        msg = f'{self.MARKER} {self.title} {self.link}{self.date}'
         return msg
 
     @staticmethod

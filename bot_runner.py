@@ -7,7 +7,6 @@ import textwrap
 import numpy as np
 import pandas as pd
 from typing import Dict
-from urllib.parse import urlparse
 from sqlalchemy import create_engine, text, NullPool
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -756,9 +755,11 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     engine = create_engine(psql_engine, poolclass=NullPool)
     user_id = json.loads(message.from_user.as_json())['id']
+    industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
     client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
-    df_all = pd.concat([client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False).fillna('-')
+    df_all = pd.concat([industry_df['other_names'], client_df['other_names'], com_df['other_names']],
+                       ignore_index=True, sort=False).fillna('-')
     df_all = pd.DataFrame(df_all)  # pandas.core.series.Series -> pandas.core.frame.DataFrame
 
     if not message_text:
@@ -781,12 +782,15 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
                           f'объекты на подписку: {list_of_unknown}')
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
     if subscriptions:
-        subscriptions = ", ".join(subscriptions).replace("'", "''")
+        subscriptions = ", ".join(set(subscriptions)).replace("'", "''")
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
-        await message.reply(f'{subscriptions} \n\nВаш новый список подписок')
-        user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions}')
+        if len(subscriptions) < 4050:
+            await message.reply(f'Ваш новый список подписок:\n\n{subscriptions.title()}')
+        else:
+            await message.reply(f'Ваши подписки были сохранены')
+        user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
     else:
         await message.reply('Перечисленные выше объекты не были найдены')
         list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
@@ -1307,7 +1311,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 async def dailynews(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
-    await send_daily_news(20, 20, 20, 1)
+    await send_daily_news(20, 20, 1)
 
 
 @dp.message_handler(commands=['newsletter'])
@@ -1377,12 +1381,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
         if subject_ids:
             industry_id = subject_ids[0]
             not_use, reply_msg, not_use_ = ap_obj.process_user_alias(industry_id, subject)
-            try:
-                await message.answer(reply_msg, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
-            except MessageIsTooLong:
-                articles = reply_msg.split('\n\n')
-                for article in articles:
-                    await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
+            await bot_send_msg(chat_id, reply_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
             return
 
@@ -1555,36 +1554,15 @@ async def send_newsletter(newsletter_data: Dict):
     return await send_newsletter(newsletter_data)
 
 
-def translate_subscriptions_to_object_id(CAI_dict: dict, subscriptions: list):
+def translate_subscriptions_to_object_id(object_dict: dict, subscriptions: list):
     """
     Получает id объектов (клиента/комоды/отрасли) по названиям объектов из подписок пользователя
 
-    :param CAI_dict: Словарь объектов {ObjectType_ObjectID: [Object_Names], ...}
+    :param object_dict: Словарь объектов {ObjectID: [Object_Names], ...}
     :param subscriptions: Список подписок пользователя. Могут быть как названия, так и альтернативные названия
     return Список id объектов
     """
-    return [key for word in subscriptions for key in CAI_dict if word in CAI_dict[key]]
-
-
-async def news_prep(subject_ids: list, news: pd.DataFrame, subject_type: str):
-    """
-    Подготовка новостей для отправки их пользователю.
-    Включает в себя: получение id новостей и разделение на блоки по темам
-
-    :param subject_ids: Список id интересных пользователю
-    :param news: Дата Фрейм с новостями за период времени
-    :param subject_type: Тип новости по направлению (клиенты/комоды/отрасли).
-    Может иметь 3 значения: 'client', 'commodity', *'industry' текст должен быть обязательно в нижнем регистре
-    return Список Дата Фраймов, где каждый ДФ относится к одной конкретной теме.
-    """
-    requested_news_id = [int(news.split('_')[1]) for news in subject_ids if news.split('_')[0] == subject_type]
-
-    # Получить список новостей по id объекту
-    news_sorted = news.loc[news['{}_id'.format(subject_type)].isin(requested_news_id)]
-
-    # Разбить список новостей на блоки по объекту
-    news_splitted = [part for _, part in news_sorted.groupby(news_sorted['{}_id'.format(subject_type)])]
-    return news_splitted
+    return [key for word in subscriptions for key in object_dict if word in object_dict[key]]
 
 
 async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 37800, last_time_to_send: int = 61200):
@@ -1622,77 +1600,100 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
 
 
+async def bot_send_msg(user_id: int | str, msg: str, delimiter: str = '\n\n'):
+    """ Делит сообщение на патчи, если длина больше допустимой """
+    patches = []
+    current_patch = ''
+    max_patch_length = 4096
+
+    for paragraph in msg.split(delimiter):
+        if len(current_patch) + len(paragraph) + len(delimiter) < max_patch_length:
+            current_patch += paragraph + delimiter
+        else:
+            patches.append(current_patch.strip())
+            current_patch = paragraph + delimiter
+
+    if current_patch:
+        patches.append(current_patch.strip())
+
+    for patch in patches:
+        await bot.send_message(user_id, text=patch, parse_mode='HTML', disable_web_page_preview=True)
+
+
 # TODO: Добавить синхронизацию времени с методом на ожидание (newsletter_scheduler)
-async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, industry_hours: int = 7, schedule: int = 0):
+async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, schedule: int = 0):
     """
     Рассылка новостей по часам и выбранным темам (объектам новостей: клиенты/комоды/отрасли)
 
     :param client_hours: За какой период нужны новости по клиентам
     :param commodity_hours: За какой период нужны новости по комодам
-    :param industry_hours: За какой период нужны новости по отраслям
     :param schedule: Запуск без ожидания
     return None
     """
-    await newsletter_scheduler(schedule)  # Ожидание рассылки
+    await newsletter_scheduler(schedule)  # ожидание рассылки
     logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
-    row_number = 0
     ap_obj = ArticleProcess(logger)
     engine = create_engine(psql_engine, poolclass=NullPool)
-    # Словарь новостных объектов {тип_id: [альтернатив. названия], ...}
-    CAI_dict = ap_obj.get_client_comm_industry_dictionary()
+
+    # получим свежие новости за определенный промежуток времени
     clients_news = ap_obj.get_news_by_time(client_hours, 'client')
     commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity')
-    # db_df_all = pd.DataFrame(pd.concat([clients_news, commodity_news]))
-    # TODO: Добавить в обработку industry
-    # db_df_all.sort_values(by='date', ascending=False, inplace=True)
+
+    # получим словарь id отрасли и ее название
+    industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
+    # получим словари новостных объектов {id: [альтернативные названия], ...}
+    industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
+
+    row_number = 0
     users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist '
                               'WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
-        row_number += 1
-        user_id = user['user_id']
-        user_name = user['username']
-        subscriptions = user['subscriptions'].split(', ')
-        # translate_subscriptions_to_id(CAI_dict, subscriptions)
-        logger.debug(f'Отправка подписок для: {user_name}*{user_id}*. {row_number}/{users.shape[0]}')
-
-        # Получить список интересующих id объектов
+        user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
-        news_id = translate_subscriptions_to_object_id(CAI_dict, subscriptions)
-        news_client_splited = await news_prep(news_id, clients_news, 'client')
-        news_comm_splited = await news_prep(news_id, commodity_news, 'commodity')
-        if news_client_splited or news_comm_splited:
+
+        # получим списки id объектов, на которые подписан пользователь
+        industry_ids = translate_subscriptions_to_object_id(industry_id_name_dict, subscriptions)
+        client_ids = translate_subscriptions_to_object_id(client_id_name_dict, subscriptions)
+        commodity_ids = translate_subscriptions_to_object_id(commodity_id_name_dict, subscriptions)
+
+        # получим новости по подпискам пользователя
+        user_industry_df, user_client_comm_df = ArticleProcess.get_user_article(clients_news, commodity_news,
+                                                                                industry_ids, client_ids, commodity_ids,
+                                                                                industry_name)
+
+        if not user_industry_df.empty or not user_client_comm_df.empty:
+            row_number += 1
+            logger.debug(f'Отправка подписок для: {user_name}*{user_id}*. {row_number}/{users.shape[0]}')
             try:
-                await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:',
-                                       parse_mode='HTML', protect_content=True)
+                industry_name_list = user_industry_df['industry'].drop_duplicates().values.tolist()
+                client_commodity_name_list = user_client_comm_df['name'].drop_duplicates().values.tolist()
+                await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:')
+
+                for industry in industry_name_list:
+                    articles = user_industry_df.loc[user_industry_df['industry'] == industry]
+                    msg = ArticleProcess.make_format_industry_msg(articles.values.tolist())
+                    await bot_send_msg(user_id, msg)
+
+                for subject in client_commodity_name_list:
+                    articles = user_client_comm_df.loc[user_client_comm_df['name'] == subject]
+                    _, msg, _ = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
+                    await bot.send_message(user_id, text=msg, parse_mode='HTML', disable_web_page_preview=True)
+
+                user_logger.debug(f"*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. "
+                                  f"Активные подписки на момент рассылки: {user['subscriptions']}")
             except ChatNotFound:
                 user_logger.error(f'Чата с пользователем *{user_id}* {user_name} не существует')
-                # print(f'Чата с пользователем {user_id} {user_name} - не существует')
-                continue
+            except BotBlocked:
+                user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
         else:
             user_logger.info(f'Нет новых новостей по подпискам для: {user_name}*{user_id}*')
-        # Вывести новости пользователю по клиентам и комодам
-        for news in (news_client_splited, news_comm_splited):
-            for news_block in news:
-                message_block = f"<b>{news_block['name'].values.tolist()[0]}</b>\n\n".upper()
-                for df_index, row in news_block.head(20).iterrows():
-                    parsed_url = urlparse(row['link'])
-                    base_url = parsed_url.netloc.split('www.')[-1]  # Базовая ссылка на источник
-                    if base_url == 't.me':
-                        base_url = f"{base_url}/{parsed_url.path.split('/')[1]}"  # Базовая ссылка на источник если ТГ
-                    message_block += sample_of_news_title.format(row['title'], row['link'], base_url)
-                await bot.send_message(user_id, text=message_block, parse_mode='HTML',
-                                       protect_content=False, disable_web_page_preview=True)
-        user_logger.debug(f"*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. "
-                          f"Активные подписки на момент рассылки: {user['subscriptions']}")
-    logger.info('Рассылка успешно завершена. Все пользователи получили свои новости. '
-                'Переходим в ожидание следующей рассылки.')
-    await asyncio.sleep(100)
+    logger.info('Рассылка успешно завершена. Переходим в ожидание следующей рассылки.')
 
+    await asyncio.sleep(100)
     client_hours = 18 if client_hours == 7 else 7
     commodity_hours = 18 if commodity_hours == 7 else 7
-    industry_hours = 18 if industry_hours == 7 else 7
 
-    return await send_daily_news(client_hours, commodity_hours, industry_hours)
+    return await send_daily_news(client_hours, commodity_hours)
 
 
 if __name__ == '__main__':
@@ -1710,4 +1711,5 @@ if __name__ == '__main__':
     loop.create_task(send_daily_news())
 
     # запускаем бота
+    print('бот запустился')
     executor.start_polling(dp, skip_updates=True)
