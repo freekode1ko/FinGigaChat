@@ -6,7 +6,7 @@ import warnings
 import textwrap
 import numpy as np
 import pandas as pd
-from typing import Dict
+from typing import Dict, Union
 from sqlalchemy import create_engine, text, NullPool
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -1600,7 +1600,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
 
 
-async def bot_send_msg(user_id: int | str, msg: str, delimiter: str = '\n\n'):
+async def bot_send_msg(user_id: Union[int, str], msg: str, delimiter: str = '\n\n'):
     """ Делит сообщение на батчи, если длина больше допустимой """
     batches = []
     current_batch = ''

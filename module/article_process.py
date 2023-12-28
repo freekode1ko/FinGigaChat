@@ -3,7 +3,7 @@ import datetime as dt
 import numpy as np
 import json
 from urllib.parse import unquote, urlparse
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import pandas as pd
 from sqlalchemy.pool import NullPool
@@ -729,7 +729,7 @@ class FormatText:
     """  Форматирует текст для передачи в Телеграмм  """
     MARKER = '&#128204;'
 
-    def __init__(self, subject: str = '', date: dt.datetime | str = '', link: str = '',
+    def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '',
                  title: str = '', text_sum: str = ''):
         self.__subject = subject  # имя клиента/товара
         self.__title = title
