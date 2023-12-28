@@ -1601,23 +1601,23 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
 
 
 async def bot_send_msg(user_id: int | str, msg: str, delimiter: str = '\n\n'):
-    """ Делит сообщение на патчи, если длина больше допустимой """
-    patches = []
-    current_patch = ''
-    max_patch_length = 4096
+    """ Делит сообщение на батчи, если длина больше допустимой """
+    batches = []
+    current_batch = ''
+    max_batch_length = 4096
 
     for paragraph in msg.split(delimiter):
-        if len(current_patch) + len(paragraph) + len(delimiter) < max_patch_length:
-            current_patch += paragraph + delimiter
+        if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
+            current_batch += paragraph + delimiter
         else:
-            patches.append(current_patch.strip())
-            current_patch = paragraph + delimiter
+            batches.append(current_batch.strip())
+            current_batch = paragraph + delimiter
 
-    if current_patch:
-        patches.append(current_patch.strip())
+    if current_batch:
+        batches.append(current_batch.strip())
 
-    for patch in patches:
-        await bot.send_message(user_id, text=patch, parse_mode='HTML', disable_web_page_preview=True)
+    for batch in batches:
+        await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
 
 
 # TODO: Добавить синхронизацию времени с методом на ожидание (newsletter_scheduler)
