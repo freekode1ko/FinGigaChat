@@ -1636,8 +1636,10 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     engine = create_engine(psql_engine, poolclass=NullPool)
 
     # получим свежие новости за определенный промежуток времени
-    clients_news = ap_obj.get_news_by_time(client_hours, 'client')
-    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity')
+    clients_news = ap_obj.get_news_by_time(client_hours, 'client').sort_values(by=['name', 'date'],
+                                                                               ascending=[True, False])
+    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity').sort_values(by=['name', 'date'],
+                                                                                       ascending=[True, False])
 
     # получим словарь id отрасли и ее название
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
