@@ -1,3 +1,5 @@
+import os
+
 from bot_runner import read_curdatetime
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
@@ -7,6 +9,8 @@ import datetime
 import config
 import copy
 import six
+
+from module import weekly_pulse_parse as wp_parse
 
 
 class Transformer:
@@ -313,9 +317,9 @@ class Newsletter:
     def make_weekly_result(cls):
         """ Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
-        slide_path_text = 'sources/weeklies/slide_2.png'
-        slide_path_table = 'sources/weeklies/slide_6.png'
-        img_path_list = [slide_path_text, slide_path_table]
+        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
+        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
         newsletter = (f'<b>{title}</b>\n'
                       f'')
         return title, newsletter, img_path_list
@@ -324,9 +328,9 @@ class Newsletter:
     def make_weekly_event(cls):
         """ Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
-        slide_path_text = 'sources/weeklies/slide_9.png'
-        slide_path_table = 'sources/weeklies/slide_10.png'
-        img_path_list = [slide_path_text, slide_path_table]
+        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
+        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
         newsletter = (f'<b>{title}</b>\n'
                       f'')
         return title, newsletter, img_path_list

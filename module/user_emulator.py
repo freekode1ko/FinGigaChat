@@ -1,6 +1,8 @@
+from PIL import Image
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from module import data_transformer as Transformer
+from module import weekly_pulse_parse
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
@@ -506,6 +508,10 @@ class ResearchParser:
                 self._logger.error(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
                 print(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
 
+    @staticmethod
+    def crop_image(img: Image, left: int = 70, top: int = 40, right: int = 1350, bottom: int = 1290) -> Image:
+        return img.crop((left, top, right, bottom))
+
     def get_weekly_review(self):
         """
         Get Research Weekly Pulse review pdf
@@ -573,18 +579,21 @@ class ResearchParser:
 
         self._logger.info('Сохранение ключевых слайдов с weekly review')
         images = convert_from_path(filename)
-        images[3].save('{}/{}'.format(weekly_dir, 'slide_2.png'))
-        images[10].save('{}/{}'.format(weekly_dir, 'slide_9.png'))
-        images[11].save('{}/{}'.format(weekly_dir, 'slide_10.png'))
+        # PARSE PDF TO GET SPECIAL SLIDES
+        weekly_pulse_parser = weekly_pulse_parse.ParsePresentationPDF()
+        slides_meta = weekly_pulse_parser.get_slides_meta()
+        slides = weekly_pulse_parser.parse(filename)
 
-        left = 70
-        top = 40
-        right = left + 1280
-        bottom = top + 1250
+        for slide_meta in slides_meta:
+            slide_info = slides[slide_meta['title']]
+            if slide_info['page_number'] < 0:
+                continue
 
-        image = images[7].crop((left, top, right, bottom))
-        image.save('{}/{}'.format(weekly_dir, 'slide_6.png'))
-        image.close()
+            with images[slide_info['page_number']] as img:
+                if slide_meta['crop']:
+                    img = self.crop_image(img)
+                img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
+
         self._logger.info('Weekly review готов')
         print('Weekly review готов')
 
