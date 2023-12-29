@@ -746,6 +746,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     :param state: конечный автомат о состоянии
     return None
     """
+    await types.ChatActions.typing()
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
     message_text = ''
