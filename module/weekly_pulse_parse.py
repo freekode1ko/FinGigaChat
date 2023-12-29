@@ -68,36 +68,36 @@ def get_page_table(pdf_file: str, page_number: Union[str, int], area: Optional[U
     # return tables[0] if tables else None
 
 
-def get_special_slides(filename: str, slides_titles: Union[List[dict], Iterable[dict]]) -> defaultdict:
-    slides_titles_data = defaultdict(default_slide_item)
+def get_special_slides(filename: str, slides_meta: Union[List[dict], Iterable[dict]]) -> defaultdict:
+    slides_titles2data = defaultdict(default_slide_item)
 
-    if not filename or not isinstance(filename, (str, Path)) or not os.path.isfile(filename) or not slides_titles:
-        return slides_titles_data
+    if not filename or not isinstance(filename, (str, Path)) or not os.path.isfile(filename) or not slides_meta:
+        return slides_titles2data
 
-    slides_titles = [i.copy() for i in slides_titles if isinstance(i, dict)]  # make a list, that copy titles
+    slides_meta = [i.copy() for i in slides_meta if isinstance(i, dict)]  # make a list, that copy slide_meta
 
     with fitz.open(filename) as pdf_file:
         for page_num, page in enumerate(pdf_file):
             # extracting text from page in natural reading order
             text = page.get_text(sort=True)
 
-            for i, slide_meta in enumerate(slides_titles):
+            for i, slide_meta in enumerate(slides_meta):
                 title = slide_meta['title']
 
                 if not is_needed_slide(title, text):
                     continue
 
-                slides_titles_data[title]['page_number'] = page_num
-                slides_titles_data[title]['text'] = crop_slide_text(text)  # crop some first and some last lines
+                slides_titles2data[title]['page_number'] = page_num
+                slides_titles2data[title]['text'] = crop_slide_text(text)  # crop some first and some last lines
 
                 if slide_meta.get('table', False):
-                    slides_titles_data[title]['table'] = get_page_table(filename, page_num + 1,
+                    slides_titles2data[title]['table'] = get_page_table(filename, page_num + 1,
                                                                         slide_meta.get('area', None),
                                                                         slide_meta.get('relative_area', False))
 
-                slides_titles.pop(i)
+                slides_meta.pop(i)
                 break
-    return slides_titles_data
+    return slides_titles2data
 
 
 class ReportTypes(Enum):
@@ -187,21 +187,21 @@ class ParsePresentationPDF:
 
         return None
 
-    def parse(self, filename: str, slides_titles: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
+    def parse(self, filename: str, slides_meta: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
         """
         Возвращает словарь, где ключом является заголовок слайда, а по заголовку содержится информация:
         page_number: номер слайда с заданным заголовком int, -1 если не найден
         text: текст слайда str
         table: таблица со слайда DataFrame или None
         :param filename: Путь к файлу, который необходимо распарсить
-        :param slides_titles: Мета информация вынимаемых слайдов
+        :param slides_meta: Мета информация вынимаемых слайдов
         return: defaultdict[str: dict]
         """
-        if not slides_titles:
-            slides_titles = self.get_slides_meta()
+        if not slides_meta:
+            slides_meta = self.get_slides_meta()
 
         try:
-            return get_special_slides(filename, slides_titles)
+            return get_special_slides(filename, slides_meta)
         except Exception:
             pass
 
