@@ -1294,7 +1294,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
 
     if reply_msg and isinstance(reply_msg, str):
         articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
-        if len(articles_all) > config.NEWS_LIMIT:
+        if len(articles_all) > config.NEWS_LIMIT + 1:
             articles_f5 = '\n\n'.join(articles_all[:config.NEWS_LIMIT + 1])
             keyboard = types.InlineKeyboardMarkup()
             keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=next_news_callback.new(
@@ -1448,7 +1448,7 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
 
                 if isinstance(reply_msg, str):
                     articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
-                    if len(articles_all) > config.NEWS_LIMIT:
+                    if len(articles_all) > config.NEWS_LIMIT + 1:
                         articles_f5 = '\n\n'.join(articles_all[:config.NEWS_LIMIT + 1])
                         keyboard = types.InlineKeyboardMarkup()
                         # keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))

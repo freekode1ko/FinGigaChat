@@ -292,7 +292,7 @@ class ArticleProcess:
         :return: name of client(commodity) and sorted sum articles
         """
         count_all, count_top = limit_all, 3
-        offset_top = 3
+        offset_top = 0
         query_temp = ('SELECT relation.article_id, relation.{subject}_score, '
                       'article_.title, article_.date, article_.link, article_.text_sum '
                       'FROM relation_{subject}_article AS relation '
