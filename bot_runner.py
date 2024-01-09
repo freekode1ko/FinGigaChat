@@ -60,7 +60,14 @@ research_footer = 'Источник: Sber Analytical Research. Распрост�
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
 
-next_news_callback = CallbackData("next_5_news", "subject", "subject_id", "limit", "offset")
+next_news_callback = CallbackData(
+    "next_5_news",
+    "subject",
+    "subject_id",
+    "full_name",
+    "user_msg",
+    "offset",
+)
 
 # States
 class Form(StatesGroup):
@@ -1276,8 +1283,11 @@ async def end_del_article(callback_query: types.CallbackQuery):
 async def send_next_news(call: types.CallbackQuery, callback_data: dict):
     subject_id = callback_data.get('subject_id', 0)
     subject = callback_data.get('subject', '')
-    limit_all = callback_data.get('limit', config.NEWS_LIMIT + 1)
+    limit_all = config.NEWS_LIMIT + 1
     offset_all = callback_data.get('offset', config.NEWS_LIMIT)
+    full_name = callback_data.get('full_name', '')
+    user_msg = callback_data.get('user_msg', '')
+    chat_id = call.message.chat.id
 
     if not subject_id or not subject:
         return
@@ -1300,7 +1310,8 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
             keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=next_news_callback.new(
                 subject_id=subject_id,
                 subject=subject,
-                limit=limit_all,
+                full_name=full_name,
+                user_msg=user_msg,
                 offset=offset_all + config.NEWS_LIMIT,
             )))
         else:
@@ -1324,6 +1335,9 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
                     logger.error(f"MessageIsTooLong ERROR: {article}")
         finally:
             await call.message.edit_reply_markup()
+
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} '
+                         f'(всего {offset_all + config.NEWS_LIMIT})')
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
@@ -1456,7 +1470,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                                                                 callback_data=next_news_callback.new(
                                                                     subject_id=subject_id,
                                                                     subject=subject,
-                                                                    limit=config.NEWS_LIMIT + 1,
+                                                                    full_name=full_name,
+                                                                    user_msg=user_msg,
                                                                     offset=config.NEWS_LIMIT,
                                                                 )))
                     else:

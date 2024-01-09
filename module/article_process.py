@@ -315,16 +315,19 @@ class ArticleProcess:
                                                        offset=offset_top)
             result_top = conn.execute(text(query_article_top_data)).fetchall()
             article_data_top = [item[2:] for item in result_top]
+            article_data_top_len = len(article_data_top)
             top_link = ','.join([f"'{item[4]}'" for item in result_top]) if result_top else "''"
+
+            offset_all_updated = ((offset_all - article_data_top_len) if offset_all > article_data_top_len else 0)
 
             condition_all = f"AND article_.link not in ({top_link})"
             query_article_all_data = query_temp.format(subject=subject, subject_id=subject_id,
                                                        count=count_all, condition=condition_all,
-                                                       offset=offset_all)
+                                                       offset=offset_all_updated)
 
             article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
             count_of_not_top_news = count_all - len(article_data_top)
-            article_data = article_data_top + article_data_all[:count_of_not_top_news]
+            article_data = article_data_top + article_data_all[:count_of_not_top_news] if not offset_all else article_data_all
 
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
