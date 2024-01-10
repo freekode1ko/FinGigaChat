@@ -1283,7 +1283,7 @@ async def end_del_article(callback_query: types.CallbackQuery):
 async def send_next_news(call: types.CallbackQuery, callback_data: dict):
     subject_id = callback_data.get('subject_id', 0)
     subject = callback_data.get('subject', '')
-    limit_all = config.NEWS_LIMIT + 1
+    limit_all = config.NEWS_LIMIT * 2 + 1
     offset_all = callback_data.get('offset', config.NEWS_LIMIT)
     full_name = callback_data.get('full_name', '')
     user_msg = callback_data.get('user_msg', '')
@@ -1301,43 +1301,45 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
     ap_obj = ArticleProcess(logger)
 
     com_price, reply_msg, img_name_list = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    new_offset = offset_all + config.NEWS_LIMIT * 2
 
     if reply_msg and isinstance(reply_msg, str):
-        articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
-        if len(articles_all) > config.NEWS_LIMIT + 1:
-            articles_f5 = '\n\n'.join(articles_all[:config.NEWS_LIMIT + 1])
+        articles_all = reply_msg.split('\n\n', limit_all)
+        if len(articles_all) > limit_all:
+            articles_f5 = '\n\n'.join(articles_all[:limit_all])
             keyboard = types.InlineKeyboardMarkup()
             keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=next_news_callback.new(
                 subject_id=subject_id,
                 subject=subject,
                 full_name=full_name,
                 user_msg=user_msg,
-                offset=offset_all + config.NEWS_LIMIT,
+                offset=new_offset,
             )))
         else:
             articles_f5 = reply_msg
             keyboard = None
 
-        try:
+        if len(articles_f5.encode()) < 4050:
             await call.message.answer(articles_f5, parse_mode='HTML', protect_content=False,
                                       disable_web_page_preview=True, reply_markup=keyboard)
-        except MessageIsTooLong:
+        else:
             articles = articles_f5.split('\n\n')
             articles_len = len(articles)
             callback_markup = None
             for i, article in enumerate(articles, 1):
-                if len(article) < 4050:
+                if len(article.encode()) < 4050:
                     if i == articles_len:
                         callback_markup = keyboard
                     await call.message.answer(article, parse_mode='HTML', protect_content=False,
                                               disable_web_page_preview=True, reply_markup=callback_markup)
+                    await types.ChatActions.typing(1.1)  # otherwise flood control return us 429 error
                 else:
                     logger.error(f"MessageIsTooLong ERROR: {article}")
-        finally:
-            await call.message.edit_reply_markup()
+
+        await call.message.edit_reply_markup()
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} '
-                         f'(всего {offset_all + config.NEWS_LIMIT})')
+                         f'(всего {new_offset})')
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
