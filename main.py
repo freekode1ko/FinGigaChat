@@ -318,9 +318,9 @@ class Main:
 
         elif table_metals[0] == 'Металлы' and page_metals == 'U7*0':
             if {'Last', 'Change'}.issubset(table_metals[3].columns):
-                jap_coal = table_metals[3][table_metals[3].Symbol.str.contains('U7.23')]
+                jap_coal = table_metals[3][table_metals[3].Symbol.str.contains('U7.24')]
                 U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
-                logger.debug('Таблица U7N23 собрана')
+                logger.debug('Таблица U7N24 собрана')
 
         elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
             if 'Metals' in table_metals[3].columns:
