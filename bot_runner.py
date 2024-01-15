@@ -1764,7 +1764,7 @@ if __name__ == '__main__':
     # инициализируем обработчик и логгер
     handler = get_handler(psql_engine)
     user_logger = get_db_logger(Path(__file__).stem, handler)  # логгер для сохранения пользовательских действий
-    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
+    logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)  # логгер для сохранения действий программы + пользователей
 
     # запускам рассылки
     loop = asyncio.get_event_loop()

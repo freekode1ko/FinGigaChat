@@ -628,7 +628,8 @@ class Main:
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')
-    logger = selector_logger(Path(__file__).stem, 10)  # логгер для сохранения действий программы + пользователей
+    # логгер для сохранения действий программы + пользователей
+    logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)
     while True:
         hours2wait = 4  # после обновления всех данных - ждем 4 часа
 
@@ -696,5 +697,5 @@ if __name__ == '__main__':
 
         for i in range(hours2wait):
             time.sleep(3600)
-            print(f'Ожидание сборки. \n{hours2wait - i+1}/{hours2wait} часа')
-            logger.info(f'Ожидание сборки. \n{hours2wait - i+1}/{hours2wait} часа')
+            print(f'Ожидание сборки. {hours2wait - i+1}/{hours2wait} часа')
+            logger.info(f'Ожидание сборки. {hours2wait - i+1}/{hours2wait} часа')
