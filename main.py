@@ -630,6 +630,8 @@ if __name__ == '__main__':
     warnings.filterwarnings('ignore')
     logger = selector_logger(Path(__file__).stem, 10)  # логгер для сохранения действий программы + пользователей
     while True:
+        hours2wait = 4  # после обновления всех данных - ждем 4 часа
+
         logger.info('Инициализация сборщика котировок')
         runner = Main()
         logger.info('Загрузка прокси')
@@ -640,6 +642,7 @@ if __name__ == '__main__':
             runner.main()
         except Exception as e:
             logger.error(f'Ошибка при сборке котировок: {e}')
+            hours2wait = 1
 
         try:
             # collect and save research data
@@ -649,47 +652,49 @@ if __name__ == '__main__':
             driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
         except Exception as e:
             logger.error(f'Ошибка при подключении к контейнеру selenium: {e}')
-            continue
+            driver = None
+            hours2wait = 1
 
-        try:
-            logger.info('Начало сборки отчетов с research')
-            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
-            logger.info('Сохранение собранных данных')
-            runner.save_clients_financial_indicators(clients_table)
-            runner.save_key_eco_table(key_eco_table)
-            runner.save_reviews(reviews_dict)
-            runner.process_companies_data(companies_pages_html_dict)
-        except Exception as e:
-            logger.error(f'Ошибка при сборке отчетов с Research: {e}')
+        if driver:
+            try:
+                logger.info('Начало сборки отчетов с research')
+                reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+                logger.info('Сохранение собранных данных')
+                runner.save_clients_financial_indicators(clients_table)
+                runner.save_key_eco_table(key_eco_table)
+                runner.save_reviews(reviews_dict)
+                runner.process_companies_data(companies_pages_html_dict)
+            except Exception as e:
+                logger.error(f'Ошибка при сборке отчетов с Research: {e}')
+                hours2wait = 1
 
-        try:
-            logger.info('Поднятие новой сессии')
-            session = req.Session()
-            # print('session started')
-            logger.info('Сборки графиков')
-            runner.commodities_plot_collect(session, driver)
-            # print('com writed')
-        except Exception as e:
-            logger.error(f'Ошибка при парсинге источников по сырью: {e}')
+            try:
+                logger.info('Поднятие новой сессии')
+                session = req.Session()
+                # print('session started')
+                logger.info('Сборки графиков')
+                runner.commodities_plot_collect(session, driver)
+                # print('com writed')
+            except Exception as e:
+                logger.error(f'Ошибка при парсинге источников по сырью: {e}')
+                hours2wait = 1
 
-        try:
-            driver.close()
-        except Exception as e:
-            logger.error(f'Ошибка во время закрытия подключения к selenium: {e}')
-            # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
-            # тогда вылетает MaxRetryError
-            continue
+            try:
+                driver.close()
+            except Exception as e:
+                # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
+                # тогда вылетает MaxRetryError
+                logger.error(f'Ошибка во время закрытия подключения к selenium: {e}')
+                hours2wait = 1
 
-        i = 0
         logger.info('Запись даты и времени последней успешной сборки')
         runner.save_date_of_last_build()
         # with open('sources/tables/time.txt', 'w') as f:
         #    f.write(datetime.datetime.now().strftime("%d.%m.%Y %H:%M"))
-        print('Ожидание 4 часов перед следующей сборкой...')
-        logger.info(f'Ожидание 4 часов перед следующей сборкой...')
+        print(f'Ожидание {hours2wait} часов перед следующей сборкой...')
+        logger.info(f'Ожидание {hours2wait} часов перед следующей сборкой...')
 
-        while i <= 3:
-            i += 1
+        for i in range(hours2wait):
             time.sleep(3600)
-            print('Ожидание сборки. \n{}/4 часа'.format(4 - i+1))
-            logger.info('Ожидание сборки. \n{}/4 часа'.format(4 - i+1))
+            print(f'Ожидание сборки. \n{hours2wait - i+1}/{hours2wait} часа')
+            logger.info(f'Ожидание сборки. \n{hours2wait - i+1}/{hours2wait} часа')
