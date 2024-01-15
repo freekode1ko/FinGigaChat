@@ -176,11 +176,11 @@ async def help_handler(message: types.Message):
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-@dp.message_handler(state='*', commands=['cancel'])
-@dp.message_handler(lambda message: message.text.lower() == 'cancel', state='*')
+@dp.message_handler(state='*', commands=['cancel', 'отмена'])
+@dp.message_handler(lambda message: message.text.lower() in ['cancel', 'отмена'], state='*')
 async def cancel_handler(message: types.Message, state: FSMContext):
     """
-    Allow user to cancel any action
+    Позволяет пользователю отменять операции
     """
     if state is None:
         return
@@ -736,7 +736,7 @@ async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
     chat_id = callback_query.message.chat.id
     user_msg = 'addnewsubscriptions'
     call_from = dict(callback_query.values['from'])
-    full_name = f"{call_from['first_name']} {call_from['last_name']}"
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     await add_subscriptions_body(chat_id, full_name, user_msg, callback_query.values['from'].as_json())
 
 
@@ -809,8 +809,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     engine = create_engine(psql_engine, poolclass=NullPool)
     user_id = json.loads(message.from_user.as_json())['id']
 
-    user_subscriptions_set = await get_list_of_user_subscriptions(user_id)
-    user_subscriptions_set = set(user_subscriptions_set)
+    user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
+    user_subscriptions_set = set(user_subscriptions_list)
 
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
@@ -900,7 +900,7 @@ async def get_user_subscriptions_callback(callback_query: types.CallbackQuery):
     chat_id = callback_query.message.chat.id
     user_msg = 'myactivesubscriptions'
     call_from = dict(callback_query.values['from'])
-    full_name = f"{call_from['first_name']} {call_from['last_name']}"
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = call_from['id']  # Get user_ID from message
     await get_user_subscriptions_body(chat_id, user_id)
@@ -920,19 +920,15 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     subscriptions = await get_list_of_user_subscriptions(user_id)
 
-    log_msg = f'Пользователь *{chat_id}* запросил удаление подписки'
+    log_msg = f'Пользователь *{chat_id}* {full_name} запросил удаление подписки'
     keyboard = types.ReplyKeyboardRemove()
     if not subscriptions:
         msg_txt = 'Нет активных подписок'
         log_msg += ', но у пользователя нет активных подписок'
         await state.finish()
-    elif user_msg.lower() == 'отмена':
-        msg_txt = 'Отменено'
-        log_msg = f'Пользователь *{chat_id}* отменил удаление подписок'
-        await state.finish()
     else:
-        cancel_msg = 'Для отмены действия напишите в чат «отмена»'
-        msg_txt = 'Выберите подписку для удаления\n\n' + cancel_msg
+        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        msg_txt = 'Ваша подписка удалена, если хотите продолжить, напишите название следующей подписки.\n\n' + cancel_msg
         subscription_to_del = -1
         for i, subscription in enumerate(subscriptions):
             if subscription == user_msg:
@@ -951,7 +947,7 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
                 conn.commit()
         else:
             log_msg += f', но у пользователя нет подписки {user_msg}'
-            msg_txt = f"Указанная подписка отсутствует\n\n" + msg_txt
+            msg_txt = 'Указанная подписка отсутствует\n\n' + 'Выберите подписку для удаления\n\n' + cancel_msg
 
         buttons = []
         for subscription in subscriptions:
@@ -975,14 +971,14 @@ async def delete_subscriptions(callback_query: types.CallbackQuery):
     chat_id = callback_query.message.chat.id
     user_msg = 'deletesubscriptions'
     call_from = dict(callback_query.values['from'])
-    full_name = f"{call_from['first_name']} {call_from['last_name']}"
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = call_from['id']  # Get user_ID from message
     engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
 
-    log_msg = f'Пользователь *{chat_id}* запросил список своих подписок'
+    log_msg = f'Пользователь *{chat_id}* {full_name} запросил список своих подписок'
     keyboard = types.ReplyKeyboardRemove()
     if not subscriptions[0]:
         msg_txt = 'Нет активных подписок'
@@ -992,7 +988,7 @@ async def delete_subscriptions(callback_query: types.CallbackQuery):
         buttons = []
         for subscription in subscriptions[0].split(', '):
             buttons.append([types.KeyboardButton(text=subscription)])
-        cancel_msg = 'Для отмены действия напишите в чат «отмена»'
+        cancel_msg = 'Напишите «отмена», если хотите закончить'
         msg_txt = 'Выберите подписку для удаления\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
                                              input_field_placeholder=cancel_msg, one_time_keyboard=True)
@@ -1012,7 +1008,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery):
     chat_id = callback_query.message.chat.id
     user_msg = 'deleteallsubscriptions'
     call_from = dict(callback_query.values['from'])
-    full_name = f"{call_from['first_name']} {call_from['last_name']}"
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = call_from['id']  # Get user_ID from message
     engine = create_engine(psql_engine, poolclass=NullPool)
@@ -1021,7 +1017,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery):
         conn.commit()
 
     msg_txt = 'Подписки удалены'
-    await bot.send_message(chat_id, msg_txt)
+    await bot.send_message(chat_id, msg_txt, reply_markup=types.ReplyKeyboardRemove())
 
 
 @dp.message_handler(commands=['subscriptions_menu'])
