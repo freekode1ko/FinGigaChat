@@ -304,7 +304,7 @@ class ArticleProcess:
                       'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score > 0 '
                       '{condition} '
                       'ORDER BY date DESC, relation.{subject}_score DESC '
-                      'OFFSET {offset}'
+                      'OFFSET {offset} '
                       'LIMIT {count}')
         condition_top = CONDITION_TOP.format(condition_word='AND', table='article_')
 
