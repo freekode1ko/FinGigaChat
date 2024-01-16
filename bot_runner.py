@@ -812,6 +812,12 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
 
+    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
+    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
+        await message.reply(f'Достигнут предел по количеству подписок\n\n'
+                            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}')
+        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
     client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
@@ -840,14 +846,24 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
 
     if subscriptions:
-        user_subscriptions_set.update(subscriptions)
+        num_of_add_subscriptions = config.USER_SUBSCRIPTIONS_LIMIT - len(user_subscriptions_set)
+        user_subscriptions_set.update(subscriptions[:num_of_add_subscriptions])
+        not_added_subscriptions = ", ".join(subscriptions[num_of_add_subscriptions:]).title()
         subscriptions = ", ".join(user_subscriptions_set).replace("'", "''")
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
 
-        if len(subscriptions) < 4050:
-            await message.reply(f'Ваш новый список подписок:\n\n{subscriptions.title()}')
+        msg_txt = f'Ваш новый список подписок:\n\n{subscriptions.title()}'
+
+        if len(user_subscriptions_set) == config.USER_SUBSCRIPTIONS_LIMIT:
+            msg_txt += f'\n\nДостигнут предел по количеству подписок'
+
+        if not_added_subscriptions:
+            msg_txt += f'\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
+
+        if len(msg_txt) < 4096:
+            await message.reply(msg_txt)
         else:
             await message.reply(f'Ваши подписки были сохранены')
 
