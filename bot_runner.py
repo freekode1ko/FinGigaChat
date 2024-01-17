@@ -869,9 +869,10 @@ async def get_user_subscriptions_body(chat_id: int, user_id: int):
         buttons = []
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
-        msg_txt = 'Выберите подписку'
+        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        msg_txt = 'Выберите подписку\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                             input_field_placeholder=msg_txt)
+                                             input_field_placeholder=cancel_msg)
     await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
 
 
