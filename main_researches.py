@@ -29,7 +29,7 @@ import click
 from utils.cli_utils import get_period
 
 
-class Main:
+class ResearchesGetter:
     def __init__(self, logger):
         self.logger = logger
         parser_obj = crawler.Parser(self.logger)
@@ -357,16 +357,6 @@ class Main:
             companies_writer.close()
 
 
-# проверить зависимости сборщика ресерчей от данных, которые собираются при сборке котировок
-# Разбить на два класса, если нет зависимостей
-# Выделить главные методы
-# Сборщик котировок:
-# - сборка котировок
-# Сборщик ресерчей (зависит от selenium):
-# - сборка ресерчей
-# - сборка графиков
-
-
 @click.command()
 @click.option('-p', '--period', default="4h", show_default=True, type=str, help="Периодичность сборки котировок\n"
                                                                                  "s - секунды\n"
@@ -390,7 +380,7 @@ def main(period):
         current_period = period
 
         logger.info('Инициализация сборщика котировок')
-        runner = Main(logger)
+        runner = ResearchesGetter(logger)
         logger.info('Загрузка прокси')
         runner.parser_obj.get_proxy_addresses()
 
