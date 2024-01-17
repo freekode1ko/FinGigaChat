@@ -1627,6 +1627,62 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
+async def send_nearest_subjects(message: types.Message):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    ap_obj = ArticleProcess(logger=logger)
+    nearest_subjects = ap_obj.find_nearest_subjects(user_msg)
+
+    buttons = [[types.KeyboardButton(text='отмена')]]
+    for subject_name in nearest_subjects:
+        buttons.append([types.KeyboardButton(text=subject_name)])
+
+    response = 'Возможно, вы имели в виду:'
+    cancel_msg = 'Напишите «отмена», если хотите закончить'
+    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                         input_field_placeholder=cancel_msg, one_time_keyboard=True)
+
+    await bot.send_message(chat_id, response, parse_mode='HTML', protect_content=False,
+                           disable_web_page_preview=True, reply_markup=keyboard)
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы '
+                     f'"{", ".join(nearest_subjects)}"')
+
+
+@dp.message_handler(commands=['askgigachat', 'спросить'])
+@dp.message_handler(lambda message: message.text.lower().startswith(('askgigachat', 'спросить')))
+async def ask_giga_chat(message: types.Message, prompt: str = ''):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f"\n\n{message.text}\n\n")
+    global chat
+    global token
+    msg = '{} {}'.format(prompt, message.text)
+    msg = msg.replace('/bonds', '')
+    msg = msg.replace('/eco', '')
+    msg = msg.replace('/commodities', '')
+    msg = msg.replace('/fx', '')
+
+    try:
+        giga_answer = chat.ask_giga_chat(token=token, text=msg)
+        giga_js = giga_answer.json()['choices'][0]['message']['content']
+    except AttributeError:
+        chat = gig.GigaChat()
+        token = chat.get_user_token()
+        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+        giga_answer = chat.ask_giga_chat(token=token, text=msg)
+        giga_js = giga_answer.json()['choices'][0]['message']['content']
+    except KeyError:
+        chat = gig.GigaChat()
+        token = chat.get_user_token()
+        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+        giga_answer = chat.ask_giga_chat(token=token, text=msg)
+        giga_js = giga_answer.json()['choices'][0]['message']['content']
+        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
+                             f' KeyError (некорректная выдача ответа GigaChat),'
+                             f' ответ после переформирования запроса')
+    response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
+    await message.answer(response, protect_content=False)
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     """ Обработка пользовательского сообщения """
@@ -1736,27 +1792,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             if function_to_call:
                 await function_to_call(message)
             else:
-                try:
-                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                except AttributeError:
-                    chat = gig.GigaChat()
-                    token = chat.get_user_token()
-                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                except KeyError:
-                    chat = gig.GigaChat()
-                    token = chat.get_user_token()
-                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
-                                         f' KeyError (некорректная выдача ответа GigaChat),'
-                                         f' ответ после переформирования запроса')
-                response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
-                await message.answer(response, protect_content=False)
-                user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+                await send_nearest_subjects(message)
+                # await ask_giga_chat(message, prompt)
 
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
