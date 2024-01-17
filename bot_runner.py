@@ -1627,6 +1627,98 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
+""" START OF TESTING SUBSCRIPTION MENU #1"""
+@dp.callback_query_handler(lambda c: c.data.startswith('page'))
+async def scroller(query: types.CallbackQuery = None):
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    input_params = query.data.split(':')
+    direction = input_params[1]
+    cur_page = input_params[2]
+    search = input_params[3]
+    cur_page = int(cur_page)
+
+    if search == 'client':
+        table = pd.read_sql_query('SELECT name FROM client', con=engine)
+    elif search == 'commodity':
+        table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
+    elif search == 'industry':
+        table = pd.read_sql_query('SELECT name FROM industry', con=engine)
+    else:
+        clients_table = pd.read_sql_query('SELECT name FROM client', con=engine)
+        commodity_table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
+        industry_table = pd.read_sql_query('SELECT name FROM industry', con=engine)
+        table = pd.concat([clients_table, commodity_table, industry_table], ignore_index=True)
+    chunks = []
+    num_chunks = len(table) // 20 + 1
+    for index in range(num_chunks):
+        chunks.append(table[index * 20:(index + 1) * 20])
+
+    cur_page += 1 if direction == 'forward' else -1
+    keyboard = await pagination(chunks, search, cur_page)
+    await query.message.edit_reply_markup(reply_markup=keyboard)
+
+
+async def pagination(pages, search, cur_page: int = 0):
+    buttons = []
+    for element in pages[cur_page].values.tolist():
+        user_button = [types.InlineKeyboardButton(f"{element[0]}", callback_data=f'element')]
+        buttons.append(user_button)
+    bottom_buttons = []
+    if cur_page != 0:
+        callback = 'page:back:{}:{}'.format(cur_page, search)
+        bottom_buttons.append(types.InlineKeyboardButton(f'⬅', callback_data=callback))
+    else:
+        bottom_buttons.append(types.InlineKeyboardButton(f'⛔', callback_data=f'stop'))
+
+    bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page+1}/{len(pages)}', callback_data=f'pagination'))
+
+    if cur_page == len(pages)-1:
+        bottom_buttons.append(types.InlineKeyboardButton(f'⛔', callback_data=f'stop'))
+    else:
+        callback = 'page:forward:{}:{}'.format(cur_page, search)
+        bottom_buttons.append(types.InlineKeyboardButton(f'➡', callback_data=callback))
+
+    buttons.append(bottom_buttons)
+    keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
+    return keyboard
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('sub'))
+async def choose_subs(query: types.CallbackQuery = None):
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    search = query.data.split(':')[1]
+    if search == 'client':
+        table = pd.read_sql_query('SELECT name FROM client', con=engine)
+    elif search == 'commodity':
+        table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
+    elif search == 'industry':
+        table = pd.read_sql_query('SELECT name FROM industry', con=engine)
+    else:
+        clients_table = pd.read_sql_query('SELECT name FROM client', con=engine)
+        commodity_table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
+        industry_table = pd.read_sql_query('SELECT name FROM industry', con=engine)
+        table = pd.concat([clients_table, commodity_table, industry_table], ignore_index=True)
+    chunks = []
+    num_chunks = len(table) // 20 + 1
+    for index in range(num_chunks):
+        chunks.append(table[index * 20:(index + 1) * 20])
+    keyboard = await pagination(chunks, search)
+    await query.message.edit_reply_markup(reply_markup=keyboard)
+
+
+@dp.message_handler(commands=['menu_1'])
+async def menu_1(message: types.Message):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(f'Клиенты', callback_data=f'sub:client'))
+    keyboard.add(types.InlineKeyboardButton(f'Сырьевые товары', callback_data=f'sub:commodity'))
+    keyboard.add(types.InlineKeyboardButton(f'Индустрия', callback_data=f'sub:industry'))
+    keyboard.add(types.InlineKeyboardButton(f'Все вместе', callback_data=f'sub:all'))
+
+    await message.answer("Выбрать себе подписку", reply_markup=keyboard)
+
+""" END OF TESTING SUBSCRIPTION MENU #1"""
+
+
 @dp.message_handler()
 async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
     """ Обработка пользовательского сообщения """
