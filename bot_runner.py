@@ -6,7 +6,7 @@ import warnings
 import textwrap
 import numpy as np
 import pandas as pd
-from typing import Dict, Union
+from typing import Dict, Union, List
 from sqlalchemy import create_engine, text, NullPool
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -79,6 +79,10 @@ class Form(StatesGroup):
     delete_user_subscriptions = State()
     send_to_users = State()
     please_add_this = State()
+
+
+class GigaChat(StatesGroup):
+    gigachat_mode = State()
 
 
 def read_curdatetime():
@@ -176,11 +180,9 @@ async def help_handler(message: types.Message):
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-@dp.message_handler(state='*', commands=['cancel', 'отмена'])
-@dp.message_handler(lambda message: message.text.lower() in ['cancel', 'отмена'], state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
+async def finish_state(message: types.Message, state: FSMContext, msg_text: str):
     """
-    Позволяет пользователю отменять операции
+    Позволяет пользователю очищать клавиатуру и выходить из любого состояния
     """
     if state is None:
         return
@@ -188,7 +190,19 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     # Cancel state and inform user about it
     await state.finish()
     # And remove keyboard (just in case)
-    await message.reply('Отменено', reply_markup=types.ReplyKeyboardRemove())
+    await message.reply(msg_text, reply_markup=types.ReplyKeyboardRemove())
+
+
+@dp.message_handler(state='*', commands=['exit', 'завершить'])
+@dp.message_handler(lambda message: message.text.lower() in ['exit', 'завершить'], state='*')
+async def exit_handler(message: types.Message, state: FSMContext):
+    await finish_state(message, state, 'Завершено')
+
+
+@dp.message_handler(state='*', commands=['cancel', 'отмена'])
+@dp.message_handler(lambda message: message.text.lower() in ['cancel', 'отмена'], state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    await finish_state(message, state, 'Отменено')
 
 
 # ['облигации', 'бонды', 'офз']
@@ -782,7 +796,7 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
                                          'отправить в бота следующем сообщением, чтобы список сохранился')
 
 
-async def get_list_of_user_subscriptions(user_id: int) -> list:
+async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
     engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
@@ -866,12 +880,15 @@ async def get_user_subscriptions_body(chat_id: int, user_id: int):
         msg_txt = 'Нет активных подписок'
         user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок, но их нет')
     else:
-        buttons = []
+        cancel_command = 'завершить'
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
-        msg_txt = 'Выберите подписку'
+
+        cancel_msg = f'Напишите «{cancel_command}» для завершения просмотра своих подписок'
+        msg_txt = 'Выберите подписку\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                             input_field_placeholder=msg_txt)
+                                             input_field_placeholder=cancel_msg)
     await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
 
 
@@ -927,7 +944,8 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
         log_msg += ', но у пользователя нет активных подписок'
         await state.finish()
     else:
-        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        cancel_command = 'завершить'
+        cancel_msg = f'Напишите «{cancel_command}», если хотите закончить'
         msg_txt = 'Ваша подписка удалена, если хотите продолжить, напишите название следующей подписки.\n\n' + cancel_msg
         subscription_to_del = -1
         for i, subscription in enumerate(subscriptions):
@@ -949,7 +967,7 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
             log_msg += f', но у пользователя нет подписки {user_msg}'
             msg_txt = 'Указанная подписка отсутствует\n\n' + 'Выберите подписку для удаления\n\n' + cancel_msg
 
-        buttons = []
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
 
@@ -974,21 +992,20 @@ async def delete_subscriptions(callback_query: types.CallbackQuery):
     full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = call_from['id']  # Get user_ID from message
-    engine = create_engine(psql_engine, poolclass=NullPool)
-    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
-                                      con=engine)['subscriptions'].values.tolist()
+    subscriptions = await get_list_of_user_subscriptions(user_id)
 
     log_msg = f'Пользователь *{chat_id}* {full_name} запросил список своих подписок'
     keyboard = types.ReplyKeyboardRemove()
-    if not subscriptions[0]:
+    if not subscriptions:
         msg_txt = 'Нет активных подписок'
         log_msg += ', но их нет'
     else:
+        cancel_command = 'завершить'
         await Form.delete_user_subscriptions.set()
-        buttons = []
-        for subscription in subscriptions[0].split(', '):
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
+        for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
-        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        cancel_msg = f'Напишите «{cancel_command}», если хотите закончить'
         msg_txt = 'Выберите подписку для удаления\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
                                              input_field_placeholder=cancel_msg, one_time_keyboard=True)
@@ -1632,12 +1649,13 @@ async def send_nearest_subjects(message: types.Message):
     ap_obj = ArticleProcess(logger=logger)
     nearest_subjects = ap_obj.find_nearest_subjects(user_msg)
 
-    buttons = [[types.KeyboardButton(text='отмена')]]
+    cancel_command = 'отмена'
+    buttons = [[types.KeyboardButton(text=cancel_command)]]
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
 
-    response = 'Возможно, вы имели в виду:'
-    cancel_msg = 'Напишите «отмена», если хотите закончить'
+    cancel_msg = f'Напишите «{cancel_command}» для очистки'
+    response = 'Не удалось обработать ваш запрос.\n\nВозможно, вы имели в виду один из следующих вариантов:'
     keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
                                          input_field_placeholder=cancel_msg, one_time_keyboard=True)
 
@@ -1647,8 +1665,23 @@ async def send_nearest_subjects(message: types.Message):
                      f'"{", ".join(nearest_subjects)}"')
 
 
-@dp.message_handler(commands=['askgigachat', 'спросить'])
-@dp.message_handler(lambda message: message.text.lower().startswith(('askgigachat', 'спросить')))
+@dp.message_handler(commands=['gigachat'])
+async def set_gigachat_mode(message: types.Message):
+    await types.ChatActions.typing()
+    await GigaChat.gigachat_mode.set()
+
+    cancel_command = 'завершить'
+    cancel_msg = f'Напишите «{cancel_command}» для завершения общения с Gigachat'
+    msg_text = 'Начато общение с Gigachat\n\n' + cancel_msg
+    buttons = [[types.KeyboardButton(text=cancel_command)]]
+
+    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                         input_field_placeholder=cancel_msg, one_time_keyboard=True)
+    await message.answer(msg_text, reply_markup=keyboard)
+
+
+# @dp.message_handler(lambda message: message.text.lower().startswith(('askgigachat', 'спросить')))
+@dp.message_handler(state=GigaChat.gigachat_mode)
 async def ask_giga_chat(message: types.Message, prompt: str = ''):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f"\n\n{message.text}\n\n")
@@ -1684,7 +1717,7 @@ async def ask_giga_chat(message: types.Message, prompt: str = ''):
 
 
 @dp.message_handler()
-async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
+async def find_news(message: types.Message, prompt: str = '', return_ans: bool = False):
     """ Обработка пользовательского сообщения """
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
