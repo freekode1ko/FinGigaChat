@@ -1,29 +1,18 @@
-import threading
-
 from dateutil.relativedelta import relativedelta
 from module.logger_base import selector_logger
 import module.data_transformer as dt
-import module.user_emulator as ue
 import module.crawler as crawler
 
-from sql_model.commodity_pricing import CommodityPricing
-from sql_model.commodity import Commodity
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, NullPool
-from typing import List, Tuple, Dict
-from selenium import webdriver
 
 from pathlib import Path
 import requests as req
 from lxml import html
 import pandas as pd
-import numpy as np
 import datetime
 import warnings
 import config
 import time
-import json
-import re
 import click
 
 from utils.cli_utils import get_period
@@ -33,19 +22,14 @@ class QuotesGetter:
     def __init__(self, logger):
         self.logger = logger
         parser_obj = crawler.Parser(self.logger)
-        # user_obj = ue.ResearchParser()
-        # rebase = config.research_base_url
         path_to_source = './sources/ТЗ.xlsx'
         transformer_obj = dt.Transformer()
         psql_engine = config.psql_engine
 
-        # self.rebase = rebase
-        # self.user_object = user_object
         self.psql_engine = psql_engine
         self.parser_obj = parser_obj
         self.path_to_source = path_to_source
         self.transformer_obj = transformer_obj
-        self.commodities = self.transformer_obj.url_updater()
 
     def table_collector(self, session: req.sessions.Session):
         all_tables = []
@@ -217,7 +201,7 @@ class QuotesGetter:
                     self.logger.warning('Сдвиг в таблице с котировками (metals_coal_kot)')
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
-    def main(self) -> None:
+    def collect(self) -> None:
         session = req.Session()
         all_tables = self.table_collector(session)
         engine = create_engine(self.psql_engine, poolclass=NullPool)
@@ -327,11 +311,18 @@ class QuotesGetter:
 
 
 @click.command()
-@click.option('-p', '--period', default="15m", show_default=True, type=str, help="Периодичность сборки котировок\n"
-                                                                                 "s - секунды\n"
-                                                                                 "m - минуты (значение по умолчанию)\n"
-                                                                                 "h - часы\n"
-                                                                                 "d - дни")
+@click.option(
+    '-p',
+    '--period',
+    default="15m",
+    show_default=True,
+    type=str,
+    help="Периодичность сборки котировок\n"
+         "s - секунды\n"
+         "m - минуты (значение по умолчанию)\n"
+         "h - часы\n"
+         "d - дни",
+)
 def main(period):
     """
     Сборщик котировок
@@ -355,7 +346,7 @@ def main(period):
 
         try:
             logger.info('Начало сборки котировок')
-            runner.main()
+            runner.collect()
         except Exception as e:
             logger.error(f'Ошибка при сборке котировок: {e}')
             current_period = 1

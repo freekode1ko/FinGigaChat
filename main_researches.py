@@ -1,6 +1,3 @@
-import threading
-
-from dateutil.relativedelta import relativedelta
 from module.logger_base import selector_logger
 import module.data_transformer as dt
 import module.user_emulator as ue
@@ -15,7 +12,6 @@ from selenium import webdriver
 
 from pathlib import Path
 import requests as req
-from lxml import html
 import pandas as pd
 import numpy as np
 import datetime
@@ -33,15 +29,11 @@ class ResearchesGetter:
     def __init__(self, logger):
         self.logger = logger
         parser_obj = crawler.Parser(self.logger)
-        # user_obj = ue.ResearchParser()
-        # rebase = config.research_base_url
         transformer_obj = dt.Transformer()
         psql_engine = config.psql_engine
         list_of_companies = config.list_of_companies
         data_market_base_url = config.data_market_base_url
 
-        # self.rebase = rebase
-        # self.user_object = user_object
         self.psql_engine = psql_engine
         self.parser_obj = parser_obj
         self.transformer_obj = transformer_obj
@@ -116,10 +108,12 @@ class ResearchesGetter:
                             'alias': self.commodities[commodity]['alias'].lower().strip(),
                             'unit': self.commodities[commodity]['measurables']}
                 '''
-                dict_row = {'Resource': self.commodities[commodity]['naming'], 'SPOT': round(float(streaming_price), 1)}
-                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
-                dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity.split(',')[0]
+                dict_row = {
+                    'Resource': commodity.split(',')[0],
+                    'SPOT': round(float(streaming_price), 1),
+                    'alias': self.commodities[commodity]['alias'].lower().strip(),
+                    'unit': self.commodities[commodity]['measurables'],
+                }
 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
@@ -168,8 +162,16 @@ class ResearchesGetter:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
-                    update({"price": row['price'], "m_delta": np.nan, "y_delta": row['y_delta'], "cons": row['cons']})
+                session.query(CommodityPricing).filter(
+                    CommodityPricing.subname == row['subname']
+                ).update(
+                    {
+                        "price": row['price'],
+                        "m_delta": np.nan,
+                        "y_delta": row['y_delta'],
+                        "cons": row['cons'],
+                    }
+                )
                 # update({"price": row['price'], "m_delta": row['m_delta'],
                 # "y_delta": row['y_delta'], "cons": row['cons']})
 
@@ -260,15 +262,12 @@ class ResearchesGetter:
             page_html = authed_user.get_company_html_page(url_part=company[0])
             companies_pages_html[company[1]] = page_html
         self.logger.info('Страница с компаниями собрана')
-        # print('companies page...ok')
 
         clients_table = authed_user.get_companies_financial_indicators_table()
         self.logger.info('Страница с клиентами собрана')
-        # print('clients table...ok')
 
         authed_user.get_industry_reviews()
         self.logger.info('Страница с отчетами по направлениям собрана')
-        # print('industry reviews...ok')
 
         authed_user.get_weekly_review()
         self.logger.info('Weekly pulse собран')
@@ -331,7 +330,6 @@ class ResearchesGetter:
 
         self.logger.info('Начало процесса обработки фин.показателей компаний')
         for comp_num, company in enumerate(company_pages_html):
-            # print('{}/{}'.format(comp_num + 1, comp_size))
             self.logger.info('{}/{}'.format(comp_num + 1, comp_size))
             page_html = company_pages_html.get(company)
             tables = self.transformer_obj.get_table_from_html(True, page_html)
@@ -358,14 +356,21 @@ class ResearchesGetter:
 
 
 @click.command()
-@click.option('-p', '--period', default="4h", show_default=True, type=str, help="Периодичность сборки котировок\n"
-                                                                                 "s - секунды\n"
-                                                                                 "m - минуты (значение по умолчанию)\n"
-                                                                                 "h - часы\n"
-                                                                                 "d - дни")
+@click.option(
+    '-p',
+    '--period',
+    default="4h",
+    show_default=True,
+    type=str,
+    help="Периодичность сборки котировок\n"
+         "s - секунды\n"
+         "m - минуты (значение по умолчанию)\n"
+         "h - часы\n"
+         "d - дни",
+)
 def main(period):
     """
-    Сборщик котировок
+    Сборщик researches и графиков
     """
     try:
         period, scale, scale_txt = get_period(period)
@@ -411,10 +416,8 @@ def main(period):
             try:
                 logger.info('Поднятие новой сессии')
                 session = req.Session()
-                # print('session started')
                 logger.info('Сборки графиков')
                 runner.commodities_plot_collect(session, driver)
-                # print('com writed')
             except Exception as e:
                 logger.error(f'Ошибка при парсинге источников по сырью: {e}')
                 current_period = 1
