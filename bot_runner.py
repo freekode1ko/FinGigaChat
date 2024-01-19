@@ -180,7 +180,7 @@ async def help_handler(message: types.Message):
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-async def finish_state(message: types.Message, state: FSMContext, msg_text: str):
+async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
     """
     Позволяет пользователю очищать клавиатуру и выходить из любого состояния
     """
@@ -709,7 +709,7 @@ def file_cleaner(filename):
         pass
 
 
-async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, from_user_json: str):
+async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, from_user_json: str) -> None:
     if await user_in_whitelist(from_user_json):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
@@ -821,7 +821,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     quotes = ['\"', '«', '»']
 
     engine = create_engine(psql_engine, poolclass=NullPool)
-    user_id = json.loads(message.from_user.as_json())['id']
+    user_id = message.from_user.id
 
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
@@ -872,7 +872,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
 
 
-async def get_user_subscriptions_body(chat_id: int, user_id: int):
+async def get_user_subscriptions_body(chat_id: int, user_id: int) -> None:
     subscriptions = await get_list_of_user_subscriptions(user_id)
 
     if not subscriptions:
@@ -902,7 +902,7 @@ async def get_user_subscriptions_command(message: types.Message):
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
+    user_id = message.from_user.id  # Get user_ID from message
     await get_user_subscriptions_body(chat_id, user_id)
 
 
@@ -1046,19 +1046,23 @@ async def subscriptions_menu(message: types.Message):
        return None
        """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data=f'myactivesubscriptions'))
-    keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data=f'addnewsubscriptions'))
-    keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data=f'deletesubscriptions'))
-    keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data=f'deleteallsubscriptions'))
+    if await user_in_whitelist(message.from_user.as_json()):
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    await bot.send_message(chat_id, text=f'Меню управления подписками\n',
-                           reply_markup=keyboard)
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data=f'myactivesubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data=f'addnewsubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data=f'deletesubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data=f'deleteallsubscriptions'))
+
+        await bot.send_message(chat_id, text=f'Меню управления подписками\n',
+                               reply_markup=keyboard)
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-async def user_in_whitelist(user: str):
+async def user_in_whitelist(user: str) -> bool:
     """
     Проверка, пользователя на наличие в списках на доступ
 
@@ -1071,8 +1075,7 @@ async def user_in_whitelist(user: str):
     whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
-    else:
-        return False
+    return False
 
 
 async def get_industries_id(handbook: pd.DataFrame):
@@ -1667,17 +1670,21 @@ async def send_nearest_subjects(message: types.Message):
 
 @dp.message_handler(commands=['gigachat'])
 async def set_gigachat_mode(message: types.Message):
-    await types.ChatActions.typing()
-    await GigaChat.gigachat_mode.set()
+    if await user_in_whitelist(message.from_user.as_json()):
+        await types.ChatActions.typing()
+        await GigaChat.gigachat_mode.set()
 
-    cancel_command = 'завершить'
-    cancel_msg = f'Напишите «{cancel_command}» для завершения общения с Gigachat'
-    msg_text = 'Начато общение с Gigachat\n\n' + cancel_msg
-    buttons = [[types.KeyboardButton(text=cancel_command)]]
+        cancel_command = 'завершить'
+        cancel_msg = f'Напишите «{cancel_command}» для завершения общения с Gigachat'
+        msg_text = 'Начато общение с Gigachat\n\n' + cancel_msg
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
 
-    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                         input_field_placeholder=cancel_msg, one_time_keyboard=True)
-    await message.answer(msg_text, reply_markup=keyboard)
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                             input_field_placeholder=cancel_msg, one_time_keyboard=True)
+        await message.answer(msg_text, reply_markup=keyboard)
+    else:
+        chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
 # @dp.message_handler(lambda message: message.text.lower().startswith(('askgigachat', 'спросить')))
