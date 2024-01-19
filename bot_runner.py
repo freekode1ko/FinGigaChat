@@ -59,7 +59,6 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
-
 next_news_callback = CallbackData(
     "next_news",
     "subject",
@@ -703,12 +702,12 @@ async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, fr
         keyboard.add(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data=f'showmeindustry:yes'))
         keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data=f'showmeindustry:no'))
         await bot.send_message(chat_id, 'Сформируйте полный список интересующих клиентов или commodities '
-                             'для подписки на пассивную отправку новостей по ним.\n'
-                             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
-                             '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
-                             'Вы также можете воспользоваться готовыми подборками клиентов и commodities, '
-                             'которые отсортированы по отраслям. Скопируйте готовую подборку, исключите '
-                             'лишние наименования или добавьте дополнительные.\n', reply_markup=keyboard)
+                                        'для подписки на пассивную отправку новостей по ним.\n'
+                                        'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
+                                        '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
+                                        'Вы также можете воспользоваться готовыми подборками клиентов и commodities, '
+                                        'которые отсортированы по отраслям. Скопируйте готовую подборку, исключите '
+                                        'лишние наименования или добавьте дополнительные.\n', reply_markup=keyboard)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -726,6 +725,15 @@ async def add_new_subscriptions_command(message: types.Message):
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('addnewsubscriptions'))
+async def select_or_write(callback_query: types.CallbackQuery):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(f'Напишу сам выберу готовую', callback_data=f'writesubs'))
+    keyboard.add(types.InlineKeyboardButton(f'Выберу из меню', callback_data=f'selectsubs'))
+
+    await bot.send_message(callback_query.from_user.id, 'Как вы хотите заполнить подписки?', reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('writesubs'))
 async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
     """
     Входная точка для добавления подписок на новостные объекты себе для получения новостей
@@ -734,7 +742,7 @@ async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
     return None
     """
     chat_id = callback_query.message.chat.id
-    user_msg = 'addnewsubscriptions'
+    user_msg = 'writesubs'
     call_from = dict(callback_query.values['from'])
     full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     await add_subscriptions_body(chat_id, full_name, user_msg, callback_query.values['from'].as_json())
@@ -1126,10 +1134,10 @@ async def ref_books(callback_query: types.CallbackQuery):
             block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
         else:
             block_head = ''
-            block_body = 'Справочник по бенефициарам и ЛПР находится в процессе обновления, '\
-                         'приносим извинения за неудобства. Функционал активной и пассивной '\
-                         'рассылки по бенефициарам остается активным, для этого сформируйте '\
-                         'новый список рассылки, вставив фамилии интересующих лиц и клиентов '\
+            block_body = 'Справочник по бенефициарам и ЛПР находится в процессе обновления, ' \
+                         'приносим извинения за неудобства. Функционал активной и пассивной ' \
+                         'рассылки по бенефициарам остается активным, для этого сформируйте ' \
+                         'новый список рассылки, вставив фамилии интересующих лиц и клиентов ' \
                          'или просто введите их диалоговую строку, чтобы получить текущие новости.'
 
         await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
@@ -1628,6 +1636,8 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
 
 
 """ START OF TESTING SUBSCRIPTION MENU #1"""
+
+
 @dp.callback_query_handler(lambda c: c.data.startswith('page'))
 async def scroller(query: types.CallbackQuery = None):
     engine = create_engine(psql_engine, poolclass=NullPool)
@@ -1637,17 +1647,15 @@ async def scroller(query: types.CallbackQuery = None):
     search = input_params[3]
     cur_page = int(cur_page)
 
-    if search == 'client':
-        table = pd.read_sql_query('SELECT name FROM client', con=engine)
-    elif search == 'commodity':
-        table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
-    elif search == 'industry':
-        table = pd.read_sql_query('SELECT name FROM industry', con=engine)
+    if search == 'Клиенты':
+        table = pd.read_sql_query('SELECT id, name FROM client', con=engine)
+    elif search == 'Сырьевые товары':
+        table = pd.read_sql_query('SELECT id, name FROM commodity', con=engine)
+    elif search == 'Отрасли':
+        table = pd.read_sql_query('SELECT id, name FROM industry', con=engine)
     else:
-        clients_table = pd.read_sql_query('SELECT name FROM client', con=engine)
-        commodity_table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
-        industry_table = pd.read_sql_query('SELECT name FROM industry', con=engine)
-        table = pd.concat([clients_table, commodity_table, industry_table], ignore_index=True)
+        table = pd.DataFrame(columns=['id', 'name'])
+
     chunks = []
     num_chunks = len(table) // 20 + 1
     for index in range(num_chunks):
@@ -1655,14 +1663,47 @@ async def scroller(query: types.CallbackQuery = None):
 
     cur_page += 1 if direction == 'forward' else -1
     keyboard = await pagination(chunks, search, cur_page)
-    await query.message.edit_reply_markup(reply_markup=keyboard)
+    await query.message.edit_text(text=f'{search}\nСтраница {cur_page+1} из {len(chunks)}', reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('addsub'))
+async def append_new_subscription(query: types.CallbackQuery = None):
+    element_id = query.data.split(':')[2]
+    table_ind = query.data.split(':')[1]
+    engine = create_engine(psql_engine, poolclass=NullPool)
+
+    if table_ind == 'Клиенты':
+        sub_element = pd.read_sql_query(f'SELECT name FROM client WHERE id = {element_id}', con=engine)
+    elif table_ind == 'Сырьевые товары':
+        sub_element = pd.read_sql_query(f'SELECT name FROM commodity WHERE id = {element_id}', con=engine)
+    elif table_ind == 'Отрасли':
+        sub_element = pd.read_sql_query(f'SELECT name FROM industry WHERE id = {element_id}', con=engine)
+    else:
+        sub_element = pd.DataFrame(columns=['name'])
+
+    element_to_add = sub_element.values.tolist()[0][0]
+    user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
+    # print(element_to_add, element_to_add.replace("'", "''"), element_to_add)
+
+    user_subscriptions.append(element_to_add)
+    new_user_subscription = list(set(user_subscriptions))
+    new_user_subscription.sort()
+    new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
+    with engine.connect() as conn:
+        sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' " \
+                   f"WHERE user_id = {query.from_user.id}"
+        conn.execute(text(sql_text))
+        conn.commit()
+    if len(user_subscriptions) + 1 < len(user_subscriptions): # FIX ME!!!!!
+        await bot.send_message(query.from_user.id, f'{element_to_add.capitalize()} - добавлен к вашим подпискам')
+    else:
+        await bot.send_message(query.from_user.id, f'{element_to_add.capitalize()} - уже есть в ваших подписках')
 
 
 async def pagination(pages, search, cur_page: int = 0):
     buttons = []
     for element in pages[cur_page].values.tolist():
-        user_button = [types.InlineKeyboardButton(f"{element[0]}", callback_data=f'element')]
-        buttons.append(user_button)
+        buttons.append([types.InlineKeyboardButton(f"{element[1]}", callback_data=f'addsub:{search}:{element[0]}')])
     bottom_buttons = []
     if cur_page != 0:
         callback = 'page:back:{}:{}'.format(cur_page, search)
@@ -1670,15 +1711,16 @@ async def pagination(pages, search, cur_page: int = 0):
     else:
         bottom_buttons.append(types.InlineKeyboardButton(f'⛔', callback_data=f'stop'))
 
-    bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page+1}/{len(pages)}', callback_data=f'pagination'))
+    bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page + 1}/{len(pages)}', callback_data=f'pagination'))
 
-    if cur_page == len(pages)-1:
+    if cur_page == len(pages) - 1:
         bottom_buttons.append(types.InlineKeyboardButton(f'⛔', callback_data=f'stop'))
     else:
         callback = 'page:forward:{}:{}'.format(cur_page, search)
         bottom_buttons.append(types.InlineKeyboardButton(f'➡', callback_data=callback))
 
     buttons.append(bottom_buttons)
+    buttons.append([types.InlineKeyboardButton('Назад', callback_data=f'selectsubs')])
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
     return keyboard
 
@@ -1687,34 +1729,35 @@ async def pagination(pages, search, cur_page: int = 0):
 async def choose_subs(query: types.CallbackQuery = None):
     engine = create_engine(psql_engine, poolclass=NullPool)
     search = query.data.split(':')[1]
-    if search == 'client':
-        table = pd.read_sql_query('SELECT name FROM client', con=engine)
-    elif search == 'commodity':
-        table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
-    elif search == 'industry':
-        table = pd.read_sql_query('SELECT name FROM industry', con=engine)
+    if search == 'Клиенты':
+        table = pd.read_sql_query('SELECT id, name FROM client', con=engine)
+    elif search == 'Сырьевые товары':
+        table = pd.read_sql_query('SELECT id, name FROM commodity', con=engine)
+    elif search == 'Отрасли':
+        table = pd.read_sql_query('SELECT id, name FROM industry', con=engine)
     else:
-        clients_table = pd.read_sql_query('SELECT name FROM client', con=engine)
-        commodity_table = pd.read_sql_query('SELECT name FROM commodity', con=engine)
-        industry_table = pd.read_sql_query('SELECT name FROM industry', con=engine)
-        table = pd.concat([clients_table, commodity_table, industry_table], ignore_index=True)
+        table = pd.DataFrame(columns=['id', 'name'])
+
     chunks = []
     num_chunks = len(table) // 20 + 1
     for index in range(num_chunks):
         chunks.append(table[index * 20:(index + 1) * 20])
     keyboard = await pagination(chunks, search)
-    await query.message.edit_reply_markup(reply_markup=keyboard)
+    await query.message.edit_text(text=f'{search}\nСтраница 1 из {len(chunks)}', reply_markup=keyboard)
 
 
-@dp.message_handler(commands=['menu_1'])
-async def menu_1(message: types.Message):
+# @dp.message_handler(commands=['menu_1'])
+@dp.callback_query_handler(lambda c: c.data.startswith('selectsubs'))
+async def select_subs_from_menu(query: types.CallbackQuery = None):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(f'Клиенты', callback_data=f'sub:client'))
-    keyboard.add(types.InlineKeyboardButton(f'Сырьевые товары', callback_data=f'sub:commodity'))
-    keyboard.add(types.InlineKeyboardButton(f'Индустрия', callback_data=f'sub:industry'))
-    keyboard.add(types.InlineKeyboardButton(f'Все вместе', callback_data=f'sub:all'))
+    keyboard.add(types.InlineKeyboardButton(f'Клиенты', callback_data=f'sub:Клиенты'))
+    keyboard.add(types.InlineKeyboardButton(f'Сырьевые товары', callback_data=f'sub:Сырьевые товары'))
+    keyboard.add(types.InlineKeyboardButton(f'Отрасли', callback_data=f'sub:Отрасли'))
 
-    await message.answer("Выбрать себе подписку", reply_markup=keyboard)
+    await bot.send_message(query.from_user.id, "Выберете раздел", reply_markup=keyboard)
+
+    # await message.answer("Выбрать себе подписку", reply_markup=keyboard)
+
 
 """ END OF TESTING SUBSCRIPTION MENU #1"""
 
@@ -2076,7 +2119,8 @@ if __name__ == '__main__':
     # инициализируем обработчик и логгер
     handler = get_handler(psql_engine)
     user_logger = get_db_logger(Path(__file__).stem, handler)  # логгер для сохранения пользовательских действий
-    logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)  # логгер для сохранения действий программы + пользователей
+    logger = selector_logger(Path(__file__).stem,
+                             config.LOG_LEVEL_INFO)  # логгер для сохранения действий программы + пользователей
 
     # запускам рассылки
     loop = asyncio.get_event_loop()
