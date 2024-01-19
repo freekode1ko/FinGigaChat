@@ -847,11 +847,15 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
                 if subscription == other_name:
                     subscriptions.append(other_name)
 
-    if (len(subscriptions) < len(user_request)) and subscriptions:
-        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
+    if len(subscriptions) < len(user_request):
+        list_of_unknown = list(set(user_request) - set(subscriptions))
+        ap_obj = ArticleProcess(logger=logger)
+        near_to_list_of_unknown = '\n'.join(ap_obj.find_nearest_to_subjects_list(list_of_unknown))
         user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные '
                           f'объекты на подписку: {list_of_unknown}')
-        await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
+        reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
+        reply_msg += f"\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}"
+        await message.reply(reply_msg)
 
     if subscriptions:
         user_subscriptions_set.update(subscriptions)
@@ -866,10 +870,6 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
             await message.reply(f'Ваши подписки были сохранены')
 
         user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
-    else:
-        await message.reply('Перечисленные выше объекты не были найдены')
-        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
-        user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты ({list_of_unknown}) не были найдены')
 
 
 async def get_user_subscriptions_body(chat_id: int, user_id: int):
@@ -1647,7 +1647,7 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
 async def send_nearest_subjects(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     ap_obj = ArticleProcess(logger=logger)
-    nearest_subjects = ap_obj.find_nearest_subjects(user_msg)
+    nearest_subjects = ap_obj.find_nearest_to_subject(user_msg)
 
     cancel_command = 'отмена'
     buttons = [[types.KeyboardButton(text=cancel_command)]]

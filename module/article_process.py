@@ -298,7 +298,7 @@ class ArticleProcess:
                 subjects_names.extend(names)
         return subjects_names
 
-    def find_nearest_subjects(self, subject_name: str, criteria: int = 5) -> List[str]:
+    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> List[str]:
         """
         Поиск ближайших похожих имен субъектов
         """
@@ -313,6 +313,23 @@ class ArticleProcess:
         names = [i[0] for i in near if i[1] >= (nearest - criteria)]
 
         return names
+
+    def find_nearest_to_subjects_list(self, subjects_names: List[str]) -> List[str]:
+        """
+        Поиск ближайших похожих имен субъектов
+        """
+        db_subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+
+        if not subjects_names:
+            return []
+
+        near_subjects = []
+
+        for subject_name in subjects_names:
+            subject_name = subject_name.lower().strip().replace('"', '')
+            near_subjects.append(process.extractOne(subject_name, db_subjects_names)[0])
+
+        return near_subjects
 
     def _get_articles(self, subject_id: int, subject: str, limit_all: int = NEWS_LIMIT, offset_all: int = 0):
         """
