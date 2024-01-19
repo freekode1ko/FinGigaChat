@@ -637,7 +637,7 @@ class InvestingAPIParser:
         self._logger.info('Обработка данных для стримингового графика с investing.com')
         url = f'{url}-streaming-chart'
         self.driver.get(url)
-        data = self.driver.find_element(By.ID, 'last_last').text.replace(',', '.')
+        data = self.driver.find_element(By.CSS_SELECTOR,"div[data-test='instrument-price-last']").text.replace(',', '.')
 
         return data
 
