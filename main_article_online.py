@@ -1,21 +1,20 @@
+import json
 import time
 import warnings
-import requests
-import json
 from pathlib import Path
 
 import pandas as pd
+import requests
 
+from config import BASE_GIGAPARSER_URL
 from module.article_process import ArticleProcess
 from module.logger_base import selector_logger
-from config import BASE_GIGAPARSER_URL
-
 
 PERIOD = 1
 
 
 def get_article() -> pd.DataFrame:
-    """ Получение новостей """
+    """Получение новостей"""
     df_article = pd.DataFrame()
     try:
         url = BASE_GIGAPARSER_URL.format('get_articles/all')
@@ -38,7 +37,7 @@ def get_article() -> pd.DataFrame:
 
 
 def regular_func():
-    """ Обработка новых новостей """
+    """Обработка новых новостей"""
 
     df_article = get_article()
 
