@@ -932,7 +932,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
             msg_txt += '\n\nДостигнут предел по количеству подписок'
 
         if not_added_subscriptions:
-            msg_txt += '\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
+            msg_txt += f'\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
 
         if len(msg_txt) < 4096:
             await message.reply(msg_txt)
@@ -1168,11 +1168,10 @@ async def show_ref_book_by_request(chat_id, subject: str):
         )
     else:
         handbook = pd.read_sql_query(
-            '''
-            SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object,
-            client.industry_id, industry.name AS industry_name FROM client_alternative
-            INNER JOIN client ON client_alternative.client_id = client.id
-            INNER JOIN industry ON client.industry_id = industry.id''',
+            "SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+            'client.industry_id, industry.name AS industry_name FROM client_alternative '
+            'INNER JOIN client ON client_alternative.client_id = client.id '
+            'INNER JOIN industry ON client.industry_id = industry.id',
             con=engine,
         )
     return await get_industries_id(handbook)
