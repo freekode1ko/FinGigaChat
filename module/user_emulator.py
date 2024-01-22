@@ -54,7 +54,7 @@ class ResearchParser:
         :return: None
         """
         sleep_time = random.uniform(start, end)
-        self._logger.debug(f'Уходим в ожидание на: {sleep_time}')
+        self._logger.info(f'Уходим в ожидание на: {sleep_time}')
         time.sleep(sleep_time)
 
     def process_bonds_exchange_text(self, text_rows, start, end=None) -> str:
@@ -157,7 +157,7 @@ class ResearchParser:
                     break
                 else:
                     # load more reviews
-                    self._logger.debug('Загрузка больше отчетов')
+                    self._logger.info('Загрузка больше отчетов')
                     button_show_more = self.driver.find_element('id', 'loadMorePublications')
                     button_show_more.click()
                     self.__sleep_some_time(3, 6)
@@ -242,7 +242,7 @@ class ResearchParser:
         self._logger.info(f'Собираем содержимое для всех отчетов. Всего в обработке {reviews_elements_size} отчетов')
         for review_num, review_element in enumerate(reviews_elements):
             title = review_element.text
-            self._logger.debug(f'Отчет {title} в обработке. {review_num+1} из {reviews_elements_size}')
+            self._logger.info(f'Отчет {title} в обработке. {review_num+1} из {reviews_elements_size}')
             date, text = self.get_date_and_text_of_review(review_element, type_of_review)
             reviews_data.append((title, text, date))
 
@@ -297,7 +297,7 @@ class ResearchParser:
                 elif len(data_row) == 6:
                     data.append(data_row)
 
-        self._logger.debug('Собираем таблицу')
+        self._logger.info('Собираем таблицу')
         df = pd.DataFrame(data, columns=headers)
         df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
         df = df.drop(index=0).reset_index(drop=True)
@@ -364,7 +364,7 @@ class ResearchParser:
             .find('table', attrs={'class': 'grid container black right'})
         )
 
-        self._logger.debug(f'Обработка найденной таблицы для компании {company}')
+        self._logger.info(f'Обработка найденной таблицы для компании {company}')
         tables = pd.read_html(str(table_soup), thousands='', decimal=',')
         df = tables[0]
         df['Unnamed: 0'].fillna(method='ffill', inplace=True)
@@ -375,7 +375,7 @@ class ResearchParser:
         df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace(',', '.'))
         df = df.rename(columns={'Unnamed: 1': 'name'})
 
-        self._logger.debug(f'Выборка нужных значений из собранной таблицы для {company}')
+        self._logger.info(f'Выборка нужных значений из собранной таблицы для {company}')
         cols_to_convert = df.columns[~df.columns.isin(['alias', 'name'])]
         mask = ~df.apply(lambda x: 'IFRS' in x.values, axis=1)
         df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
@@ -428,7 +428,7 @@ class ResearchParser:
         :param driver: driver to retrieve session params
         :return session:
         """
-        self._logger.debug('Загрузка и установка параметров драйвера для selenium')
+        self._logger.info('Загрузка и установка параметров драйвера для selenium')
         cookies = driver.get_cookies()
         headers = {
             header['name']: header['value']
@@ -456,18 +456,19 @@ class ResearchParser:
         old = []
         self.driver.get(url)
         self.__sleep_some_time(10.0, 12.0)
+        reviews = self.driver.find_element(By.XPATH, '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
         self.__sleep_some_time(10.0, 12.0)
         reviews_rows = self.driver.find_elements(By.XPATH, f"//div[contains(@title, '{value}')]")
         reviews_size = len(reviews_rows)
-        self._logger.debug(f'Обработка отчетов по индустриям ({reviews_size})')
+        self._logger.info(f'Обработка отчетов по индустриям ({reviews_size})')
         for review_num, review in enumerate(reviews_rows):
-            self._logger.debug(f'Начало обработки отчет по индустриям № {review_num+1} из {reviews_size}')
+            self._logger.info(f'Начало обработки отчет по индустриям № {review_num+1} из {reviews_size}')
             link = review.find_element(By.XPATH, './a[1]')
             self.driver.execute_script('arguments[0].scrollIntoView();', link)
             filename = review.get_attribute('title').replace(' ', '_')
-            self._logger.debug(f'Установлено название обрабатываемого отчета: {filename}')
+            self._logger.info(f'Установлено название обрабатываемого отчета: {filename}')
             date = review.find_element(By.XPATH, '..').find_element(By.XPATH, '..').find_element(By.CLASS_NAME, 'date').text
-            self._logger.debug(f'Установлена дата ({date}) для {filename}')
+            self._logger.info(f'Установлена дата ({date}) для {filename}')
             filename = f'{filename}__{date}.pdf'
             filename = '{}/{}'.format(pdf_dir, filename)
             link.click()
@@ -522,29 +523,29 @@ class ResearchParser:
         self._logger.info('Сборка Weekly Pulse')
         base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
         self.driver.get(base_url)
-        self._logger.debug('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
+        self._logger.info('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
         WebDriverWait(self.driver, 30).until(
             EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and EC.invisibility_of_element_located((By.ID, 'all_loading'))
         )
         self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
-        self._logger.debug('Поиск Weekly Pulse отчета')
+        self._logger.info('Поиск Weekly Pulse отчета')
         weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
         weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
 
         try:
             self._logger.info('Начало обработки "Weekly Pulse" отчета')
             while len(weeklies) < 1:
-                self._logger.debug('Ожидание доступности отчета для открытия')
+                self._logger.info('Ожидание доступности отчета для открытия')
                 WebDriverWait(self.driver, 30).until(
                     EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
                     and EC.invisibility_of_element_located((By.ID, 'loadMorePublications_loading'))
                 )
-                self._logger.debug('Загрузка большего количества публикаций для поиска там отчета')
+                self._logger.info('Загрузка большего количества публикаций для поиска там отчета')
                 more = self.driver.find_element(By.XPATH, '//*[@id="loadMorePublications"]')
                 self.driver.execute_script('arguments[0].scrollIntoView();', more)
-                self._logger.debug('Загрузка следующих публикаций')
+                self._logger.info('Загрузка следующих публикаций')
                 more.click()
-                self._logger.debug('Ожидание доступности дополнительных отчетов для открытия')
+                self._logger.info('Ожидание доступности дополнительных отчетов для открытия')
                 WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
                 weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
@@ -557,7 +558,7 @@ class ResearchParser:
 
         filename = f"{weeklies[0].text.replace(' ', '_')}.pdf"
         filename = '{}/{}'.format(weekly_dir, filename)
-        self._logger.debug('Проверка путей до Weekly Pulse')
+        self._logger.info('Проверка путей до Weekly Pulse')
 
         if not os.path.exists(weekly_dir):
             os.makedirs(weekly_dir)
@@ -621,7 +622,7 @@ class InvestingAPIParser:
         self.driver.get(url)
         data = self.driver.find_element(By.ID, 'json').text
         json_obj = json.loads(data)
-        self._logger.debug('Обработка данных для графика с investing.com')
+        self._logger.info('Обработка данных для графика с investing.com')
         df = pd.DataFrame()
         for day in json_obj['data']:
             date = Transformer.Transformer.unix_to_default(day[0])
@@ -667,7 +668,7 @@ class MetalsWireParser:
         time.sleep(5)
         page_html = self.driver.page_source
         soup = BeautifulSoup(page_html, 'html.parser')
-        self._logger.debug('Разметка табличных данных для MetalsWire')
+        self._logger.info('Разметка табличных данных для MetalsWire')
         elems = soup.find(class_='table__container').find_all(class_='sticky-col')
         df = pd.DataFrame()
         for elem in elems:

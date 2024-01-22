@@ -14,6 +14,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import BotBlocked, ChatNotFound, MessageIsTooLong
 from sqlalchemy import NullPool, create_engine, text
 
@@ -107,6 +108,15 @@ research_footer = 'Источник: Sber Analytical Research. Распрост�
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
 
+next_news_callback = CallbackData(
+    'next_news',
+    'subject',
+    'subject_id',
+    'user_msg',
+    'offset',
+)
+
+
 # States
 class Form(StatesGroup):
     link = State()
@@ -114,6 +124,7 @@ class Form(StatesGroup):
     link_to_delete = State()
     permission_to_delete = State()
     user_subscriptions = State()
+    delete_user_subscriptions = State()
     send_to_users = State()
     please_add_this = State()
 
@@ -213,6 +224,21 @@ async def help_handler(message: types.Message):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+@dp.message_handler(state='*', commands=['cancel', 'отмена'])
+@dp.message_handler(lambda message: message.text.lower() in ['cancel', 'отмена'], state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    """
+    Позволяет пользователю отменять операции
+    """
+    if state is None:
+        return
+
+    # Cancel state and inform user about it
+    await state.finish()
+    # And remove keyboard (just in case)
+    await message.reply('Отменено', reply_markup=types.ReplyKeyboardRemove())
 
 
 # ['облигации', 'бонды', 'офз']
@@ -732,22 +758,15 @@ def file_cleaner(filename):
         pass
 
 
-@dp.message_handler(commands=['addnewsubscriptions'])
-async def add_new_subscriptions(message: types.Message):
-    """
-    Входная точка для добавления подписок на новостные объекты себе для получения новостей
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    return None
-    """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if await user_in_whitelist(message.from_user.as_json()):
+async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, from_user_json: str):
+    if await user_in_whitelist(from_user_json):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
         keyboard = types.InlineKeyboardMarkup()
         keyboard.add(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data='showmeindustry:yes'))
         keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='showmeindustry:no'))
-        await message.answer(
+        await bot.send_message(
+            chat_id,
             'Сформируйте полный список интересующих клиентов или commodities '
             'для подписки на пассивную отправку новостей по ним.\n'
             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
@@ -761,10 +780,37 @@ async def add_new_subscriptions(message: types.Message):
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
+@dp.message_handler(commands=['addnewsubscriptions'])
+async def add_new_subscriptions_command(message: types.Message):
+    """
+    Входная точка для добавления подписок на новостные объекты себе для получения новостей
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    await add_subscriptions_body(chat_id, full_name, user_msg, message.from_user.as_json())
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('addnewsubscriptions'))
+async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
+    """
+    Входная точка для добавления подписок на новостные объекты себе для получения новостей
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = 'addnewsubscriptions'
+    call_from = dict(callback_query.values['from'])
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
+    await add_subscriptions_body(chat_id, full_name, user_msg, callback_query.values['from'].as_json())
+
+
 @dp.callback_query_handler(lambda c: c.data.startswith('showmeindustry'), state=Form.user_subscriptions)
 async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext):
     callback_values = dict(callback_query.values['from'])
-    chat_id = callback_values['id']
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
     callback_data = callback_query.data.split(':')
     show_ref_book = callback_data[1]
     if show_ref_book == 'yes':
@@ -805,6 +851,14 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     )
 
 
+async def get_list_of_user_subscriptions(user_id: int) -> list:
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'", con=engine)[
+        'subscriptions'
+    ].values.tolist()
+    return subscriptions[0].split(', ') if subscriptions[0] else []
+
+
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
@@ -824,6 +878,18 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     engine = create_engine(psql_engine, poolclass=NullPool)
     user_id = json.loads(message.from_user.as_json())['id']
+
+    user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
+    user_subscriptions_set = set(user_subscriptions_list)
+
+    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
+    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
+        await message.reply(
+            f'Достигнут предел по количеству подписок\n\n'
+            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
+        )
+        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
     client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
@@ -850,15 +916,29 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
         user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: {list_of_unknown}')
         await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
+
     if subscriptions:
-        subscriptions = ', '.join(set(subscriptions)).replace("'", "''")
+        num_of_add_subscriptions = config.USER_SUBSCRIPTIONS_LIMIT - len(user_subscriptions_set)
+        user_subscriptions_set.update(subscriptions[:num_of_add_subscriptions])
+        not_added_subscriptions = ', '.join(subscriptions[num_of_add_subscriptions:]).title()
+        subscriptions = ', '.join(user_subscriptions_set).replace("'", "''")
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
-        if len(subscriptions) < 4050:
-            await message.reply(f'Ваш новый список подписок:\n\n{subscriptions.title()}')
+
+        msg_txt = f'Ваш новый список подписок:\n\n{subscriptions.title()}'
+
+        if len(user_subscriptions_set) == config.USER_SUBSCRIPTIONS_LIMIT:
+            msg_txt += '\n\nДостигнут предел по количеству подписок'
+
+        if not_added_subscriptions:
+            msg_txt += '\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
+
+        if len(msg_txt) < 4096:
+            await message.reply(msg_txt)
         else:
             await message.reply('Ваши подписки были сохранены')
+
         user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
     else:
         await message.reply('Перечисленные выше объекты не были найдены')
@@ -866,8 +946,25 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты ({list_of_unknown}) не были найдены')
 
 
+async def get_user_subscriptions_body(chat_id: int, user_id: int):
+    subscriptions = await get_list_of_user_subscriptions(user_id)
+
+    if not subscriptions:
+        keyboard = types.ReplyKeyboardRemove()
+        msg_txt = 'Нет активных подписок'
+        user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок, но их нет')
+    else:
+        buttons = []
+        for subscription in subscriptions:
+            buttons.append([types.KeyboardButton(text=subscription)])
+        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        msg_txt = 'Выберите подписку\n\n' + cancel_msg
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg)
+    await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
+
+
 @dp.message_handler(commands=['myactivesubscriptions'])
-async def get_user_subscriptions(message: types.Message):
+async def get_user_subscriptions_command(message: types.Message):
     """
     Получение сообщением информации о своих подписках
 
@@ -877,22 +974,160 @@ async def get_user_subscriptions(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
+    await get_user_subscriptions_body(chat_id, user_id)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('myactivesubscriptions'))
+async def get_user_subscriptions_callback(callback_query: types.CallbackQuery):
+    """
+    Получение сообщением информации о своих подписках
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = 'myactivesubscriptions'
+    call_from = dict(callback_query.values['from'])
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_id = call_from['id']  # Get user_ID from message
+    await get_user_subscriptions_body(chat_id, user_id)
+
+
+@dp.message_handler(state=Form.delete_user_subscriptions)
+async def delete_user_subscription(message: types.Message, state: FSMContext):
+    """
+    Удаление своей подписки, если такая существует
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Состояние конечного автомата
+    return None
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
+    subscriptions = await get_list_of_user_subscriptions(user_id)
+
+    log_msg = f'Пользователь *{chat_id}* {full_name} запросил удаление подписки'
+    keyboard = types.ReplyKeyboardRemove()
+    if not subscriptions:
+        msg_txt = 'Нет активных подписок'
+        log_msg += ', но у пользователя нет активных подписок'
+        await state.finish()
+    else:
+        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        msg_txt = 'Ваша подписка удалена, если хотите продолжить, напишите название следующей подписки.\n\n' + cancel_msg
+        subscription_to_del = -1
+        for i, subscription in enumerate(subscriptions):
+            if subscription == user_msg:
+                subscription_to_del = i
+                break
+
+        if subscription_to_del > -1:
+            del subscriptions[subscription_to_del]
+            log_msg += f' {user_msg}'
+
+            subscriptions_update = ', '.join(subscriptions).replace("'", "''")
+            engine = create_engine(psql_engine, poolclass=NullPool)
+            with engine.connect() as conn:
+                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' " f"WHERE user_id = '{user_id}'"))
+                conn.commit()
+        else:
+            log_msg += f', но у пользователя нет подписки {user_msg}'
+            msg_txt = 'Указанная подписка отсутствует\n\n' + 'Выберите подписку для удаления\n\n' + cancel_msg
+
+        buttons = []
+        for subscription in subscriptions:
+            buttons.append([types.KeyboardButton(text=subscription)])
+
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+        )
+
+    user_logger.info(log_msg)
+    await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('deletesubscriptions'))
+async def delete_subscriptions(callback_query: types.CallbackQuery):
+    """
+    Получение сообщением информации о своих подписках для их удаления
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = 'deletesubscriptions'
+    call_from = dict(callback_query.values['from'])
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_id = call_from['id']  # Get user_ID from message
     engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'", con=engine)[
         'subscriptions'
     ].values.tolist()
 
+    log_msg = f'Пользователь *{chat_id}* {full_name} запросил список своих подписок'
+    keyboard = types.ReplyKeyboardRemove()
     if not subscriptions[0]:
-        keyboard = types.ReplyKeyboardRemove()
         msg_txt = 'Нет активных подписок'
-        user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок, но их нет')
+        log_msg += ', но их нет'
     else:
+        await Form.delete_user_subscriptions.set()
         buttons = []
         for subscription in subscriptions[0].split(', '):
             buttons.append([types.KeyboardButton(text=subscription)])
-        msg_txt = 'Выберите подписку'
-        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder=msg_txt)
-    await message.answer(msg_txt, reply_markup=keyboard)
+        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        msg_txt = 'Выберите подписку для удаления\n\n' + cancel_msg
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+        )
+
+    user_logger.info(log_msg)
+    await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('deleteallsubscriptions'))
+async def delete_all_subscriptions(callback_query: types.CallbackQuery):
+    """
+    Получение сообщением информации о своих подписках для их удаления
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = 'deleteallsubscriptions'
+    call_from = dict(callback_query.values['from'])
+    full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_id = call_from['id']  # Get user_ID from message
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    with engine.connect() as conn:
+        conn.execute(text(f"UPDATE whitelist SET subscriptions = '' WHERE user_id = '{user_id}'"))
+        conn.commit()
+
+    msg_txt = 'Подписки удалены'
+    await bot.send_message(chat_id, msg_txt, reply_markup=types.ReplyKeyboardRemove())
+
+
+@dp.message_handler(commands=['subscriptions_menu'])
+async def subscriptions_menu(message: types.Message):
+    """
+    Получение меню для взаимодействия с подписками
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
+    keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
+    keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
+    keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
+
+    await bot.send_message(chat_id, text='Меню управления подписками\n', reply_markup=keyboard)
 
 
 async def user_in_whitelist(user: str):
@@ -935,10 +1170,9 @@ async def show_ref_book_by_request(chat_id, subject: str):
         handbook = pd.read_sql_query(
             '''
             SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object,
-            client.industry_id, industry.name AS industry_name FROM client_alternative '
-            INNER JOIN client ON client_alternative.client_id = client.id '
-            INNER JOIN industry ON client.industry_id = industry.id
-            ''',
+            client.industry_id, industry.name AS industry_name FROM client_alternative
+            INNER JOIN client ON client_alternative.client_id = client.id
+            INNER JOIN industry ON client.industry_id = industry.id''',
             con=engine,
         )
     return await get_industries_id(handbook)
@@ -946,7 +1180,7 @@ async def show_ref_book_by_request(chat_id, subject: str):
 
 @dp.message_handler(commands=['referencebook'])
 async def reference_book(message: types.Message):
-    chat_id, full_name = message.chat.id, message.from_user.full_name
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
 
     keyboard = types.InlineKeyboardMarkup()
@@ -1360,22 +1594,79 @@ async def end_del_article(callback_query: types.CallbackQuery):
     await bot.edit_message_reply_markup(chat_id, callback_query.message.message_id, reply_markup=keyboard)
 
 
-@dp.callback_query_handler(text='next_5_news')
-async def send_next_five_news(call: types.CallbackQuery):
-    """
-    Вывод 5 новостей пользователю в чат
+@dp.callback_query_handler(next_news_callback.filter())
+async def send_next_news(call: types.CallbackQuery, callback_data: dict):
+    subject_id = callback_data.get('subject_id', 0)
+    subject = callback_data.get('subject', '')
+    limit_all = config.NEWS_LIMIT * 2 + 1
+    offset_all = callback_data.get('offset', config.NEWS_LIMIT)
+    user_msg = callback_data.get('user_msg', '')
+    callback_values = dict(call.values['from'])
+    full_name = f"{callback_values['first_name']} {callback_values['last_name']}"
+    chat_id = call.message.chat.id
 
-    :param call: Объект(сообщение) для ответа
-    return None
-    """
+    if not subject_id or not subject:
+        return
+
     try:
-        await call.message.answer(articles_l5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
-    except MessageIsTooLong:
-        articles = articles_l5.split('\n\n')
-        for article in articles:
-            await call.message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
-    finally:
+        limit_all = int(limit_all)
+        offset_all = int(offset_all)
+    except (ValueError, TypeError):
+        return
+
+    ap_obj = ArticleProcess(logger)
+
+    com_price, reply_msg, img_name_list = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    new_offset = offset_all + config.NEWS_LIMIT * 2
+
+    if reply_msg and isinstance(reply_msg, str):
+        articles_all = reply_msg.split('\n\n', limit_all)
+        if len(articles_all) > limit_all:
+            articles_f5 = '\n\n'.join(articles_all[:limit_all])
+            keyboard = types.InlineKeyboardMarkup()
+            try:
+                callback_meta = next_news_callback.new(
+                    subject_id=subject_id,
+                    subject=subject,
+                    user_msg=user_msg,
+                    offset=new_offset,
+                )
+            except ValueError:
+                callback_meta = next_news_callback.new(
+                    subject_id=subject_id,
+                    subject=subject,
+                    user_msg='',
+                    offset=new_offset,
+                )
+            keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta))
+        else:
+            articles_f5 = reply_msg
+            keyboard = None
+
+        if len(articles_f5.encode()) < 4050:
+            await call.message.answer(
+                articles_f5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
+            )
+        else:
+            articles = articles_f5.split('\n\n')
+            articles_len = len(articles)
+            callback_markup = None
+            for i, article in enumerate(articles, 1):
+                if len(article.encode()) < 4050:
+                    if i == articles_len:
+                        callback_markup = keyboard
+                    await call.message.answer(
+                        article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=callback_markup
+                    )
+                    await types.ChatActions.typing(1.1)  # otherwise flood control return us 429 error
+                else:
+                    logger.error(f'MessageIsTooLong ERROR: {article}')
+
         await call.message.edit_reply_markup()
+
+        user_logger.info(
+            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} ' f'(всего {new_offset})'
+        )
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
@@ -1498,13 +1789,26 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
                     await message.answer(com_price, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
 
                 if isinstance(reply_msg, str):
-                    global articles_l5
-                    articles_all = reply_msg.split('\n\n', 6)
-                    if len(articles_all) > 5:
-                        articles_f5 = '\n\n'.join(articles_all[:6])
-                        articles_l5 = articles_all[-1]
+                    articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
+                    if len(articles_all) > config.NEWS_LIMIT + 1:
+                        articles_f5 = '\n\n'.join(articles_all[: config.NEWS_LIMIT + 1])
                         keyboard = types.InlineKeyboardMarkup()
-                        keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
+                        # keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
+                        try:
+                            callback_meta = next_news_callback.new(
+                                subject_id=subject_id,
+                                subject=subject,
+                                user_msg=user_msg,
+                                offset=config.NEWS_LIMIT,
+                            )
+                        except ValueError:
+                            callback_meta = next_news_callback.new(
+                                subject_id=subject_id,
+                                subject=subject,
+                                user_msg='',
+                                offset=config.NEWS_LIMIT,
+                            )
+                        keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta))
                     else:
                         articles_f5 = reply_msg
                         keyboard = None
@@ -1792,7 +2096,7 @@ if __name__ == '__main__':
     # инициализируем обработчик и логгер
     handler = get_handler(psql_engine)
     user_logger = get_db_logger(Path(__file__).stem, handler)  # логгер для сохранения пользовательских действий
-    logger = selector_logger(Path(__file__).stem, 20)  # логгер для сохранения действий программы + пользователей
+    logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)  # логгер для сохранения действий программы + пользователей
 
     # запускам рассылки
     loop = asyncio.get_event_loop()

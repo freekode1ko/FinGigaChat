@@ -1,5 +1,10 @@
 log_file = 'logs/{}.log'
-log_lvl = 10  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
+LOG_LEVEL_DEBUG = 10
+LOG_LEVEL_INFO = 20
+LOG_LEVEL_WARNING = 30
+LOG_LEVEL_ERROR = 40
+LOG_LEVEL_CRITICAL = 50
+log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' 'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 ' 'Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' 'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 ' 'Safari/537.36',
@@ -38,6 +43,8 @@ CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
+NEWS_LIMIT = 5
+USER_SUBSCRIPTIONS_LIMIT = 20
 
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
@@ -59,6 +66,7 @@ summarization_prompt = (
     '________________'
     'Твой ответ:'
 )
+
 
 help_text = (
     'Всем привет! Мы начинаем пилотирование MVP AI-помощника банкира на ограниченной выборке ГКМ, старших '
