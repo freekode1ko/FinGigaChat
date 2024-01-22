@@ -77,11 +77,11 @@ def selector_logger(module_logger: str, level: int = log_lvl):
     raise Exception('Не найден сценарий для логирования')
 
 
-def get_handler(url_engine, level: int = log_lvl):
+def get_handler(url_engine, level: int = log_lvl) -> DBHandler:
     return DBHandler(url_engine, level, LOG_FORMAT)
 
 
-def get_db_logger(name, handler, level: int = log_lvl):
+def get_db_logger(name, handler, level: int = log_lvl) -> logging.Logger:
     """ Создает логер, который записывает в базу данных """
     logger = logging.getLogger(name)
     logger.addHandler(handler)
