@@ -797,6 +797,11 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
 
 
 async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
+    """
+    Возвращает список подписок пользователя
+
+    :param user_id: int - telegram ID пользователя
+    """
     engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
                                       con=engine)['subscriptions'].values.tolist()
@@ -873,6 +878,12 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
 
 async def get_user_subscriptions_body(chat_id: int, user_id: int) -> None:
+    """
+    Формирует ответное сообщение с подписками пользователя
+
+    :param chat_id: int - ID чата с пользователем
+    :param user_id: int - telegram ID пользователя
+    """
     subscriptions = await get_list_of_user_subscriptions(user_id)
 
     if not subscriptions:
@@ -1669,7 +1680,8 @@ async def send_nearest_subjects(message: types.Message):
 
 
 @dp.message_handler(commands=['gigachat'])
-async def set_gigachat_mode(message: types.Message):
+async def set_gigachat_mode(message: types.Message) -> None:
+    """Переключение в режим общения с Gigachat"""
     if await user_in_whitelist(message.from_user.as_json()):
         await types.ChatActions.typing()
         await GigaChat.gigachat_mode.set()
@@ -1689,12 +1701,13 @@ async def set_gigachat_mode(message: types.Message):
 
 # @dp.message_handler(lambda message: message.text.lower().startswith(('askgigachat', 'спросить')))
 @dp.message_handler(state=GigaChat.gigachat_mode)
-async def ask_giga_chat(message: types.Message, prompt: str = ''):
+async def ask_giga_chat(message: types.Message, prompt: str = '') -> None:
+    """Отправка пользователю ответа, сформированного Gigachat, на сообщение пользователя"""
+
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f"\n\n{message.text}\n\n")
     global chat
     global token
-    msg = '{} {}'.format(prompt, message.text)
+    msg = f'{prompt} {message.text}'
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
@@ -1718,17 +1731,17 @@ async def ask_giga_chat(message: types.Message, prompt: str = ''):
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
                              f' KeyError (некорректная выдача ответа GigaChat),'
                              f' ответ после переформирования запроса')
-    response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
+    response = f'{giga_js}\n\n{giga_ans_footer}'
     await message.answer(response, protect_content=False)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
 
 
 @dp.message_handler()
-async def find_news(message: types.Message, prompt: str = '', return_ans: bool = False):
-    """ Обработка пользовательского сообщения """
+async def find_news(message: types.Message, prompt: str = '', return_ans: bool = False) -> None:
+    """Обработка пользовательского сообщения"""
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    msg = '{} {}'.format(prompt, message.text)
+    msg = f'{prompt} {message.text}'
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
