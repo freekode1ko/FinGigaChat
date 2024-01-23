@@ -22,6 +22,7 @@ import config
 import time
 import json
 import re
+from utils import sentry
 
 
 class Main:
@@ -627,6 +628,7 @@ class Main:
 
 
 if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
     logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)

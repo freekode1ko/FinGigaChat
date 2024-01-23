@@ -24,6 +24,7 @@ import module.data_transformer as dt
 import module.gigachat as gig
 from module.logger_base import get_db_logger, get_handler, selector_logger
 import config
+from utils.sentry import init_sentry
 
 path_to_source = config.path_to_source
 psql_engine = config.psql_engine
@@ -1996,6 +1997,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
 
 
 if __name__ == '__main__':
+    init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
 
     # инициализируем обработчик и логгер

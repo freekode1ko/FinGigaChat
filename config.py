@@ -1,8 +1,14 @@
 import pathlib
 import json
 import typing as t
+from environs import Env
+from enums import Environment
 
-DEFAULT_ENCODING = 'utf-8'
+env = Env()
+env.read_env()
+
+_env_value = env.str('ENV', default='local')
+ENV: Environment = Environment.from_str(_env_value)
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent  # noqa
@@ -10,7 +16,7 @@ STATIC_ASSETS_PATH = PROJECT_DIR / 'constants' / 'assets'
 
 
 def read_asset_from_json(file_name: t.Union[str, pathlib.Path],
-                         encoding: str = DEFAULT_ENCODING) -> t.Union[list, dict, str]:
+                         encoding: str = 'utf-8') -> t.Union[list, dict, str]:
     """
     Считывает константу из json-файла
     Args:
@@ -19,6 +25,10 @@ def read_asset_from_json(file_name: t.Union[str, pathlib.Path],
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
 
+
+SENTRY_CHAT_BOT_DSN: str = env.str('SENTRY_CHAT_BOT_DSN', default='')
+SENTRY_PARSER_DSN: str = env.str('SENTRY_PARSER_DSN', default='')
+SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
 log_file = 'logs/{}.log'
 LOG_LEVEL_DEBUG = 10
