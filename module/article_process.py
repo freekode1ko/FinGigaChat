@@ -10,7 +10,7 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 
-from config import psql_engine
+from config import psql_engine, NEWS_LIMIT
 from module.model_pipe import deduplicate, model_func, model_func_online, add_text_sum_column
 from module.logger_base import Logger
 
@@ -284,14 +284,15 @@ class ArticleProcess:
                 subject_ids.append(subject_id)
         return subject_ids
 
-    def _get_articles(self, subject_id: int, subject: str):
+    def _get_articles(self, subject_id: int, subject: str, limit_all: int = NEWS_LIMIT, offset_all: int = 0):
         """
         Get sorted sum article by subject id.
         :param subject_id: id of client or commodity
         :param subject: client or commodity
         :return: name of client(commodity) and sorted sum articles
         """
-        count_all, count_top = 10, 3
+        count_all, count_top = limit_all, 3
+        offset_top = 0
         query_temp = ('SELECT relation.article_id, relation.{subject}_score, '
                       'article_.title, article_.date, article_.link, article_.text_sum '
                       'FROM relation_{subject}_article AS relation '
@@ -303,24 +304,30 @@ class ArticleProcess:
                       'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score > 0 '
                       '{condition} '
                       'ORDER BY date DESC, relation.{subject}_score DESC '
+                      'OFFSET {offset} '
                       'LIMIT {count}')
         condition_top = CONDITION_TOP.format(condition_word='AND', table='article_')
 
         with self.engine.connect() as conn:
 
             query_article_top_data = query_temp.format(subject=subject, subject_id=subject_id,
-                                                       count=count_top, condition=condition_top)
+                                                       count=count_top, condition=condition_top,
+                                                       offset=offset_top)
             result_top = conn.execute(text(query_article_top_data)).fetchall()
             article_data_top = [item[2:] for item in result_top]
+            article_data_top_len = len(article_data_top)
             top_link = ','.join([f"'{item[4]}'" for item in result_top]) if result_top else "''"
+
+            offset_all_updated = ((offset_all - article_data_top_len) if offset_all > article_data_top_len else 0)
 
             condition_all = f"AND article_.link not in ({top_link})"
             query_article_all_data = query_temp.format(subject=subject, subject_id=subject_id,
-                                                       count=count_all, condition=condition_all)
+                                                       count=count_all, condition=condition_all,
+                                                       offset=offset_all_updated)
 
             article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
             count_of_not_top_news = count_all - len(article_data_top)
-            article_data = article_data_top + article_data_all[:count_of_not_top_news]
+            article_data = article_data_top + article_data_all[:count_of_not_top_news] if not offset_all else article_data_all
 
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
@@ -539,15 +546,15 @@ class ArticleProcess:
         format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
         return format_msg
 
-    def process_user_alias(self, subject_id: int, subject: str = ''):
+    def process_user_alias(self, subject_id: int, subject: str = '', limit_all: int = NEWS_LIMIT + 1, offset_all: int = 0):
         """ Process user alias and return reply for it """
 
         com_data, reply_msg, img_name_list = None, '', []
 
         if subject == 'client':
-            subject_name, articles = self._get_articles(subject_id, subject)
+            subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
         elif subject == 'commodity':
-            subject_name, articles = self._get_articles(subject_id, subject)
+            subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
             com_data = self._get_commodity_pricing(subject_id)
         elif subject == 'industry':
             articles = self._get_industry_articles(subject_id)

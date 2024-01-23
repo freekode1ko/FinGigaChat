@@ -71,10 +71,13 @@ def selector_logger(module_logger: str, level: int = log_lvl):
     :param level: уровень логирования
     return Класс логера
     """
+    logs_path = os.path.join('logs', module_logger)
+    if not os.path.exists(logs_path):
+        os.makedirs(logs_path, exist_ok=True)
 
-    if os.path.exists('logs/{}'.format(module_logger)):
-        return Logger(module_logger, level).logger
-    raise Exception('Не найден сценарий для логирования')
+    if not os.path.isdir(logs_path):
+        raise FileExistsError(f'Файл {logs_path} не является каталогом')
+    return Logger(module_logger, level).logger
 
 
 def get_handler(url_engine, level: int = log_lvl) -> DBHandler:

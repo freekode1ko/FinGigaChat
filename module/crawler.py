@@ -61,10 +61,10 @@ class Parser:
         html = '<!doctype html><head><title></title></head><body><header>EMPTY PAGE</header></body></html>'
         if '.ru' in url:
             euro_standard = True
-        self._logger.debug(f'Сайт {url} евростандарта: {euro_standard}')
+        self._logger.info(f'Сайт {url} евростандарта: {euro_standard}')
 
         try:
-            self._logger.debug(f'Генерируем User-Agent для запроса')
+            self._logger.info(f'Генерируем User-Agent для запроса')
             random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
             header = {'Accept': '*/*',
                       'User-Agent': random_user_agent,
