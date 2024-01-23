@@ -1,27 +1,26 @@
-from module.logger_base import selector_logger
-import module.data_transformer as dt
-import module.user_emulator as ue
-import module.crawler as crawler
-
-from sql_model.commodity_pricing import CommodityPricing
-from sql_model.commodity import Commodity
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, NullPool
-from typing import List, Tuple, Dict
-from selenium import webdriver
-
-from pathlib import Path
-import requests as req
-import pandas as pd
-import numpy as np
 import datetime
-import warnings
-import config
-import time
 import json
 import re
-import click
+import time
+import warnings
+from pathlib import Path
+from typing import Dict, List, Tuple
 
+import click
+import numpy as np
+import pandas as pd
+import requests as req
+from selenium import webdriver
+from sqlalchemy import NullPool, create_engine
+from sqlalchemy.orm import sessionmaker
+
+import config
+import module.crawler as crawler
+import module.data_transformer as dt
+import module.user_emulator as ue
+from module.logger_base import selector_logger
+from sql_model.commodity import Commodity
+from sql_model.commodity_pricing import CommodityPricing
 from utils.cli_utils import get_period
 
 
@@ -73,12 +72,14 @@ class ResearchesGetter:
             name = url.split('/')[-1]
             euro_standard, page_html = self.parser_obj.get_html(url, session)
             auth = re.findall(r"TESecurify = ('.+');", page_html)
-            graph_url = '{}chart?s=lmahds03:com&' \
-                        'span=5y&' \
-                        'securify=new&' \
-                        'url=/commodity/{}&' \
-                        'AUTH={}&' \
-                        'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+            graph_url = (
+                '{}chart?s=lmahds03:com&'
+                'span=5y&'
+                'securify=new&'
+                'url=/commodity/{}&'
+                'AUTH={}&'
+                'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+            )
             data = req.get(graph_url, verify=False)
 
             self.transformer_obj.five_year_graph(data, name)
@@ -139,7 +140,7 @@ class ResearchesGetter:
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
         engine = create_engine(self.psql_engine, poolclass=NullPool)
-        commodity = pd.read_sql_query("SELECT * FROM commodity", con=engine)
+        commodity = pd.read_sql_query('SELECT * FROM commodity', con=engine)
         commodity_ids = pd.DataFrame()
 
         for i, row in commodity_pricing.iterrows():
@@ -150,8 +151,8 @@ class ResearchesGetter:
 
         df_combined = pd.concat([commodity_pricing, commodity_ids], axis=1)
         df_combined = df_combined.rename(
-            columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta',
-                     "Cons-s'23": 'cons'})
+            columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta', "Cons-s'23": 'cons'}
+        )
         df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
         df_combined = df_combined.drop(columns=['alias'])
 
@@ -162,14 +163,12 @@ class ResearchesGetter:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-                session.query(CommodityPricing).filter(
-                    CommodityPricing.subname == row['subname']
-                ).update(
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).update(
                     {
-                        "price": row['price'],
-                        "m_delta": np.nan,
-                        "y_delta": row['y_delta'],
-                        "cons": row['cons'],
+                        'price': row['price'],
+                        'm_delta': np.nan,
+                        'y_delta': row['y_delta'],
+                        'cons': row['cons'],
                     }
                 )
                 # update({"price": row['price'], "m_delta": row['m_delta'],
@@ -186,19 +185,15 @@ class ResearchesGetter:
                     m_delta=np.nan,
                     # m_delta=row['m_delta'],
                     y_delta=row['y_delta'],
-                    cons=row['cons'])
+                    cons=row['cons'],
+                )
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
             q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
             commodity_price_obj = CommodityPricing(
-                commodity_id=q_gas[0].id,
-                subname='Газ',
-                unit=np.nan,
-                price=np.nan,
-                m_delta=np.nan,
-                y_delta=np.nan,
-                cons=np.nan)
+                commodity_id=q_gas[0].id, subname='Газ', unit=np.nan, price=np.nan, m_delta=np.nan, y_delta=np.nan, cons=np.nan
+            )
             session.merge(commodity_price_obj, load=True)
             session.commit()
 
@@ -218,31 +213,50 @@ class ResearchesGetter:
         # economy
         key_eco_table = authed_user.get_key_econ_ind_table()
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                            name_of_review='Экономика России. Ежемесячный обзор')
+        eco_month = authed_user.get_reviews(
+            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Экономика России. Ежемесячный обзор'
+        )
         self.logger.info('Блок по экономике собран')
 
         # bonds
-        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-                                            name_of_review='Валютный рынок и процентные ставки',
-                                            type_of_review='bonds', count_of_review=2)
-        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
-                                              name_of_review='Обзор рынка процентных ставок')
+        bonds_day = authed_user.get_reviews(
+            url_part=money,
+            tab='Ежедневные',
+            title='FX &amp; Ставки - Sberbank CIB',
+            name_of_review='Валютный рынок и процентные ставки',
+            type_of_review='bonds',
+            count_of_review=2,
+        )
+        bonds_month = authed_user.get_reviews(
+            url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB', name_of_review='Обзор рынка процентных ставок'
+        )
         self.logger.info('Блок по ставкам собран')
 
         # exchange
-        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-                                               name_of_review='Валютный рынок и процентные ставки',
-                                               type_of_review='exchange', count_of_review=2)
-        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                                     name_of_review='Ежемесячный обзор по юаню')
-        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                                      name_of_review='Ежемесячный дайджест по мягким валютам')
+        exchange_day = authed_user.get_reviews(
+            url_part=money,
+            tab='Ежедневные',
+            title='FX &amp; Ставки - Sberbank CIB',
+            name_of_review='Валютный рынок и процентные ставки',
+            type_of_review='exchange',
+            count_of_review=2,
+        )
+        exchange_month_uan = authed_user.get_reviews(
+            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по юаню'
+        )
+        exchange_month_soft = authed_user.get_reviews(
+            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный дайджест по мягким валютам'
+        )
         self.logger.info('Блок по курсам валют собран')
 
         # commodity
-        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
-                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        commodity_day = authed_user.get_reviews(
+            url_part=comm,
+            tab='Ежедневные',
+            title='Сырьевые товары - Sberbank CIB',
+            name_of_review='Сырьевые рынки',
+            type_of_review='commodity',
+        )
         self.logger.info('Блок по сырью собран')
 
         exchange_month = exchange_month_uan + exchange_month_soft
@@ -253,7 +267,7 @@ class ResearchesGetter:
             'Bonds month': bonds_month,
             'Exchange day': exchange_day,
             'Exchange month': exchange_month,
-            'Commodity day': commodity_day
+            'Commodity day': commodity_day,
         }
 
         # companies
@@ -289,7 +303,7 @@ class ResearchesGetter:
             'Bonds month': 'report_bon_mon',
             'Exchange day': 'report_exc_day',
             'Exchange month': 'report_exc_mon',
-            'Commodity day': 'report_met_day'
+            'Commodity day': 'report_met_day',
         }
 
         for review_name in table_name_for_review:
@@ -312,7 +326,7 @@ class ResearchesGetter:
 
     def save_date_of_last_build(self):
         engine = create_engine(self.psql_engine, poolclass=NullPool)
-        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time = datetime.datetime.now().strftime('%d.%m.%Y %H:%M')
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
         self.logger.info('Таблица date_of_last_build записана')
@@ -334,7 +348,7 @@ class ResearchesGetter:
             page_html = company_pages_html.get(company)
             tables = self.transformer_obj.get_table_from_html(True, page_html)
             pd.set_option('display.max_columns', None)
-            tables[0]["group_no"] = tables[0].isnull().all(axis=1).cumsum()
+            tables[0]['group_no'] = tables[0].isnull().all(axis=1).cumsum()
             tables = tables[0].dropna(subset='Unnamed: 1')
             tables_names = tables['Unnamed: 0'].dropna().tolist()
 
@@ -359,14 +373,10 @@ class ResearchesGetter:
 @click.option(
     '-p',
     '--period',
-    default="4h",
+    default='4h',
     show_default=True,
     type=str,
-    help="Периодичность сборки котировок\n"
-         "s - секунды\n"
-         "m - минуты (значение по умолчанию)\n"
-         "h - часы\n"
-         "d - дни",
+    help='Периодичность сборки котировок\n' 's - секунды\n' 'm - минуты (значение по умолчанию)\n' 'h - часы\n' 'd - дни',
 )
 def main(period):
     """

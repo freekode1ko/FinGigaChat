@@ -1,16 +1,13 @@
 # importing required modules
 import os
 import re
-
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, Union, Iterable, Optional
+from typing import Iterable, List, Optional, Union
 
 import fitz
 import pandas
-
-from module.logger_base import Logger
 
 __all__ = ['ParsePresentationPDF', 'ReportTypes']
 
@@ -52,8 +49,9 @@ def is_needed_slide(criteria: str, slide_text: str) -> bool:
     return False
 
 
-def get_page_table(pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None,
-                   relative_area: bool = False) -> Optional[pandas.DataFrame]:
+def get_page_table(
+    pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
+) -> Optional[pandas.DataFrame]:
     return None
     # try:
     #     import tabula  # pip install tabula-py
@@ -91,9 +89,9 @@ def get_special_slides(filename: str, slides_meta: Union[List[dict], Iterable[di
                 slides_titles2data[title]['text'] = crop_slide_text(text)  # crop some first and some last lines
 
                 if slide_meta.get('table', False):
-                    slides_titles2data[title]['table'] = get_page_table(filename, page_num + 1,
-                                                                        slide_meta.get('area', None),
-                                                                        slide_meta.get('relative_area', False))
+                    slides_titles2data[title]['table'] = get_page_table(
+                        filename, page_num + 1, slide_meta.get('area', None), slide_meta.get('relative_area', False)
+                    )
 
                 slides_meta.pop(i)
                 break
@@ -101,13 +99,14 @@ def get_special_slides(filename: str, slides_meta: Union[List[dict], Iterable[di
 
 
 class ReportTypes(Enum):
-    """ Типы отчетов для пользователя по weekly pulse """
+    """Типы отчетов для пользователя по weekly pulse"""
+
     weekly_results = 0
     weekly_event = 1
 
 
 class ParsePresentationPDF:
-    """ Обрабатывает файл презентации weekly pulse в pdf формате """
+    """Обрабатывает файл презентации weekly pulse в pdf формате"""
 
     @staticmethod
     def get_slides_meta() -> List[dict]:
@@ -170,8 +169,9 @@ class ParsePresentationPDF:
         return [f"{i['eng_name']}.png" for i in s_meta if i['report_type'] == report_type]
 
     @staticmethod
-    def parse_table(pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None,
-                    relative_area: bool = False) -> Optional[pandas.DataFrame]:
+    def parse_table(
+        pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
+    ) -> Optional[pandas.DataFrame]:
         """
         Возвращает найденную на слайде первую таблицу
         :param pdf_file: Имя презентации с расширением pdf
@@ -206,6 +206,3 @@ class ParsePresentationPDF:
             pass
 
         return defaultdict(default_slide_item)
-
-
-
