@@ -1,27 +1,27 @@
-from dateutil.relativedelta import relativedelta
-from module.logger_base import selector_logger
-import module.data_transformer as dt
-import module.user_emulator as ue
-import module.crawler as crawler
-
-from sql_model.commodity_pricing import CommodityPricing
-from sql_model.commodity import Commodity
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, NullPool
-from typing import List, Tuple, Dict
-from selenium import webdriver
-
-from pathlib import Path
-import requests as req
-from lxml import html
-import pandas as pd
-import numpy as np
 import datetime
-import warnings
-import config
-import time
 import json
 import re
+import time
+import warnings
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+import numpy as np
+import pandas as pd
+import requests as req
+from dateutil.relativedelta import relativedelta
+from lxml import html
+from selenium import webdriver
+from sqlalchemy import NullPool, create_engine
+from sqlalchemy.orm import sessionmaker
+
+import config
+import module.crawler as crawler
+import module.data_transformer as dt
+import module.user_emulator as ue
+from module.logger_base import selector_logger
+from sql_model.commodity import Commodity
+from sql_model.commodity_pricing import CommodityPricing
 from utils import sentry
 
 
@@ -93,12 +93,14 @@ class Main:
             name = url.split('/')[-1]
             euro_standard, page_html = self.parser_obj.get_html(url, session)
             auth = re.findall(r"TESecurify = ('.+');", page_html)
-            graph_url = '{}chart?s=lmahds03:com&' \
-                        'span=5y&' \
-                        'securify=new&' \
-                        'url=/commodity/{}&' \
-                        'AUTH={}&' \
-                        'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+            graph_url = (
+                '{}chart?s=lmahds03:com&'
+                'span=5y&'
+                'securify=new&'
+                'url=/commodity/{}&'
+                'AUTH={}&'
+                'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
+            )
             data = req.get(graph_url, verify=False)
 
             self.transformer_obj.five_year_graph(data, name)
@@ -157,7 +159,7 @@ class Main:
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
         engine = create_engine(self.psql_engine, poolclass=NullPool)
-        commodity = pd.read_sql_query("SELECT * FROM commodity", con=engine)
+        commodity = pd.read_sql_query('SELECT * FROM commodity', con=engine)
         commodity_ids = pd.DataFrame()
 
         for i, row in commodity_pricing.iterrows():
@@ -168,8 +170,8 @@ class Main:
 
         df_combined = pd.concat([commodity_pricing, commodity_ids], axis=1)
         df_combined = df_combined.rename(
-            columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta',
-                     "Cons-s'23": 'cons'})
+            columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta', "Cons-s'23": 'cons'}
+        )
         df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
         df_combined = df_combined.drop(columns=['alias'])
 
@@ -180,8 +182,9 @@ class Main:
 
         if q.count() == 28:
             for i, row in df_combined.iterrows():
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']). \
-                    update({"price": row['price'], "m_delta": np.nan, "y_delta": row['y_delta'], "cons": row['cons']})
+                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).update(
+                    {'price': row['price'], 'm_delta': np.nan, 'y_delta': row['y_delta'], 'cons': row['cons']}
+                )
                 # update({"price": row['price'], "m_delta": row['m_delta'],
                 # "y_delta": row['y_delta'], "cons": row['cons']})
 
@@ -196,19 +199,15 @@ class Main:
                     m_delta=np.nan,
                     # m_delta=row['m_delta'],
                     y_delta=row['y_delta'],
-                    cons=row['cons'])
+                    cons=row['cons'],
+                )
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
             q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
             commodity_price_obj = CommodityPricing(
-                commodity_id=q_gas[0].id,
-                subname='Газ',
-                unit=np.nan,
-                price=np.nan,
-                m_delta=np.nan,
-                y_delta=np.nan,
-                cons=np.nan)
+                commodity_id=q_gas[0].id, subname='Газ', unit=np.nan, price=np.nan, m_delta=np.nan, y_delta=np.nan, cons=np.nan
+            )
             session.merge(commodity_price_obj, load=True)
             session.commit()
 
@@ -226,8 +225,7 @@ class Main:
     def economic_block(table_eco: list, page_eco: str):
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых',
-                                         'Инфляция, % г/г', 'Цель по инфляции, %'])
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
         if table_eco[0] == 'Экономика' and page_eco == 'KeyRate':
             eco_frst_third.append(['Текущая ключевая ставка Банка России', table_eco[3]['Ставка'][0]])
             logger.info('Таблица Экономика (KeyRate) собрана')
@@ -254,7 +252,7 @@ class Main:
 
     @staticmethod
     def find_number(data_list):
-        """ Находит первое число в списке """
+        """Находит первое число в списке"""
         for item in data_list[:20]:
             try:
                 return float(item)
@@ -281,8 +279,10 @@ class Main:
                     except Exception as ex:
                         logger.error(f'Ошибка при обработке таблицы: {ex}')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
-                row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
-                                                            'Real-time Currencies']['Last'].values.tolist()[0]]
+                row = [
+                    exchange_page,
+                    table_exchange[3].loc[table_exchange[3]['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0],
+                ]
                 exchange_kot.append(row)
                 logger.info('Таблица exchange_kot (Exchange) собрана')
 
@@ -325,16 +325,26 @@ class Main:
 
         elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
             if 'Metals' in table_metals[3].columns:
-                temp = table_metals[3].loc[table_metals[3]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz',
-                                                                           'Platinum USD/t,oz', 'Lithium CNY/T'])]
+                temp = table_metals[3].loc[
+                    table_metals[3]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz', 'Platinum USD/t,oz', 'Lithium CNY/T'])
+                ]
                 metals_kot.append(temp)
                 logger.info('Таблица metals_kot (Metals) собрана')
 
             elif 'Industrial' in table_metals[3].columns:
-                temp = table_metals[3].loc[table_metals[3]['Industrial'].isin(['Aluminum USD/T', 'Nickel USD/T',
-                                                                               'Lead USD/T', 'Zinc USD/T',
-                                                                               'Palladium USD/t,oz', 'Cobalt USD/T',
-                                                                               'Iron Ore 62% fe USD/T'])]
+                temp = table_metals[3].loc[
+                    table_metals[3]['Industrial'].isin(
+                        [
+                            'Aluminum USD/T',
+                            'Nickel USD/T',
+                            'Lead USD/T',
+                            'Zinc USD/T',
+                            'Palladium USD/t,oz',
+                            'Cobalt USD/T',
+                            'Iron Ore 62% fe USD/T',
+                        ]
+                    )
+                ]
                 metals_kot.append(temp.rename(columns={'Industrial': 'Metals'}))
                 logger.info('Таблица metals_kot (Industrial) собрана')
 
@@ -355,19 +365,30 @@ class Main:
                 week_table = table_metals[3].loc[table_metals[3]['Date'] == str(week_day).split()[0]]
                 month_table = table_metals[3].loc[table_metals[3]['Date'] == str(month_day).split()[0]]
                 year_table = table_metals[3].loc[table_metals[3]['Date'] == str(year_day).split()[0]]
-                temp_table = pd.concat([table_metals[3].head(1), week_table,
-                                        month_table, year_table], ignore_index=True)
+                temp_table = pd.concat([table_metals[3].head(1), week_table, month_table, year_table], ignore_index=True)
 
                 temp_table['Metals'] = 'Эн. уголь'
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 try:
-                    metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                            *temp_table['%'].tolist()[1:], str(temp_table['Date'][0]).split()[0]])
+                    metals_coal_kot.append(
+                        [
+                            temp_table['Metals'][0],
+                            temp_table['Price'][0],
+                            *temp_table['%'].tolist()[1:],
+                            str(temp_table['Date'][0]).split()[0],
+                        ]
+                    )
                     logger.info('Таблица metals_coal_kot собрана')
                 except ValueError:
-                    metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                            *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
+                    metals_coal_kot.append(
+                        [
+                            temp_table['Metals'][0],
+                            temp_table['Price'][0],
+                            *temp_table['%'].tolist()[0:],
+                            str(temp_table['Date'][0]).split()[0],
+                        ]
+                    )
                     logger.warning('Сдвиг в таблице с котировками (metals_coal_kot)')
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
@@ -376,15 +397,12 @@ class Main:
         all_tables = self.table_collector(session)
         engine = create_engine(self.psql_engine, poolclass=NullPool)
         logger.info('Котировки собраны, запускаем обработку')
-        all_tables.append(['Металлы', 'Блок котировки',
-                           'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
-        bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,',
-                                          'Мин,', 'Изм,', 'Изм, %', 'Время'])
+        all_tables.append(['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
+        bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
         exchange_kot = []
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых',
-                                         'Инфляция, % г/г', 'Цель по инфляции, %'])
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
         U7N23 = []
         metals_kot = []
         metals_coal_kot = []
@@ -432,8 +450,7 @@ class Main:
 
         # Запись Курсов в БД и Локальное хранилище
         exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
-            .drop_duplicates(subset=['Валюта'], ignore_index=True)
+        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']).drop_duplicates(subset=['Валюта'], ignore_index=True)
         fx_df.to_excel(exchange_writer, sheet_name='Курсы валют')
         logger.info('Записана страница с Курсами')
         # Write to fx DB
@@ -486,31 +503,50 @@ class Main:
         # economy
         key_eco_table = authed_user.get_key_econ_ind_table()
         eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        eco_month = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                            name_of_review='Экономика России. Ежемесячный обзор')
+        eco_month = authed_user.get_reviews(
+            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Экономика России. Ежемесячный обзор'
+        )
         logger.info('Блок по экономике собран')
 
         # bonds
-        bonds_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-                                            name_of_review='Валютный рынок и процентные ставки',
-                                            type_of_review='bonds', count_of_review=2)
-        bonds_month = authed_user.get_reviews(url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB',
-                                              name_of_review='Обзор рынка процентных ставок')
+        bonds_day = authed_user.get_reviews(
+            url_part=money,
+            tab='Ежедневные',
+            title='FX &amp; Ставки - Sberbank CIB',
+            name_of_review='Валютный рынок и процентные ставки',
+            type_of_review='bonds',
+            count_of_review=2,
+        )
+        bonds_month = authed_user.get_reviews(
+            url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB', name_of_review='Обзор рынка процентных ставок'
+        )
         logger.info('Блок по ставкам собран')
 
         # exchange
-        exchange_day = authed_user.get_reviews(url_part=money, tab='Ежедневные', title='FX &amp; Ставки - Sberbank CIB',
-                                               name_of_review='Валютный рынок и процентные ставки',
-                                               type_of_review='exchange', count_of_review=2)
-        exchange_month_uan = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                                     name_of_review='Ежемесячный обзор по юаню')
-        exchange_month_soft = authed_user.get_reviews(url_part=economy, tab='Все', title='Экономика - Sberbank CIB',
-                                                      name_of_review='Ежемесячный дайджест по мягким валютам')
+        exchange_day = authed_user.get_reviews(
+            url_part=money,
+            tab='Ежедневные',
+            title='FX &amp; Ставки - Sberbank CIB',
+            name_of_review='Валютный рынок и процентные ставки',
+            type_of_review='exchange',
+            count_of_review=2,
+        )
+        exchange_month_uan = authed_user.get_reviews(
+            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по юаню'
+        )
+        exchange_month_soft = authed_user.get_reviews(
+            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный дайджест по мягким валютам'
+        )
         logger.info('Блок по курсам валют собран')
 
         # commodity
-        commodity_day = authed_user.get_reviews(url_part=comm, tab='Ежедневные', title='Сырьевые товары - Sberbank CIB',
-                                                name_of_review='Сырьевые рынки', type_of_review='commodity')
+        commodity_day = authed_user.get_reviews(
+            url_part=comm,
+            tab='Ежедневные',
+            title='Сырьевые товары - Sberbank CIB',
+            name_of_review='Сырьевые рынки',
+            type_of_review='commodity',
+        )
         logger.info('Блок по сырью собран')
 
         exchange_month = exchange_month_uan + exchange_month_soft
@@ -521,7 +557,7 @@ class Main:
             'Bonds month': bonds_month,
             'Exchange day': exchange_day,
             'Exchange month': exchange_month,
-            'Commodity day': commodity_day
+            'Commodity day': commodity_day,
         }
 
         # companies
@@ -560,7 +596,7 @@ class Main:
             'Bonds month': 'report_bon_mon',
             'Exchange day': 'report_exc_day',
             'Exchange month': 'report_exc_mon',
-            'Commodity day': 'report_met_day'
+            'Commodity day': 'report_met_day',
         }
 
         for review_name in table_name_for_review:
@@ -583,7 +619,7 @@ class Main:
 
     def save_date_of_last_build(self):
         engine = create_engine(self.psql_engine, poolclass=NullPool)
-        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time = datetime.datetime.now().strftime('%d.%m.%Y %H:%M')
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
         logger.info('Таблица date_of_last_build записана')
@@ -606,7 +642,7 @@ class Main:
             page_html = company_pages_html.get(company)
             tables = self.transformer_obj.get_table_from_html(True, page_html)
             pd.set_option('display.max_columns', None)
-            tables[0]["group_no"] = tables[0].isnull().all(axis=1).cumsum()
+            tables[0]['group_no'] = tables[0].isnull().all(axis=1).cumsum()
             tables = tables[0].dropna(subset='Unnamed: 1')
             tables_names = tables['Unnamed: 0'].dropna().tolist()
 

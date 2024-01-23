@@ -3,7 +3,7 @@ from typing import Tuple
 
 def get_period(period: str) -> Tuple[int, int, str]:
     if not isinstance(period, str):
-        raise TypeError("Неверный тип параметра period.")
+        raise TypeError('Неверный тип параметра period.')
     period_scales = {
         's': 1,
         'm': 60,
@@ -23,7 +23,5 @@ def get_period(period: str) -> Tuple[int, int, str]:
     elif period[:-1].isdigit():
         period = int(period[:-1])
     else:
-        raise ValueError("Неверное значение параметра period.")
+        raise ValueError('Неверное значение параметра period.')
     return period, scale, scale_txt
-
-

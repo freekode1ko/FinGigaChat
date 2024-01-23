@@ -1,20 +1,19 @@
-from dateutil.relativedelta import relativedelta
-from module.logger_base import selector_logger
-import module.data_transformer as dt
-import module.crawler as crawler
-
-from sqlalchemy import create_engine, NullPool
-
-from pathlib import Path
-import requests as req
-from lxml import html
-import pandas as pd
 import datetime
-import warnings
-import config
 import time
-import click
+import warnings
+from pathlib import Path
 
+import click
+import pandas as pd
+import requests as req
+from dateutil.relativedelta import relativedelta
+from lxml import html
+from sqlalchemy import NullPool, create_engine
+
+import config
+import module.crawler as crawler
+import module.data_transformer as dt
+from module.logger_base import selector_logger
 from utils.cli_utils import get_period
 
 
@@ -56,8 +55,7 @@ class QuotesGetter:
     def economic_block(self, table_eco: list, page_eco: str):
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых',
-                                         'Инфляция, % г/г', 'Цель по инфляции, %'])
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
         if table_eco[0] == 'Экономика' and page_eco == 'KeyRate':
             eco_frst_third.append(['Текущая ключевая ставка Банка России', table_eco[3]['Ставка'][0]])
             self.logger.info('Таблица Экономика (KeyRate) собрана')
@@ -84,7 +82,7 @@ class QuotesGetter:
 
     @staticmethod
     def find_number(data_list):
-        """ Находит первое число в списке """
+        """Находит первое число в списке"""
         for item in data_list[:20]:
             try:
                 return float(item)
@@ -111,8 +109,10 @@ class QuotesGetter:
                     except Exception as ex:
                         self.logger.error(f'Ошибка при обработке таблицы: {ex}')
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[3].columns):
-                row = [exchange_page, table_exchange[3].loc[table_exchange[3]['Exchange'] ==
-                                                            'Real-time Currencies']['Last'].values.tolist()[0]]
+                row = [
+                    exchange_page,
+                    table_exchange[3].loc[table_exchange[3]['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0],
+                ]
                 exchange_kot.append(row)
                 self.logger.info('Таблица exchange_kot (Exchange) собрана')
 
@@ -155,16 +155,26 @@ class QuotesGetter:
 
         elif table_metals[0] == 'Металлы' and page_metals == 'commodities':
             if 'Metals' in table_metals[3].columns:
-                temp = table_metals[3].loc[table_metals[3]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz',
-                                                                           'Platinum USD/t,oz', 'Lithium CNY/T'])]
+                temp = table_metals[3].loc[
+                    table_metals[3]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz', 'Platinum USD/t,oz', 'Lithium CNY/T'])
+                ]
                 metals_kot.append(temp)
                 self.logger.info('Таблица metals_kot (Metals) собрана')
 
             elif 'Industrial' in table_metals[3].columns:
-                temp = table_metals[3].loc[table_metals[3]['Industrial'].isin(['Aluminum USD/T', 'Nickel USD/T',
-                                                                               'Lead USD/T', 'Zinc USD/T',
-                                                                               'Palladium USD/t,oz', 'Cobalt USD/T',
-                                                                               'Iron Ore 62% fe USD/T'])]
+                temp = table_metals[3].loc[
+                    table_metals[3]['Industrial'].isin(
+                        [
+                            'Aluminum USD/T',
+                            'Nickel USD/T',
+                            'Lead USD/T',
+                            'Zinc USD/T',
+                            'Palladium USD/t,oz',
+                            'Cobalt USD/T',
+                            'Iron Ore 62% fe USD/T',
+                        ]
+                    )
+                ]
                 metals_kot.append(temp.rename(columns={'Industrial': 'Metals'}))
                 self.logger.info('Таблица metals_kot (Industrial) собрана')
 
@@ -185,19 +195,30 @@ class QuotesGetter:
                 week_table = table_metals[3].loc[table_metals[3]['Date'] == str(week_day).split()[0]]
                 month_table = table_metals[3].loc[table_metals[3]['Date'] == str(month_day).split()[0]]
                 year_table = table_metals[3].loc[table_metals[3]['Date'] == str(year_day).split()[0]]
-                temp_table = pd.concat([table_metals[3].head(1), week_table,
-                                        month_table, year_table], ignore_index=True)
+                temp_table = pd.concat([table_metals[3].head(1), week_table, month_table, year_table], ignore_index=True)
 
                 temp_table['Metals'] = 'Эн. уголь'
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
                 try:
-                    metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                            *temp_table['%'].tolist()[1:], str(temp_table['Date'][0]).split()[0]])
+                    metals_coal_kot.append(
+                        [
+                            temp_table['Metals'][0],
+                            temp_table['Price'][0],
+                            *temp_table['%'].tolist()[1:],
+                            str(temp_table['Date'][0]).split()[0],
+                        ]
+                    )
                     self.logger.info('Таблица metals_coal_kot собрана')
                 except ValueError:
-                    metals_coal_kot.append([temp_table['Metals'][0], temp_table['Price'][0],
-                                            *temp_table['%'].tolist()[0:], str(temp_table['Date'][0]).split()[0]])
+                    metals_coal_kot.append(
+                        [
+                            temp_table['Metals'][0],
+                            temp_table['Price'][0],
+                            *temp_table['%'].tolist()[0:],
+                            str(temp_table['Date'][0]).split()[0],
+                        ]
+                    )
                     self.logger.warning('Сдвиг в таблице с котировками (metals_coal_kot)')
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
@@ -206,15 +227,12 @@ class QuotesGetter:
         all_tables = self.table_collector(session)
         engine = create_engine(self.psql_engine, poolclass=NullPool)
         self.logger.info('Котировки собраны, запускаем обработку')
-        all_tables.append(['Металлы', 'Блок котировки',
-                           'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
-        bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,',
-                                          'Мин,', 'Изм,', 'Изм, %', 'Время'])
+        all_tables.append(['Металлы', 'Блок котировки', 'https://www.bloomberg.com/quote/LMCADS03:COM', [pd.DataFrame()]])
+        bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
         exchange_kot = []
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых',
-                                         'Инфляция, % г/г', 'Цель по инфляции, %'])
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
         U7N23 = []
         metals_kot = []
         metals_coal_kot = []
@@ -262,8 +280,7 @@ class QuotesGetter:
 
         # Запись Курсов в БД и Локальное хранилище
         exchange_writer = pd.ExcelWriter('sources/tables/exc.xlsx')
-        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']) \
-            .drop_duplicates(subset=['Валюта'], ignore_index=True)
+        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']).drop_duplicates(subset=['Валюта'], ignore_index=True)
         fx_df.to_excel(exchange_writer, sheet_name='Курсы валют')
         self.logger.info('Записана страница с Курсами')
         # Write to fx DB
@@ -304,7 +321,7 @@ class QuotesGetter:
 
     def save_date_of_last_build(self):
         engine = create_engine(self.psql_engine, poolclass=NullPool)
-        cur_time = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
+        cur_time = datetime.datetime.now().strftime('%d.%m.%Y %H:%M')
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
         self.logger.info('Таблица date_of_last_build записана')
@@ -314,14 +331,10 @@ class QuotesGetter:
 @click.option(
     '-p',
     '--period',
-    default="15m",
+    default='15m',
     show_default=True,
     type=str,
-    help="Периодичность сборки котировок\n"
-         "s - секунды\n"
-         "m - минуты (значение по умолчанию)\n"
-         "h - часы\n"
-         "d - дни",
+    help='Периодичность сборки котировок\n' 's - секунды\n' 'm - минуты (значение по умолчанию)\n' 'h - часы\n' 'd - дни',
 )
 def main(period):
     """

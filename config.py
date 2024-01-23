@@ -1,7 +1,9 @@
-import pathlib
 import json
+import pathlib
 import typing as t
+
 from environs import Env
+
 from enums import Environment
 
 env = Env()
@@ -15,8 +17,7 @@ PROJECT_DIR = pathlib.Path(__file__).parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'constants' / 'assets'
 
 
-def read_asset_from_json(file_name: t.Union[str, pathlib.Path],
-                         encoding: str = 'utf-8') -> t.Union[list, dict, str]:
+def read_asset_from_json(file_name: t.Union[str, pathlib.Path], encoding: str = 'utf-8') -> t.Union[list, dict, str]:
     """
     Считывает константу из json-файла
     Args:
@@ -64,9 +65,9 @@ BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
 
-mail_username = "ai-helper@mail.ru"
-mail_password = "ExamKejCpmcpr8kM5emw"
-mail_imap_server = "imap.mail.ru"
+mail_username = 'ai-helper@mail.ru'
+mail_password = 'ExamKejCpmcpr8kM5emw'
+mail_imap_server = 'imap.mail.ru'
 summarization_prompt = (
     'Ты - суммаризатор новостной ленты.'
     'На вход тебе будут подаваться новости.'
@@ -85,38 +86,41 @@ summarization_prompt = (
     'Твой ответ:'
 )
 
-help_text = ('Всем привет! Мы начинаем пилотирование MVP AI-помощника банкира на ограниченной выборке ГКМ, старших '
-             'банкиров и руководителей.\n\n'
-             'В боте можно посмотреть аналитику CIB Research, текущие и прогнозные котировки и данные по макроэкономике,'
-             ' FI, FX, сырьевым товарам воспользовавшись командами из бокового меню или ввести ключевые слова '
-             '(экономика, валюты, ОФЗ, металлы, нефть, инфляция, КС, ВВП, бюджет, юань и тд).\n\n'
-             'Для просмотра новостного потока по клиентам необходимо ввести название клиента («Роснефть», «Магнит», '
-             '«Уралхим» и тд) - в настоящее время доступен сервис по 250 именам. По публичным клиентам доступны '
-             'также исторические и прогнозные финансовые показатели.  Аналогичный новостной функционал, а также '
-             'динамика котировок доступны по ключевым commodities.\n\n'
-             'Кроме того, в боте вы можете пообщаться с Гигачатом в свободной форме, попросив написать письмо, сделать '
-             'самари, перевести текст и тд.\n\n'
-             'В ближайших планах: расширение функционала в части отраслевой аналитики, персонализация под ГКМ и '
-             'настройка пассивного контента (настройка рассылки), инфо по законодательству, госпраммам и многое другое!\n\n'
-             'В перспективе рассматриваем варианты заведения колл репортов через этот бот и интеграцию с контуром '
-             'альфа (тут есть ограничения по безопасности, но мы не сдаемся и ищем варианты:)\n\n'
-             'Бот постоянно совершенствуется и дообучается, поэтому присылайте, пожалуйста, обратную связь по контенту, '
-             'функционалу и новым идеям Максиму Королькову @korolkov_m и Александру Юдину.')
+
+help_text = (
+    'Всем привет! Мы начинаем пилотирование MVP AI-помощника банкира на ограниченной выборке ГКМ, старших '
+    'банкиров и руководителей.\n\n'
+    'В боте можно посмотреть аналитику CIB Research, текущие и прогнозные котировки и данные по макроэкономике,'
+    ' FI, FX, сырьевым товарам воспользовавшись командами из бокового меню или ввести ключевые слова '
+    '(экономика, валюты, ОФЗ, металлы, нефть, инфляция, КС, ВВП, бюджет, юань и тд).\n\n'
+    'Для просмотра новостного потока по клиентам необходимо ввести название клиента («Роснефть», «Магнит», '
+    '«Уралхим» и тд) - в настоящее время доступен сервис по 250 именам. По публичным клиентам доступны '
+    'также исторические и прогнозные финансовые показатели.  Аналогичный новостной функционал, а также '
+    'динамика котировок доступны по ключевым commodities.\n\n'
+    'Кроме того, в боте вы можете пообщаться с Гигачатом в свободной форме, попросив написать письмо, сделать '
+    'самари, перевести текст и тд.\n\n'
+    'В ближайших планах: расширение функционала в части отраслевой аналитики, персонализация под ГКМ и '
+    'настройка пассивного контента (настройка рассылки), инфо по законодательству, госпраммам и многое другое!\n\n'
+    'В перспективе рассматриваем варианты заведения колл репортов через этот бот и интеграцию с контуром '
+    'альфа (тут есть ограничения по безопасности, но мы не сдаемся и ищем варианты:)\n\n'
+    'Бот постоянно совершенствуется и дообучается, поэтому присылайте, пожалуйста, обратную связь по контенту, '
+    'функционалу и новым идеям Максиму Королькову @korolkov_m и Александру Юдину.'
+)
 
 table_link = 'https://metals-wire.com/data'
 
-charts_links = \
-    {
-        'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/'
-                            '?to=date_date&countBack=1825',
-        'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/'
-                          '?period=P5Y&interval=P1M&pointscount=120'
-    }
+charts_links = {
+    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/' '?to=date_date&countBack=1825',
+    'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/'
+    '?period=P5Y&interval=P1M&pointscount=120',
+}
 
 dict_of_commodities: t.Dict = read_asset_from_json('commodities_dict.json')
 dict_of_companies: t.Dict = read_asset_from_json('companies_dict.json')
 industry_reviews: t.Dict[str, str] = read_asset_from_json('industry_reviews.json')
 
-industry_base_url = 'https://research.sberbank-cib.com/group/guest/' \
-                    'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_' \
-                    'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
+industry_base_url = (
+    'https://research.sberbank-cib.com/group/guest/'
+    'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_'
+    'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
+)
