@@ -1,6 +1,6 @@
-import os
-
 import pandas as pd
+from datetime import date
+from pathlib import Path
 from sqlalchemy import Engine, text
 
 
@@ -25,7 +25,7 @@ class UserStatistics:
         users_df = pd.DataFrame(data, columns=['telegram_user_name', 'user_id'])  # 'empl_fullname', 'department_name'])
         return users_df
 
-    def get_stat(self) -> pd.DataFrame:
+    def get_stat(self, from_date: date = None, to_date: date = None) -> pd.DataFrame:
         """
         Возвращает статистику по использованию бота пользователями
 
@@ -37,10 +37,19 @@ class UserStatistics:
             'DATE(date) AS date, COUNT(CASE WHEN level=\'INFO\' THEN 1 END) AS qty_of_prompts '
             'FROM user_log '
             'JOIN whitelist ON whitelist.user_id=user_log.user_id '
-            'WHERE level=\'INFO\' OR level=\'DEBUG\' '
+            'WHERE (level=\'INFO\' OR level=\'DEBUG\') {period_condition} '
             'GROUP BY whitelist.username, user_log.user_id, DATE(date) '
             'ORDER BY date;'
         )
+
+        period_condition = ''
+
+        if from_date:
+            period_condition += f'AND DATE(date) >= \'{from_date.strftime("%Y-%m-%d")}\' '
+        if to_date:
+            period_condition += f'AND DATE(date) <= \'{to_date.strftime("%Y-%m-%d")}\' '
+
+        query = query.format(period_condition=period_condition)
 
         with self.engine.connect() as conn:  # FIXME унести в класс работы с БД
             data = conn.execute(text(query))
@@ -50,32 +59,21 @@ class UserStatistics:
         return stat_df
 
     @staticmethod
-    def save_stat_excel(save_df: pd.DataFrame, file_save_path: str, sheet_name: str = 'Лист 1') -> None:
+    def save_stat_excel(save_df: pd.DataFrame, file_save_path: Path, sheet_name: str = 'Лист 1') -> None:
         """Сохраняет передаваемый DataFrame в xlsx формате"""
-        if not isinstance(save_df, pd.DataFrame):
-            raise TypeError(f'Передан {type(save_df)=:}, ожидалcя тип "pandas.DataFrame"')
-        if not isinstance(sheet_name, str):
-            raise TypeError(f'Передан {type(sheet_name)=:}, ожидалcя тип "str"')
-        if not isinstance(file_save_path, str):
-            raise TypeError(f'Передан {type(file_save_path)=:}, ожидалcя тип "str"')
+        save_df.to_excel(file_save_path, sheet_name=sheet_name)
 
-        with pd.ExcelWriter(file_save_path) as writer:
-            save_df.to_excel(writer, sheet_name=sheet_name)
-
-    def collect_bot_usage(self, file_save_path: str = None) -> None:
-        """
-        Формирует статистику использования бота и сохраняет ее по пути file_save_path
-        (по умолчанию sources/tables/users_statistics.xlsx).
-        """
+    def collect_bot_usage(self, file_save_path: Path) -> None:
+        """Формирует статистику использования бота и сохраняет ее по пути file_save_path"""
         stat_df = self.get_stat()
-        file_save_path = file_save_path or os.path.join('sources', 'tables', 'users_statistics.xlsx')
         self.save_stat_excel(stat_df, file_save_path=file_save_path, sheet_name='Статистика использования')
 
-    def collect_users(self, file_save_path: str = None) -> None:
-        """
-        Формирует справочник пользователей и сохраняет его по пути file_save_path
-        (по умолчанию sources/tables/users.xlsx).
-        """
+    def collect_bot_usage_over_period(self, file_save_path: Path, from_date: date, to_date: date) -> None:
+        """Формирует статистику использования бота и сохраняет ее по пути file_save_path"""
+        stat_df = self.get_stat(from_date=from_date, to_date=to_date)
+        self.save_stat_excel(stat_df, file_save_path=file_save_path, sheet_name='Статистика использования')
+
+    def collect_users_data(self, file_save_path: Path) -> None:
+        """Формирует справочник пользователей и сохраняет его по пути file_save_path"""
         stat_df = self.get_users()
-        file_save_path = file_save_path or os.path.join('sources', 'tables', 'users.xlsx')
         self.save_stat_excel(stat_df, file_save_path=file_save_path, sheet_name='Справочник пользователей')
