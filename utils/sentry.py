@@ -2,8 +2,9 @@ import logging
 
 import sentry_sdk
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
-import config
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
+
+import config
 from enums import Environment
 
 logger = logging.getLogger(__name__)
@@ -22,9 +23,7 @@ def init_sentry(dsn: str) -> None:
         dsn=dsn,
         environment=config.ENV.value,
         integrations=[AsyncioIntegration()],
-        event_scrubber=EventScrubber(
-            denylist=DEFAULT_DENYLIST
-        ),
+        event_scrubber=EventScrubber(denylist=DEFAULT_DENYLIST),
         include_source_context=True,
         include_local_variables=True,
     )
