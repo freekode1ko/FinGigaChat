@@ -1,29 +1,33 @@
-import re
-import os
-import json
 import asyncio
-import warnings
+import json
+import os
+import re
 import textwrap
 import numpy as np
 import pandas as pd
 from typing import Dict, Union, List
 from sqlalchemy import create_engine, text, NullPool
+import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Dict, Union
 
-from aiogram.utils.exceptions import MessageIsTooLong, ChatNotFound, BotBlocked
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+import numpy as np
+import pandas as pd
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.utils.callback_data import CallbackData
+from aiogram.utils.exceptions import BotBlocked, ChatNotFound, MessageIsTooLong
+from sqlalchemy import NullPool, create_engine, text
 
-from module.article_process import ArticleProcess, ArticleProcessAdmin
-from module.model_pipe import summarization_by_chatgpt
+import config
 import module.data_transformer as dt
 import module.gigachat as gig
+from module.article_process import ArticleProcess, ArticleProcessAdmin
 from module.logger_base import get_db_logger, get_handler, selector_logger
-import config
+from module.model_pipe import summarization_by_chatgpt
 
 path_to_source = config.path_to_source
 psql_engine = config.psql_engine
@@ -38,17 +42,65 @@ bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
-eco_aliases = ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика', 'макро',
-               'макроэкономика', 'ключевая ставка', 'кс', 'ставка цб', 'ruonia', 'lpr', 'инфляция']
-exchange_aliases = ['курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро', 'fx', 'валютный рынок',
-                    'валюта', 'курс доллара', 'курс евро', 'курс юаня', 'курс рубля', 'доллар к рублю',
-                    'прогноз валютных курсов', 'прогнозы курса', 'прогнозы курса рубля', 'прогнозы курса доллара',
-                    'прогнозы курса юаня', 'мягкие валюты', 'рупии', 'лиры', 'тенге']
-metal_aliases = ['металлы', 'сырьевые товары', 'commodities', 'сырьевые рынки', 'сырье', 'цены на commodities',
-                 'ценны на металлы']
-view_aliases = ['ввп', 'бюджет', 'баланс бюджета', 'денежное предложение', 'проценстная ставка по кредитам',
-                'проценстная ставка по депозитам', 'безработица', 'платежный баланс', 'экспорт', 'импорт',
-                'торговый баланс', 'счет текущих операций', 'международные резервы', 'внешний долг', 'госдолг']
+eco_aliases = [
+    'экономика',
+    'ставки',
+    'ключевая ставка',
+    'кс',
+    'монетарная политика',
+    'макро',
+    'макроэкономика',
+    'ключевая ставка',
+    'кс',
+    'ставка цб',
+    'ruonia',
+    'lpr',
+    'инфляция',
+]
+exchange_aliases = [
+    'курсы валют',
+    'курсы',
+    'валюты',
+    'рубль',
+    'доллар',
+    'юань',
+    'евро',
+    'fx',
+    'валютный рынок',
+    'валюта',
+    'курс доллара',
+    'курс евро',
+    'курс юаня',
+    'курс рубля',
+    'доллар к рублю',
+    'прогноз валютных курсов',
+    'прогнозы курса',
+    'прогнозы курса рубля',
+    'прогнозы курса доллара',
+    'прогнозы курса юаня',
+    'мягкие валюты',
+    'рупии',
+    'лиры',
+    'тенге',
+]
+metal_aliases = ['металлы', 'сырьевые товары', 'commodities', 'сырьевые рынки', 'сырье', 'цены на commodities', 'ценны на металлы']
+view_aliases = [
+    'ввп',
+    'бюджет',
+    'баланс бюджета',
+    'денежное предложение',
+    'проценстная ставка по кредитам',
+    'проценстная ставка по депозитам',
+    'безработица',
+    'платежный баланс',
+    'экспорт',
+    'импорт',
+    'торговый баланс',
+    'счет текущих операций',
+    'международные резервы',
+    'внешний долг',
+    'госдолг',
+]
 
 sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
 handbook_format = '<b>{}</b>\n\n{}'
@@ -61,11 +113,11 @@ giga_ans_footer = 'Ответ сгенерирован Gigachat. Информа�
 
 
 next_news_callback = CallbackData(
-    "next_news",
-    "subject",
-    "subject_id",
-    "user_msg",
-    "offset",
+    'next_news',
+    'subject',
+    'subject_id',
+    'user_msg',
+    'offset',
 )
 
 
@@ -121,18 +173,20 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     giga_ans = text
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
-            text_group.append(text[batch:batch + batch_size])
+            text_group.append(text[batch : batch + batch_size])
         for summ_part in text_group:
-            await message.answer('<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer, date),
-                                 parse_mode="HTML", protect_content=True)
+            await message.answer(
+                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
+            )
     else:
-        await message.answer('<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date),
-                             parse_mode="HTML", protect_content=True)
+        await message.answer(
+            '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date), parse_mode='HTML', protect_content=True
+        )
 
 
-async def __sent_photo_and_msg(message: types.Message, photo, day: str = '',
-                               month: str = '', title: str = '', source: str = '',
-                               protect_content: bool = True):
+async def __sent_photo_and_msg(
+    message: types.Message, photo, day: str = '', month: str = '', title: str = '', source: str = '', protect_content: bool = True
+):
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
 
@@ -223,8 +277,7 @@ async def bonds_info(message: types.Message):
         bonds = bonds[columns].dropna(axis=0)
         bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
         bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения', 'Доходность': 'Доходность, %'})
-        years = ['1 год', '2 года', '3 года', '5 лет',
-                 '7 лет', '10 лет', '15 лет', '20 лет']
+        years = ['1 год', '2 года', '3 года', '5 лет', '7 лет', '10 лет', '15 лет', '20 лет']
         for num, name in enumerate(bond_ru['Cрок до погашения'].values):
             bond_ru['Cрок до погашения'].values[num] = years[num]
 
@@ -236,8 +289,9 @@ async def bonds_info(message: types.Message):
         month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
         title = 'ОФЗ'
         data_source = 'investing.com'
-        await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
-                                   title=sample_of_img_title.format(title, data_source, read_curdatetime()))
+        await __sent_photo_and_msg(
+            message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())
+        )
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -280,7 +334,7 @@ async def economy_info(message: types.Message):
             'Mexico': 'Мексика',
             'Brazil': 'Бразилия',
             'Turkey': 'Турция',
-            'Argentina': 'Аргентина'
+            'Argentina': 'Аргентина',
         }
         world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
         for num, country in enumerate(world_bet['Страна'].values):
@@ -288,35 +342,48 @@ async def economy_info(message: types.Message):
         transformer = dt.Transformer()
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'world_bet')
         world_bet = world_bet.round(2)
-        transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0,
-                                     col_width=2.2, title='Ключевые ставки ЦБ мира.')
+        transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2, title='Ключевые ставки ЦБ мира.')
         photo = open(png_path, 'rb')
         day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
         month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
         title = 'Ключевые ставки ЦБ мира'
         data_source = 'ЦБ стран мира'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
-                                   title=sample_of_img_title.format(title, data_source, curdatetime))
+        await __sent_photo_and_msg(
+            message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, curdatetime)
+        )
 
         month_dict = {
-            1: "Январь", 2: "Февраль", 3: "Март",
-            4: "Апрель", 5: "Май", 6: "Июнь",
-            7: "Июль", 8: "Август", 9: "Сентябрь",
-            10: "Октябрь", 11: "Ноябрь", 12: "Декабрь"
+            1: 'Январь',
+            2: 'Февраль',
+            3: 'Март',
+            4: 'Апрель',
+            5: 'Май',
+            6: 'Июнь',
+            7: 'Июль',
+            8: 'Август',
+            9: 'Сентябрь',
+            10: 'Октябрь',
+            11: 'Ноябрь',
+            12: 'Декабрь',
         }
         for num, date in enumerate(rus_infl['Дата'].values):
             cell = str(date).split('.')
             rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
-        transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0,
-                                     col_width=2, title='Ежемесячная инфляция в России.')
+        transformer.render_mpl_table(
+            rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2, title='Ежемесячная инфляция в России.'
+        )
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
         photo = open(png_path, 'rb')
         title = 'Инфляция в России'
         data_source = 'ЦБ РФ'
-        await bot.send_photo(message.chat.id, photo,
-                             caption=sample_of_img_title.format(title, data_source, curdatetime),
-                             parse_mode='HTML', protect_content=False)
+        await bot.send_photo(
+            message.chat.id,
+            photo,
+            caption=sample_of_img_title.format(title, data_source, curdatetime),
+            parse_mode='HTML',
+            protect_content=False,
+        )
         # сообщение с текущими ставками
         stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
@@ -364,7 +431,7 @@ async def data_mart(message: types.Message):
             'Социальный сектор': 4,
             'Норма сбережений': 4,
             'Платежный баланс': 5,
-            'Обменный курс': 6
+            'Обменный курс': 6,
         }
         groups_dict = {group: [] for group in range(1, 7)}
 
@@ -380,9 +447,10 @@ async def data_mart(message: types.Message):
         tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
         # Денежное предложение
         for table in tables:
-            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = \
-                'Денежное предложение ' + table.loc[table['alias'].str.contains('Денежное предложение'),
-                                                    'Экономические показатели'].str.lower()
+            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = (
+                'Денежное предложение '
+                + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+            )
         # Средняя процентная ставка
         for table in tables:
             condition = table['alias'].str.contains('Средняя процентная ставка')
@@ -393,22 +461,23 @@ async def data_mart(message: types.Message):
 
         # рубль/доллар
         for table in tables:
-            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = \
+            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = (
                 table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
+            )
         # ИПЦ
         for table in tables:
-            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = \
+            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = (
                 table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
+            )
         # ИЦП
         for table in tables:
-            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = \
+            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = (
                 table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
+            )
         # Юралз
         for table in tables:
-            condition = table['alias'].str.contains('рубль/евро') & \
-                        ~table['Экономические показатели'].str.contains('Юралз')
-            table.loc[condition, 'Экономические показатели'] = \
-                table.loc[condition, 'Экономические показатели'] + ', €/руб'
+            condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
+            table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели'] + ', €/руб'
 
         titles = []
         for key_eco in tables:
@@ -427,12 +496,11 @@ async def data_mart(message: types.Message):
                 cols_to_keep.insert(0, 'Экономические показатели')
                 key_eco = key_eco.loc[:, cols_to_keep]
 
-                transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4,
-                                             title=title, alias=titles[i])
+                transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
                 png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
 
-                with open(png_path, "rb") as photo:
-                    await __sent_photo_and_msg(message, photo, title="")
+                with open(png_path, 'rb') as photo:
+                    await __sent_photo_and_msg(message, photo, title='')
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -465,23 +533,21 @@ async def exchange_info(message: types.Message):
                 exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
         exc = exc.sort_index().reset_index(drop=True)
 
-        transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0,
-                                     col_width=2, title='Текущие курсы валют')
+        transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2, title='Текущие курсы валют')
         day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
         month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
         title = 'Курсы валют'
         data_source = 'investing.com'
         curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(message, photo, day, month, protect_content=False,
-                                   title=sample_of_img_title.format(title, data_source, curdatetime))
+        await __sent_photo_and_msg(
+            message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, curdatetime)
+        )
 
-        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(
-            columns={'базовый сценарий': ' '})
+        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(columns={'базовый сценарий': ' '})
         title = 'Прогноз валютных курсов'
         data_source = 'Sber analytical research'
-        transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0,
-                                     col_width=1.5, title=title)
+        transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0, col_width=1.5, title=title)
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
         photo = open(png_path, 'rb')
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
@@ -507,24 +573,26 @@ async def metal_info(message: types.Message):
         engine = create_engine(psql_engine, poolclass=NullPool)
         metal = pd.read_sql_query('SELECT * FROM metals', con=engine)
         metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
-        metal = metal.rename(columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя',
-                                       'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'}))
+        metal = metal.rename(
+            columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'})
+        )
 
-        order = {'Медь': ['Медь', '$/т', '0'],
-                 'Aluminum USD/T': ['Алюминий', '$/т', '1'],
-                 'Nickel USD/T': ['Никель', '$/т', '2'],
-                 'Lead USD/T': ['Cвинец', '$/т', '3'],
-                 'Zinc USD/T': ['Цинк', '$/т', '4'],
-                 'Gold USD/t,oz': ['Золото', '$/унц', '5'],
-                 'Silver USD/t,oz': ['Cеребро', '$/унц', '6'],
-                 'Palladium USD/t,oz': ['Палладий', '$/унц', '7'],
-                 'Platinum USD/t,oz': ['Платина', '$/унц', '8'],
-                 'Lithium CNY/T': ['Литий', 'CNH/т', '9'],
-                 'Cobalt USD/T': ['Кобальт', '$/т', '10'],
-                 'Iron Ore 62% fe USD/T': ['ЖРС (Китай)', '$/т', '11'],
-                 'Эн. уголь': ['Эн. уголь\n(Au)', '$/т', '12'],
-                 'кокс. уголь': ['Кокс. уголь\n(Au)', '$/т', '13']
-                 }
+        order = {
+            'Медь': ['Медь', '$/т', '0'],
+            'Aluminum USD/T': ['Алюминий', '$/т', '1'],
+            'Nickel USD/T': ['Никель', '$/т', '2'],
+            'Lead USD/T': ['Cвинец', '$/т', '3'],
+            'Zinc USD/T': ['Цинк', '$/т', '4'],
+            'Gold USD/t,oz': ['Золото', '$/унц', '5'],
+            'Silver USD/t,oz': ['Cеребро', '$/унц', '6'],
+            'Palladium USD/t,oz': ['Палладий', '$/унц', '7'],
+            'Platinum USD/t,oz': ['Платина', '$/унц', '8'],
+            'Lithium CNY/T': ['Литий', 'CNH/т', '9'],
+            'Cobalt USD/T': ['Кобальт', '$/т', '10'],
+            'Iron Ore 62% fe USD/T': ['ЖРС (Китай)', '$/т', '11'],
+            'Эн. уголь': ['Эн. уголь\n(Au)', '$/т', '12'],
+            'кокс. уголь': ['Кокс. уголь\n(Au)', '$/т', '13'],
+        }
 
         metal['ind'] = None
         metal.insert(1, 'Ед. изм.', None)
@@ -538,31 +606,30 @@ async def metal_info(message: types.Message):
         metal.sort_index(inplace=True)
         metal = metal.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
         for key in metal.columns[2:]:
-            metal[key] = metal[key].apply(lambda x: str(x).replace(",", "."))
+            metal[key] = metal[key].apply(lambda x: str(x).replace(',', '.'))
             metal[key] = metal[key].apply(lambda x: __replacer(x))
-            metal[key] = metal[key].apply(lambda x: str(x).replace("s", ""))
-            metal[key] = metal[key].apply(lambda x: str(x).replace("%", ""))
+            metal[key] = metal[key].apply(lambda x: str(x).replace('s', ''))
+            metal[key] = metal[key].apply(lambda x: str(x).replace('%', ''))
             metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
 
             metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan) if str(x) == 'None' else '{}'.format(x))
             metal[key] = metal[key].astype('float')
             metal[key] = metal[key].round()
-            metal[key] = metal[key].apply(lambda x: "{:,.0f}".format(x).replace(',', ' '))
-            metal[key] = metal[key].apply(lambda x: '{}%'.format(x) if x != 'nan' and key != 'Цена'
-            else str(x).replace("nan", "-"))
+            metal[key] = metal[key].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
+            metal[key] = metal[key].apply(lambda x: '{}%'.format(x) if x != 'nan' and key != 'Цена' else str(x).replace('nan', '-'))
 
         metal.index = metal.index.astype('int')
         metal.sort_index(inplace=True)
-        transformer.render_mpl_table(metal, 'metal', header_columns=0,
-                                     col_width=1.5, title='Цены на ключевые сырьевые товары.')
+        transformer.render_mpl_table(metal, 'metal', header_columns=0, col_width=1.5, title='Цены на ключевые сырьевые товары.')
 
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
         day = pd.read_sql_query('SELECT * FROM "report_met_day"', con=engine).values.tolist()
         photo = open(png_path, 'rb')
         title = ' Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
-        await __sent_photo_and_msg(message, photo, day, protect_content=False,
-                                   title=sample_of_img_title.format(title, data_source, read_curdatetime()))
+        await __sent_photo_and_msg(
+            message, photo, day, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())
+        )
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -601,8 +668,10 @@ async def message_to_all(message: types.Message):
     if await user_in_whitelist(user_str):
         if await check_your_right(user):
             await Form.send_to_users.set()
-            await message.answer('Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
-                                 'или, если передумали, напишите слово "Отмена".')
+            await message.answer(
+                'Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
+                'или, если передумали, напишите слово "Отмена".'
+            )
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         else:
             await message.answer('Недостаточно прав для этой команды!')
@@ -686,12 +755,10 @@ async def send_msg_to(user_id, message_text, file_name, file_type):
     if file_name:
         if file_type == 'photo':
             file = types.InputFile('sources/{}.jpg'.format(file_name))
-            await bot.send_photo(photo=file, chat_id=user_id,
-                                 caption=message_text, parse_mode='HTML', protect_content=True)
+            await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
         elif file_type == 'document':
             file = types.InputFile('sources/{}'.format(file_name))
-            await bot.send_document(document=file, chat_id=user_id,
-                                    caption=message_text, parse_mode='HTML', protect_content=True)
+            await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
     else:
         await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
@@ -714,15 +781,19 @@ async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, fr
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data=f'showmeindustry:yes'))
-        keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data=f'showmeindustry:no'))
-        await bot.send_message(chat_id, 'Сформируйте полный список интересующих клиентов или commodities '
-                             'для подписки на пассивную отправку новостей по ним.\n'
-                             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
-                             '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
-                             'Вы также можете воспользоваться готовыми подборками клиентов и commodities, '
-                             'которые отсортированы по отраслям. Скопируйте готовую подборку, исключите '
-                             'лишние наименования или добавьте дополнительные.\n', reply_markup=keyboard)
+        keyboard.add(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data='showmeindustry:yes'))
+        keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='showmeindustry:no'))
+        await bot.send_message(
+            chat_id,
+            'Сформируйте полный список интересующих клиентов или commodities '
+            'для подписки на пассивную отправку новостей по ним.\n'
+            'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
+            '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
+            'Вы также можете воспользоваться готовыми подборками клиентов и commodities, '
+            'которые отсортированы по отраслям. Скопируйте готовую подборку, исключите '
+            'лишние наименования или добавьте дополнительные.\n',
+            reply_markup=keyboard,
+        )
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -766,15 +837,12 @@ async def showmeindustry(callback_query: types.CallbackQuery, state: FSMContext)
         user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
         industries = pd.read_sql_query('SELECT name FROM industry', con=engine)['name'].tolist()
         for industry in industries:
-            keyboard.add(types.InlineKeyboardButton(text=industry.capitalize(),
-                                                    callback_data=f'whatinthisindustry:{industry}'))
-        await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов и commodities?',
-                               reply_markup=keyboard)
+            keyboard.add(types.InlineKeyboardButton(text=industry.capitalize(), callback_data=f'whatinthisindustry:{industry}'))
+        await bot.send_message(chat_id, 'По какой отрасли вы бы хотели получить список клиентов и commodities?', reply_markup=keyboard)
     else:
         user_logger.info('Отмена действия - /addnewsubscriptions')
         await state.finish()
-        await bot.send_message(chat_id, 'Действие успешно отменено',
-                               parse_mode='HTML', protect_content=True)
+        await bot.send_message(chat_id, 'Действие успешно отменено', parse_mode='HTML', protect_content=True)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('whatinthisindustry'), state=Form.user_subscriptions)
@@ -789,11 +857,16 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
     commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
     all_objects = pd.concat([clients, commodity], ignore_index=True)
-    await bot.send_message(chat_id, handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in
-                                                                                        all_objects['name'].tolist()])),
-                           parse_mode='HTML')
-    await bot.send_message(chat_id, text='Вы можете скопировать список выше, отредактировать, если это необходимо и '
-                                         'отправить в бота следующем сообщением, чтобы список сохранился')
+    await bot.send_message(
+        chat_id,
+        handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in all_objects['name'].tolist()])),
+        parse_mode='HTML',
+    )
+    await bot.send_message(
+        chat_id,
+        text='Вы можете скопировать список выше, отредактировать, если это необходимо и '
+        'отправить в бота следующем сообщением, чтобы список сохранился',
+    )
 
 
 async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
@@ -803,8 +876,9 @@ async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
     :param user_id: int - telegram ID пользователя
     """
     engine = create_engine(psql_engine, poolclass=NullPool)
-    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'",
-                                      con=engine)['subscriptions'].values.tolist()
+    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'", con=engine)[
+        'subscriptions'
+    ].values.tolist()
     return subscriptions[0].split(', ') if subscriptions[0] else []
 
 
@@ -831,11 +905,20 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
 
+    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
+    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
+        await message.reply(
+            f'Достигнут предел по количеству подписок\n\n'
+            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
+        )
+        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
     client_df = pd.read_sql_query('SELECT * FROM "commodity_alternative"', con=engine)
-    df_all = pd.concat([industry_df['other_names'], client_df['other_names'], com_df['other_names']],
-                       ignore_index=True, sort=False).fillna('-')
+    df_all = pd.concat(
+        [industry_df['other_names'], client_df['other_names'], com_df['other_names']], ignore_index=True, sort=False
+    ).fillna('-')
     df_all = pd.DataFrame(df_all)  # pandas.core.series.Series -> pandas.core.frame.DataFrame
 
     if not message_text:
@@ -863,16 +946,26 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         await message.reply(reply_msg)
 
     if subscriptions:
-        user_subscriptions_set.update(subscriptions)
-        subscriptions = ", ".join(user_subscriptions_set).replace("'", "''")
+        num_of_add_subscriptions = config.USER_SUBSCRIPTIONS_LIMIT - len(user_subscriptions_set)
+        user_subscriptions_set.update(subscriptions[:num_of_add_subscriptions])
+        not_added_subscriptions = ', '.join(subscriptions[num_of_add_subscriptions:]).title()
+        subscriptions = ', '.join(user_subscriptions_set).replace("'", "''")
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
 
-        if len(subscriptions) < 4050:
-            await message.reply(f'Ваш новый список подписок:\n\n{subscriptions.title()}')
+        msg_txt = f'Ваш новый список подписок:\n\n{subscriptions.title()}'
+
+        if len(user_subscriptions_set) == config.USER_SUBSCRIPTIONS_LIMIT:
+            msg_txt += '\n\nДостигнут предел по количеству подписок'
+
+        if not_added_subscriptions:
+            msg_txt += f'\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
+
+        if len(msg_txt) < 4096:
+            await message.reply(msg_txt)
         else:
-            await message.reply(f'Ваши подписки были сохранены')
+            await message.reply('Ваши подписки были сохранены')
 
         user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
 
@@ -898,8 +991,7 @@ async def get_user_subscriptions_body(chat_id: int, user_id: int) -> None:
 
         cancel_msg = f'Напишите «{cancel_command}» для завершения просмотра своих подписок'
         msg_txt = 'Выберите подписку\n\n' + cancel_msg
-        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                             input_field_placeholder=cancel_msg)
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg)
     await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
 
 
@@ -966,13 +1058,12 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
 
         if subscription_to_del > -1:
             del subscriptions[subscription_to_del]
-            log_msg += f" {user_msg}"
+            log_msg += f' {user_msg}'
 
-            subscriptions_update = ", ".join(subscriptions).replace("'", "''")
+            subscriptions_update = ', '.join(subscriptions).replace("'", "''")
             engine = create_engine(psql_engine, poolclass=NullPool)
             with engine.connect() as conn:
-                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' "
-                                  f"WHERE user_id = '{user_id}'"))
+                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' " f"WHERE user_id = '{user_id}'"))
                 conn.commit()
         else:
             log_msg += f', но у пользователя нет подписки {user_msg}'
@@ -982,8 +1073,9 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
 
-        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                             input_field_placeholder=cancel_msg, one_time_keyboard=True)
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+        )
 
     user_logger.info(log_msg)
     await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
@@ -1018,8 +1110,9 @@ async def delete_subscriptions(callback_query: types.CallbackQuery):
             buttons.append([types.KeyboardButton(text=subscription)])
         cancel_msg = f'Напишите «{cancel_command}», если хотите закончить'
         msg_txt = 'Выберите подписку для удаления\n\n' + cancel_msg
-        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                             input_field_placeholder=cancel_msg, one_time_keyboard=True)
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+        )
 
     user_logger.info(log_msg)
     await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
@@ -1051,11 +1144,11 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery):
 @dp.message_handler(commands=['subscriptions_menu'])
 async def subscriptions_menu(message: types.Message):
     """
-       Получение меню для взаимодействия с подписками
+    Получение меню для взаимодействия с подписками
 
-       :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-       return None
-       """
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    return None
+    """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
@@ -1098,32 +1191,38 @@ async def get_industries_id(handbook: pd.DataFrame):
 
 
 async def show_ref_book_by_request(chat_id, subject: str):
-    logger.info(f"Сборка справочника для *{chat_id}* на тему {subject}")
+    logger.info(f'Сборка справочника для *{chat_id}* на тему {subject}')
     engine = create_engine(psql_engine, poolclass=NullPool)
 
     if (subject == 'client') or (subject == 'commodity'):
-        handbook = pd.read_sql_query(f'SELECT {subject}.name AS object, industry_id, '
-                                     f'industry.name AS industry_name FROM {subject} '
-                                     f'LEFT JOIN industry ON {subject}.industry_id = industry.id', con=engine)
+        handbook = pd.read_sql_query(
+            f'SELECT {subject}.name AS object, industry_id, '
+            f'industry.name AS industry_name FROM {subject} '
+            f'LEFT JOIN industry ON {subject}.industry_id = industry.id',
+            con=engine,
+        )
     else:
-        handbook = pd.read_sql_query(f"SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
-                                     f"client.industry_id, industry.name AS industry_name FROM client_alternative "
-                                     f"INNER JOIN client ON client_alternative.client_id = client.id "
-                                     f"INNER JOIN industry ON client.industry_id = industry.id", con=engine)
+        handbook = pd.read_sql_query(
+            "SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+            'client.industry_id, industry.name AS industry_name FROM client_alternative '
+            'INNER JOIN client ON client_alternative.client_id = client.id '
+            'INNER JOIN industry ON client.industry_id = industry.id',
+            con=engine,
+        )
     return await get_industries_id(handbook)
 
 
 @dp.message_handler(commands=['referencebook'])
 async def reference_book(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f"*{chat_id}* {full_name} - Запросил справочник")
+    user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
 
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data=f'ref_books:client'))
-    keyboard.add(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data=f'ref_books:beneficiaries'))
-    keyboard.add(types.InlineKeyboardButton(text='Commodities', callback_data=f'ref_books:commodity'))
+    keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data='ref_books:client'))
+    keyboard.add(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data='ref_books:beneficiaries'))
+    keyboard.add(types.InlineKeyboardButton(text='Commodities', callback_data='ref_books:commodity'))
 
-    await message.answer("Выберите какой справочник вам интересен:", reply_markup=keyboard)
+    await message.answer('Выберите какой справочник вам интересен:', reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('ref_books'))
@@ -1133,7 +1232,7 @@ async def ref_books(callback_query: types.CallbackQuery):
     chat_id, user_first_name = callback_values['id'], callback_values['first_name']
     callback_data = callback_query.data.split(':')
     book = callback_data[1]
-    user_logger.info(f"*{chat_id}* {user_first_name} - Запросил справочник по {book}")
+    user_logger.info(f'*{chat_id}* {user_first_name} - Запросил справочник по {book}')
     handbooks = [pd.DataFrame(columns=['industry_name', 'object'])]
     what_is_this = ''
     if book == 'client':
@@ -1157,18 +1256,19 @@ async def ref_books(callback_query: types.CallbackQuery):
             block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
         else:
             block_head = ''
-            block_body = 'Справочник по бенефициарам и ЛПР находится в процессе обновления, '\
-                         'приносим извинения за неудобства. Функционал активной и пассивной '\
-                         'рассылки по бенефициарам остается активным, для этого сформируйте '\
-                         'новый список рассылки, вставив фамилии интересующих лиц и клиентов '\
-                         'или просто введите их диалоговую строку, чтобы получить текущие новости.'
+            block_body = (
+                'Справочник по бенефициарам и ЛПР находится в процессе обновления, '
+                'приносим извинения за неудобства. Функционал активной и пассивной '
+                'рассылки по бенефициарам остается активным, для этого сформируйте '
+                'новый список рассылки, вставив фамилии интересующих лиц и клиентов '
+                'или просто введите их диалоговую строку, чтобы получить текущие новости.'
+            )
 
         await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=f'isthisall:yes'))
-    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=f'isthisall:no'))
-    await bot.send_message(chat_id, text=f'Все ли Ваши {what_is_this} содержатся в справочнике?\n',
-                           reply_markup=keyboard)
+    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data='isthisall:yes'))
+    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data='isthisall:no'))
+    await bot.send_message(chat_id, text=f'Все ли Ваши {what_is_this} содержатся в справочнике?\n', reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('isthisall'), state=Form.please_add_this)
@@ -1177,14 +1277,17 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext):
     chat_id, user_first_name = callback_values['id'], callback_values['first_name']
     callback_data = callback_query.data.split(':')
     need_new = callback_data[1]
-    user_logger.info(f"*{chat_id}* {user_first_name} - Пользователь удовлетворен наполнением справочника?  {need_new}")
+    user_logger.info(f'*{chat_id}* {user_first_name} - Пользователь удовлетворен наполнением справочника?  {need_new}')
     if need_new == 'no':
-        await bot.send_message(chat_id, text='Если вы не нашли интересующего вас клиента (холдинг), '
-                                             'бенефициара, ЛПР или commodity в списке, напишите его наименование в чат.'
-                                             '\nВы также можете написать его альтернативные названия и синонимы. '
-                                             'Мы добавим их в справочник в ближайшее время.\n'
-                                             'При возникновении дополнительных вопросов можно '
-                                             'обращаться к Максиму Королькову')
+        await bot.send_message(
+            chat_id,
+            text='Если вы не нашли интересующего вас клиента (холдинг), '
+            'бенефициара, ЛПР или commodity в списке, напишите его наименование в чат.'
+            '\nВы также можете написать его альтернативные названия и синонимы. '
+            'Мы добавим их в справочник в ближайшее время.\n'
+            'При возникновении дополнительных вопросов можно '
+            'обращаться к Максиму Королькову',
+        )
         await continue_isthisall(state)
     else:
         await bot.send_message(chat_id, text='Спасибо за обратную связь!')
@@ -1195,10 +1298,9 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext):
 async def continue_isthisall(message: types.Message, state: FSMContext):
     await state.update_data(please_add_this=message.text)
     data = await state.get_data()
-    user_logger.info(f"Пользовать {message.from_user.full_name} "
-                     f"просит добавить в справочник: {data.get('please_add_this')}")
+    user_logger.info(f'Пользовать {message.from_user.full_name} ' f"просит добавить в справочник: {data.get('please_add_this')}")
     await state.finish()
-    await message.answer("Спасибо за обратную связь, мы добавим их как можно скорее")
+    await message.answer('Спасибо за обратную связь, мы добавим их как можно скорее')
 
 
 @dp.message_handler(commands=['addmetowhitelist'])
@@ -1218,16 +1320,17 @@ async def user_to_whitelist(message: types.Message):
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
-        user = pd.DataFrame([[user_id, user_username, full_name, 'user', 'active', None]],
-                            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'])
+        user = pd.DataFrame(
+            [[user_id, user_username, full_name, 'user', 'active', None]],
+            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'],
+        )
         try:
             engine = create_engine(psql_engine, poolclass=NullPool)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
-            user_logger.info(f"*{chat_id}* {full_name} - {user_msg} : новый пользователь")
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
         except Exception as e:
-            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. '
-                                 f'\n\n{e}', protect_content=False)
+            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. ' f'\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
@@ -1262,11 +1365,11 @@ async def __create_fin_table(message, client_name, client_fin_table):
     """
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
-    transformer.render_mpl_table(client_fin_table,
-                                 'financial_indicator', header_columns=0, col_width=4, title='',
-                                 alias=client_name.strip().upper(), fin=True)
+    transformer.render_mpl_table(
+        client_fin_table, 'financial_indicator', header_columns=0, col_width=4, title='', alias=client_name.strip().upper(), fin=True
+    )
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
-    with open(png_path, "rb") as photo:
+    with open(png_path, 'rb') as photo:
         await bot.send_photo(message.chat.id, photo, caption='', parse_mode='HTML', protect_content=True)
 
 
@@ -1284,10 +1387,12 @@ async def admin_help(message: types.Message):
 
     if admin_flag:
         # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
-        help_msg = ('<b>/show_article</b> - показать детальную информацию о новости\n'
-                    '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
-                    '<b>/delete_article</b> - удалить новость из базы данных\n'
-                    '<b>/sendtoall</b> - отправить сообщение на всех пользователей')
+        help_msg = (
+            '<b>/show_article</b> - показать детальную информацию о новости\n'
+            '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
+            '<b>/delete_article</b> - удалить новость из базы данных\n'
+            '<b>/sendtoall</b> - отправить сообщение на всех пользователей'
+        )
         await message.answer(help_msg, protect_content=False, parse_mode='HTML')
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -1311,8 +1416,9 @@ async def show_article(message: types.Message):
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
         await Form.link.set()
-        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=False, disable_web_page_preview=True)
+        await bot.send_message(
+            chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
+        )
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
@@ -1342,8 +1448,7 @@ async def continue_show_article(message: types.Message, state: FSMContext):
 
     data_article_dict = apd_obj.get_article_by_link(data['link'])
     if not isinstance(data_article_dict, dict):
-        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
-                             protect_content=False)
+        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.', protect_content=False)
         user_logger.critical(f'/show_article : {data_article_dict}')
         return
 
@@ -1378,8 +1483,9 @@ async def change_summary(message: types.Message):
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
         await Form.link_change_summary.set()
-        await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML',
-                               protect_content=False, disable_web_page_preview=True)
+        await bot.send_message(
+            chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
+        )
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
@@ -1413,26 +1519,26 @@ async def continue_change_summary(message: types.Message, state: FSMContext):
     try:
         new_text_sum = summarization_by_chatgpt(full_text)
         apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
-        await message.answer(f"<b>Старое саммари:</b> {old_text_sum}", parse_mode='HTML', protect_content=False)
+        await message.answer(f'<b>Старое саммари:</b> {old_text_sum}', parse_mode='HTML', protect_content=False)
 
     except MessageIsTooLong:
-        await message.answer(f"<b>Старое саммари не помещается в одно сообщение.</b>", parse_mode='HTML')
-        user_logger.critical(f"/change_summary : старое саммари оказалось слишком длинным "
-                             f"({data['link_change_summary']}\n{old_text_sum})")
+        await message.answer('<b>Старое саммари не помещается в одно сообщение.</b>', parse_mode='HTML')
+        user_logger.critical(
+            f'/change_summary : старое саммари оказалось слишком длинным ' f"({data['link_change_summary']}\n{old_text_sum})"
+        )
 
-    except:
-        user_logger.critical(f'/change_summary : ошибка при создании саммари с помощью chatGPT')
-        await message.answer('Произошла ошибка при создании саммари. Разработчики уже решают проблему.',
-                             protect_content=False)
+    except Exception:
+        user_logger.critical('/change_summary : ошибка при создании саммари с помощью chatGPT')
+        await message.answer('Произошла ошибка при создании саммари. Разработчики уже решают проблему.', protect_content=False)
 
     else:
-        await message.answer(f"<b>Новое саммари:</b> {new_text_sum}", parse_mode='HTML', protect_content=False)
+        await message.answer(f'<b>Новое саммари:</b> {new_text_sum}', parse_mode='HTML', protect_content=False)
         await state.finish()
 
 
 @dp.message_handler(commands=['delete_article'])
 async def delete_article(message: types.Message):
-    """ Получение ссылки на новость от пользователя для ее удаления (снижения значимости) """
+    """Получение ссылки на новость от пользователя для ее удаления (снижения значимости)"""
     await types.ChatActions.typing()
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
@@ -1468,9 +1574,13 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
         user_logger.warning(f"/delete_article : не получилось найти новость по ссылке - {data['link_to_delete']}")
         return
     else:
-        del_buttons_data_dict = dict(cancel='Отменить удаление', duplicate='Удалить дубль',
-                                     useless='Удалить незначимую новость', not_relevant='Удалить нерелевантную новость',
-                                     another='Удалить по другой причине')
+        del_buttons_data_dict = dict(
+            cancel='Отменить удаление',
+            duplicate='Удалить дубль',
+            useless='Удалить незначимую новость',
+            not_relevant='Удалить нерелевантную новость',
+            another='Удалить по другой причине',
+        )
         callback_func = 'end_del_article'
         keyboard = types.InlineKeyboardMarkup()
 
@@ -1478,13 +1588,13 @@ async def continue_delete_article(message: types.Message, state: FSMContext):
             callback = f'{callback_func}:{reason}:{article_id}'  # макс. длина 64 символа
             keyboard.add(types.InlineKeyboardButton(text=label, callback_data=callback))
 
-        await message.answer("Выберите причину удаления новости:", reply_markup=keyboard)
+        await message.answer('Выберите причину удаления новости:', reply_markup=keyboard)
         await state.finish()
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('end_del_article'))
 async def end_del_article(callback_query: types.CallbackQuery):
-    """ Понижение значимости новости """
+    """Понижение значимости новости"""
     await types.ChatActions.typing()
     # получаем данные
     callback_data = callback_query.data.split(':')
@@ -1501,12 +1611,16 @@ async def end_del_article(callback_query: types.CallbackQuery):
         result = apd_obj.change_score_article_by_id(article_id_to_delete)
         if result:
             await bot.send_message(chat_id, text='Новость удалена.')
-            user_logger.info(f"*{chat_id}* {user_first_name} - /delete_article : "
-                             f"админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}")
+            user_logger.info(
+                f'*{chat_id}* {user_first_name} - /delete_article : '
+                f'админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}'
+            )
         else:
             await bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.')
-            user_logger.critical(f"*{chat_id}* {user_first_name} - /delete_article : "
-                                 f"не получилось понизить значимость новости с id {article_id_to_delete}")
+            user_logger.critical(
+                f'*{chat_id}* {user_first_name} - /delete_article : '
+                f'не получилось понизить значимость новости с id {article_id_to_delete}'
+            )
 
     # обновляем кнопки на одну не активную
     keyboard = types.InlineKeyboardMarkup()
@@ -1564,8 +1678,9 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
             keyboard = None
 
         if len(articles_f5.encode()) < 4050:
-            await call.message.answer(articles_f5, parse_mode='HTML', protect_content=False,
-                                      disable_web_page_preview=True, reply_markup=keyboard)
+            await call.message.answer(
+                articles_f5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
+            )
         else:
             articles = articles_f5.split('\n\n')
             articles_len = len(articles)
@@ -1574,16 +1689,18 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
                 if len(article.encode()) < 4050:
                     if i == articles_len:
                         callback_markup = keyboard
-                    await call.message.answer(article, parse_mode='HTML', protect_content=False,
-                                              disable_web_page_preview=True, reply_markup=callback_markup)
+                    await call.message.answer(
+                        article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=callback_markup
+                    )
                     await types.ChatActions.typing(1.1)  # otherwise flood control return us 429 error
                 else:
-                    logger.error(f"MessageIsTooLong ERROR: {article}")
+                    logger.error(f'MessageIsTooLong ERROR: {article}')
 
         await call.message.edit_reply_markup()
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} '
-                         f'(всего {new_offset})')
+        user_logger.info(
+            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} ' f'(всего {new_offset})'
+        )
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
@@ -1614,7 +1731,7 @@ async def dailynews(message: types.Message):
 
 @dp.message_handler(commands=['newsletter'])
 async def show_newsletter_buttons(message: types.Message):
-    """ Отображает кнопки с доступными рассылками """
+    """Отображает кнопки с доступными рассылками"""
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
@@ -1627,7 +1744,7 @@ async def show_newsletter_buttons(message: types.Message):
             callback = f'{callback_func}:{type_}'
             keyboard.add(types.InlineKeyboardButton(text=title, callback_data=callback))
 
-        await message.answer("Какую информацию вы хотите получить?", reply_markup=keyboard)
+        await message.answer('Какую информацию вы хотите получить?', reply_markup=keyboard)
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -1636,7 +1753,7 @@ async def show_newsletter_buttons(message: types.Message):
 
 @dp.callback_query_handler(lambda c: c.data.startswith('send_newsletter_by_button'))
 async def send_newsletter_by_button(callback_query: types.CallbackQuery):
-    """ Отправляет рассылку по кнопке """
+    """Отправляет рассылку по кнопке"""
     # получаем данные
     newsletter_type = callback_query.data.split(':')[1]
     data_callback = dict(callback_query.values['from'])
@@ -1781,13 +1898,12 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
                     await bot.send_media_group(message.chat.id, media=media, protect_content=False)
 
                 if com_price:
-                    await message.answer(com_price, parse_mode='HTML', protect_content=False,
-                                         disable_web_page_preview=True)
+                    await message.answer(com_price, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
 
                 if isinstance(reply_msg, str):
                     articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
                     if len(articles_all) > config.NEWS_LIMIT + 1:
-                        articles_f5 = '\n\n'.join(articles_all[:config.NEWS_LIMIT + 1])
+                        articles_f5 = '\n\n'.join(articles_all[: config.NEWS_LIMIT + 1])
                         keyboard = types.InlineKeyboardMarkup()
                         # keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data='next_5_news'))
                         try:
@@ -1810,16 +1926,16 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
                         keyboard = None
 
                     try:
-                        await message.answer(articles_f5, parse_mode='HTML', protect_content=False,
-                                             disable_web_page_preview=True, reply_markup=keyboard)
+                        await message.answer(
+                            articles_f5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
+                        )
                     except MessageIsTooLong:
                         articles = articles_f5.split('\n\n')
                         for article in articles:
                             if len(article) < 4050:
-                                await message.answer(article, parse_mode='HTML', protect_content=False,
-                                                     disable_web_page_preview=True)
+                                await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
                             else:
-                                logger.error(f"MessageIsTooLong ERROR: {article}")
+                                logger.error(f'MessageIsTooLong ERROR: {article}')
 
                 user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
                 return_ans = True
@@ -1838,7 +1954,7 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
                 **{alias: economy_info for alias in eco_aliases},
                 **{alias: metal_info for alias in metal_aliases},
                 **{alias: exchange_info for alias in exchange_aliases},
-                **{alias: data_mart for alias in view_aliases}
+                **{alias: data_mart for alias in view_aliases},
             }
             message_text = message.text.lower().strip()
             function_to_call = aliases_dict.get(message_text)
@@ -1871,8 +1987,7 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
     days_until_sending = (weekday_to_send - current_weekday + 7) % 7
 
     # определяем следующую дату рассылки
-    datetime_ = datetime(current_datetime.year, current_datetime.month,
-                         current_datetime.day, hour_to_send, minute_to_send)
+    datetime_ = datetime(current_datetime.year, current_datetime.month, current_datetime.day, hour_to_send, minute_to_send)
     datetime_for_sending = datetime_ + timedelta(days=days_until_sending)
 
     # добавляем неделю, если дата прошла
@@ -1886,7 +2001,7 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
 
 
 async def send_newsletter(newsletter_data: Dict):
-    """  Отправляет рассылку  """
+    """Отправляет рассылку"""
 
     newsletter_type, sending_weekday, sending_hour, sending_minute = tuple(newsletter_data.values())
 
@@ -1945,7 +2060,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
     """
     if time_to_wait != 0:
-        logger.info(f'Запуск ручной рассылки новостей по подписке!')
+        logger.info('Запуск ручной рассылки новостей по подписке!')
         return None
     end_of_the_day = 86400  # 86400(всего секунд)/3600(секунд в одном часе) = 24 (00:00 или 24:00)
     current_day = datetime.now()
@@ -1961,17 +2076,16 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
         time_to_wait = (end_of_the_day - current_time) + first_time_to_send
         next_send_time = str(timedelta(seconds=first_time_to_send))
     elif first_time_to_send > current_time:
-        time_to_wait = (first_time_to_send - current_time)
+        time_to_wait = first_time_to_send - current_time
         next_send_time = str(timedelta(seconds=first_time_to_send))
 
-    logger.info(f'В ожидании рассылки в {next_send_time}.'
-                f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    logger.info(f'В ожидании рассылки в {next_send_time}.' f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
 
 async def bot_send_msg(user_id: Union[int, str], msg: str, delimiter: str = '\n\n'):
-    """ Делит сообщение на батчи, если длина больше допустимой """
+    """Делит сообщение на батчи, если длина больше допустимой"""
     batches = []
     current_batch = ''
     max_batch_length = 4096
@@ -2001,15 +2115,13 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     return None
     """
     await newsletter_scheduler(schedule)  # ожидание рассылки
-    logger.info(f'Начинается ежедневная рассылка новостей по подпискам...')
+    logger.info('Начинается ежедневная рассылка новостей по подпискам...')
     ap_obj = ArticleProcess(logger)
     engine = create_engine(psql_engine, poolclass=NullPool)
 
     # получим свежие новости за определенный промежуток времени
-    clients_news = ap_obj.get_news_by_time(client_hours, 'client').sort_values(by=['name', 'date'],
-                                                                               ascending=[True, False])
-    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity').sort_values(by=['name', 'date'],
-                                                                                       ascending=[True, False])
+    clients_news = ap_obj.get_news_by_time(client_hours, 'client').sort_values(by=['name', 'date'], ascending=[True, False])
+    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity').sort_values(by=['name', 'date'], ascending=[True, False])
 
     # получим словарь id отрасли и ее название
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
@@ -2017,8 +2129,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
 
     row_number = 0
-    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist '
-                              'WHERE subscriptions IS NOT NULL', con=engine)
+    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist ' 'WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
         user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
@@ -2029,9 +2140,9 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
         commodity_ids = translate_subscriptions_to_object_id(commodity_id_name_dict, subscriptions)
 
         # получим новости по подпискам пользователя
-        user_industry_df, user_client_comm_df = ArticleProcess.get_user_article(clients_news, commodity_news,
-                                                                                industry_ids, client_ids, commodity_ids,
-                                                                                industry_name)
+        user_industry_df, user_client_comm_df = ArticleProcess.get_user_article(
+            clients_news, commodity_news, industry_ids, client_ids, commodity_ids, industry_name
+        )
 
         if not user_industry_df.empty or not user_client_comm_df.empty:
             row_number += 1
@@ -2051,8 +2162,10 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
                     _, msg, _ = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
                     await bot.send_message(user_id, text=msg, parse_mode='HTML', disable_web_page_preview=True)
 
-                user_logger.debug(f"*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. "
-                                  f"Активные подписки на момент рассылки: {user['subscriptions']}")
+                user_logger.debug(
+                    f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. '
+                    f"Активные подписки на момент рассылки: {user['subscriptions']}"
+                )
             except ChatNotFound:
                 user_logger.error(f'Чата с пользователем *{user_id}* {user_name} не существует')
             except BotBlocked:

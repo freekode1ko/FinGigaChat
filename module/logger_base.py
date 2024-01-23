@@ -1,15 +1,14 @@
-import re
 import datetime
-import os
-
 import logging
+import os
+import re
+from logging import Formatter, Handler, LogRecord
 from logging.handlers import RotatingFileHandler
-from logging import Handler, Formatter, LogRecord
-from sqlalchemy.pool import NullPool
+
 from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 
 from config import log_lvl
-
 
 LOG_FORMAT = '%(asctime)s,%(msecs)d %(levelname)-8s [%(module)s:%(lineno)d in %(funcName)s] %(message)s'
 MAX_BYTES = 10 * 1024 * 1024
@@ -26,14 +25,13 @@ class Logger:
         self.log_dir = 'logs/{}/{}.log'.format(log_name, log_name)
         self.log_format = LOG_FORMAT
         self.log_datefmt = '%d-%m-%Y %H:%M:%S'
-        self.handler = RotatingFileHandler(self.log_dir, maxBytes=MAX_BYTES, encoding='utf-8',
-                                           delay=False, backupCount=1)
+        self.handler = RotatingFileHandler(self.log_dir, maxBytes=MAX_BYTES, encoding='utf-8', delay=False, backupCount=1)
 
         logging.basicConfig(format=self.log_format, datefmt=self.log_datefmt, level=level, handlers=[self.handler])
 
 
 class DBHandler(Handler):
-    """ Обработчик для сохранения журнальных сообщений в базу данных """
+    """Обработчик для сохранения журнальных сообщений в базу данных"""
 
     def __init__(self, url_engine: str, level: int, log_format: str):
         super().__init__()
@@ -42,7 +40,7 @@ class DBHandler(Handler):
         self.setFormatter(Formatter(log_format))
 
     def emit(self, record: LogRecord, *args) -> None:
-        """ Записывает в таблицу user_log атрибуты лога """
+        """Записывает в таблицу user_log атрибуты лога"""
         level = record.levelname
         date = datetime.datetime.fromtimestamp(record.created).replace(microsecond=0)
         file_name = record.module
@@ -57,8 +55,10 @@ class DBHandler(Handler):
             user_id = 'NULL'
 
         with self.engine.connect() as conn:
-            query = text(f"insert into user_log (level, date, file_name, func_name, line_no, message, user_id) values "
-                         f"('{level}','{date}', '{file_name}','{func_name}',{line_no}, '{message}', {user_id})")
+            query = text(
+                f'insert into user_log (level, date, file_name, func_name, line_no, message, user_id) values '
+                f"('{level}','{date}', '{file_name}','{func_name}',{line_no}, '{message}', {user_id})"
+            )
             conn.execute(query)
             conn.commit()
 
@@ -85,7 +85,7 @@ def get_handler(url_engine, level: int = log_lvl):
 
 
 def get_db_logger(name, handler, level: int = log_lvl):
-    """ Создает логер, который записывает в базу данных """
+    """Создает логер, который записывает в базу данных"""
     logger = logging.getLogger(name)
     logger.addHandler(handler)
     logger.setLevel(level)

@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, text
 import pandas as pd
+from sqlalchemy import create_engine, text
 
 print('Connecting to NEW database...')
 psql_engine_new = 'postgresql://testuser:12345678A@77.232.134.41:5432/users'
@@ -14,14 +14,16 @@ print('Connection to OLD database is established')
 old_whitelist = pd.read_sql_query('select * from "whitelist"', con=engine_old)
 print(old_whitelist)
 
-query = ('CREATE TABLE IF NOT EXISTS public.whitelist ('
-         'user_id integer NOT NULL, '
-         'username text NOT NULL, '
-         'email text, '
-         'user_type text NOT NULL, '
-         'user_status text NOT NULL, '
-         'CONSTRAINT user_id_pkey PRIMARY KEY (user_id)) '
-         'TABLESPACE pg_default;')
+query = (
+    'CREATE TABLE IF NOT EXISTS public.whitelist ('
+    'user_id integer NOT NULL, '
+    'username text NOT NULL, '
+    'email text, '
+    'user_type text NOT NULL, '
+    'user_status text NOT NULL, '
+    'CONSTRAINT user_id_pkey PRIMARY KEY (user_id)) '
+    'TABLESPACE pg_default;'
+)
 with engine_new.connect() as conn:
     conn.execute(text(query))
     conn.commit()

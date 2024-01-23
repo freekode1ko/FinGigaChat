@@ -1,7 +1,7 @@
+import email
+import imaplib
 import os
 import shutil
-import imaplib
-import email
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 
@@ -33,10 +33,10 @@ class ImapParse:
         self.imap = None
         self.msg = None
 
-        self.client_box = "inbox/client_box"
-        self.commodity_box = "inbox/commodity_box"
+        self.client_box = 'inbox/client_box'
+        self.commodity_box = 'inbox/commodity_box'
 
-    def get_connection(self,  login, password, imap_server):
+    def get_connection(self, login, password, imap_server):
         self.imap = imaplib.IMAP4_SSL(imap_server)
         self.imap.login(login, password)
 
@@ -65,7 +65,7 @@ class ImapParse:
         :param index_of_new_msg: index of the newest message
         :return: a message object
         """
-        status_msg, msg = self.imap.fetch(str(index_of_new_msg), "(RFC822)")
+        status_msg, msg = self.imap.fetch(str(index_of_new_msg), '(RFC822)')
         if status_msg == 'OK':
             return email.message_from_bytes(msg[0][1])
         raise ImapError('Some error with get new message.')
@@ -81,15 +81,15 @@ class ImapParse:
 
         if self.msg.is_multipart():
             for part in self.msg.walk():
-                content_disposition = str(part.get("Content-Disposition"))
-                if "attachment" in content_disposition:
+                content_disposition = str(part.get('Content-Disposition'))
+                if 'attachment' in content_disposition:
                     filename, encoding = decode_header(part.get_filename())[0]
                     if encoding is not None:
                         filename = filename.decode(encoding)
                     if filename and filename != old_filename:
                         filepath = os.path.join(folder_name, filename)
                         clear_dir(folder_name)
-                        with open(filepath, "wb") as f:
+                        with open(filepath, 'wb') as f:
                             f.write(part.get_payload(decode=True))
                         return filepath
                     else:
@@ -103,7 +103,7 @@ class ImapParse:
         Get subject of the newest message
         :return: subject of the message
         """
-        subject, encoding = decode_header(self.msg["Subject"])[0]
+        subject, encoding = decode_header(self.msg['Subject'])[0]
         if isinstance(subject, bytes):
             subject = subject.decode(encoding)
         return subject
@@ -113,7 +113,7 @@ class ImapParse:
         Get date of the newest message
         :return: date of the message
         """
-        date, encoding = decode_header(self.msg["Date"])[0]
+        date, encoding = decode_header(self.msg['Date'])[0]
         if isinstance(date, bytes):
             date = date.decode(encoding)
         return parsedate_to_datetime(date).date()
