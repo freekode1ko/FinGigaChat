@@ -5,7 +5,6 @@ from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
 import config
-from enums import Environment
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +15,7 @@ def init_sentry(dsn: str) -> None:
     dsn: DSN Sentry для интеграции (выдается при создании проекта в Sentry)
     """
 
-    if config.ENV == Environment.LOCAL and not config.SENTRY_FORCE_LOCAL:
+    if config.ENV.is_local() and not config.SENTRY_FORCE_LOCAL:
         return
 
     sentry_sdk.init(
