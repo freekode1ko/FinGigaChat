@@ -7,6 +7,7 @@ class Environment(str, Enum):
     """
     Среда окружения, где запускаем код
     """
+
     STAGE = 'dev'
     PROD = 'prod'
     LOCAL = 'local'
