@@ -3,7 +3,6 @@
 ### Инструкция по локальному запуску проекта:
 
 1. Обновите pip до актуальной версии.
-
 ```shell
 pip install -U pip
 ```
@@ -14,7 +13,7 @@ pip install -U pip
 pip install -r requirements.txt
 ```
 
-2. Установите и настройте `pre-commit`:
+Установите и настройте `pre-commit`:
 
 ```bash
 pip install pre-commit
@@ -27,3 +26,9 @@ pre-commit будет запускать линтеры и проверки пр
 Также pre-commit можно запустить просто командой `pre-commit run`  
 Подробнее про утилиту [тут](https://pre-commit.com/)
 
+3. Создайте файл `.env` в корне проекта и скопируйте содержимое из `.env.example`
+
+### Инструкция по работе с Sentry:
+1. Для запроса на доступ в Sentry проекта перейдите [сюда](https://giga-chat-gkm.sentry.io/auth/login/giga-chat-gkm/) и запросите доступ
+2. Для записи в Sentry с локальной среды поставьте в .env `SENTRY_FORCE_LOCAL=true` **(Внимание!!! Это стоит делать только для дебага интеграции Sentry)**
+3. Для дебага интеграции Sentry выполнить пункт 2 и попросить переменные `SENTRY_CHAT_BOT_DSN` и `SENTRY_PARSER_DSN` у коллег
