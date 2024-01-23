@@ -777,6 +777,15 @@ def file_cleaner(filename):
 
 
 async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, from_user_json: str) -> None:
+    """
+    Формирует ответное сообщение для добавления подписок
+
+    :param chat_id: int - ID чата с пользователем
+    :param full_name: str - имя пользователя (first_name + last_name)
+    :param user_msg: str - сообщение пользователя
+    :param from_user_json: str - данные из aiogram.types.Message.from_user.as_json()
+                                содержит ID пользователя и прочую информацию о пользователе
+    """
     if await user_in_whitelist(from_user_json):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
