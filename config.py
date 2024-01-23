@@ -1,6 +1,6 @@
 import json
 import pathlib
-import typing as t
+from typing import Dict, List, Union
 
 from environs import Env
 
@@ -17,7 +17,7 @@ PROJECT_DIR = pathlib.Path(__file__).parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'constants' / 'assets'
 
 
-def read_asset_from_json(file_name: t.Union[str, pathlib.Path], encoding: str = 'utf-8') -> t.Union[list, dict, str]:
+def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
     Считывает константу из json-файла
     Args:
@@ -39,9 +39,9 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-user_agents: t.List[str] = read_asset_from_json(file_name='user_agents.json')
+user_agents: List[str] = read_asset_from_json(file_name='user_agents.json')
 
-list_of_companies: t.List[t.List] = read_asset_from_json('companies_list.json')
+list_of_companies: List[List] = read_asset_from_json('companies_list.json')
 
 chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
 research_base_url = 'https://research.sberbank-cib.com/'
@@ -115,9 +115,9 @@ charts_links = {
     '?period=P5Y&interval=P1M&pointscount=120',
 }
 
-dict_of_commodities: t.Dict = read_asset_from_json('commodities_dict.json')
-dict_of_companies: t.Dict = read_asset_from_json('companies_dict.json')
-industry_reviews: t.Dict[str, str] = read_asset_from_json('industry_reviews.json')
+dict_of_commodities: dict = read_asset_from_json('commodities_dict.json')
+dict_of_companies: dict = read_asset_from_json('companies_dict.json')
+industry_reviews: Dict[str, str] = read_asset_from_json('industry_reviews.json')
 
 industry_base_url = (
     'https://research.sberbank-cib.com/group/guest/'
