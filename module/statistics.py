@@ -1,8 +1,10 @@
-import config
-import pandas as pd
 from datetime import date
 from pathlib import Path
-from sqlalchemy import create_engine, NullPool
+
+import pandas as pd
+from sqlalchemy import NullPool, create_engine
+
+import config
 
 
 class UserStatistics:

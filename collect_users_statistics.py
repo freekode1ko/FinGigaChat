@@ -1,11 +1,13 @@
-import config
-import schedule
 import time
 import warnings
 from datetime import date, timedelta
+from pathlib import Path
+
+import schedule
+
+import config
 from module.logger_base import Logger, selector_logger
 from module.statistics import UserStatistics
-from pathlib import Path
 
 
 def get_file_name_with_date(base_file_name: str, dop_info: str = '') -> Path:
