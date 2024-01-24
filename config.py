@@ -50,6 +50,7 @@ STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
+STATS_COLLECTOR_SLEEP_TIME = 60
 
 mail_username = "ai-helper@mail.ru"
 mail_password = "ExamKejCpmcpr8kM5emw"
