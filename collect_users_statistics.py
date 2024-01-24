@@ -35,7 +35,7 @@ def collect_all_stat(runner: UserStatistics, logger: Logger.logger) -> None:
         runner.collect_bot_usage_over_period(bot_usage_stat_save_path)
         logger.info('Сборка полной статистики использования бота завершена')
     except Exception as e:
-        logger.error(f'Ошибка при сборке полной статистики использования бота: {e}')
+        logger.error('Ошибка при сборке полной статистики использования бота: %s', e)
 
 
 def collect_last_days_stat(
@@ -57,7 +57,7 @@ def collect_last_days_stat(
         runner.collect_bot_usage_over_period(bot_usage_stat_save_path, from_date=from_date, to_date=to_date)
         logger.info(f'Сборка статистики по использованию бота за последние {days} дней завершена')
     except Exception as e:
-        logger.error(f'Ошибка при сборке статистики по использованию бота за последние {days} дней: {e}')
+        logger.error('Ошибка при сборке статистики по использованию бота за последние %s дней: %s', days, e)
 
 
 def collect_users_data(runner: UserStatistics, logger: Logger.logger) -> None:
@@ -74,7 +74,7 @@ def collect_users_data(runner: UserStatistics, logger: Logger.logger) -> None:
         runner.collect_users_data(users_data_save_path)
         logger.info('Сборка каталога пользователей завершена')
     except Exception as e:
-        logger.error(f'Ошибка при сборке каталога пользователей: {e}')
+        logger.error('Ошибка при сборке каталога пользователей: %s', e)
 
 
 def main():
