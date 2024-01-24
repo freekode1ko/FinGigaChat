@@ -550,7 +550,7 @@ class ResearchParser:
                 weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
         except Exception as e:
-            self._logger.error(f'Ошибка ({e}) в загрузке Weekly Pulse')
+            self._logger.error('Ошибка (%s) в загрузке Weekly Pulse', e)
             print(f'Ошибка ({e}) в загрузке Weekly Pulse')
             return
 

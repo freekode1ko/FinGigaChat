@@ -112,7 +112,7 @@ class ArticleProcess:
             )
             self._logger.info(f'Объединение новостей по одинаковым ссылкам, количество новостей - {len(df_subject)}')
         except Exception as e:
-            self._logger.error(f'Ошибка при объединении ссылок: {e}')
+            self._logger.error('Ошибка при объединении ссылок: %s', e)
 
         return df_subject
 
@@ -155,7 +155,7 @@ class ArticleProcess:
             )
             self._logger.info(f'Объединение новостей по одинаковым ссылкам, количество новостей - {len(df)}')
         except Exception as e:
-            self._logger.error(f'Ошибка при объединении ссылок: {e}')
+            self._logger.error('Ошибка при объединении ссылок: %s', e)
 
         return df, gotten_ids
 

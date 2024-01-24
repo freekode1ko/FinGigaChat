@@ -30,7 +30,7 @@ def get_article() -> pd.DataFrame:
         print('Ошибка при получении новостей: ConnectionError')
 
     except Exception as e:
-        logger.error(f'Ошибка при получении новостей: {e}')
+        logger.error('Ошибка при получении новостей: %s', e)
         print(f'Ошибка при получении новостей: {e}')
 
     return df_article
@@ -77,7 +77,7 @@ def post_ids(ids):
         requests.post(BASE_GIGAPARSER_URL.format('success_request'), json=ids)  # ids = {'id': [1,2,3...]}
     except Exception as e:
         print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
-        logger.error(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
+        logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
 
 
 if __name__ == '__main__':

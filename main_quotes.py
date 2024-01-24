@@ -361,7 +361,7 @@ def main(period):
             logger.info('Начало сборки котировок')
             runner.collect()
         except Exception as e:
-            logger.error(f'Ошибка при сборке котировок: {e}')
+            logger.error('Ошибка при сборке котировок: %s', e)
             current_period = 1
 
         logger.info('Запись даты и времени последней успешной сборки котировок')
