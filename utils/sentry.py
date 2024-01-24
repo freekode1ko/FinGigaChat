@@ -22,6 +22,7 @@ def init_sentry(dsn: str) -> None:
         dsn=dsn,
         environment=config.ENV.value,
         integrations=[AsyncioIntegration()],
+        attach_stacktrace=True,
         event_scrubber=EventScrubber(denylist=DEFAULT_DENYLIST),
         include_source_context=True,
         include_local_variables=True,

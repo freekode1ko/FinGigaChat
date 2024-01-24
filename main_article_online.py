@@ -6,9 +6,11 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+import config
 from config import BASE_GIGAPARSER_URL
 from module.article_process import ArticleProcess
 from module.logger_base import selector_logger
+from utils import sentry
 
 PERIOD = 1
 
@@ -81,6 +83,7 @@ def post_ids(ids):
 
 
 if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem

@@ -5,10 +5,12 @@ from pathlib import Path
 
 import pandas as pd
 
+import config
 from config import mail_imap_server, mail_password, mail_username
 from module.article_process import ArticleProcess
 from module.logger_base import selector_logger
 from module.mail_parse import ImapParse
+from utils import sentry
 
 CLIENT_FOLDER_DIR = 'data/articles/client'
 COMMODITY_FOLDER_DIR = 'data/articles/commodity'
@@ -144,6 +146,7 @@ def daily_func():
 
 
 if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_POLYANALISTA_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem

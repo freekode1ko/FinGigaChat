@@ -22,7 +22,6 @@ import module.user_emulator as ue
 from module.logger_base import selector_logger
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
-from utils import sentry
 
 
 class Main:
@@ -664,7 +663,6 @@ class Main:
 
 
 if __name__ == '__main__':
-    sentry.init_sentry(dsn=config.SENTRY_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
     logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)

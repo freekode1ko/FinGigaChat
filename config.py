@@ -28,7 +28,10 @@ def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'u
 
 
 SENTRY_CHAT_BOT_DSN: str = env.str('SENTRY_CHAT_BOT_DSN', default='')
-SENTRY_PARSER_DSN: str = env.str('SENTRY_PARSER_DSN', default='')
+SENTRY_QUOTES_PARSER_DSN: str = env.str('SENTRY_QUOTES_PARSER_DSN', default='')
+SENTRY_RESEARCHES_PARSER_DSN: str = env.str('SENTRY_RESEARCHES_PARSER_DSN', default='')
+SENTRY_POLYANALISTA_PARSER_DSN: str = env.str('SENTRY_POLYANALISTA_PARSER_DSN', default='')
+SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
 log_file = 'logs/{}.log'
@@ -85,7 +88,6 @@ summarization_prompt = (
     '________________'
     'Твой ответ:'
 )
-
 
 help_text = (
     'Всем привет! Мы начинаем пилотирование MVP AI-помощника банкира на ограниченной выборке ГКМ, старших '
