@@ -383,7 +383,7 @@ def main(period):
     """
     Сборщик researches и графиков
     """
-    sentry.init_sentry(dsn=config.SENTRY_RESEARCHES_PARSER_DSN)
+    sentry.init_sentry(dsn=config.SENTRY_RESEARCH_PARSER_DSN)
     try:
         period, scale, scale_txt = get_period(period)
     except ValueError as e:
