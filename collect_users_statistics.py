@@ -40,9 +40,7 @@ def collect_all_stat(runner: UserStatistics, logger: Logger.logger) -> None:
         logger.error('Ошибка при сборке полной статистики использования бота: %s', e)
 
 
-def collect_last_days_stat(
-        runner: UserStatistics, logger: Logger.logger, days: int = config.NUM_DAYS_FOR_WHICH_STATS_COLLECT
-) -> None:
+def collect_last_days_stat(runner: UserStatistics, logger: Logger.logger, days: int = config.NUM_DAYS_FOR_WHICH_STATS_COLLECT) -> None:
     """
     Сборка статистики по использованию бота за последнюю неделю
 

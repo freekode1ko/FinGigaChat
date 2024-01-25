@@ -62,9 +62,7 @@ class UserStatistics:
         file_save_path = Path(stat_path, file_name)
         save_df.to_excel(file_save_path, *args, **kwargs)
 
-    def collect_bot_usage_over_period(
-            self, file_name: Path, from_date: date = date.min, to_date: date = date.max
-    ) -> None:
+    def collect_bot_usage_over_period(self, file_name: Path, from_date: date = date.min, to_date: date = date.max) -> None:
         """
         Формирует статистику использования бота и сохраняет ее в config.STATISTICS_PATH
         в файле file_name в формате xlsx
