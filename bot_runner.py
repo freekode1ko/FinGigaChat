@@ -3,6 +3,10 @@ import json
 import os
 import re
 import textwrap
+import numpy as np
+import pandas as pd
+from typing import Dict, Union, List
+from sqlalchemy import create_engine, text, NullPool
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -129,6 +133,10 @@ class Form(StatesGroup):
     please_add_this = State()
 
 
+class GigaChat(StatesGroup):
+    gigachat_mode = State()
+
+
 def read_curdatetime():
     """
     Чтение даты последней сборки из базы данных
@@ -226,11 +234,9 @@ async def help_handler(message: types.Message):
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-@dp.message_handler(state='*', commands=['cancel', 'отмена'])
-@dp.message_handler(lambda message: message.text.lower() in ['cancel', 'отмена'], state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
+async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
     """
-    Позволяет пользователю отменять операции
+    Позволяет пользователю очищать клавиатуру и выходить из любого состояния
     """
     if state is None:
         return
@@ -238,7 +244,19 @@ async def cancel_handler(message: types.Message, state: FSMContext):
     # Cancel state and inform user about it
     await state.finish()
     # And remove keyboard (just in case)
-    await message.reply('Отменено', reply_markup=types.ReplyKeyboardRemove())
+    await message.reply(msg_text, reply_markup=types.ReplyKeyboardRemove())
+
+
+@dp.message_handler(state='*', commands=['exit', 'завершить'])
+@dp.message_handler(lambda message: message.text.lower() in ['exit', 'завершить'], state='*')
+async def exit_handler(message: types.Message, state: FSMContext):
+    await finish_state(message, state, 'Завершено')
+
+
+@dp.message_handler(state='*', commands=['cancel', 'отмена'])
+@dp.message_handler(lambda message: message.text.lower() in ['cancel', 'отмена'], state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    await finish_state(message, state, 'Отменено')
 
 
 # ['облигации', 'бонды', 'офз']
@@ -758,7 +776,16 @@ def file_cleaner(filename):
         pass
 
 
-async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, from_user_json: str):
+async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, from_user_json: str) -> None:
+    """
+    Формирует ответное сообщение для добавления подписок
+
+    :param chat_id: int - ID чата с пользователем
+    :param full_name: str - имя пользователя (first_name + last_name)
+    :param user_msg: str - сообщение пользователя
+    :param from_user_json: str - данные из aiogram.types.Message.from_user.as_json()
+                                содержит ID пользователя и прочую информацию о пользователе
+    """
     if await user_in_whitelist(from_user_json):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await Form.user_subscriptions.set()
@@ -851,7 +878,12 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     )
 
 
-async def get_list_of_user_subscriptions(user_id: int) -> list:
+async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
+    """
+    Возвращает список подписок пользователя
+
+    :param user_id: int - telegram ID пользователя
+    """
     engine = create_engine(psql_engine, poolclass=NullPool)
     subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'", con=engine)[
         'subscriptions'
@@ -877,7 +909,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     quotes = ['\"', '«', '»']
 
     engine = create_engine(psql_engine, poolclass=NullPool)
-    user_id = json.loads(message.from_user.as_json())['id']
+    user_id = message.from_user.id
 
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
@@ -912,10 +944,15 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
                 if subscription == other_name:
                     subscriptions.append(other_name)
 
-    if (len(subscriptions) < len(user_request)) and subscriptions:
-        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
-        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: {list_of_unknown}')
-        await message.reply(f'{list_of_unknown} - Эти объекты новостей нам неизвестны')
+    if len(subscriptions) < len(user_request):
+        list_of_unknown = list(set(user_request) - set(subscriptions))
+        ap_obj = ArticleProcess(logger=logger)
+        near_to_list_of_unknown = '\n'.join(ap_obj.find_nearest_to_subjects_list(list_of_unknown))
+        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные '
+                          f'объекты на подписку: {list_of_unknown}')
+        reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
+        reply_msg += f"\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}"
+        await message.reply(reply_msg)
 
     if subscriptions:
         num_of_add_subscriptions = config.USER_SUBSCRIPTIONS_LIMIT - len(user_subscriptions_set)
@@ -940,13 +977,15 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
             await message.reply('Ваши подписки были сохранены')
 
         user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
-    else:
-        await message.reply('Перечисленные выше объекты не были найдены')
-        list_of_unknown = f'{", ".join(list(set(user_request) - set(subscriptions)))}'
-        user_logger.info(f'Для пользователя *{user_id}* запрошенные объекты ({list_of_unknown}) не были найдены')
 
 
-async def get_user_subscriptions_body(chat_id: int, user_id: int):
+async def get_user_subscriptions_body(chat_id: int, user_id: int) -> None:
+    """
+    Формирует ответное сообщение с подписками пользователя
+
+    :param chat_id: int - ID чата с пользователем
+    :param user_id: int - telegram ID пользователя
+    """
     subscriptions = await get_list_of_user_subscriptions(user_id)
 
     if not subscriptions:
@@ -954,10 +993,12 @@ async def get_user_subscriptions_body(chat_id: int, user_id: int):
         msg_txt = 'Нет активных подписок'
         user_logger.info(f'Пользователь *{chat_id}* запросил список своих подписок, но их нет')
     else:
-        buttons = []
+        cancel_command = 'завершить'
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
-        cancel_msg = 'Напишите «отмена», если хотите закончить'
+
+        cancel_msg = f'Напишите «{cancel_command}» для завершения просмотра своих подписок'
         msg_txt = 'Выберите подписку\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg)
     await bot.send_message(chat_id, msg_txt, reply_markup=keyboard)
@@ -973,7 +1014,7 @@ async def get_user_subscriptions_command(message: types.Message):
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
+    user_id = message.from_user.id  # Get user_ID from message
     await get_user_subscriptions_body(chat_id, user_id)
 
 
@@ -1015,7 +1056,8 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
         log_msg += ', но у пользователя нет активных подписок'
         await state.finish()
     else:
-        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        cancel_command = 'завершить'
+        cancel_msg = f'Напишите «{cancel_command}», если хотите закончить'
         msg_txt = 'Ваша подписка удалена, если хотите продолжить, напишите название следующей подписки.\n\n' + cancel_msg
         subscription_to_del = -1
         for i, subscription in enumerate(subscriptions):
@@ -1036,7 +1078,7 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
             log_msg += f', но у пользователя нет подписки {user_msg}'
             msg_txt = 'Указанная подписка отсутствует\n\n' + 'Выберите подписку для удаления\n\n' + cancel_msg
 
-        buttons = []
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
         for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
 
@@ -1062,22 +1104,20 @@ async def delete_subscriptions(callback_query: types.CallbackQuery):
     full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     user_id = call_from['id']  # Get user_ID from message
-    engine = create_engine(psql_engine, poolclass=NullPool)
-    subscriptions = pd.read_sql_query(f"SELECT subscriptions FROM whitelist WHERE user_id = '{user_id}'", con=engine)[
-        'subscriptions'
-    ].values.tolist()
+    subscriptions = await get_list_of_user_subscriptions(user_id)
 
     log_msg = f'Пользователь *{chat_id}* {full_name} запросил список своих подписок'
     keyboard = types.ReplyKeyboardRemove()
-    if not subscriptions[0]:
+    if not subscriptions:
         msg_txt = 'Нет активных подписок'
         log_msg += ', но их нет'
     else:
+        cancel_command = 'завершить'
         await Form.delete_user_subscriptions.set()
-        buttons = []
-        for subscription in subscriptions[0].split(', '):
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
+        for subscription in subscriptions:
             buttons.append([types.KeyboardButton(text=subscription)])
-        cancel_msg = 'Напишите «отмена», если хотите закончить'
+        cancel_msg = f'Напишите «{cancel_command}», если хотите закончить'
         msg_txt = 'Выберите подписку для удаления\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(
             keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
@@ -1119,18 +1159,23 @@ async def subscriptions_menu(message: types.Message):
     return None
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
-    keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
-    keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
-    keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
+    if await user_in_whitelist(message.from_user.as_json()):
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    await bot.send_message(chat_id, text='Меню управления подписками\n', reply_markup=keyboard)
+        keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data=f'myactivesubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data=f'addnewsubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data=f'deletesubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data=f'deleteallsubscriptions'))
+
+        await bot.send_message(chat_id, text=f'Меню управления подписками\n',
+                               reply_markup=keyboard)
+    else:
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-async def user_in_whitelist(user: str):
+async def user_in_whitelist(user: str) -> bool:
     """
     Проверка, пользователя на наличие в списках на доступ
 
@@ -1143,8 +1188,7 @@ async def user_in_whitelist(user: str):
     whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
     if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
         return True
-    else:
-        return False
+    return False
 
 
 async def get_industries_id(handbook: pd.DataFrame):
@@ -1740,12 +1784,90 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
+async def send_nearest_subjects(message: types.Message):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    ap_obj = ArticleProcess(logger=logger)
+    nearest_subjects = ap_obj.find_nearest_to_subject(user_msg)
+
+    cancel_command = 'отмена'
+    buttons = [[types.KeyboardButton(text=cancel_command)]]
+    for subject_name in nearest_subjects:
+        buttons.append([types.KeyboardButton(text=subject_name)])
+
+    cancel_msg = f'Напишите «{cancel_command}» для очистки'
+    response = 'Не удалось обработать ваш запрос.\n\nВозможно, вы имели в виду один из следующих вариантов:'
+    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                         input_field_placeholder=cancel_msg, one_time_keyboard=True)
+
+    await bot.send_message(chat_id, response, parse_mode='HTML', protect_content=False,
+                           disable_web_page_preview=True, reply_markup=keyboard)
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы '
+                     f'"{", ".join(nearest_subjects)}"')
+
+
+@dp.message_handler(commands=['gigachat'])
+async def set_gigachat_mode(message: types.Message) -> None:
+    """Переключение в режим общения с Gigachat"""
+    if await user_in_whitelist(message.from_user.as_json()):
+        await types.ChatActions.typing()
+        await GigaChat.gigachat_mode.set()
+
+        cancel_command = 'завершить'
+        cancel_msg = f'Напишите «{cancel_command}» для завершения общения с Gigachat'
+        msg_text = 'Начато общение с Gigachat\n\n' + cancel_msg
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
+
+        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
+                                             input_field_placeholder=cancel_msg, one_time_keyboard=True)
+        await message.answer(msg_text, reply_markup=keyboard)
+    else:
+        chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+# @dp.message_handler(lambda message: message.text.lower().startswith(('askgigachat', 'спросить')))
+@dp.message_handler(state=GigaChat.gigachat_mode)
+async def ask_giga_chat(message: types.Message, prompt: str = '') -> None:
+    """Отправка пользователю ответа, сформированного Gigachat, на сообщение пользователя"""
+
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    global chat
+    global token
+    msg = f'{prompt} {message.text}'
+    msg = msg.replace('/bonds', '')
+    msg = msg.replace('/eco', '')
+    msg = msg.replace('/commodities', '')
+    msg = msg.replace('/fx', '')
+
+    try:
+        giga_answer = chat.ask_giga_chat(token=token, text=msg)
+        giga_js = giga_answer.json()['choices'][0]['message']['content']
+    except AttributeError:
+        chat = gig.GigaChat()
+        token = chat.get_user_token()
+        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+        giga_answer = chat.ask_giga_chat(token=token, text=msg)
+        giga_js = giga_answer.json()['choices'][0]['message']['content']
+    except KeyError:
+        chat = gig.GigaChat()
+        token = chat.get_user_token()
+        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+        giga_answer = chat.ask_giga_chat(token=token, text=msg)
+        giga_js = giga_answer.json()['choices'][0]['message']['content']
+        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
+                             f' KeyError (некорректная выдача ответа GigaChat),'
+                             f' ответ после переформирования запроса')
+    response = f'{giga_js}\n\n{giga_ans_footer}'
+    await message.answer(response, protect_content=False)
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+
+
 @dp.message_handler()
-async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = False):
+async def find_news(message: types.Message, prompt: str = '', return_ans: bool = False) -> None:
     """Обработка пользовательского сообщения"""
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    msg = '{} {}'.format(prompt, message.text)
+    msg = f'{prompt} {message.text}'
     msg = msg.replace('/bonds', '')
     msg = msg.replace('/eco', '')
     msg = msg.replace('/commodities', '')
@@ -1848,29 +1970,8 @@ async def giga_ask(message: types.Message, prompt: str = '', return_ans: bool = 
             if function_to_call:
                 await function_to_call(message)
             else:
-                try:
-                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                except AttributeError:
-                    chat = gig.GigaChat()
-                    token = chat.get_user_token()
-                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                except KeyError:
-                    chat = gig.GigaChat()
-                    token = chat.get_user_token()
-                    logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-                    giga_answer = chat.ask_giga_chat(token=token, text=msg)
-                    giga_js = giga_answer.json()['choices'][0]['message']['content']
-                    user_logger.critical(
-                        f'*{chat_id}* {full_name} - {user_msg} :'
-                        f' KeyError (некорректная выдача ответа GigaChat),'
-                        f' ответ после переформирования запроса'
-                    )
-                response = '{}\n\n{}'.format(giga_js, giga_ans_footer)
-                await message.answer(response, protect_content=False)
-                user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+                await send_nearest_subjects(message)
+                # await ask_giga_chat(message, prompt)
 
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
