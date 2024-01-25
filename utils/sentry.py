@@ -28,4 +28,4 @@ def init_sentry(dsn: str) -> None:
         include_local_variables=True,
     )
 
-    logger.info('Sentry initialised')
+    logger.info('Интеграция с Sentry установлена')
