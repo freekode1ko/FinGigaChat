@@ -14,6 +14,7 @@ import config
 import module.crawler as crawler
 import module.data_transformer as dt
 from module.logger_base import selector_logger
+from utils import sentry
 from utils.cli_utils import get_period
 
 
@@ -340,6 +341,7 @@ def main(period):
     """
     Сборщик котировок
     """
+    sentry.init_sentry(dsn=config.SENTRY_QUOTES_PARSER_DSN)
     try:
         period, scale, scale_txt = get_period(period)
     except ValueError as e:
@@ -361,7 +363,7 @@ def main(period):
             logger.info('Начало сборки котировок')
             runner.collect()
         except Exception as e:
-            logger.error(f'Ошибка при сборке котировок: {e}')
+            logger.error('Ошибка при сборке котировок: %s', e)
             current_period = 1
 
         logger.info('Запись даты и времени последней успешной сборки котировок')

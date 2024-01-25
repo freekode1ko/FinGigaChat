@@ -21,6 +21,7 @@ import module.user_emulator as ue
 from module.logger_base import selector_logger
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
+from utils import sentry
 from utils.cli_utils import get_period
 
 
@@ -382,6 +383,7 @@ def main(period):
     """
     Сборщик researches и графиков
     """
+    sentry.init_sentry(dsn=config.SENTRY_RESEARCH_PARSER_DSN)
     try:
         period, scale, scale_txt = get_period(period)
     except ValueError as e:
@@ -406,7 +408,7 @@ def main(period):
             firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
             driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
         except Exception as e:
-            logger.error(f'Ошибка при подключении к контейнеру selenium: {e}')
+            logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
             driver = None
             current_period = 1
 
@@ -420,7 +422,7 @@ def main(period):
                 runner.save_reviews(reviews_dict)
                 runner.process_companies_data(companies_pages_html_dict)
             except Exception as e:
-                logger.error(f'Ошибка при сборке отчетов с Research: {e}')
+                logger.error('Ошибка при сборке отчетов с Research: %s', e)
                 current_period = 1
 
             try:
@@ -429,7 +431,7 @@ def main(period):
                 logger.info('Сборки графиков')
                 runner.commodities_plot_collect(session, driver)
             except Exception as e:
-                logger.error(f'Ошибка при парсинге источников по сырью: {e}')
+                logger.error('Ошибка при парсинге источников по сырью: %s', e)
                 current_period = 1
 
             try:
@@ -437,7 +439,7 @@ def main(period):
             except Exception as e:
                 # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
                 # тогда вылетает MaxRetryError
-                logger.error(f'Ошибка во время закрытия подключения к selenium: {e}')
+                logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
                 current_period = 1
 
         logger.info('Запись даты и времени последней успешной сборки котировок')

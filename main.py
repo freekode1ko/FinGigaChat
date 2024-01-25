@@ -678,7 +678,7 @@ if __name__ == '__main__':
             logger.info('Начало сборки котировок')
             runner.main()
         except Exception as e:
-            logger.error(f'Ошибка при сборке котировок: {e}')
+            logger.error('Ошибка при сборке котировок: %s', e)
             hours2wait = 1
 
         try:
@@ -688,7 +688,7 @@ if __name__ == '__main__':
             firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
             driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
         except Exception as e:
-            logger.error(f'Ошибка при подключении к контейнеру selenium: {e}')
+            logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
             driver = None
             hours2wait = 1
 
@@ -702,7 +702,7 @@ if __name__ == '__main__':
                 runner.save_reviews(reviews_dict)
                 runner.process_companies_data(companies_pages_html_dict)
             except Exception as e:
-                logger.error(f'Ошибка при сборке отчетов с Research: {e}')
+                logger.error('Ошибка при сборке отчетов с Research: %s', e)
                 hours2wait = 1
 
             try:
@@ -713,7 +713,7 @@ if __name__ == '__main__':
                 runner.commodities_plot_collect(session, driver)
                 # print('com writed')
             except Exception as e:
-                logger.error(f'Ошибка при парсинге источников по сырью: {e}')
+                logger.error('Ошибка при парсинге источников по сырью: %s', e)
                 hours2wait = 1
 
             try:
@@ -721,7 +721,7 @@ if __name__ == '__main__':
             except Exception as e:
                 # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
                 # тогда вылетает MaxRetryError
-                logger.error(f'Ошибка во время закрытия подключения к selenium: {e}')
+                logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
                 hours2wait = 1
 
         logger.info('Запись даты и времени последней успешной сборки')

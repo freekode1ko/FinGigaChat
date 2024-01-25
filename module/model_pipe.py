@@ -438,7 +438,7 @@ def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str
         giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except Exception as e:
-        logger.error(f'Ошибка при создании саммари: {e}')
+        logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
         giga_answer = ''
 

@@ -6,9 +6,11 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+import config
 from config import BASE_GIGAPARSER_URL
 from module.article_process import ArticleProcess
 from module.logger_base import selector_logger
+from utils import sentry
 
 PERIOD = 1
 
@@ -30,7 +32,7 @@ def get_article() -> pd.DataFrame:
         print('Ошибка при получении новостей: ConnectionError')
 
     except Exception as e:
-        logger.error(f'Ошибка при получении новостей: {e}')
+        logger.error('Ошибка при получении новостей: %s', e)
         print(f'Ошибка при получении новостей: {e}')
 
     return df_article
@@ -77,10 +79,11 @@ def post_ids(ids):
         requests.post(BASE_GIGAPARSER_URL.format('success_request'), json=ids)  # ids = {'id': [1,2,3...]}
     except Exception as e:
         print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
-        logger.error(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
+        logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
 
 
 if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem

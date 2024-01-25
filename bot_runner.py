@@ -3,14 +3,10 @@ import json
 import os
 import re
 import textwrap
-import numpy as np
-import pandas as pd
-from typing import Dict, Union, List
-from sqlalchemy import create_engine, text, NullPool
 import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -28,6 +24,7 @@ import module.gigachat as gig
 from module.article_process import ArticleProcess, ArticleProcessAdmin
 from module.logger_base import get_db_logger, get_handler, selector_logger
 from module.model_pipe import summarization_by_chatgpt
+from utils.sentry import init_sentry
 
 path_to_source = config.path_to_source
 psql_engine = config.psql_engine
@@ -948,10 +945,9 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
         list_of_unknown = list(set(user_request) - set(subscriptions))
         ap_obj = ArticleProcess(logger=logger)
         near_to_list_of_unknown = '\n'.join(ap_obj.find_nearest_to_subjects_list(list_of_unknown))
-        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные '
-                          f'объекты на подписку: {list_of_unknown}')
+        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: {list_of_unknown}')
         reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
-        reply_msg += f"\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}"
+        reply_msg += f'\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}'
         await message.reply(reply_msg)
 
     if subscriptions:
@@ -1164,13 +1160,12 @@ async def subscriptions_menu(message: types.Message):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
         keyboard = types.InlineKeyboardMarkup()
-        keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data=f'myactivesubscriptions'))
-        keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data=f'addnewsubscriptions'))
-        keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data=f'deletesubscriptions'))
-        keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data=f'deleteallsubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
+        keyboard.add(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
 
-        await bot.send_message(chat_id, text=f'Меню управления подписками\n',
-                               reply_markup=keyboard)
+        await bot.send_message(chat_id, text='Меню управления подписками\n', reply_markup=keyboard)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -1796,13 +1791,16 @@ async def send_nearest_subjects(message: types.Message):
 
     cancel_msg = f'Напишите «{cancel_command}» для очистки'
     response = 'Не удалось обработать ваш запрос.\n\nВозможно, вы имели в виду один из следующих вариантов:'
-    keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                         input_field_placeholder=cancel_msg, one_time_keyboard=True)
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+    )
 
-    await bot.send_message(chat_id, response, parse_mode='HTML', protect_content=False,
-                           disable_web_page_preview=True, reply_markup=keyboard)
-    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы '
-                     f'"{", ".join(nearest_subjects)}"')
+    await bot.send_message(
+        chat_id, response, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
+    )
+    user_logger.info(
+        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы ' f'"{", ".join(nearest_subjects)}"'
+    )
 
 
 @dp.message_handler(commands=['gigachat'])
@@ -1817,8 +1815,9 @@ async def set_gigachat_mode(message: types.Message) -> None:
         msg_text = 'Начато общение с Gigachat\n\n' + cancel_msg
         buttons = [[types.KeyboardButton(text=cancel_command)]]
 
-        keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True,
-                                             input_field_placeholder=cancel_msg, one_time_keyboard=True)
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+        )
         await message.answer(msg_text, reply_markup=keyboard)
     else:
         chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
@@ -1854,9 +1853,11 @@ async def ask_giga_chat(message: types.Message, prompt: str = '') -> None:
         logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
         giga_answer = chat.ask_giga_chat(token=token, text=msg)
         giga_js = giga_answer.json()['choices'][0]['message']['content']
-        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} :'
-                             f' KeyError (некорректная выдача ответа GigaChat),'
-                             f' ответ после переформирования запроса')
+        user_logger.critical(
+            f'*{chat_id}* {full_name} - {user_msg} :'
+            f' KeyError (некорректная выдача ответа GigaChat),'
+            f' ответ после переформирования запроса'
+        )
     response = f'{giga_js}\n\n{giga_ans_footer}'
     await message.answer(response, protect_content=False)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
@@ -2191,6 +2192,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
 
 
 if __name__ == '__main__':
+    init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
 
     # инициализируем обработчик и логгер
