@@ -21,6 +21,7 @@ import module.user_emulator as ue
 from module.logger_base import selector_logger
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
+from utils import sentry
 from utils.cli_utils import get_period
 
 
@@ -382,6 +383,7 @@ def main(period):
     """
     Сборщик researches и графиков
     """
+    sentry.init_sentry(dsn=config.SENTRY_RESEARCHES_PARSER_DSN)
     try:
         period, scale, scale_txt = get_period(period)
     except ValueError as e:

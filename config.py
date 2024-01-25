@@ -30,7 +30,7 @@ def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'u
 SENTRY_CHAT_BOT_DSN: str = env.str('SENTRY_CHAT_BOT_DSN', default='')
 SENTRY_QUOTES_PARSER_DSN: str = env.str('SENTRY_QUOTES_PARSER_DSN', default='')
 SENTRY_RESEARCHES_PARSER_DSN: str = env.str('SENTRY_RESEARCHES_PARSER_DSN', default='')
-SENTRY_POLYANALISTA_PARSER_DSN: str = env.str('SENTRY_POLYANALISTA_PARSER_DSN', default='')
+SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', default='')
 SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
@@ -64,7 +64,7 @@ COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
-BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
+BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
 
