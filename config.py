@@ -46,9 +46,15 @@ BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:8000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
 
-mail_username = 'ai-helper@mail.ru'
-mail_password = 'ExamKejCpmcpr8kM5emw'
-mail_imap_server = 'imap.mail.ru'
+STATISTICS_PATH = 'statistics'
+BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
+USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
+NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
+STATS_COLLECTOR_SLEEP_TIME = 60
+
+mail_username = "ai-helper@mail.ru"
+mail_password = "ExamKejCpmcpr8kM5emw"
+mail_imap_server = "imap.mail.ru"
 summarization_prompt = (
     'Ты - суммаризатор новостной ленты.'
     'На вход тебе будут подаваться новости.'
