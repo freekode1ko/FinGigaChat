@@ -6,6 +6,8 @@ from urllib.parse import unquote, urlparse
 
 import numpy as np
 import pandas as pd
+from fuzzywuzzy import process
+from sqlalchemy.pool import NullPool
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
@@ -325,6 +327,52 @@ class ArticleProcess:
             if message_text in names:
                 subject_ids.append(subject_id)
         return subject_ids
+
+    def get_subjects_names(self, subjects: List[str]) -> List[str]:
+        """
+        Получение всех альтернативных имен по списку из industry, client, commodity
+        """
+        subjects_names = []
+
+        for subject in subjects:
+            df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
+            df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
+            for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
+                subjects_names.extend(names)
+        return subjects_names
+
+    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> List[str]:
+        """
+        Поиск ближайших похожих имен субъектов
+        """
+        subject_name = subject_name.lower().strip().replace('"', '')
+        subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+
+        if not subjects_names:
+            return []
+
+        near = process.extract(subject_name, subjects_names)
+        nearest = near[0][1]
+        names = [i[0] for i in near if i[1] >= (nearest - criteria)]
+
+        return names
+
+    def find_nearest_to_subjects_list(self, subjects_names: List[str]) -> List[str]:
+        """
+        Поиск ближайших похожих имен субъектов
+        """
+        db_subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+
+        if not subjects_names:
+            return []
+
+        near_subjects = []
+
+        for subject_name in subjects_names:
+            subject_name = subject_name.lower().strip().replace('"', '')
+            near_subjects.append(process.extractOne(subject_name, db_subjects_names)[0])
+
+        return near_subjects
 
     def _get_articles(self, subject_id: int, subject: str, limit_all: int = NEWS_LIMIT, offset_all: int = 0):
         """
