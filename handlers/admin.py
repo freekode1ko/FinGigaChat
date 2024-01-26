@@ -1,0 +1,365 @@
+import json
+# import logging
+
+import pandas as pd
+from aiogram import F, Router, types
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.chat_action import ChatActionMiddleware
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+import config
+from base_logger import logger, user_logger
+from database import engine
+from module.article_process import ArticleProcessAdmin
+from module.model_pipe import summarization_by_chatgpt
+from utils.bot_utils import (
+    check_your_right,
+    file_cleaner,
+    send_msg_to,
+    user_in_whitelist,
+)
+
+# logger = logging.getLogger(__name__)
+router = Router()
+router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+
+
+class AdminStates(StatesGroup):
+    link = State()
+    link_change_summary = State()
+    link_to_delete = State()
+    send_to_users = State()
+
+
+@router.message(Command('sendtoall'))
+async def message_to_all(message: types.Message, state: FSMContext) -> None:
+    """
+    Входная точка для ручной рассылки новостей на всех пользователей
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    user_str = message.from_user.model_dump_json()
+    user = json.loads(message.from_user.model_dump_json())
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
+    if await user_in_whitelist(user_str):
+        if await check_your_right(user):
+            await state.set_state(AdminStates.send_to_users)
+            await message.answer(
+                'Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
+                'или, если передумали, напишите слово "Отмена".'
+            )
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        else:
+            await message.answer('Недостаточно прав для этой команды!')
+            user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+    else:
+        await message.answer('Неавторизованный пользователь')
+        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+@router.message(AdminStates.send_to_users)  # , content_types=types.ContentTypes.ANY)
+async def get_msg_from_admin(message, state: FSMContext) -> None:
+    """
+    Обработка сообщения и/или файла от пользователя и рассылка их на всех пользователей
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    """
+    message_jsn = json.loads(message.model_dump_json())
+    if 'text' in message_jsn:
+        file_type = 'text'
+        file_name = None
+        msg = message.text
+    elif 'document' in message_jsn:
+        file_type = 'document'
+        file_name = message.document.file_name
+        msg = message.caption
+        await message.document.download(destination_file='sources/{}'.format(file_name))
+    elif 'photo' in message_jsn:
+        file_type = 'photo'
+        best_photo = message.photo[0]
+        for photo_file in message.photo[1:]:
+            if best_photo.file_size < photo_file.file_size:
+                best_photo = photo_file
+        file_name = best_photo.file_id
+        await best_photo.download(destination_file='sources/{}.jpg'.format(file_name))
+        msg = message.caption
+    else:
+        await state.clear()
+        await message.answer('Отправка не удалась')
+        return None
+
+    await state.clear()
+    users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
+    users_ids = users['user_id'].tolist()
+    successful_sending = 0
+    for user_id in users_ids:
+        try:
+            user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
+            await send_msg_to(message.bot, user_id, msg, file_name, file_type)
+            user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+            successful_sending += 1
+        # except BotBlocked:
+        #     user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
+        except Exception as ex:
+            user_logger.error(f'*{user_id}* Пользователь не получил сообщения из-за ошибки: {ex}')
+
+    await message.answer('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
+    logger.info('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
+
+    file_cleaner('sources/{}'.format(file_name))
+    file_cleaner('sources/{}.jpg'.format(file_name))
+
+
+@router.message(Command('admin_help'))
+async def admin_help(message: types.Message) -> None:
+    """
+    Вывод в чат подсказки по командам для администратора
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user = json.loads(message.from_user.model_dump_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
+        help_msg = (
+            '<b>/show_article</b> - показать детальную информацию о новости\n'
+            '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
+            '<b>/delete_article</b> - удалить новость из базы данных\n'
+            '<b>/sendtoall</b> - отправить сообщение на всех пользователей'
+        )
+        await message.answer(help_msg, protect_content=False, parse_mode='HTML')
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+
+
+@router.message(Command('show_article'))
+async def show_article(message: types.Message, state: FSMContext) -> None:
+    """
+    Вывод в чат новости по ссылке
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user = json.loads(message.from_user.model_dump_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
+        await state.set_state(AdminStates.link)
+        await message.bot.send_message(
+            chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
+        )
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+
+
+@router.message(AdminStates.link)
+async def continue_show_article(message: types.Message, state: FSMContext) -> None:
+    """
+    Вывод новости по ссылке от пользователя
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    """
+    await state.update_data(link=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    article_id = apd_obj.get_article_id_by_link(data['link'])
+    if not article_id:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+        await state.clear()
+        user_logger.warning(f"/show_article : не получилось найти новость по ссылке '{data['link']}'")
+        return
+
+    data_article_dict = apd_obj.get_article_by_link(data['link'])
+    if not isinstance(data_article_dict, dict):
+        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.', protect_content=False)
+        user_logger.critical(f'/show_article : {data_article_dict}')
+        return
+
+    format_msg = ''
+    for key, val in data_article_dict.items():
+        format_msg += f'<b>{key}</b>: {val}\n'
+
+    await message.answer(format_msg, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
+    await state.clear()
+
+
+@router.message(Command('change_summary'))
+async def change_summary(message: types.Message, state: FSMContext) -> None:
+    """
+    Получение ссылки на новость для изменения ее короткой версии
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
+    if not config.api_key_gpt:
+        await message.answer('Данная команда пока недоступна.', protect_content=False)
+        user_logger.critical('Нет токена доступа к chatGPT')
+        return
+
+    user = json.loads(message.from_user.model_dump_json())
+    admin_flag = await check_your_right(user)
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
+        await state.set_state(AdminStates.link_change_summary)
+        await message.bot.send_message(
+            chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
+        )
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+
+
+@router.message(AdminStates.link_change_summary)
+async def continue_change_summary(message: types.Message, state: FSMContext) -> None:
+    """
+    Изменение краткой версии новости
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    """
+    await state.update_data(link_change_summary=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
+
+    if not full_text:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+        await state.clear()
+        user_logger.warning(f"/change_summary : не получилось найти новость по ссылке - {data['link_change_summary']}")
+        return
+
+    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=False)
+
+    try:
+        new_text_sum = summarization_by_chatgpt(full_text)
+        apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
+        await message.answer(f'<b>Старое саммари:</b> {old_text_sum}', parse_mode='HTML', protect_content=False)
+
+    # except MessageIsTooLong:
+    #     await message.answer('<b>Старое саммари не помещается в одно сообщение.</b>', parse_mode='HTML')
+    #     user_logger.critical(
+    #         f'/change_summary : старое саммари оказалось слишком длинным ' f"({data['link_change_summary']}\n{old_text_sum})"
+    #     )
+
+    except Exception:
+        user_logger.critical('/change_summary : ошибка при создании саммари с помощью chatGPT')
+        await message.answer('Произошла ошибка при создании саммари. Разработчики уже решают проблему.', protect_content=False)
+
+    else:
+        await message.answer(f'<b>Новое саммари:</b> {new_text_sum}', parse_mode='HTML', protect_content=False)
+        await state.clear()
+
+
+@router.message(Command('delete_article'))
+async def delete_article(message: types.Message, state: FSMContext) -> None:
+    """
+    Получение ссылки на новость от пользователя для ее удаления (снижения значимости)
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    user = json.loads(message.from_user.model_dump_json())
+    admin_flag = await check_your_right(user)
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
+    if admin_flag:
+        ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
+        await state.set_state(AdminStates.link_to_delete)
+        await message.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.')
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+
+
+@router.message(AdminStates.link_to_delete)
+async def continue_delete_article(message: types.Message, state: FSMContext) -> None:
+    """
+    Проверка, что действие по удалению новости не случайное и выбор причины удаления (снижения значимости)
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: конечный автомат о состоянии
+    """
+    await state.update_data(link_to_delete=message.text)
+    data = await state.get_data()
+
+    apd_obj = ArticleProcessAdmin()
+    article_id = apd_obj.get_article_id_by_link(data['link_to_delete'])
+    if not article_id:
+        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.')
+        await state.clear()
+        user_logger.warning(f"/delete_article : не получилось найти новость по ссылке - {data['link_to_delete']}")
+        return
+    else:
+        del_buttons_data_dict = dict(
+            cancel='Отменить удаление',
+            duplicate='Удалить дубль',
+            useless='Удалить незначимую новость',
+            not_relevant='Удалить нерелевантную новость',
+            another='Удалить по другой причине',
+        )
+        callback_func = 'end_del_article'
+        keyboard = InlineKeyboardBuilder()
+
+        for reason, label in del_buttons_data_dict.items():
+            callback = f'{callback_func}:{reason}:{article_id}'  # макс. длина 64 символа
+            keyboard.row(types.InlineKeyboardButton(text=label, callback_data=callback))
+
+        await message.answer('Выберите причину удаления новости:', reply_markup=keyboard.as_markup())
+        await state.clear()
+
+
+@router.callback_query(F.data.startswith('end_del_article'))
+async def end_del_article(callback_query: types.CallbackQuery) -> None:
+    """Понижение значимости новости"""
+    # получаем данные
+    callback_data = callback_query.data.split(':')
+    reason_to_delete = callback_data[1]
+    article_id_to_delete = int(callback_data[2])
+    callback_values = dict(callback_query.values['from'])
+    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+
+    apd_obj = ArticleProcessAdmin()
+    if reason_to_delete == 'cancel':
+        await callback_query.message.bot.send_message(chat_id, text='Удаление отменено.')
+        user_logger.info('Отмена действия - /delete_article')
+    else:
+        result = apd_obj.change_score_article_by_id(article_id_to_delete)
+        if result:
+            await callback_query.message.bot.send_message(chat_id, text='Новость удалена.')
+            user_logger.info(
+                f'*{chat_id}* {user_first_name} - /delete_article : '
+                f'админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}'
+            )
+        else:
+            await callback_query.message.bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.')
+            user_logger.critical(
+                f'*{chat_id}* {user_first_name} - /delete_article : '
+                f'не получилось понизить значимость новости с id {article_id_to_delete}'
+            )
+
+    # обновляем кнопки на одну не активную
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='Команда использована', callback_data='none'))
+    await callback_query.message.bot.edit_message_reply_markup(
+        chat_id, callback_query.message.message_id, reply_markup=keyboard.as_markup()
+    )

@@ -9,8 +9,8 @@ import pandas as pd
 import six
 
 import config
-from bot_runner import read_curdatetime
 from module import weekly_pulse_parse as wp_parse
+from utils.bot_utils import read_curdatetime
 
 
 class Transformer:
