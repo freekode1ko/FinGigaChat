@@ -22,7 +22,12 @@ import config
 import module.data_transformer as dt
 import module.gigachat as gig
 from module.article_process import ArticleProcess, ArticleProcessAdmin
-from module.logger_base import get_db_logger, get_handler, selector_logger
+from module.logger_base import (
+    TelegramLogger,
+    get_db_logger,
+    get_handler,
+    selector_logger,
+)
 from module.model_pipe import summarization_by_chatgpt
 from utils.sentry import init_sentry
 
@@ -107,7 +112,6 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
-
 
 next_news_callback = CallbackData(
     'next_news',
@@ -226,7 +230,7 @@ async def help_handler(message: types.Message):
         msg_id = to_pin.message_id
         await bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -290,7 +294,7 @@ async def bonds_info(message: types.Message):
             message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())
         )
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -387,7 +391,7 @@ async def economy_info(message: types.Message):
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -499,7 +503,7 @@ async def data_mart(message: types.Message):
                 with open(png_path, 'rb') as photo:
                     await __sent_photo_and_msg(message, photo, title='')
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -549,7 +553,7 @@ async def exchange_info(message: types.Message):
         photo = open(png_path, 'rb')
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -628,7 +632,7 @@ async def metal_info(message: types.Message):
             message, photo, day, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())
         )
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -669,10 +673,10 @@ async def message_to_all(message: types.Message):
                 'Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
                 'или, если передумали, напишите слово "Отмена".'
             )
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+            user_logger_tg.info_tg_meta(tg_msg=message)
         else:
             await message.answer('Недостаточно прав для этой команды!')
-            user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+            user_logger_tg.warning_tg_meta(tg_msg=message, msg='недостаточно прав для команды')
     else:
         await message.answer('Неавторизованный пользователь')
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
@@ -898,8 +902,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
     return None
     """
     await types.ChatActions.typing()
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
+    user_logger_tg.info_tg_meta(tg_msg=message, msg='настройка пользовательских подписок')
     message_text = ''
     await state.finish()
     subscriptions = []
@@ -1009,7 +1012,7 @@ async def get_user_subscriptions_command(message: types.Message):
     return None
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_logger_tg.info_tg_meta(tg_msg=message)
     user_id = message.from_user.id  # Get user_ID from message
     await get_user_subscriptions_body(chat_id, user_id)
 
@@ -1041,7 +1044,7 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
     return None
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_logger_tg.info_tg_meta(tg_msg=message)
     user_id = json.loads(message.from_user.as_json())['id']  # Get user_ID from message
     subscriptions = await get_list_of_user_subscriptions(user_id)
 
@@ -1157,7 +1160,7 @@ async def subscriptions_menu(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.as_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
 
         keyboard = types.InlineKeyboardMarkup()
         keyboard.add(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
@@ -1218,8 +1221,7 @@ async def show_ref_book_by_request(chat_id, subject: str):
 
 @dp.message_handler(commands=['referencebook'])
 async def reference_book(message: types.Message):
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
+    user_logger_tg.info_tg_meta(tg_msg=message, msg='Запросил справочник')
 
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data='ref_books:client'))
@@ -1332,13 +1334,13 @@ async def user_to_whitelist(message: types.Message):
             engine = create_engine(psql_engine, poolclass=NullPool)
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
+            user_logger_tg.info_tg_meta(tg_msg=message, msg='новый пользователь')
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. ' f'\n\n{e}', protect_content=False)
-            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+            user_logger_tg.critical_tg_meta(tg_msg=message, msg=f'ошибка авторизации ({e})')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
+        user_logger_tg.info_tg_meta(tg_msg=message, msg='уже добавлен')
 
 
 async def check_your_right(user: dict):
@@ -1398,10 +1400,10 @@ async def admin_help(message: types.Message):
             '<b>/sendtoall</b> - отправить сообщение на всех пользователей'
         )
         await message.answer(help_msg, protect_content=False, parse_mode='HTML')
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+        user_logger_tg.warning_tg_meta(tg_msg=message, msg='недостаточно прав для команды')
 
 
 @dp.message_handler(commands=['show_article'])
@@ -1423,10 +1425,10 @@ async def show_article(message: types.Message):
         await bot.send_message(
             chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
         )
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+        user_logger_tg.warning_tg_meta(tg_msg=message, msg='недостаточно прав для команды')
 
 
 @dp.message_handler(state=Form.link)
@@ -1490,10 +1492,10 @@ async def change_summary(message: types.Message):
         await bot.send_message(
             chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
         )
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+        user_logger_tg.warning_tg_meta(tg_msg=message, msg='недостаточно прав для команды')
 
 
 @dp.message_handler(state=Form.link_change_summary)
@@ -1546,16 +1548,15 @@ async def delete_article(message: types.Message):
     await types.ChatActions.typing()
     user = json.loads(message.from_user.as_json())
     admin_flag = await check_your_right(user)
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
         await Form.link_to_delete.set()
         await bot.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.')
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+        user_logger_tg.warning_tg_meta(tg_msg=message, msg='недостаточно прав для команды')
 
 
 @dp.message_handler(state=Form.link_to_delete)
@@ -1702,9 +1703,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: dict):
 
         await call.message.edit_reply_markup()
 
-        user_logger.info(
-            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} ' f'(всего {new_offset})'
-        )
+        user_logger_tg.info_tg_meta(tg_msg=call.message, msg=f'получил следующий набор новостей по {subject} (всего {new_offset})')
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
@@ -1728,8 +1727,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 
 @dp.message_handler(commands=['dailynews'])
 async def dailynews(message: types.Message):
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
+    user_logger_tg.critical_tg_meta(tg_msg=message, msg='МЕТОД НЕ РАЗРЕШЕН!')
     await send_daily_news(20, 20, 1)
 
 
@@ -1750,7 +1748,7 @@ async def show_newsletter_buttons(message: types.Message):
 
         await message.answer('Какую информацию вы хотите получить?', reply_markup=keyboard)
 
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+        user_logger_tg.info_tg_meta(tg_msg=message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -1798,9 +1796,7 @@ async def send_nearest_subjects(message: types.Message):
     await bot.send_message(
         chat_id, response, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
     )
-    user_logger.info(
-        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы ' f'"{", ".join(nearest_subjects)}"'
-    )
+    user_logger_tg.info_tg_meta(tg_msg=message, msg=f'На запрос пользователя найдены схожие запросы {", ".join(nearest_subjects)}')
 
 
 @dp.message_handler(commands=['gigachat'])
@@ -1844,13 +1840,13 @@ async def ask_giga_chat(message: types.Message, prompt: str = '') -> None:
     except AttributeError:
         chat = gig.GigaChat()
         token = chat.get_user_token()
-        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+        logger_tg.debug_tg_meta(tg_msg=message, msg='перевыпуск токена для общения с GigaChat')
         giga_answer = chat.ask_giga_chat(token=token, text=msg)
         giga_js = giga_answer.json()['choices'][0]['message']['content']
     except KeyError:
         chat = gig.GigaChat()
         token = chat.get_user_token()
-        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
+        logger_tg.debug_tg_meta(tg_msg=message, msg='перевыпуск токена для общения с GigaChat')
         giga_answer = chat.ask_giga_chat(token=token, text=msg)
         giga_js = giga_answer.json()['choices'][0]['message']['content']
         user_logger.critical(
@@ -1860,7 +1856,7 @@ async def ask_giga_chat(message: types.Message, prompt: str = '') -> None:
         )
     response = f'{giga_js}\n\n{giga_ans_footer}'
     await message.answer(response, protect_content=False)
-    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+    user_logger_tg.info_tg_meta(tg_msg=message, msg=f'На запрос GigaChat ответил: "{giga_js}"')
 
 
 @dp.message_handler()
@@ -1885,7 +1881,7 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
             industry_id = subject_ids[0]
             not_use, reply_msg, not_use_ = ap_obj.process_user_alias(industry_id, subject)
             await bot_send_msg(chat_id, reply_msg)
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
+            user_logger_tg.info_tg_meta(tg_msg=message, msg='получил новости по отраслям')
             return
 
         # проверка пользовательского сообщения на запрос новостей по клиентам/товарам
@@ -1947,14 +1943,14 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
                             else:
                                 logger.error(f'MessageIsTooLong ERROR: {article}')
 
-                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
+                user_logger_tg.info_tg_meta(tg_msg=message, msg=f'получил новости по {subject}')
                 return_ans = True
 
         if not return_ans:
             return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
 
         if return_ans:
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
+            user_logger_tg.info_tg_meta(tg_msg=message, msg=': получил таблицу фин показателей')
         else:
             await types.ChatActions.typing()
             global chat
@@ -2198,7 +2194,9 @@ if __name__ == '__main__':
     # инициализируем обработчик и логгер
     handler = get_handler(psql_engine)
     user_logger = get_db_logger(Path(__file__).stem, handler)  # логгер для сохранения пользовательских действий
+    user_logger_tg = TelegramLogger(user_logger)
     logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)  # логгер для сохранения действий программы + пользователей
+    logger_tg = TelegramLogger(logger)
 
     # запускам рассылки
     loop = asyncio.get_event_loop()
