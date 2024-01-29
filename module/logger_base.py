@@ -79,6 +79,7 @@ class TelegramLogger:
             logging.DEBUG: self.debug_tg_meta,
             logging.CRITICAL: self.critical_tg_meta,
             logging.WARNING: self.warning_tg_meta,
+            logging.ERROR: self.error_tg_meta,
         }
         return _level_to_callable[level]
 
@@ -93,6 +94,9 @@ class TelegramLogger:
 
     def warning_tg_meta(self, tg_msg: Message, msg: str = '', *args, **kwargs):
         self.logger.warning(self.add_tg_message_meta(tg_msg, msg), *args, **kwargs)
+
+    def error_tg_meta(self, tg_msg: Message, msg: str = '', *args, **kwargs):
+        self.logger.error(self.add_tg_message_meta(tg_msg, msg), *args, **kwargs)
 
 
 class DBHandler(Handler):
