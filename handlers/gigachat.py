@@ -7,7 +7,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import module.gigachat as gig
-from base_logger import logger, user_logger
+from bot_logger import logger, user_logger
 from constants.bot.constants import giga_ans_footer
 from utils.bot_utils import user_in_whitelist
 

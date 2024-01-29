@@ -10,7 +10,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import config
-from base_logger import logger, user_logger
+from bot_logger import logger, user_logger
 from database import engine
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
@@ -61,8 +61,8 @@ async def message_to_all(message: types.Message, state: FSMContext) -> None:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-@router.message(AdminStates.send_to_users)  # , content_types=types.ContentTypes.ANY)
-async def get_msg_from_admin(message, state: FSMContext) -> None:
+@router.message(AdminStates.send_to_users, F.content_type.in_({'text', 'document', 'photo'}))
+async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     """
     Обработка сообщения и/или файла от пользователя и рассылка их на всех пользователей
 
@@ -70,23 +70,23 @@ async def get_msg_from_admin(message, state: FSMContext) -> None:
     :param state: конечный автомат о состоянии
     """
     message_jsn = json.loads(message.model_dump_json())
-    if 'text' in message_jsn:
+    if message.content_type == types.ContentType.TEXT:
         file_type = 'text'
         file_name = None
         msg = message.text
-    elif 'document' in message_jsn:
+    elif message.content_type == types.ContentType.DOCUMENT:
         file_type = 'document'
         file_name = message.document.file_name
         msg = message.caption
-        await message.document.download(destination_file='sources/{}'.format(file_name))
-    elif 'photo' in message_jsn:
+        await message.bot.download(message.document, destination=f'sources/{file_name}')
+    elif message.content_type == types.ContentType.PHOTO:
         file_type = 'photo'
         best_photo = message.photo[0]
         for photo_file in message.photo[1:]:
             if best_photo.file_size < photo_file.file_size:
                 best_photo = photo_file
         file_name = best_photo.file_id
-        await best_photo.download(destination_file='sources/{}.jpg'.format(file_name))
+        await message.bot.download(best_photo, destination=f'sources/{file_name}.jpg')
         msg = message.caption
     else:
         await state.clear()
@@ -285,7 +285,7 @@ async def delete_article(message: types.Message, state: FSMContext) -> None:
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
         await state.set_state(AdminStates.link_to_delete)
-        await message.send_message(chat_id=message.chat.id, text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
+        await message.answer(text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         await message.answer('У Вас недостаточно прав для использования данной команды.')
@@ -335,23 +335,23 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
     callback_data = callback_query.data.split(':')
     reason_to_delete = callback_data[1]
     article_id_to_delete = int(callback_data[2])
-    callback_values = dict(callback_query.values['from'])
-    chat_id, user_first_name = callback_values['id'], callback_values['first_name']
+    from_user = callback_query.from_user
+    chat_id, user_first_name = from_user.id, from_user.first_name
 
     apd_obj = ArticleProcessAdmin()
     if reason_to_delete == 'cancel':
-        await callback_query.message.bot.send_message(chat_id, text='Удаление отменено.')
+        await callback_query.message.answer(text='Удаление отменено.')
         user_logger.info('Отмена действия - /delete_article')
     else:
         result = apd_obj.change_score_article_by_id(article_id_to_delete)
         if result:
-            await callback_query.message.bot.send_message(chat_id, text='Новость удалена.')
+            await callback_query.message.answer(text='Новость удалена.')
             user_logger.info(
                 f'*{chat_id}* {user_first_name} - /delete_article : '
                 f'админ понизил значимость новости по причине {reason_to_delete} - id={article_id_to_delete}'
             )
         else:
-            await callback_query.message.bot.send_message(chat_id, text='Возникла ошибка, попробуйте в другой раз.')
+            await callback_query.message.answer(text='Возникла ошибка, попробуйте в другой раз.')
             user_logger.critical(
                 f'*{chat_id}* {user_first_name} - /delete_article : '
                 f'не получилось понизить значимость новости с id {article_id_to_delete}'
@@ -360,6 +360,4 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
     # обновляем кнопки на одну не активную
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text='Команда использована', callback_data='none'))
-    await callback_query.message.bot.edit_message_reply_markup(
-        chat_id, callback_query.message.message_id, reply_markup=keyboard.as_markup()
-    )
+    await callback_query.message.edit_reply_markup(reply_markup=keyboard.as_markup())

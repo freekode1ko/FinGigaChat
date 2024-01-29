@@ -11,7 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import text
 
 import config
-from base_logger import logger, user_logger
+from bot_logger import logger, user_logger
 from constants.bot.constants import handbook_format
 from database import engine
 from module.article_process import ArticleProcess

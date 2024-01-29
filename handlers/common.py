@@ -8,7 +8,7 @@ from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
 import config
-from base_logger import user_logger
+from bot_logger import user_logger
 from database import engine
 from utils.bot_utils import user_in_whitelist
 

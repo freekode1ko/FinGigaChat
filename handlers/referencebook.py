@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from base_logger import logger, user_logger
+from bot_logger import logger, user_logger
 from constants.bot.constants import handbook_format
 from utils.bot_utils import show_ref_book_by_request, user_in_whitelist
 
@@ -101,7 +101,7 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext) -> N
             'При возникновении дополнительных вопросов можно '
             'обращаться к Максиму Королькову',
         )
-        await continue_isthisall(state)
+        await continue_isthisall(state=state)
     else:
         await callback_query.message.answer(text='Спасибо за обратную связь!')
         await state.clear()

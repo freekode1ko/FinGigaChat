@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 import config
 import module.data_transformer as dt
-from base_logger import logger, user_logger
+from bot_logger import logger, user_logger
 from database import engine
 from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions
 from module.article_process import ArticleProcess
@@ -21,6 +21,7 @@ from utils.bot_utils import (
     set_bot_commands,
     translate_subscriptions_to_object_id,
 )
+from utils.sentry import init_sentry
 
 storage = MemoryStorage()
 bot = Bot(token=config.api_token)
@@ -51,11 +52,14 @@ async def send_newsletter(newsletter_data: Dict) -> None:
     # отправляем пользователям
     with engine.connect() as conn:
         users_data = conn.execute(text('SELECT user_id, username FROM whitelist')).fetchall()
+
+    users_got_news_cnt = len(users_data)
+
     for user_data in users_data:
         user_id, user_name = user_data[0], user_data[1]
         media = MediaGroupBuilder()
         for path in img_path_list:
-            media.add_photo(types.InputFile(path))
+            media.add_photo(types.FSInputFile(path))
         try:
             await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
             await bot.send_media_group(user_id, media=media.build(), protect_content=True)
@@ -64,8 +68,9 @@ async def send_newsletter(newsletter_data: Dict) -> None:
         #     user_logger.warning(f'*{user_id}* Пользователь не получил рассылку "{title}" : бот в блоке')
         except Exception as e:
             logger.error(f'ERROR *{user_id}* Пользователь не получил рассылку "{title}" : {e}')
+            users_got_news_cnt -= 1
 
-    logger.info(f'{len(users_data)} пользователям пришла рассылка "{title}"')
+    logger.info(f'{users_got_news_cnt} пользователям из {len(users_data)} пришла рассылка "{title}"')
 
     await asyncio.sleep(100)
     return await send_newsletter(newsletter_data)
@@ -81,7 +86,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     :param schedule: Запуск без ожидания
     return None
     """
-    await newsletter_scheduler(schedule)  # ожидание рассылки
+    await newsletter_scheduler(schedule, logger=logger)  # ожидание рассылки
     logger.info('Начинается ежедневная рассылка новостей по подпискам...')
     ap_obj = ArticleProcess(logger)
 
@@ -168,18 +173,21 @@ async def start_bot():
     await dp.start_polling(bot)
 
 
-def main():
+async def main():
+    init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
 
     # запускам рассылки
     print('Инициализация бота')
-    # loop = asyncio.get_event_loop()
-    # loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
-    # loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
-    # loop.create_task(send_daily_news())
-    # loop.create_task(start_bot())
-    asyncio.run(start_bot())
+    loop = asyncio.get_event_loop()
+    loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
+    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
+    loop.create_task(send_daily_news())
+    await start_bot()
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("bot was terminated")

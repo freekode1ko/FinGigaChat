@@ -8,7 +8,7 @@ from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from base_logger import user_logger
+from bot_logger import user_logger
 from config import path_to_source
 from constants.bot.constants import sample_of_img_title
 from database import engine

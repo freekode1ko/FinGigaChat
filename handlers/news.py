@@ -10,7 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
 import config
-from base_logger import logger, user_logger
+from bot_logger import logger, user_logger
 from bot_runner import send_daily_news
 from constants.bot.aliases import (
     bonds_aliases,
@@ -44,8 +44,8 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
     limit_all = config.NEWS_LIMIT * 2 + 1
     offset_all = callback_data.offset
     user_msg = callback_data.user_msg
-    callback_values = dict(call.values['from'])
-    full_name = f"{callback_values['first_name']} {callback_values['last_name']}"
+    callback_values = call.from_user
+    full_name = f"{callback_values.first_name} {callback_values.last_name or ''}"
     chat_id = call.message.chat.id
 
     if not subject_id or not subject:
@@ -166,7 +166,7 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     """Отправляет рассылку по кнопке"""
     # получаем данные
     newsletter_type = callback_query.data.split(':')[1]
-    data_callback = dict(callback_query.values['from'])
+    user_id = callback_query.from_user.id
 
     # получаем текст рассылки
     if newsletter_type == 'weekly_result':
@@ -181,7 +181,7 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
         media.add_photo(types.FSInputFile(path))
     await callback_query.message.answer(text=newsletter, parse_mode='HTML', protect_content=True)
     await callback_query.message.answer_media_group(media=media.build(), protect_content=True)
-    user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
+    user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
 async def send_nearest_subjects(message: types.Message):
@@ -206,7 +206,7 @@ async def send_nearest_subjects(message: types.Message):
     )
 
 
-@router.message()
+@router.message(F.text)
 async def find_news(message: types.Message, prompt: str = '', return_ans: bool = False) -> None:
     """Обработка пользовательского сообщения"""
 
