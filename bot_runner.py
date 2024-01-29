@@ -5,20 +5,21 @@ from typing import Dict
 import pandas as pd
 from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 from aiogram.utils.media_group import MediaGroupBuilder
 from sqlalchemy import text
 
 import config
 import module.data_transformer as dt
 from bot_logger import logger, user_logger
+from constants.bot.commands import PUBLIC_COMMANDS
 from database import engine
 from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions
 from module.article_process import ArticleProcess
 from utils.bot_utils import (
     bot_send_msg,
     get_waiting_time,
-    newsletter_scheduler,
-    set_bot_commands,
+    wait_until_next_newsletter,
     translate_subscriptions_to_object_id,
 )
 from utils.sentry import init_sentry
@@ -86,7 +87,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     :param schedule: Запуск без ожидания
     return None
     """
-    await newsletter_scheduler(schedule, logger=logger)  # ожидание рассылки
+    await wait_until_next_newsletter(schedule, logger=logger)  # ожидание рассылки
     logger.info('Начинается ежедневная рассылка новостей по подпискам...')
     ap_obj = ArticleProcess(logger)
 
@@ -154,9 +155,19 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     return await send_daily_news(client_hours, commodity_hours)
 
 
+async def set_bot_commands() -> None:
+    commands = []
+
+    for command in PUBLIC_COMMANDS:
+        commands.append(BotCommand(command=f'/{command["command"]}', description=command['description']))
+
+    await bot.delete_my_commands()
+    await bot.set_my_commands(commands)
+
+
 async def start_bot():
     # Устанавливаем список актуальных команд
-    await set_bot_commands(bot)
+    await set_bot_commands()
 
     # запускаем бота
     dp.include_routers(

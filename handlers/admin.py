@@ -15,7 +15,7 @@ from database import engine
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
 from utils.bot_utils import (
-    check_your_right,
+    is_admin_user,
     file_cleaner,
     send_msg_to,
     user_in_whitelist,
@@ -46,7 +46,7 @@ async def message_to_all(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(user_str):
-        if await check_your_right(user):
+        if await is_admin_user(user):
             await state.set_state(AdminStates.send_to_users)
             await message.answer(
                 'Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
@@ -124,7 +124,7 @@ async def admin_help(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await check_your_right(user)
+    admin_flag = await is_admin_user(user)
 
     if admin_flag:
         # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
@@ -151,7 +151,7 @@ async def show_article(message: types.Message, state: FSMContext) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await check_your_right(user)
+    admin_flag = await is_admin_user(user)
 
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
@@ -214,7 +214,7 @@ async def change_summary(message: types.Message, state: FSMContext) -> None:
         return
 
     user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await check_your_right(user)
+    admin_flag = await is_admin_user(user)
 
     if admin_flag:
         ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
@@ -279,7 +279,7 @@ async def delete_article(message: types.Message, state: FSMContext) -> None:
     :param state: Объект, который хранит состояние FSM для пользователя
     """
     user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await check_your_right(user)
+    admin_flag = await is_admin_user(user)
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if admin_flag:

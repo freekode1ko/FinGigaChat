@@ -39,6 +39,7 @@ class NextNewsCallback(CallbackData, prefix='next_news'):
 
 @router.callback_query(NextNewsCallback.filter())
 async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallback) -> None:
+    """Отправляет пользователю еще новостей по client или commodity"""
     subject_id = callback_data.subject_id
     subject = callback_data.subject
     limit_all = config.NEWS_LIMIT * 2 + 1
@@ -121,7 +122,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     :param s_id: ID клиента или комоды
     :param msg_text: Текст сообщения
     :param ap_obj: экземпляр класса ArticleProcess
-    return Булевое значение об успешности создания таблицы
+    return значение об успешности создания таблицы
     """
     client_name, client_fin_table = ap_obj.get_client_fin_indicators(s_id, msg_text.strip().lower())
     if not client_fin_table.empty:
@@ -133,14 +134,14 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 
 
 @router.message(Command('dailynews'))
-async def dailynews(message: types.Message):
+async def dailynews(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
     await send_daily_news(20, 20, 1)
 
 
 @router.message(Command('newsletter'))
-async def show_newsletter_buttons(message: types.Message):
+async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
@@ -162,7 +163,7 @@ async def show_newsletter_buttons(message: types.Message):
 
 
 @router.callback_query(F.data.startswith('send_newsletter_by_button'))
-async def send_newsletter_by_button(callback_query: types.CallbackQuery):
+async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None:
     """Отправляет рассылку по кнопке"""
     # получаем данные
     newsletter_type = callback_query.data.split(':')[1]
@@ -184,7 +185,8 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
-async def send_nearest_subjects(message: types.Message):
+async def send_nearest_subjects(message: types.Message) -> None:
+    """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     ap_obj = ArticleProcess(logger=logger)
     nearest_subjects = ap_obj.find_nearest_to_subject(user_msg)

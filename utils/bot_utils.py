@@ -1,29 +1,18 @@
 import asyncio
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import List, Union
 
 import pandas as pd
 from aiogram import Bot, types
-from aiogram.types import BotCommand
 
 import module.data_transformer as dt
 from config import path_to_source
-from constants.bot.commands import PUBLIC_COMMANDS
 from constants.bot.constants import research_footer
 from database import engine
 from module.logger_base import Logger
-
-
-async def set_bot_commands(bot: Bot) -> None:
-    commands = []
-
-    for command in PUBLIC_COMMANDS:
-        commands.append(BotCommand(command=f'/{command["command"]}', description=command['description']))
-
-    await bot.delete_my_commands()
-    await bot.set_my_commands(commands)
 
 
 async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n') -> None:
@@ -62,7 +51,6 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     :param message_text: Текст для отправки или подпись к файлу
     :param file_name: Текст содержащий в себе название сохраненного файла
     :param file_type: Тип файла для отправки. Может быть None, str("Document") и str("Picture")
-    return None
     """
     if file_name:
         if file_type == 'photo':
@@ -90,12 +78,11 @@ async def user_in_whitelist(user: str) -> bool:
     return False
 
 
-async def check_your_right(user: dict) -> bool:
+async def is_admin_user(user: dict) -> bool:
     """
-    Проверка прав пользователя
+    Проверка прав пользователя, что он является admin или owner
 
-    :param user: Словарь с информацией о пользователе
-    return Булевое значение на наличие прав администратора и выше
+    :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
     """
     user_id = user['id']
     user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
@@ -120,7 +107,6 @@ def file_cleaner(filename) -> None:
     Удаление файла по относительному или абсолютному пути
 
     :param filename: Путь от исполняемого файла (если он не рядом) и имя файла для удаления
-    return None
     """
     try:
         os.remove(filename)
@@ -247,18 +233,19 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
     return time_to_wait
 
 
-async def newsletter_scheduler(
+async def wait_until_next_newsletter(
     time_to_wait: int = 0, first_time_to_send: int = 37800, last_time_to_send: int = 61200, logger: Logger.logger = None
 ) -> None:
     """
-    Функция для расчета времени ожидания
+    Функция ожидания до следующей рассылки
 
     :param time_to_wait: Параметр для пропуска ожидания. Для пропуска можно передать любое int значение кроме 0
     :param first_time_to_send: Время для отправки первой рассылки. Время в секундах. Default = 37800  # 10:30
     :param last_time_to_send: Время для отправки последней рассылки. Время в секундах. Default = 61200  # 17:00
     :param logger: logger
-    return None
     """
+    logger = logger or logging.getLogger('bot_runner')
+
     if time_to_wait != 0:
         logger.info('Запуск ручной рассылки новостей по подписке!')
         return None
