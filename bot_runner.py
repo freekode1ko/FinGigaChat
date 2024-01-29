@@ -818,17 +818,16 @@ async def add_new_subscriptions_command(message: types.Message):
 @dp.callback_query_handler(lambda c: c.data.startswith('addnewsubscriptions'))
 async def select_or_write(callback_query: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(f'Напишу сам/Справочник по подпискам', callback_data=f'writesubs'))
-    keyboard.add(types.InlineKeyboardButton(f'Выберу из меню/Подписка на отрасль', callback_data=f'selectsubs'))
-    keyboard.add(types.InlineKeyboardButton(f'Отменить создание подписок', callback_data=f'cancel_subs'))
+    keyboard.add(types.InlineKeyboardButton('Напишу сам/Справочник по подпискам', callback_data='writesubs'))
+    keyboard.add(types.InlineKeyboardButton('Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
+    keyboard.add(types.InlineKeyboardButton('Отменить создание подписок', callback_data='cancel_subs'))
 
     await bot.send_message(callback_query.from_user.id, 'Как вы хотите заполнить подписки?', reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('cancel_subs'))
 async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
-    await bot.send_message(callback_query.message.chat.id,
-                           'Отмена создание подписки')
+    await bot.send_message(callback_query.message.chat.id, 'Отмена создание подписки')
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('writesubs'))
@@ -1815,7 +1814,7 @@ async def scroller(query: types.CallbackQuery = None):
     chunks = []
     num_chunks = len(table) // 11 + 1
     for index in range(num_chunks):
-        chunks.append(table[index * 11:(index + 1) * 11])
+        chunks.append(table[index * 11 : (index + 1) * 11])
 
     cur_page += 1 if direction == 'forward' else -1
     keyboard = await pagination(chunks, search, cur_page)
@@ -1847,41 +1846,46 @@ async def append_new_subscription(query: types.CallbackQuery = None):
     new_user_subscription.sort()
     new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
     with engine.connect() as conn:
-        sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' " \
-                   f"WHERE user_id = {query.from_user.id}"
+        sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' " f'WHERE user_id = {query.from_user.id}'
         conn.execute(text(sql_text))
         conn.commit()
     if subs_count < len(new_user_subscription):
-        await bot.send_message(query.from_user.id, f'{element_to_add.capitalize()} - добавлен к вашим подпискам\n'
-                                                   f'Можете подписаться еще на дополнительные отрасли '
-                                                   f'или выбрать другой раздел')
+        await bot.send_message(
+            query.from_user.id,
+            f'{element_to_add.capitalize()} - добавлен к вашим подпискам\n'
+            f'Можете подписаться еще на дополнительные отрасли '
+            f'или выбрать другой раздел',
+        )
     else:
-        await bot.send_message(query.from_user.id, f'{element_to_add.capitalize()} - уже есть в ваших подписках\n'
-                                                   f'Можете подписаться еще на дополнительные отрасли '
-                                                   f'или выбрать другой раздел')
+        await bot.send_message(
+            query.from_user.id,
+            f'{element_to_add.capitalize()} - уже есть в ваших подписках\n'
+            f'Можете подписаться еще на дополнительные отрасли '
+            f'или выбрать другой раздел',
+        )
 
 
 async def pagination(pages, search, cur_page: int = 0):
     buttons = []
     for element in pages[cur_page].values.tolist():
-        buttons.append([types.InlineKeyboardButton(f"{element[1]}", callback_data=f'addsub:{search}:{element[0]}')])
+        buttons.append([types.InlineKeyboardButton(f'{element[1]}', callback_data=f'addsub:{search}:{element[0]}')])
     bottom_buttons = []
     if cur_page != 0:
         callback = 'page:back:{}:{}'.format(cur_page, search)
-        bottom_buttons.append(types.InlineKeyboardButton(f'⬅', callback_data=callback))
+        bottom_buttons.append(types.InlineKeyboardButton('⬅', callback_data=callback))
     else:
-        bottom_buttons.append(types.InlineKeyboardButton(f'⛔', callback_data=f'stop'))
+        bottom_buttons.append(types.InlineKeyboardButton('⛔', callback_data='stop'))
 
-    bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page + 1}/{len(pages)}', callback_data=f'pagination'))
+    bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page + 1}/{len(pages)}', callback_data='pagination'))
 
     if cur_page == len(pages) - 1:
-        bottom_buttons.append(types.InlineKeyboardButton(f'⛔', callback_data=f'stop'))
+        bottom_buttons.append(types.InlineKeyboardButton('⛔', callback_data='stop'))
     else:
         callback = 'page:forward:{}:{}'.format(cur_page, search)
-        bottom_buttons.append(types.InlineKeyboardButton(f'➡', callback_data=callback))
+        bottom_buttons.append(types.InlineKeyboardButton('➡', callback_data=callback))
 
     buttons.append(bottom_buttons)
-    buttons.append([types.InlineKeyboardButton('Назад к выбору раздела', callback_data=f'selectsubs')])
+    buttons.append([types.InlineKeyboardButton('Назад к выбору раздела', callback_data='selectsubs')])
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
     return keyboard
 
@@ -1902,7 +1906,7 @@ async def choose_subs(query: types.CallbackQuery = None):
     chunks = []
     num_chunks = len(table) // 11 + 1
     for index in range(num_chunks):
-        chunks.append(table[index * 11:(index + 1) * 11])
+        chunks.append(table[index * 11 : (index + 1) * 11])
     keyboard = await pagination(chunks, search)
     await query.message.edit_text(text=f'{search}\nСтраница 1 из {len(chunks)}', reply_markup=keyboard)
 
@@ -1910,11 +1914,11 @@ async def choose_subs(query: types.CallbackQuery = None):
 @dp.callback_query_handler(lambda c: c.data.startswith('selectsubs'))
 async def select_subs_from_menu(query: types.CallbackQuery = None):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton(f'Клиенты', callback_data=f'sub:Клиенты'))
-    keyboard.add(types.InlineKeyboardButton(f'Сырьевые товары', callback_data=f'sub:Сырьевые товары'))
-    keyboard.add(types.InlineKeyboardButton(f'Отрасли', callback_data=f'sub:Отрасли'))
+    keyboard.add(types.InlineKeyboardButton('Клиенты', callback_data='sub:Клиенты'))
+    keyboard.add(types.InlineKeyboardButton('Сырьевые товары', callback_data='sub:Сырьевые товары'))
+    keyboard.add(types.InlineKeyboardButton('Отрасли', callback_data='sub:Отрасли'))
 
-    await bot.send_message(query.from_user.id, "Выберете раздел", reply_markup=keyboard)
+    await bot.send_message(query.from_user.id, 'ыберете раздел', reply_markup=keyboard)
 
 
 async def send_nearest_subjects(message: types.Message):
