@@ -1,20 +1,19 @@
-import re
-from re import search
 import json
 import pickle
-from requests.exceptions import ConnectionError
+import re
+from re import search
 from typing import Dict
 
 import pandas as pd
 import pymorphy2
+from requests.exceptions import ConnectionError
 from sklearn.feature_extraction.text import TfidfVectorizer
-
-from sqlalchemy.pool import NullPool
 from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
 
-from config import summarization_prompt, psql_engine
-from module.gigachat import GigaChat
+from config import psql_engine, summarization_prompt
 from module.chatgpt import ChatGPT
+from module.gigachat import GigaChat
 from module.logger_base import Logger
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_binary_best2.pkl'
@@ -25,24 +24,43 @@ COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
-BAD_GIGA_ANSWERS = ['Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
-                    'Как у нейросетевой языковой модели у меня не может быть настроения, но почему-то я совсем не хочу '
-                    'говорить на эту тему.',
-                    'Не люблю менять тему разговора, но вот сейчас тот самый случай.',
-                    'Спасибо за информацию! Я передам ее дальше.']
-STOCK_WORDS = ['индекс мосбиржа', 'индекс мб', 'индекс ртс ', 's&p', 'фондовый рынок', 'курс доллар',
-               'курс рубль', 'курс евро', 'дайджест', 'открытие рынок', 'закрытие рынок', 'комметарий по рынок',
-               'утренний обзор', 'вечерний обзор', 'главный анонс', 'главный событие день', 'главный событие неделя',
-               'главный событие месяц', 'вечерний комментарий', 'дневной обзор']
+BAD_GIGA_ANSWERS = [
+    'Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
+    'Как у нейросетевой языковой модели у меня не может быть настроения, но почему-то я совсем не хочу ' 'говорить на эту тему.',
+    'Не люблю менять тему разговора, но вот сейчас тот самый случай.',
+    'Спасибо за информацию! Я передам ее дальше.',
+]
+STOCK_WORDS = [
+    'индекс мосбиржа',
+    'индекс мб',
+    'индекс ртс ',
+    's&p',
+    'фондовый рынок',
+    'курс доллар',
+    'курс рубль',
+    'курс евро',
+    'дайджест',
+    'открытие рынок',
+    'закрытие рынок',
+    'комметарий по рынок',
+    'утренний обзор',
+    'вечерний обзор',
+    'главный анонс',
+    'главный событие день',
+    'главный событие неделя',
+    'главный событие месяц',
+    'вечерний комментарий',
+    'дневной обзор',
+]
 
 
 def get_alternative_names_pattern_commodity(alt_names):
-    """ Создает регулярные выражения для коммодов """
+    """Создает регулярные выражения для коммодов"""
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for i, alt_names_list in enumerate(table_subject_list):
         clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        names_pattern_base = "|".join(clear_alt_names)
+        names_pattern_base = '|'.join(clear_alt_names)
         names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
         key = clear_alt_names[0]
         alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
@@ -50,7 +68,7 @@ def get_alternative_names_pattern_commodity(alt_names):
 
 
 def add_endings(clear_names_list):
-    """ Добавляет окончания к именам клиента в списке альтернативных имен """
+    """Добавляет окончания к именам клиента в списке альтернативных имен"""
     vowels = 'ауоыэяюиеь'
     english_vowels = 'aeiouy'
     ending_v = '|а|я|ы|и|е|у|ю|ой|ей'
@@ -72,7 +90,7 @@ def add_endings(clear_names_list):
 
 
 def get_alternative_names_pattern_client(alt_names):
-    """ Создает регулярные выражения для клиентов """
+    """Создает регулярные выражения для клиентов"""
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for alt_names_list in table_subject_list:
@@ -82,10 +100,10 @@ def get_alternative_names_pattern_client(alt_names):
         clear_alt_names = add_endings(clear_alt_names)
         clear_alt_names_upper = add_endings([el.upper() for el in clear_alt_names])
 
-        names_pattern_base = "( |\. |, |\) )|".join(clear_alt_names)
-        names_pattern_base += "( |\. |, |\) )"
+        names_pattern_base = '( |\. |, |\) )|'.join(clear_alt_names)
+        names_pattern_base += '( |\. |, |\) )'
         names_patter_upper = '( |\. |, |\) )|'.join(clear_alt_names_upper)
-        names_patter_upper += "( |\. |, |\) )"
+        names_patter_upper += '( |\. |, |\) )'
         alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+', '\+')
 
     return alter_names_dict
@@ -286,9 +304,11 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     counts_dict = {}
     with engine.connect() as conn:
         for subject_name in names:
-            query_count = ("SELECT COUNT(article_id) FROM relation_{type_of_article}_article r "
-                           "JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id "
-                           "where {type_of_article}.name = '{subject_name}'")
+            query_count = (
+                'SELECT COUNT(article_id) FROM relation_{type_of_article}_article r '
+                'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
+                "where {type_of_article}.name = '{subject_name}'"
+            )
             count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
             counts_dict[subject_name] = count
     min_count = min(counts_dict.values())
@@ -337,15 +357,17 @@ def rate_client(df, rating_dict, threshold: float = 0.65) -> pd.DataFrame:
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
 
     # using relevance label condition
-    df['client_labels'] = df.apply(lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'],
-                                                               row['client_labels'], rating_dict), axis=1)
+    df['client_labels'] = df.apply(
+        lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'], row['client_labels'], rating_dict), axis=1
+    )
 
     # delete relevance column
     df.drop(columns=['relevance'], inplace=True)
 
     # processing stck news
-    df['client_labels'] = df.apply(lambda row: find_stock(row['title'], row['client'], row['cleaned_data'],
-                                                          row['client_labels']), axis=1)
+    df['client_labels'] = df.apply(
+        lambda row: find_stock(row['title'], row['client'], row['cleaned_data'], row['client_labels']), axis=1
+    )
 
     return df
 
@@ -372,12 +394,14 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
         res.append(1 if (pair[1]) > local_threshold else 0)
     df['relevance'] = res
 
-    df['commodity_labels'] = df.apply(lambda row: search_keywords(row['relevance'], row['commodity'],
-                                                                  row['cleaned_data'], '0', rating_dict), axis=1)
+    df['commodity_labels'] = df.apply(
+        lambda row: search_keywords(row['relevance'], row['commodity'], row['cleaned_data'], '0', rating_dict), axis=1
+    )
     df.drop(columns=['relevance'], inplace=True)
 
-    df['commodity_labels'] = df.apply(lambda row: find_stock(row['title'], row['commodity'], row['cleaned_data'],
-                                                             row['commodity_labels'], 'commodity'), axis=1)
+    df['commodity_labels'] = df.apply(
+        lambda row: find_stock(row['title'], row['commodity'], row['cleaned_data'], row['commodity_labels'], 'commodity'), axis=1
+    )
     return df
 
 
@@ -414,7 +438,7 @@ def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str
         giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
         giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except Exception as e:
-        logger.error(f'Ошибка при создании саммари: {e}')
+        logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
         giga_answer = ''
 
@@ -422,14 +446,14 @@ def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str
     giga_answer = '\n'.join([p for p in paragraphs if p.strip()])
 
     if giga_answer in BAD_GIGA_ANSWERS:
-        logger.error(f'GigaChat отказался генерировать саммари из-за цензуры')
+        logger.error('GigaChat отказался генерировать саммари из-за цензуры')
         giga_answer = ''
 
     return giga_answer
 
 
 def change_bad_summary(logger: Logger.logger, row: pd.Series) -> str:
-    """ Изменение краткой версии текста, если ее нет """
+    """Изменение краткой версии текста, если ее нет"""
     if row['text_sum']:
         return row['text_sum']
     # elif row['title']:
@@ -437,7 +461,7 @@ def change_bad_summary(logger: Logger.logger, row: pd.Series) -> str:
     else:
         print(f'GigaChat не сгенерировал саммари для новости  {row["link"]}')
         logger.error(f'GigaChat не сгенерировал саммари для новости {row["link"]}')
-        first_sentence = row['text'][:row['text'].find('.') + 1]
+        first_sentence = row['text'][: row['text'].find('.') + 1]
         return first_sentence
 
 
@@ -456,8 +480,7 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
     logger.debug(f'Нахождение {type_of_article} в тексте новости')
 
     if type_of_article == 'client':
-        df[['found_client', 'client_impact']] = df['text'].apply(
-                                                lambda x: pd.Series(find_names(x, alter_client_names_dict)))
+        df[['found_client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict)))
 
         df[type_of_article] = df.apply(lambda row: union_name(row['client'], row['found_client']), axis=1)
         df[type_of_article] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
@@ -467,7 +490,8 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
 
     else:
         df[['found_commodity', 'commodity_impact']] = df['cleaned_data'].apply(
-            lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True)))
+            lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True))
+        )
 
         df['found_commodity'] = df.apply(lambda row: find_bad_gas(row['found_commodity'], row['cleaned_data']), axis=1)
         df[type_of_article] = df['found_commodity']
@@ -476,8 +500,7 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
         df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
+    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
     df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
@@ -497,14 +520,16 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
     # find subject name in text
-    logger.debug(f'Нахождение клиентов в тексте новости')
+    logger.debug('Нахождение клиентов в тексте новости')
     df[['client', 'client_impact']] = df.apply(
-        lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)), axis=1)
+        lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)), axis=1
+    )
     df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
 
-    logger.debug(f'Нахождение товаров в тексте новости')
+    logger.debug('Нахождение товаров в тексте новости')
     df[['commodity', 'commodity_impact']] = df.apply(
-        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1)
+        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1
+    )
     df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
 
     # make rating for article
@@ -524,7 +549,7 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
-    """ Make summary for dataframe with articles """
+    """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
     giga_chat = GigaChat()
     token = giga_chat.get_user_token()
@@ -544,18 +569,17 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df.query('not client_score.isnull() and client_score != -1 or '
-                  'not commodity_score.isnull() and commodity_score != -1')
+    df = df.query('not client_score.isnull() and client_score != -1 or ' 'not commodity_score.isnull() and commodity_score != -1')
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
     df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
-    df['count_commodity'] = df['commodity'].map(
-        lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
-    df = df.sort_values(by=['count_client', 'count_commodity', 'client_score', 'commodity_score'],
-                        ascending=[False, False, False, False]).reset_index(drop=True)
+    df['count_commodity'] = df['commodity'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
+    df = df.sort_values(
+        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'], ascending=[False, False, False, False]
+    ).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
     # объединяем столбцы старого и нового датафрейма
@@ -626,15 +650,15 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
 
 def summarization_by_chatgpt(full_text: str):
     # TODO: do by langchain
-    """ Make summary by chatgpt """
+    """Make summary by chatgpt"""
     batch_size = 4000
     text_batches = []
     new_text_sum = ''
-    if len(full_text+summarization_prompt) > batch_size:
-        while len(full_text+summarization_prompt) > batch_size:
+    if len(full_text + summarization_prompt) > batch_size:
+        while len(full_text + summarization_prompt) > batch_size:
             point_index = full_text[:batch_size].rfind('.')
-            text_batches.append(full_text[:point_index+1])
-            full_text = full_text[point_index+1:]
+            text_batches.append(full_text[: point_index + 1])
+            full_text = full_text[point_index + 1 :]
     else:
         text_batches = [full_text]
     for batch in text_batches:
