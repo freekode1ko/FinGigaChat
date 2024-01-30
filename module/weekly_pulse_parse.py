@@ -13,6 +13,7 @@ __all__ = ['ParsePresentationPDF', 'ReportTypes']
 
 
 HEADER_MAX_LEN = 256
+PERCENT_HEIGHT_OF_USEFUL_INFO = 94
 
 
 def default_slide_item() -> dict:
@@ -154,6 +155,13 @@ class ParsePresentationPDF:
                 'table': False,  # True
                 'area': (15, 0, 90, 100),
                 'relative_area': True,
+            },
+            {
+                'title': 'Прогноз динамики ключевой ставки',
+                'eng_name': 'exc_state_prediction',
+                'crop': False,
+                'report_type': ReportTypes.weekly_event,
+                'table': False,  # True
             },
         ]
         return special_slides_meta

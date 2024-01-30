@@ -595,6 +595,9 @@ class ResearchParser:
                 continue
 
             with images[slide_info['page_number']] as img:
+                width, height = img.size
+                useful_height = height * weekly_pulse_parse.PERCENT_HEIGHT_OF_USEFUL_INFO // 100
+                img = self.crop_image(img, 0, 0, width, useful_height)
                 if slide_meta['crop']:
                     img = self.crop_image(img)
                 img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
