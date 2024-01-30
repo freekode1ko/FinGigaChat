@@ -1918,7 +1918,7 @@ async def select_subs_from_menu(query: types.CallbackQuery = None):
     keyboard.add(types.InlineKeyboardButton('Сырьевые товары', callback_data='sub:Сырьевые товары'))
     keyboard.add(types.InlineKeyboardButton('Отрасли', callback_data='sub:Отрасли'))
 
-    await bot.send_message(query.from_user.id, 'ыберете раздел', reply_markup=keyboard)
+    await bot.send_message(query.from_user.id, 'Выберете раздел', reply_markup=keyboard)
 
 
 async def send_nearest_subjects(message: types.Message):
