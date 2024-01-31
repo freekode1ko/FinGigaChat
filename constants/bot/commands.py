@@ -2,6 +2,14 @@ from typing import List
 
 PUBLIC_COMMANDS: List[dict] = [
     {
+        'command': 'help',
+        'description': 'Информация о боте',
+    },
+    {
+        'command': 'gigachat',
+        'description': 'Переход в режим общения с GigaChat',
+    },
+    {
         'command': 'eco',
         'description': 'Экономика',
     },
@@ -75,9 +83,5 @@ SECRET_COMMANDS: List[dict] = [
     {
         'command': 'start',
         'description': 'Начать работу с ботом',
-    },
-    {
-        'command': 'help',
-        'description': 'Информация о боте',
     },
 ]
