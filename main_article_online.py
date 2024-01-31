@@ -80,6 +80,9 @@ def regular_func():
             print(f'Получено {len(df_article)} новостей')
             df_article, ids = ap_obj_online.preprocess_article_online(df_article)
             if not df_article.empty:
+                print('Старт получения новостей из тг-каналов из общего списка новостей')
+                all_tg_articles_df = ap_obj_online.get_tg_articles(df_article)
+
                 logger.info('Старт обработки новостей с помощью моделей')
                 print('Старт обработки новостей с помощью моделей')
                 df_article = ap_obj_online.throw_the_models(df_article)
@@ -87,6 +90,14 @@ def regular_func():
                 ap_obj_online.drop_duplicate()
                 ap_obj_online.make_text_sum()
                 ap_obj_online.save_tables()
+
+                saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
+                df_article = ap_obj_online.update_tg_articles(saved_tg_df, all_tg_articles_df)
+
+                if not df_article.empty:
+                    ap_obj_online.df_article = df_article
+                    ap_obj_online.make_text_sum()
+                    ap_obj_online.save_tg_tables()
                 print('Окончание обработки новостей с помощью моделей')
                 logger.info('Окончание обработки новостей с помощью моделей')
             else:
