@@ -192,7 +192,7 @@ async def main():
     print('Инициализация бота')
     loop = asyncio.get_event_loop()
     loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
-    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=10, minute=30)))
+    loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=11, minute=0)))
     loop.create_task(send_daily_news())
     await start_bot()
 
