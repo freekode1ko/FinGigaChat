@@ -31,6 +31,8 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
     if await user_in_whitelist(message.from_user.model_dump_json()):
         await state.set_state(GigaChat.gigachat_mode)
 
@@ -43,8 +45,8 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
             keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
         )
         await message.answer(msg_text, reply_markup=keyboard)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 

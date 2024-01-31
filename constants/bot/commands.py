@@ -50,6 +50,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Создать новый набор подписок (Скоро будет удалено)',
     },
     {
+        'command': 'industry_tgnews',
+        'description': 'Сводка новостей из telegram каналов по отраслям',
+    },
+    {
         'command': 'delete_article',
         'description': 'Удалить новость',
     },

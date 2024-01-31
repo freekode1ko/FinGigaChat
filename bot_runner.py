@@ -14,7 +14,7 @@ import module.data_transformer as dt
 from bot_logger import logger, user_logger
 from constants.bot.commands import PUBLIC_COMMANDS
 from database import engine
-from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions
+from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry
 from module.article_process import ArticleProcess
 from utils.bot_utils import (
     bot_send_msg,
@@ -177,6 +177,7 @@ async def start_bot():
         subscriptions.router,
         gigachat.router,
         referencebook.router,
+        industry.router,
         news.router,
     )
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
