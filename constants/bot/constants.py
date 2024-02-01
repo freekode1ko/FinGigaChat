@@ -7,3 +7,10 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
+
+SELECTED = '✅'
+UNSELECTED = '🟩'
+DELETE_CROSS = '❌'
+NEXT_PAGE = '➡'
+PREV_PAGE = '⬅'
+STOP = '⛔'

@@ -1,14 +1,10 @@
 # import logging
-from datetime import date, timedelta
-from typing import List, Dict, Union
+from typing import Union
 
-import pandas as pd
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.utils.chat_action import ChatActionMiddleware
-from sqlalchemy import text
 
-import database
 from bot_logger import user_logger
 from constants.bot.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
     BACK_TO_MENU
@@ -16,15 +12,11 @@ from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
 from keyboards.industry.constructors import get_industry_kb, get_select_period_kb
 from utils.bot_utils import user_in_whitelist
 
+from utils.db_api.industry import get_industry_name, get_industry_tg_news, get_industries
+
 # logger = logging.getLogger(__name__)
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
-
-
-def get_industries() -> pd.DataFrame:
-    query = 'SELECT id, name FROM industry ORDER BY name;'
-    industry_df = pd.read_sql(query, con=database.engine)
-    return industry_df
 
 
 async def list_industries(message: Union[types.CallbackQuery, types.Message]) -> None:
@@ -98,35 +90,6 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : Выбрал отрасль с id {industry_id}')
 
 
-def get_industry_name(industry_id: int) -> str:
-    with database.engine.connect() as conn:
-        query = text('SELECT name FROM industry WHERE id=:industry_id')
-        industry_name = conn.execute(query.bindparams(industry_id=industry_id)).scalar_one()
-
-    return industry_name
-
-
-def get_industry_tg_news(industry_id: int, my_subscriptions: bool, days: int) -> pd.DataFrame:
-    # FIXME пока что выдает по всем тг каналам, позже добавлю таблицу подписок
-    query = text(
-        'SELECT tg.name as telegram_channel_name, a.link as telegram_article_link, a.text_sum, a.date '
-        'FROM article a '
-        'JOIN relation_telegram_article ra ON a.id=ra.article_id '
-        'JOIN tg_channels tg ON ra.telegram_id=tg.id '
-        'WHERE tg.industry_id=:industry_id AND '
-        'DATE(a.date) BETWEEN :before_date AND :now_date '
-        'ORDER BY a.date DESC, ra.telegram_score DESC'
-    )
-    now_date = date.today()
-    before_date = now_date - timedelta(days=days)
-
-    with database.engine.connect() as conn:
-        data = conn.execute(query.bindparams(industry_id=industry_id, before_date=before_date, now_date=now_date)).all()
-        data_df = pd.DataFrame(data, columns=['telegram_channel_name', 'telegram_article_link', 'text_sum', 'date'])
-
-    return data_df
-
-
 @router.callback_query(GetNewsDaysCount.filter())
 async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, callback_data: GetNewsDaysCount) -> None:
     """
@@ -139,12 +102,13 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
     user_msg = SELECTED_INDUSTRY_TOKEN
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_id = callback_query.from_user.id
     industry_id = callback_data.industry_id
     my_subs = callback_data.my_subscriptions
     days = callback_data.days_count
 
     industry_name = get_industry_name(industry_id)
-    news = get_industry_tg_news(industry_id, my_subs, days)
+    news = get_industry_tg_news(industry_id, my_subs, days, user_id)
     msg_text = f'Сводка новостей по <b>{"подпискам" if my_subs else "всем telegram каналам"}</b> по отрасли ' \
                f'<b>{industry_name.title()}</b>\n\n'
 
@@ -152,7 +116,7 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
         for index, article in news.iterrows():
             article = (
                 f'<b>{article["telegram_channel_name"]}</b>\n'
-                f'{article["text_sum"]}\n'  # FIXME слишком большой объект краткого изложения
+                f'{article["title"]}\n'
                 f'<b>Ссылка на новость</b>: {article["telegram_article_link"]}\n'
                 f'<b>Дата получения новости</b>: {article["date"].strftime("%d.%m.%Y %H:%M")}\n\n'
             )

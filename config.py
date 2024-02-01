@@ -64,9 +64,11 @@ COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
+TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
+PAGE_ELEMENTS_COUNT = 10
 
 STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'

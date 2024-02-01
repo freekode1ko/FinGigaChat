@@ -167,7 +167,7 @@ class ArticleProcess:
         :param df: DataFrame с предобработанными данными, сгруппированными по источникам новостей (link, title, date, text, [id])
         return: DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id)
         """
-        query = 'SELECT id, link FROM tg_channels;'
+        query = 'SELECT id, link FROM telegram_channel;'
         tg_channels_df = pd.read_sql(query, con=self.engine)
 
         if 'id' not in df.columns:

@@ -1,0 +1,54 @@
+from datetime import date, timedelta
+
+import pandas as pd
+from sqlalchemy import text
+
+import database
+
+
+def get_industries() -> pd.DataFrame:
+    query = 'SELECT id, name FROM industry ORDER BY name;'
+    industry_df = pd.read_sql(query, con=database.engine)
+    return industry_df
+
+
+def get_industry_name(industry_id: int) -> str:
+    with database.engine.connect() as conn:
+        query = text('SELECT name FROM industry WHERE id=:industry_id')
+        industry_name = conn.execute(query.bindparams(industry_id=industry_id)).scalar_one()
+
+    return industry_name
+
+
+def get_industry_tg_news(industry_id: int, my_subscriptions: bool, days: int, user_id: int) -> pd.DataFrame:
+    query = (
+        'SELECT tg.name as telegram_channel_name, a.link as telegram_article_link, a.title, a.date '
+        'FROM article a '
+        'JOIN relation_telegram_article ra ON a.id=ra.article_id '
+        'JOIN telegram_channel tg ON ra.telegram_id=tg.id '
+        'WHERE tg.industry_id=:industry_id AND '
+        'DATE(a.date) BETWEEN :before_date AND :now_date '
+        '{dop_condition} '
+        'ORDER BY a.date DESC, ra.telegram_score DESC'
+    )
+    now_date = date.today()
+    before_date = now_date - timedelta(days=days)
+    kwargs = {
+        'now_date': now_date,
+        'before_date': before_date,
+        'industry_id': industry_id,
+    }
+
+    if not my_subscriptions:
+        dop_condition = ''
+    else:
+        dop_condition = 'AND tg.id IN (SELECT telegram_id FROM user_telegram_subscription WHERE user_id=:user_id)'
+        kwargs['user_id'] = user_id
+
+    query = text(query.format(dop_condition=dop_condition)).bindparams(**kwargs)
+
+    with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
+        data = conn.execute(query).all()
+        data_df = pd.DataFrame(data, columns=['telegram_channel_name', 'telegram_article_link', 'title', 'date'])
+
+    return data_df

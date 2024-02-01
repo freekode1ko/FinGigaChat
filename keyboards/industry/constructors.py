@@ -3,8 +3,8 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants.bot.industry import SELECTED, UNSELECTED, ALL_TG_CHANNELS_CALLBACK_TEXT, MY_TG_CHANNELS_CALLBACK_TEXT, \
-    BACK_TO_MENU
+from constants.bot.constants import SELECTED, UNSELECTED
+from constants.bot.industry import ALL_TG_CHANNELS_CALLBACK_TEXT, MY_TG_CHANNELS_CALLBACK_TEXT, BACK_TO_MENU
 from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
 
 
