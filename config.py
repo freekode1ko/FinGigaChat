@@ -34,6 +34,9 @@ SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', de
 SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
+api_token: str = env.str('BOT_API_TOKEN', default='')
+psql_engine: str = env.str('PSQL_ENGINE', default='')
+
 log_file = 'logs/{}.log'
 LOG_LEVEL_DEBUG = 10
 LOG_LEVEL_INFO = 20
@@ -54,10 +57,6 @@ user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
-api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
-# api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
-
-psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
 
 CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
