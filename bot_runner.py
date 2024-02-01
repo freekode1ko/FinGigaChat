@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import os
 import re
@@ -37,6 +38,8 @@ chat = ''
 storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
+
+emoji = copy.deepcopy(config.dict_of_emoji)
 
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
 help_aliases = ['что ты умеешь?', 'что ты можешь?', 'научи как с тобой работать', 'что умеет этот бот']
@@ -1873,17 +1876,17 @@ async def pagination(pages, search, cur_page: int = 0):
     bottom_buttons = []
     if cur_page != 0:
         callback = 'page:back:{}:{}'.format(cur_page, search)
-        bottom_buttons.append(types.InlineKeyboardButton('⬅', callback_data=callback))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['backward'], callback_data=callback))
     else:
-        bottom_buttons.append(types.InlineKeyboardButton('⛔', callback_data='stop'))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['block'], callback_data='stop'))
 
     bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page + 1}/{len(pages)}', callback_data='pagination'))
 
     if cur_page == len(pages) - 1:
-        bottom_buttons.append(types.InlineKeyboardButton('⛔', callback_data='stop'))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['block'], callback_data='stop'))
     else:
         callback = 'page:forward:{}:{}'.format(cur_page, search)
-        bottom_buttons.append(types.InlineKeyboardButton('➡', callback_data=callback))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['forward'], callback_data=callback))
 
     buttons.append(bottom_buttons)
     buttons.append([types.InlineKeyboardButton('Назад к выбору раздела', callback_data='selectsubs')])

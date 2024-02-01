@@ -1,3 +1,4 @@
+import copy
 import datetime as dt
 import json
 import os
@@ -11,7 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from config import NEWS_LIMIT, psql_engine
+from config import NEWS_LIMIT, dict_of_emoji, psql_engine
 from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
@@ -198,7 +199,7 @@ class ArticleProcess:
             f'(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn '
             f'from relation_client_article r '
             f'join article a on r.article_id = a.id) t1 '
-            f'where rn <= {count_to_keep} and t1.client_score > 0'
+            f'where rn <= {count_to_keep} and t1.client_score > 0 '
             f'UNION '
             f'select distinct article_id from '
             f'(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn '
@@ -835,7 +836,7 @@ class ArticleProcessAdmin:
 class FormatText:
     """Форматирует текст для передачи в Телеграмм"""
 
-    MARKER = '&#128204;'
+    MARKER = copy.deepcopy(dict_of_emoji)['marker']  # '&#128204;'
 
     def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '', title: str = '', text_sum: str = ''):
         self.__subject = subject  # имя клиента/товара

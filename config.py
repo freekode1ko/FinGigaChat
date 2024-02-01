@@ -140,6 +140,8 @@ dict_of_commodities: dict = read_asset_from_json('commodities_dict.json')
 dict_of_companies: dict = read_asset_from_json('companies_dict.json')
 industry_reviews: Dict[str, str] = read_asset_from_json('industry_reviews.json')
 
+dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
+
 industry_base_url = (
     'https://research.sberbank-cib.com/group/guest/'
     'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_'
