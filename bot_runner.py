@@ -39,6 +39,7 @@ bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
+help_aliases = ['что ты умеешь?', 'что ты можешь?', 'научи как с тобой работать', 'что умеет этот бот']
 eco_aliases = [
     'экономика',
     'ставки',
@@ -2102,6 +2103,7 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
             global chat
             global token
             aliases_dict = {
+                **{alias: help_handler for alias in help_aliases},
                 **{alias: bonds_info for alias in bonds_aliases},
                 **{alias: economy_info for alias in eco_aliases},
                 **{alias: metal_info for alias in metal_aliases},
