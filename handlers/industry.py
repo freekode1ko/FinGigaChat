@@ -1,4 +1,5 @@
 # import logging
+import asyncio
 from typing import Union
 
 from aiogram import Router, types, F
@@ -10,7 +11,7 @@ from constants.bot.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLB
     BACK_TO_MENU
 from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
 from keyboards.industry.constructors import get_industry_kb, get_select_period_kb
-from utils.bot_utils import user_in_whitelist
+from utils.bot_utils import user_in_whitelist, bot_send_msg
 
 from utils.db_api.industry import get_industry_name, get_industry_tg_news, get_industries
 
@@ -126,5 +127,6 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
     else:
         msg_text += 'За выбранный период новых новостей не нашлось'
 
-    await callback_query.message.answer(msg_text, parse_mode='HTML')  # FIXME MessageIsTooLong
+    # await callback_query.message.answer(msg_text, parse_mode='HTML')  # FIXME MessageIsTooLong
+    await bot_send_msg(callback_query.message.bot, user_id, msg_text)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : получил новости по отрасли с id {industry_id} за {days} дней')
