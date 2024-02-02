@@ -93,7 +93,7 @@ def get_industry_tg_channels_df(industry_id: int, user_id: int) -> pd.DataFrame:
     query = text(
         'SELECT tg.id, tg.name, (CASE WHEN utg.user_id IS NULL THEN false ELSE true END) as is_subscribed '
         'FROM telegram_channel tg '
-        'LEFT JOIN user_telegram_subscription utg ON tg.id=utg.telegram_id '
+        'LEFT JOIN user_telegram_subscription utg ON tg.id=utg.telegram_id and utg.user_id=:user_id '
         'WHERE industry_id=:industry_id AND (utg.user_id=:user_id OR utg.user_id IS NULL)'
         'ORDER BY tg.name'
     )

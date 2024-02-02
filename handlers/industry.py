@@ -13,7 +13,7 @@ from keyboards.industry.constructors import get_industry_kb, get_select_period_k
 from module.article_process import FormatText
 from utils.bot_utils import user_in_whitelist, bot_send_msg
 
-from utils.db_api.industry import get_industry_name, get_industry_tg_news, get_industries
+from utils.db_api.industry import get_industry_name, get_industry_tg_news, get_industries_with_tg_channels
 
 # logger = logging.getLogger(__name__)
 router = Router()
@@ -22,7 +22,7 @@ router.message.middleware(ChatActionMiddleware())  # on every message for admin 
 
 async def list_industries(message: Union[types.CallbackQuery, types.Message]) -> None:
     msg_text = 'Выберите отрасль для получения краткой сводки новостей из telegram каналов по ней'
-    industry_df = get_industries()
+    industry_df = get_industries_with_tg_channels()
     keyboard = get_industry_kb(industry_df)
 
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение

@@ -21,7 +21,7 @@ from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
 from module.article_process import ArticleProcess
 from utils.bot_utils import user_in_whitelist, get_page_data_and_info
-from utils.db_api.industry import get_industries, get_industry_name
+from utils.db_api.industry import get_industries_with_tg_channels, get_industry_name
 from utils.db_api.subscriptions import get_user_tg_subscriptions_df, delete_user_telegram_subscription, \
     delete_all_user_telegram_subscriptions, get_industry_tg_channels_df, get_telegram_channel_info, \
     add_user_telegram_subscription
@@ -567,7 +567,7 @@ async def get_tg_subs_industries_menu(callback_query: types.CallbackQuery) -> No
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    industry_df = get_industries()
+    industry_df = get_industries_with_tg_channels()
     msg_text = 'Выберите подборку telegram каналов по отраслям'
     keyboard = kb_maker.get_tg_subs_industries_menu_kb(industry_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)

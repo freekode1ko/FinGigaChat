@@ -6,8 +6,8 @@ from sqlalchemy import text
 import database
 
 
-def get_industries() -> pd.DataFrame:
-    query = 'SELECT id, name FROM industry ORDER BY name;'
+def get_industries_with_tg_channels() -> pd.DataFrame:
+    query = 'SELECT id, name FROM industry WHERE id IN (SELECT industry_id FROM telegram_channel) ORDER BY name;'
     industry_df = pd.read_sql(query, con=database.engine)
     return industry_df
 
