@@ -42,15 +42,6 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
             5) назад
     """
     keyboard = InlineKeyboardBuilder()
-
-    # buttons
-    # 1а) по подпискам (галка, по умолчанию)
-    # 1б) по всем каналам
-    # 2а) за 1 день
-    # 2б) за 3 дня
-    # 3) за неделю
-    # 4) за месяц
-    # 5) назад
     by_my_subs = SelectNewsPeriod(
         industry_id=industry_id,
         my_subscriptions=True,
@@ -70,7 +61,7 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
             'days': 1,
         },
         {
-            'text': 'За 3 день',
+            'text': 'За 3 дня',
             'days': 3,
         },
         {

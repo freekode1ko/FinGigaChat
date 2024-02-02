@@ -1,5 +1,4 @@
 # import logging
-import asyncio
 from typing import Union
 
 from aiogram import Router, types, F
@@ -8,9 +7,10 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 from bot_logger import user_logger
 from constants.bot.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
-    BACK_TO_MENU
+    BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
 from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
 from keyboards.industry.constructors import get_industry_kb, get_select_period_kb
+from module.article_process import FormatText
 from utils.bot_utils import user_in_whitelist, bot_send_msg
 
 from utils.db_api.industry import get_industry_name, get_industry_tg_news, get_industries
@@ -30,7 +30,7 @@ async def list_industries(message: Union[types.CallbackQuery, types.Message]) ->
         await message.answer(msg_text, reply_markup=keyboard)
 
     # Если CallbackQuery - изменяем это сообщение
-    elif isinstance(message, types.CallbackQuery):
+    else:
         call = message
         await call.message.edit_text(msg_text, reply_markup=keyboard)
 
@@ -100,7 +100,7 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
     :param callback_data: Выбранная отрасль, кол-во дней, за которые пользователь хочет получить сводку, способ получения новостей
     """
     chat_id = callback_query.message.chat.id
-    user_msg = SELECTED_INDUSTRY_TOKEN
+    user_msg = GET_INDUSTRY_TG_NEWS
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = callback_query.from_user.id
@@ -115,12 +115,8 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
 
     if not news.empty:
         for index, article in news.iterrows():
-            article = (
-                f'<b>{article["telegram_channel_name"]}</b>\n'
-                f'{article["title"]}\n'
-                f'<b>Ссылка на новость</b>: {article["telegram_article_link"]}\n'
-                f'<b>Дата получения новости</b>: {article["date"].strftime("%d.%m.%Y %H:%M")}\n\n'
-            )
+            format_text = FormatText(title=article['title'], date=article['date'], link=article['telegram_article_link'])
+            article = format_text.make_industry_text()
 
             msg_text += article
 

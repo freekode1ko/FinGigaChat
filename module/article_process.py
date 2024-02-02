@@ -162,9 +162,9 @@ class ArticleProcess:
 
     def get_tg_articles(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Preprocess articles to get only telegram articles
+        Вынимает новости, которые связаны с тг-каналами, добавляет колонку с telegram_id
 
-        :param df: DataFrame с предобработанными данными, сгруппированными по источникам новостей (link, title, date, text, [id])
+        :param df: DataFrame с предобработанными даннымы новостей (link, title, date, text, [id])
         return: DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id)
         """
         query = 'SELECT id, link FROM telegram_channel;'

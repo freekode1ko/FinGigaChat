@@ -332,16 +332,28 @@ async def __create_fin_table(message: types.Message, client_name: str, client_fi
 
 
 def get_page_data_and_info(
-        all_data_df: pd.DataFrame, page: int, page_elements: int = PAGE_ELEMENTS_COUNT
+        all_data_df: pd.DataFrame,
+        page: int,
+        page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> Tuple[pd.DataFrame, str, int]:
+    """
+    1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
+    2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
+    3)Вычисляет кол-во страниц
+
+    :param all_data_df: Набор данных для постраничной навигации
+    :param page: Текущая страница
+    :param page_elements: Число элементов на странице
+    return: (Данные для страницы, сбщ о числе элементов на странице, число страниц всего)
+    """
     elements_cnt = len(all_data_df)
     from_ = page * page_elements
     to_ = (page + 1) * page_elements
     to_ = to_ if to_ < elements_cnt else elements_cnt
     data_df = all_data_df[from_: to_]
 
-    from_ = from_ if from_ < elements_cnt else elements_cnt
-    info = f'{from_ + 1}-{to_} из {elements_cnt}'
+    from_ = (from_ + 1) if from_ < elements_cnt else elements_cnt
+    info = f'{from_}-{to_} из {elements_cnt}'
     return data_df, info, ceil(elements_cnt / page_elements)
 
 

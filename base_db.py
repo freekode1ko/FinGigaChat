@@ -290,6 +290,10 @@ query_tg_channels = (
         name character varying(128) COLLATE pg_catalog."default" NOT NULL,
         link character varying(255) COLLATE pg_catalog."default" NOT NULL,
         industry_id integer NOT NULL
+        CONSTRAINT industry_id FOREIGN KEY (industry_id)
+            REFERENCES public.industry (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
     )
     TABLESPACE pg_default;
     COMMENT ON TABLE public.telegram_channel
@@ -322,7 +326,7 @@ query_tg_subscriptions = (
     """
     CREATE TABLE IF NOT EXISTS public.user_telegram_subscription
     (
-        user_id integer NOT NULL,
+        user_id bigint NOT NULL,
         telegram_id integer NOT NULL,
         CONSTRAINT user_telegram_subscription_pkey PRIMARY KEY (user_id, telegram_id),
         CONSTRAINT telegram_id FOREIGN KEY (telegram_id)
@@ -387,23 +391,23 @@ if __name__ == '__main__':
     # !!! DROP TABLE !!!
     # # # # drop_tables(main_engine)
 
-    # create base table and full it
-    main(main_engine)
-    # create commodity_pricing
-    update_database(main_engine, query_commodity_pricing)
-    # add energy in commodity
-    update_database(main_engine, query_commodity_energy)
-    # delete duplicate commodity
-    update_database(main_engine, query_delete_dupl)
-    # insert new com: olovo
-    update_database(main_engine, query_commodity_olovo)
-    # insert alternative name for new com
-    update_database(main_engine, query_new_alternative_com_electro)
-    update_database(main_engine, query_new_alternative_com_olovo)
-    # make article_name_count
-    update_database(main_engine, query_article_name_impact)
-    # update client_alternative
-    update_client_alternative(main_engine)
+    # # create base table and full it
+    # main(main_engine)
+    # # create commodity_pricing
+    # update_database(main_engine, query_commodity_pricing)
+    # # add energy in commodity
+    # update_database(main_engine, query_commodity_energy)
+    # # delete duplicate commodity
+    # update_database(main_engine, query_delete_dupl)
+    # # insert new com: olovo
+    # update_database(main_engine, query_commodity_olovo)
+    # # insert alternative name for new com
+    # update_database(main_engine, query_new_alternative_com_electro)
+    # update_database(main_engine, query_new_alternative_com_olovo)
+    # # make article_name_count
+    # update_database(main_engine, query_article_name_impact)
+    # # update client_alternative
+    # update_client_alternative(main_engine)
 
     # add table telegram_channel
     update_database(main_engine, query_tg_channels)

@@ -607,9 +607,17 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
     user_msg = TG_SUBS_DELETE_ALL
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_id = callback_query.from_user.id
 
-    msg_text = 'Вы уверены, что хотите удалить все подписки на telegram каналы?'
-    keyboard = kb_maker.get_prepare_tg_subs_delete_all_kb()
+    user_tg_subs = get_user_tg_subscriptions_df(user_id=user_id)
+
+    if user_tg_subs.empty:
+        msg_text = 'У вас отсутствуют подписки'
+        keyboard = kb_maker.get_back_to_tg_subs_menu_kb()
+    else:
+        msg_text = 'Вы уверены, что хотите удалить все подписки на telegram каналы?'
+        keyboard = kb_maker.get_prepare_tg_subs_delete_all_kb()
+
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -626,7 +634,7 @@ async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> No
         await message.answer(msg_text, reply_markup=keyboard)
 
     # Если CallbackQuery - изменяем это сообщение
-    elif isinstance(message, types.CallbackQuery):
+    else:
         call = message
         await call.message.edit_text(msg_text, reply_markup=keyboard)
 

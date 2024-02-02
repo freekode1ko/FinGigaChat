@@ -21,6 +21,12 @@ def get_industry_name(industry_id: int) -> str:
 
 
 def get_industry_tg_news(industry_id: int, my_subscriptions: bool, days: int, user_id: int) -> pd.DataFrame:
+    """
+    Возвращает все тг-новости по отрасли за {days} дней с текущего числа
+    Если my_subscriptions == True, то новости вынимаются только из каналов, на которые подписан пользователь
+
+    return: DataFrame['telegram_channel_name', 'telegram_article_link', 'title', 'date']
+    """
     query = (
         'SELECT tg.name as telegram_channel_name, a.link as telegram_article_link, a.title, a.date '
         'FROM article a '

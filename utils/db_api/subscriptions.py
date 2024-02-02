@@ -40,6 +40,11 @@ def delete_all_user_telegram_subscriptions(user_id: int) -> None:
 
 
 def get_user_tg_subscriptions_df(user_id: int) -> pd.DataFrame:
+    """
+    Возвращает список подписок пользователя на тг каналы
+
+    return: DataFrame[id, name]
+    """
     query = text(
         'SELECT tg.id, tg.name as name '
         'FROM telegram_channel tg '
@@ -56,6 +61,9 @@ def get_user_tg_subscriptions_df(user_id: int) -> pd.DataFrame:
 
 
 def get_telegram_channel_info(telegram_id: int) -> dict:
+    """
+    return: dict(id, name, link, industry_id, industry_name)
+    """
     query = text(
         'SELECT tg.id, tg.name, tg.link, tg.industry_id, i.name '
         'FROM telegram_channel tg '
@@ -77,15 +85,21 @@ def get_telegram_channel_info(telegram_id: int) -> dict:
 
 
 def get_industry_tg_channels_df(industry_id: int, user_id: int) -> pd.DataFrame:
+    """
+    Возвращает набор тг каналов по отрасли industry_id
+    Если пользователь подписан на тг канал, то is_subscribed=True
+    return: DataFrame[id, name, is_subscribed]
+    """
     query = text(
-        'SELECT tg.id, tg.name, COALESCE(utg.user_id, 0)::boolean as is_subscribed '
+        'SELECT tg.id, tg.name, (CASE WHEN utg.user_id IS NULL THEN false ELSE true END) as is_subscribed '
         'FROM telegram_channel tg '
         'LEFT JOIN user_telegram_subscription utg ON tg.id=utg.telegram_id '
-        'WHERE industry_id=:industry_id'
+        'WHERE industry_id=:industry_id AND (utg.user_id=:user_id OR utg.user_id IS NULL)'
+        'ORDER BY tg.name'
     )
 
     with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
-        data = conn.execute(query.bindparams(industry_id=industry_id)).all()
+        data = conn.execute(query.bindparams(industry_id=industry_id, user_id=user_id)).all()
         data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
 
     return data_df
