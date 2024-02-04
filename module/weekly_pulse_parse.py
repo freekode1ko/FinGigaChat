@@ -156,13 +156,6 @@ class ParsePresentationPDF:
                 'area': (15, 0, 90, 100),
                 'relative_area': True,
             },
-            {
-                'title': 'Прогноз динамики ключевой ставки',
-                'eng_name': 'exc_state_prediction',
-                'crop': False,
-                'report_type': ReportTypes.weekly_event,
-                'table': False,  # True
-            },
         ]
         return special_slides_meta
 
