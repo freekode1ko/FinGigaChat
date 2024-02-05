@@ -1812,16 +1812,15 @@ async def append_new_subscription(query: types.CallbackQuery = None):
 
     table_name = table_mapping.get(table_ind)
     engine = create_engine(psql_engine, poolclass=NullPool)
-    user_subscriptions_list = await get_list_of_user_subscriptions(query.from_user.id)
-    user_subscriptions_set = set(user_subscriptions_list)
-    if not await user_reached_limit(query.from_user.id, user_subscriptions_set):
+    user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
+    user_subscriptions_uniq = set(user_subscriptions)
+    if not await user_reached_limit(query.from_user.id, user_subscriptions_uniq):
         if table_name:
             sub_element = pd.read_sql_query(f'SELECT name FROM {table_name} WHERE id = {element_id}', con=engine)
         else:
             sub_element = pd.DataFrame(columns=['name'])
 
         element_to_add = sub_element.values.tolist()[0][0]
-        user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
         subs_count = len(user_subscriptions)
 
         user_subscriptions.append(element_to_add)
