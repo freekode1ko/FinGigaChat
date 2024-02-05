@@ -1086,7 +1086,7 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
             subscriptions_update = ', '.join(subscriptions).replace("'", "''")
             engine = create_engine(psql_engine, poolclass=NullPool)
             with engine.connect() as conn:
-                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' " f"WHERE user_id = '{user_id}'"))
+                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' WHERE user_id = '{user_id}'"))
                 conn.commit()
         else:
             log_msg += f', но у пользователя нет подписки {user_msg}'
@@ -1822,7 +1822,7 @@ async def append_new_subscription(query: types.CallbackQuery = None):
     new_user_subscription.sort()
     new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
     with engine.connect() as conn:
-        sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' " f'WHERE user_id = {query.from_user.id}'
+        sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {query.from_user.id}"
         conn.execute(text(sql_text))
         conn.commit()
     if subs_count < len(new_user_subscription):
@@ -1923,7 +1923,7 @@ async def send_nearest_subjects(message: types.Message):
         chat_id, response, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
     )
     user_logger.info(
-        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы ' f'"{", ".join(nearest_subjects)}"'
+        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы {", ".join(nearest_subjects)}'
     )
 
 
