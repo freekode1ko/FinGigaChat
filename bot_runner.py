@@ -1844,7 +1844,7 @@ async def append_new_subscription(query: types.CallbackQuery = None):
 async def pagination(pages, search, cur_page: int = 0):
     buttons = []
     for element in pages[cur_page].values.tolist():
-        buttons.append([types.InlineKeyboardButton(f'{element[1]}', callback_data=f'addsub:{search}:{element[0]}')])
+        buttons.append([types.InlineKeyboardButton(f'{element[1].capitalize()}', callback_data=f'addsub:{search}:{element[0]}')])
     bottom_buttons = []
     if cur_page != 0:
         callback = 'page:back:{}:{}'.format(cur_page, search)
