@@ -151,9 +151,9 @@ async def economy_info(message: types.Message) -> None:
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
-        title = 'Прогноз динамики ключевой ставки'
+        title = 'Прогноз валютных курсов и динамики ключевой ставки'
         data_source = 'Sber analytical research'
-        png_path = Path(path_to_source) / 'weeklies' / 'exc_state_prediction.png'
+        png_path = Path(path_to_source) / 'weeklies' / 'exc_rate_prediction.png'
         photo = types.FSInputFile(png_path)
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
