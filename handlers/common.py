@@ -1,5 +1,4 @@
 import json
-import logging
 
 import pandas as pd
 from aiogram import F, Router, types
@@ -10,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 import config
 from bot_logger import user_logger
 from database import engine
-from utils.bot_utils import user_in_whitelist
+from utils.bot.base import user_in_whitelist
 
 
 # States

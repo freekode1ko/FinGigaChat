@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from math import ceil
 from typing import List, Union, Tuple
 
@@ -363,3 +363,37 @@ def wrap_callback_data(data: str) -> str:
 
 def unwrap_callback_data(data: str) -> str:
     return data.replace(';', ':')
+
+
+def next_weekday(d: Union[date, datetime], weekday: int) -> Union[date, datetime]:
+    """
+    Вычисляет дату/дату_время следующего дня недели относительно переданной даты/даты_времени
+
+    :param d: переданная дата/дата_время
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    """
+    days_ahead = ((weekday - d.weekday()) % 7) or 7
+    return d + timedelta(days_ahead)
+
+
+def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: int = 0) -> datetime:
+    """
+    Вычисляет ближайшую дату_время относительно переданной по заданным параметрам
+    next_weekday_time(datetime(2024, 1, 1, 12, 0), 0, 15, 30) -> datetime(2024, 1, 1, 15, 30)
+    next_weekday_time(datetime(2024, 1, 1, 16, 0), 0, 15, 30) -> datetime(2024, 1, 8, 15, 30)
+
+    :param from_dt: переданная дата_время
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    :param hour: числовое значение часа недели 0-23
+    :param minute: числовое значение минуты недели 0-59
+    """
+    if from_dt.weekday() == weekday and (from_dt.hour < hour or (from_dt.hour == hour and from_dt.minute < minute)):
+        return datetime(from_dt.year, from_dt.month, from_dt.day, hour, minute)
+
+    ndt = next_weekday(from_dt, weekday)
+    return datetime(ndt.year, ndt.month, ndt.day, hour, minute)
+
+
+async def wait_until(to_dt: datetime) -> None:
+    """Спит до переданного datetime"""
+    await asyncio.sleep((to_dt - datetime.now()).total_seconds())

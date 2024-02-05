@@ -7,7 +7,7 @@ from constants.bot.constants import DELETE_CROSS, PREV_PAGE, NEXT_PAGE, STOP, UN
 from constants.bot.subscriptions import BACK_TO_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_INDUSTRIES_MENU, \
     TG_SUBS_DELETE_ALL
 from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, IndustryTGChannels, TGSubAction
-from utils.bot_utils import wrap_callback_data, unwrap_callback_data
+from utils.bot.base import wrap_callback_data, unwrap_callback_data
 
 
 def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:

@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import warnings
 from typing import Dict
 
@@ -16,12 +17,13 @@ from constants.bot.commands import PUBLIC_COMMANDS
 from database import engine
 from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry
 from module.article_process import ArticleProcess
-from utils.bot_utils import (
+from utils.bot.base import (
     bot_send_msg,
     get_waiting_time,
     wait_until_next_newsletter,
-    translate_subscriptions_to_object_id,
+    translate_subscriptions_to_object_id, next_weekday_time, wait_until,
 )
+from utils.bot.industry import get_msg_text_for_tg_newsletter
 from utils.sentry import init_sentry
 
 storage = MemoryStorage()
@@ -101,7 +103,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
 
     row_number = 0
-    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist ' 'WHERE subscriptions IS NOT NULL', con=engine)
+    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
         user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
@@ -155,6 +157,52 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     return await send_daily_news(client_hours, commodity_hours)
 
 
+async def send_weekly_tg_news(
+        telegram_days: int = 7,
+        newsletter_weekday: int = 0,
+        newsletter_hour: int = 12,
+        newsletter_minute: int = 0
+) -> None:
+    """
+    Рассылка сводки новостей из telegram каналов по подпискам за 7 дней
+    Рассылка производится в такой-то день недели, в такое время ??? FIXME
+    По умолчанию в 12 00 каждый понедельник
+
+    :param telegram_days: Период, за который формируется сводка новостей
+    :param newsletter_weekday: день недели, в который производим рассылку 0-6 (0 - пн, 6 - вс)
+    :param newsletter_hour: час, в который производим рассылку
+    :param newsletter_minute: минута, в которую производим рассылку
+    """
+    while True:
+        now = datetime.datetime.now()
+        next_newsletter_date = next_weekday_time(now, newsletter_weekday, newsletter_hour, newsletter_minute)
+        await wait_until(next_newsletter_date)
+        logger.info('Начинается еженедельная рассылка новостей по подпискам на telegram каналы...')
+        # получим словарь id отрасли и ее название (в цикле, потому что справочник может пополняться)
+        industry_dict = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
+        # получим справочник пользователей (в цикле, потому что справочник может пополняться)
+        user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist WHERE subscriptions IS NOT NULL', con=engine)
+
+        for index, user in user_df.iterrows():
+            user_id, user_name = user['user_id'], user['username']
+            logger.debug(f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
+
+            for industry_id, industry_name in industry_dict.items():
+                msg_text = await get_msg_text_for_tg_newsletter(industry_id, user_id, telegram_days)
+
+                if not msg_text:
+                    user_logger.info(
+                        f'Нет новых новостей по подпискам на telegram каналы для отрасли {industry_id} для: {user_name}*{user_id}*'
+                    )
+                else:
+                    await bot_send_msg(bot, user_id, msg_text)
+                    user_logger.info(
+                        f'*{user_id}* Пользователю {user_name} пришла еженедельная рассылка сводки новостей из telegram каналов. '
+                    )
+                    await asyncio.sleep(1.1)
+        logger.info('Рассылка успешно завершена. Переходим в ожидание следующей рассылки.')
+
+
 async def set_bot_commands() -> None:
     commands = []
 
@@ -195,6 +243,8 @@ async def main():
     loop.create_task(send_newsletter(dict(name='weekly_result', weekday=5, hour=18, minute=0)))
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=11, minute=0)))
     loop.create_task(send_daily_news())
+    # рассылка сводки новостей из тг каналов каждый пн в 12:00
+    # loop.create_task(send_weekly_tg_news(telegram_days=7, newsletter_weekday=0, newsletter_hour=12, newsletter_minute=0))
     await start_bot()
 
 

@@ -10,10 +10,10 @@ from constants.bot.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLB
     BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
 from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
 from keyboards.industry.constructors import get_industry_kb, get_select_period_kb
-from module.article_process import FormatText
-from utils.bot_utils import user_in_whitelist, bot_send_msg
+from utils.bot.base import user_in_whitelist, bot_send_msg
+from utils.bot.industry import get_msg_text_for_tg_newsletter
 
-from utils.db_api.industry import get_industry_name, get_industry_tg_news, get_industries_with_tg_channels
+from utils.db_api.industry import get_industry_name, get_industries_with_tg_channels
 
 # logger = logging.getLogger(__name__)
 router = Router()
@@ -105,23 +105,9 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = callback_query.from_user.id
     industry_id = callback_data.industry_id
-    my_subs = callback_data.my_subscriptions
     days = callback_data.days_count
 
-    industry_name = get_industry_name(industry_id)
-    news = get_industry_tg_news(industry_id, my_subs, days, user_id)
-    msg_text = f'Сводка новостей по <b>{"подпискам" if my_subs else "всем telegram каналам"}</b> по отрасли ' \
-               f'<b>{industry_name.title()}</b>\n\n'
-
-    if not news.empty:
-        for index, article in news.iterrows():
-            format_text = FormatText(title=article['title'], date=article['date'], link=article['telegram_article_link'])
-            article = format_text.make_industry_text()
-
-            msg_text += article
-
-    else:
-        msg_text += 'За выбранный период новых новостей не нашлось'
+    msg_text = await get_msg_text_for_tg_newsletter(industry_id, user_id, days, callback_data.my_subscriptions)
 
     # await callback_query.message.answer(msg_text, parse_mode='HTML')  # FIXME MessageIsTooLong
     await bot_send_msg(callback_query.message.bot, user_id, msg_text)
