@@ -16,6 +16,8 @@ from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from module.logger_base import Logger
 
+import datetime as dt
+
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_binary_best2.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
@@ -586,7 +588,11 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
     df_concat_client = pd.concat([df_previous['client'], df['client']], ignore_index=True).fillna(';')
     df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']], ignore_index=True).fillna(';')
-
+    
+    # устанавливаем порог определения старой новости: если она лежит в БД более 2 дней
+    MAX_TIME_LIM = 60 * 60 * 24 * 2
+    dt_now = dt.datetime.now()
+    
     # векторизируем новости в датафрейме
     vectorizer = TfidfVectorizer()
     X_tf_idf = vectorizer.fit_transform(df_concat)
@@ -606,8 +612,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
         # от начала старых новостей до конца новых новостей
         for previous_pos in range(actual_pos):
 
-            # если новость из старого батча + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
-            current_threshold = threshold + 0.2 if previous_pos < start else threshold
+            # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
+            current_threshold = threshold + 0.2 if (previous_pos < start and (dt_now - df_previous['date'][previous_pos]).total_seconds() > MAX_TIME_LIM) else threshold
 
             actual_client = df_concat_client[actual_pos].split(';')
             actual_commodity = df_concat_commodity[actual_pos].split(';')

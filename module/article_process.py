@@ -169,7 +169,7 @@ class ArticleProcess:
         """Call func to delete similar articles"""
         dt_now = dt.datetime.now()
         old_query = (
-            f'SELECT a.id, '
+            f'SELECT a.id, a.date,'
             f"STRING_AGG(DISTINCT client.name, ';') AS client, "
             f"STRING_AGG(DISTINCT commodity.name, ';') AS commodity, "
             f'ani.cleaned_data '
@@ -180,7 +180,7 @@ class ArticleProcess:
             f'LEFT JOIN commodity ON r_commodity.commodity_id = commodity.id '
             f'JOIN article_name_impact ani ON ani.article_id = a.id '
             f"WHERE '{dt_now}' - a.date < '15 day' "
-            f'GROUP BY a.id, ani.cleaned_data'
+            f'GROUP BY a.id, a.date, ani.cleaned_data'
         )
         old_articles = pd.read_sql(old_query, con=self.engine)
         self.df_article = deduplicate(self._logger, self.df_article, old_articles)
