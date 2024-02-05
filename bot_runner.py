@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import os
 import re
@@ -38,7 +39,10 @@ storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
+emoji = copy.deepcopy(config.dict_of_emoji)
+
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
+help_aliases = ['что ты умеешь?', 'что ты можешь?', 'научи как с тобой работать', 'что умеет этот бот']
 eco_aliases = [
     'экономика',
     'ставки',
@@ -1793,34 +1797,6 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
-@dp.callback_query_handler(lambda c: c.data.startswith('page'))
-async def scroller(query: types.CallbackQuery = None):
-    engine = create_engine(psql_engine, poolclass=NullPool)
-    input_params = query.data.split(':')
-    direction = input_params[1]
-    cur_page = input_params[2]
-    search = input_params[3]
-    cur_page = int(cur_page)
-
-    if search == 'Клиенты':
-        table = pd.read_sql_query('SELECT id, name FROM client', con=engine)
-    elif search == 'Сырьевые товары':
-        table = pd.read_sql_query('SELECT id, name FROM commodity', con=engine)
-    elif search == 'Отрасли':
-        table = pd.read_sql_query('SELECT id, name FROM industry', con=engine)
-    else:
-        table = pd.DataFrame(columns=['id', 'name'])
-
-    chunks = []
-    num_chunks = len(table) // 11 + 1
-    for index in range(num_chunks):
-        chunks.append(table[index * 11 : (index + 1) * 11])
-
-    cur_page += 1 if direction == 'forward' else -1
-    keyboard = await pagination(chunks, search, cur_page)
-    await query.message.edit_text(text=f'{search}\nСтраница {cur_page+1} из {len(chunks)}', reply_markup=keyboard)
-
-
 @dp.callback_query_handler(lambda c: c.data.startswith('addsub'))
 async def append_new_subscription(query: types.CallbackQuery = None):
     element_id = query.data.split(':')[2]
@@ -1872,17 +1848,17 @@ async def pagination(pages, search, cur_page: int = 0):
     bottom_buttons = []
     if cur_page != 0:
         callback = 'page:back:{}:{}'.format(cur_page, search)
-        bottom_buttons.append(types.InlineKeyboardButton('⬅', callback_data=callback))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['backward'], callback_data=callback))
     else:
-        bottom_buttons.append(types.InlineKeyboardButton('⛔', callback_data='stop'))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['block'], callback_data='stop'))
 
     bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page + 1}/{len(pages)}', callback_data='pagination'))
 
     if cur_page == len(pages) - 1:
-        bottom_buttons.append(types.InlineKeyboardButton('⛔', callback_data='stop'))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['block'], callback_data='stop'))
     else:
         callback = 'page:forward:{}:{}'.format(cur_page, search)
-        bottom_buttons.append(types.InlineKeyboardButton('➡', callback_data=callback))
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['forward'], callback_data=callback))
 
     buttons.append(bottom_buttons)
     buttons.append([types.InlineKeyboardButton('Назад к выбору раздела', callback_data='selectsubs')])
@@ -1890,10 +1866,14 @@ async def pagination(pages, search, cur_page: int = 0):
     return keyboard
 
 
-@dp.callback_query_handler(lambda c: c.data.startswith('sub'))
-async def choose_subs(query: types.CallbackQuery = None):
+@dp.callback_query_handler(lambda c: c.data.startswith('page'))
+async def scroller(query: types.CallbackQuery = None):
     engine = create_engine(psql_engine, poolclass=NullPool)
-    search = query.data.split(':')[1]
+    input_params = query.data.split(':')
+    direction = input_params[1]
+    cur_page = int(input_params[2])
+    search = input_params[3]
+
     if search == 'Клиенты':
         table = pd.read_sql_query('SELECT id, name FROM client', con=engine)
     elif search == 'Сырьевые товары':
@@ -1907,16 +1887,18 @@ async def choose_subs(query: types.CallbackQuery = None):
     num_chunks = len(table) // 11 + 1
     for index in range(num_chunks):
         chunks.append(table[index * 11 : (index + 1) * 11])
-    keyboard = await pagination(chunks, search)
-    await query.message.edit_text(text=f'{search}\nСтраница 1 из {len(chunks)}', reply_markup=keyboard)
+
+    cur_page += 1 if direction == 'forward' else -1
+    keyboard = await pagination(chunks, search, cur_page)
+    await query.message.edit_text(text=f'{search}\nСтраница {cur_page+1} из {len(chunks)}', reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('selectsubs'))
 async def select_subs_from_menu(query: types.CallbackQuery = None):
     keyboard = types.InlineKeyboardMarkup()
-    keyboard.add(types.InlineKeyboardButton('Клиенты', callback_data='sub:Клиенты'))
-    keyboard.add(types.InlineKeyboardButton('Сырьевые товары', callback_data='sub:Сырьевые товары'))
-    keyboard.add(types.InlineKeyboardButton('Отрасли', callback_data='sub:Отрасли'))
+    keyboard.add(types.InlineKeyboardButton('Клиенты', callback_data='page:empty:1:Клиенты'))
+    keyboard.add(types.InlineKeyboardButton('Сырьевые товары', callback_data='page:empty:1:Сырьевые товары'))
+    keyboard.add(types.InlineKeyboardButton('Отрасли', callback_data='page:empty:1:Отрасли'))
 
     await bot.send_message(query.from_user.id, 'Выберете раздел', reply_markup=keyboard)
 
@@ -2102,6 +2084,7 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
             global chat
             global token
             aliases_dict = {
+                **{alias: help_handler for alias in help_aliases},
                 **{alias: bonds_info for alias in bonds_aliases},
                 **{alias: economy_info for alias in eco_aliases},
                 **{alias: metal_info for alias in metal_aliases},
