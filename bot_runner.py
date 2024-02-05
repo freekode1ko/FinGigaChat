@@ -906,6 +906,17 @@ async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
     return subscriptions[0].split(', ') if subscriptions[0] else []
 
 
+async def user_reached_limit(user_id, user_subscriptions_set):
+    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
+    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
+        await bot.send_message(user_id, f'Достигнут предел по количеству подписок\n\n'
+                                        f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
+                               )
+        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+        return True
+    return False
+
+
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
@@ -928,14 +939,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
-
-    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
-    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
-        await message.reply(
-            f'Достигнут предел по количеству подписок\n\n'
-            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
-        )
-        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+    await user_reached_limit(user_id, user_subscriptions_set)
 
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
@@ -1812,33 +1816,37 @@ async def append_new_subscription(query: types.CallbackQuery = None):
     else:
         sub_element = pd.DataFrame(columns=['name'])
 
-    element_to_add = sub_element.values.tolist()[0][0]
-    user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
-    subs_count = len(user_subscriptions)
-    # print(element_to_add, element_to_add.replace("'", "''"), element_to_add)
+    user_subscriptions_list = await get_list_of_user_subscriptions(query.from_user.id)
+    user_subscriptions_set = set(user_subscriptions_list)
 
-    user_subscriptions.append(element_to_add)
-    new_user_subscription = list(set(user_subscriptions))
-    new_user_subscription.sort()
-    new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
-    with engine.connect() as conn:
-        sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {query.from_user.id}"
-        conn.execute(text(sql_text))
-        conn.commit()
-    if subs_count < len(new_user_subscription):
-        await bot.send_message(
-            query.from_user.id,
-            f'{element_to_add.capitalize()} - добавлен к вашим подпискам\n'
-            f'Можете подписаться еще на дополнительные отрасли '
-            f'или выбрать другой раздел',
-        )
-    else:
-        await bot.send_message(
-            query.from_user.id,
-            f'{element_to_add.capitalize()} - уже есть в ваших подписках\n'
-            f'Можете подписаться еще на дополнительные отрасли '
-            f'или выбрать другой раздел',
-        )
+    if not await user_reached_limit(query.from_user.id, user_subscriptions_set):
+        element_to_add = sub_element.values.tolist()[0][0]
+        user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
+        subs_count = len(user_subscriptions)
+
+        user_subscriptions.append(element_to_add)
+        new_user_subscription = list(set(user_subscriptions))
+        new_user_subscription.sort()
+        new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
+
+        with engine.connect() as conn:
+            sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {query.from_user.id}"
+            conn.execute(text(sql_text))
+            conn.commit()
+        if subs_count < len(new_user_subscription):
+            await bot.send_message(
+                query.from_user.id,
+                f'{element_to_add.capitalize()} - добавлен к вашим подпискам\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел',
+            )
+        else:
+            await bot.send_message(
+                query.from_user.id,
+                f'{element_to_add.capitalize()} - уже есть в ваших подписках\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел',
+            )
 
 
 async def pagination(pages, search, cur_page: int = 0):
