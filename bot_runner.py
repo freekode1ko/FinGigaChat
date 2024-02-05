@@ -1803,23 +1803,23 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda c: c.data.startswith('addsub'))
 async def append_new_subscription(query: types.CallbackQuery = None):
-    element_id = query.data.split(':')[2]
-    table_ind = query.data.split(':')[1]
+    element_id, table_ind = query.data.split(':')[2], query.data.split(':')[1]
+    table_mapping = {
+        'Клиенты': 'client',
+        'Сырьевые товары': 'commodity',
+        'Отрасли': 'industry'
+    }
+
+    table_name = table_mapping.get(table_ind)
     engine = create_engine(psql_engine, poolclass=NullPool)
-
-    if table_ind == 'Клиенты':
-        sub_element = pd.read_sql_query(f'SELECT name FROM client WHERE id = {element_id}', con=engine)
-    elif table_ind == 'Сырьевые товары':
-        sub_element = pd.read_sql_query(f'SELECT name FROM commodity WHERE id = {element_id}', con=engine)
-    elif table_ind == 'Отрасли':
-        sub_element = pd.read_sql_query(f'SELECT name FROM industry WHERE id = {element_id}', con=engine)
-    else:
-        sub_element = pd.DataFrame(columns=['name'])
-
     user_subscriptions_list = await get_list_of_user_subscriptions(query.from_user.id)
     user_subscriptions_set = set(user_subscriptions_list)
-
     if not await user_reached_limit(query.from_user.id, user_subscriptions_set):
+        if table_name:
+            sub_element = pd.read_sql_query(f'SELECT name FROM {table_name} WHERE id = {element_id}', con=engine)
+        else:
+            sub_element = pd.DataFrame(columns=['name'])
+
         element_to_add = sub_element.values.tolist()[0][0]
         user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
         subs_count = len(user_subscriptions)
