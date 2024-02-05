@@ -66,7 +66,7 @@ COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xl
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
-USER_SUBSCRIPTIONS_LIMIT = 20
+USER_SUBSCRIPTIONS_LIMIT = 70
 
 STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
