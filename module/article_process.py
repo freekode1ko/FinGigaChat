@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from config import NEWS_LIMIT, psql_engine
+from config import NEWS_LIMIT, psql_engine, BASE_DATE_FORMAT
 from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
@@ -857,7 +857,7 @@ class FormatText:
     @property
     def date(self):
         if self.__date:
-            return f'\n<i>{self.__date.strftime("%d.%m.%Y")}</i>'
+            return f'\n<i>{self.__date.strftime(BASE_DATE_FORMAT)}</i>'
         else:
             return self.__date
 

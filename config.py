@@ -72,6 +72,12 @@ BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
+POST_TO_GIGAPARSER_TIMEOUT = 180
+POST_TO_GIGAPARSER_ATTEMPTS = 3
+POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
+
+BASE_DATE_FORMAT = '%d.%m.%Y'
+BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
