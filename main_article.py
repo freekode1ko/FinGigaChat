@@ -146,7 +146,7 @@ def daily_func():
 
 
 if __name__ == '__main__':
-    sentry.init_sentry(dsn=config.SENTRY_POLYANALISTA_PARSER_DSN)
+    sentry.init_sentry(dsn=config.SENTRY_POLYANALIST_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem
