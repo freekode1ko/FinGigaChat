@@ -6,10 +6,10 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import click
 import numpy as np
 import pandas as pd
 import requests as req
+import schedule
 from selenium import webdriver
 from sqlalchemy import NullPool, create_engine
 from sqlalchemy.orm import sessionmaker
@@ -18,11 +18,10 @@ import config
 import module.crawler as crawler
 import module.data_transformer as dt
 import module.user_emulator as ue
-from module.logger_base import selector_logger
+from module.logger_base import selector_logger, Logger
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
 from utils import sentry
-from utils.cli_utils import get_period
 
 
 class ResearchesGetter:
@@ -370,87 +369,76 @@ class ResearchesGetter:
             companies_writer.close()
 
 
-@click.command()
-@click.option(
-    '-p',
-    '--period',
-    default='4h',
-    show_default=True,
-    type=str,
-    help='Периодичность сборки котировок\n' 's - секунды\n' 'm - минуты (значение по умолчанию)\n' 'h - часы\n' 'd - дни',
-)
-def main(period):
+def run_researches_getter(logger: Logger.logger) -> None:
+    logger.info('Инициализация сборщика researches и графиков')
+    runner = ResearchesGetter(logger)
+    logger.info('Загрузка прокси')
+    runner.parser_obj.get_proxy_addresses()
+
+    try:
+        # collect and save research data
+        logger.info('Подключение к контейнеру selenium')
+        firefox_options = webdriver.FirefoxOptions()
+        firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+    except Exception as e:
+        logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
+        driver = None
+
+    if driver:
+        try:
+            logger.info('Начало сборки отчетов с research')
+            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+            logger.info('Сохранение собранных данных')
+            runner.save_clients_financial_indicators(clients_table)
+            runner.save_key_eco_table(key_eco_table)
+            runner.save_reviews(reviews_dict)
+            runner.process_companies_data(companies_pages_html_dict)
+        except Exception as e:
+            logger.error('Ошибка при сборке отчетов с Research: %s', e)
+
+        try:
+            logger.info('Поднятие новой сессии')
+            session = req.Session()
+            logger.info('Сборки графиков')
+            runner.commodities_plot_collect(session, driver)
+        except Exception as e:
+            logger.error('Ошибка при парсинге источников по сырью: %s', e)
+
+        try:
+            driver.close()
+        except Exception as e:
+            # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
+            # тогда вылетает MaxRetryError
+            logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
+
+    logger.info('Запись даты и времени последней успешной сборки researches и графиков')
+    runner.save_date_of_last_build()
+    print(f'Ожидание перед следующей сборкой...')
+    logger.info(f'Ожидание перед следующей сборкой...')
+
+
+def main():
     """
     Сборщик researches и графиков
+    Сборка происходит каждый день в ??:?? и ??:??
     """
     sentry.init_sentry(dsn=config.SENTRY_RESEARCH_PARSER_DSN)
-    try:
-        period, scale, scale_txt = get_period(period)
-    except ValueError as e:
-        print(e)
-        return
 
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
     logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)
+
+    # сборка происходит каждый день в
+    for collect_time in config.RESEARCH_GETTING_TIMES_LIST:
+        schedule.every().day.at(collect_time).do(run_researches_getter, logger=logger)
+
     while True:
-        current_period = period
-
-        logger.info('Инициализация сборщика котировок')
-        runner = ResearchesGetter(logger)
-        logger.info('Загрузка прокси')
-        runner.parser_obj.get_proxy_addresses()
-
-        try:
-            # collect and save research data
-            logger.info('Подключение к контейнеру selenium')
-            firefox_options = webdriver.FirefoxOptions()
-            firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
-            driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-        except Exception as e:
-            logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
-            driver = None
-            current_period = 1
-
-        if driver:
-            try:
-                logger.info('Начало сборки отчетов с research')
-                reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
-                logger.info('Сохранение собранных данных')
-                runner.save_clients_financial_indicators(clients_table)
-                runner.save_key_eco_table(key_eco_table)
-                runner.save_reviews(reviews_dict)
-                runner.process_companies_data(companies_pages_html_dict)
-            except Exception as e:
-                logger.error('Ошибка при сборке отчетов с Research: %s', e)
-                current_period = 1
-
-            try:
-                logger.info('Поднятие новой сессии')
-                session = req.Session()
-                logger.info('Сборки графиков')
-                runner.commodities_plot_collect(session, driver)
-            except Exception as e:
-                logger.error('Ошибка при парсинге источников по сырью: %s', e)
-                current_period = 1
-
-            try:
-                driver.close()
-            except Exception as e:
-                # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
-                # тогда вылетает MaxRetryError
-                logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
-                current_period = 1
-
-        logger.info('Запись даты и времени последней успешной сборки котировок')
-        runner.save_date_of_last_build()
-        print(f'Ожидание {current_period} часов перед следующей сборкой...')
-        logger.info(f'Ожидание {current_period} часов перед следующей сборкой...')
-
-        for i in range(current_period, 0, -1):
-            time.sleep(scale)
-            print(f'Ожидание сборки. {i} из {current_period} {scale_txt}')
-            logger.info(f'Ожидание сборки. {i} из {current_period} {scale_txt}')
+        schedule.run_pending()
+        # эту команду можно использовать, если хотим, чтобы сборка началась сразу при запуске файла,
+        # после первого прогона сборка вновь будет собираться по заданному времени
+        # schedule.run_all()
+        time.sleep(config.STATS_COLLECTOR_SLEEP_TIME)
 
 
 if __name__ == '__main__':
