@@ -369,7 +369,24 @@ class ResearchesGetter:
             companies_writer.close()
 
 
-def run_researches_getter(logger: Logger.logger) -> None:
+def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datetime:
+    """
+    Возвращает дату_время следующей сборки
+
+    :param next_research_getting_time: строка формата %H:%M
+    """
+    now = datetime.datetime.now()
+    next_collect_dt = datetime.datetime.strptime(next_research_getting_time, "%H:%M")
+    next_collect_dt = datetime.datetime(now.year, now.month, now.day, next_collect_dt.hour, next_collect_dt.minute)
+
+    if next_collect_dt < now:
+        next_collect_dt += datetime.timedelta(days=1)
+    return next_collect_dt
+
+
+def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
+    start_tm = time.time()
+
     logger.info('Инициализация сборщика researches и графиков')
     runner = ResearchesGetter(logger)
     logger.info('Загрузка прокси')
@@ -414,24 +431,33 @@ def run_researches_getter(logger: Logger.logger) -> None:
 
     logger.info('Запись даты и времени последней успешной сборки researches и графиков')
     runner.save_date_of_last_build()
-    print(f'Ожидание перед следующей сборкой...')
-    logger.info(f'Ожидание перед следующей сборкой...')
+
+    work_time = time.time() - start_tm
+    end_dt = datetime.datetime.now().strftime('%H:%M %d.%m.%Y')
+    next_collect_dt = get_next_collect_datetime(next_research_getting_time).strftime('%H:%M %d.%m.%Y')
+    end_msg = f'Сборка завершена за {work_time:.3f} секунд в {end_dt}. Следующая сборка в {next_collect_dt}'
+    print(end_msg)
+    logger.info(end_msg)
 
 
 def main():
     """
     Сборщик researches и графиков
-    Сборка происходит каждый день в ??:?? и ??:??
+    Сборка происходит каждый день в '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'
+    Время сборки указано в списке в config.RESEARCH_GETTING_TIMES_LIST
     """
     sentry.init_sentry(dsn=config.SENTRY_RESEARCH_PARSER_DSN)
 
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
     logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)
+    res_get_times_len = len(config.RESEARCH_GETTING_TIMES_LIST)
 
     # сборка происходит каждый день в
-    for collect_time in config.RESEARCH_GETTING_TIMES_LIST:
-        schedule.every().day.at(collect_time).do(run_researches_getter, logger=logger)
+    for index, collect_time in enumerate(config.RESEARCH_GETTING_TIMES_LIST):
+        next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(index + 1) % res_get_times_len]
+
+        schedule.every().day.at(collect_time).do(run_researches_getter, next_research_getting_time=next_collect_time, logger=logger)
 
     while True:
         schedule.run_pending()
