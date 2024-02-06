@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import os
 import re
@@ -38,7 +39,10 @@ storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
+emoji = copy.deepcopy(config.dict_of_emoji)
+
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
+help_aliases = ['что ты умеешь?', 'что ты можешь?', 'научи как с тобой работать', 'что умеет этот бот']
 eco_aliases = [
     'экономика',
     'ставки',
@@ -107,7 +111,6 @@ PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
-
 
 next_news_callback = CallbackData(
     'next_news',
@@ -791,7 +794,7 @@ async def add_subscriptions_body(chat_id: int, full_name: str, user_msg: str, fr
         keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='showmeindustry:no'))
         await bot.send_message(
             chat_id,
-            'Сформируйте полный список интересующих клиентов или commodities '
+            'Сформируйте полный список интересующих клиентов и/или commodities и/или отрасли '
             'для подписки на пассивную отправку новостей по ним.\n'
             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
             '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
@@ -817,6 +820,21 @@ async def add_new_subscriptions_command(message: types.Message):
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('addnewsubscriptions'))
+async def select_or_write(callback_query: types.CallbackQuery):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton('Напишу сам/Справочник по подпискам', callback_data='writesubs'))
+    keyboard.add(types.InlineKeyboardButton('Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
+    keyboard.add(types.InlineKeyboardButton('Отменить создание подписок', callback_data='cancel_subs'))
+
+    await bot.send_message(callback_query.from_user.id, 'Как вы хотите заполнить подписки?', reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('cancel_subs'))
+async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
+    await bot.send_message(callback_query.message.chat.id, 'Отмена создание подписки')
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('writesubs'))
 async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
     """
     Входная точка для добавления подписок на новостные объекты себе для получения новостей
@@ -825,7 +843,7 @@ async def add_new_subscriptions_callback(callback_query: types.CallbackQuery):
     return None
     """
     chat_id = callback_query.message.chat.id
-    user_msg = 'addnewsubscriptions'
+    user_msg = 'writesubs'
     call_from = dict(callback_query.values['from'])
     full_name = f"{call_from['first_name']} {call_from.get('last_name', '')}"
     await add_subscriptions_body(chat_id, full_name, user_msg, callback_query.values['from'].as_json())
@@ -888,6 +906,17 @@ async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
     return subscriptions[0].split(', ') if subscriptions[0] else []
 
 
+async def is_subscription_limit_reached(user_id, user_subscriptions_set):
+    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
+    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
+        await bot.send_message(user_id, f'Достигнут предел по количеству подписок\n\n'
+                                        f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
+                               )
+        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+        return True
+    return False
+
+
 @dp.message_handler(state=Form.user_subscriptions)
 async def set_user_subscriptions(message: types.Message, state: FSMContext):
     """
@@ -910,14 +939,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
-
-    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
-    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
-        await message.reply(
-            f'Достигнут предел по количеству подписок\n\n'
-            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
-        )
-        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+    await is_subscription_limit_reached(user_id, user_subscriptions_set)
 
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
@@ -1068,7 +1090,7 @@ async def delete_user_subscription(message: types.Message, state: FSMContext):
             subscriptions_update = ', '.join(subscriptions).replace("'", "''")
             engine = create_engine(psql_engine, poolclass=NullPool)
             with engine.connect() as conn:
-                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' " f"WHERE user_id = '{user_id}'"))
+                conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions_update}' WHERE user_id = '{user_id}'"))
                 conn.commit()
         else:
             log_msg += f', но у пользователя нет подписки {user_msg}'
@@ -1779,6 +1801,115 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery):
     user_logger.debug(f'*{data_callback["id"]}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
+@dp.callback_query_handler(lambda c: c.data.startswith('addsub'))
+async def append_new_subscription(query: types.CallbackQuery = None):
+    element_id, table_ind = query.data.split(':')[2], query.data.split(':')[1]
+    table_mapping = {
+        'Клиенты': 'client',
+        'Сырьевые товары': 'commodity',
+        'Отрасли': 'industry'
+    }
+
+    table_name = table_mapping.get(table_ind)
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
+    user_subscriptions_uniq = set(user_subscriptions)
+    if not await is_subscription_limit_reached(query.from_user.id, user_subscriptions_uniq):
+        if table_name:
+            sub_element = pd.read_sql_query(f'SELECT name FROM {table_name} WHERE id = {element_id}', con=engine)
+        else:
+            sub_element = pd.DataFrame(columns=['name'])
+
+        element_to_add = sub_element.values.tolist()[0][0]
+        subs_count = len(user_subscriptions)
+
+        user_subscriptions.append(element_to_add)
+        new_user_subscription = list(set(user_subscriptions))
+        new_user_subscription.sort()
+        new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
+
+        with engine.connect() as conn:
+            sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {query.from_user.id}"
+            conn.execute(text(sql_text))
+            conn.commit()
+        if subs_count < len(new_user_subscription):
+            await bot.send_message(
+                query.from_user.id,
+                f'{element_to_add.capitalize()} - добавлен к вашим подпискам\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел',
+            )
+        else:
+            await bot.send_message(
+                query.from_user.id,
+                f'{element_to_add.capitalize()} - уже есть в ваших подписках\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел',
+            )
+
+
+async def pagination(pages, search, cur_page: int = 0):
+    buttons = []
+    for element in pages[cur_page].values.tolist():
+        buttons.append([types.InlineKeyboardButton(f'{element[1].capitalize()}', callback_data=f'addsub:{search}:{element[0]}')])
+    bottom_buttons = []
+    if cur_page != 0:
+        callback = 'page:back:{}:{}'.format(cur_page, search)
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['backward'], callback_data=callback))
+    else:
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['block'], callback_data='stop'))
+
+    bottom_buttons.append(types.InlineKeyboardButton(f'{cur_page + 1}/{len(pages)}', callback_data='pagination'))
+
+    if cur_page == len(pages) - 1:
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['block'], callback_data='stop'))
+    else:
+        callback = 'page:forward:{}:{}'.format(cur_page, search)
+        bottom_buttons.append(types.InlineKeyboardButton(emoji['forward'], callback_data=callback))
+
+    buttons.append(bottom_buttons)
+    buttons.append([types.InlineKeyboardButton('Назад к выбору раздела', callback_data='selectsubs')])
+    keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
+    return keyboard
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('page'))
+async def scroller(query: types.CallbackQuery = None):
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    input_params = query.data.split(':')
+    direction = input_params[1]
+    cur_page = int(input_params[2])
+    search = input_params[3]
+
+    if search == 'Клиенты':
+        table = pd.read_sql_query('SELECT id, name FROM client', con=engine)
+    elif search == 'Сырьевые товары':
+        table = pd.read_sql_query('SELECT id, name FROM commodity', con=engine)
+    elif search == 'Отрасли':
+        table = pd.read_sql_query('SELECT id, name FROM industry', con=engine)
+    else:
+        table = pd.DataFrame(columns=['id', 'name'])
+
+    chunks = []
+    num_chunks = len(table) // 11 + 1
+    for index in range(num_chunks):
+        chunks.append(table[index * 11 : (index + 1) * 11])
+
+    cur_page += 1 if direction == 'forward' else -1
+    keyboard = await pagination(chunks, search, cur_page)
+    await query.message.edit_text(text=f'{search}\nСтраница {cur_page+1} из {len(chunks)}', reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith('selectsubs'))
+async def select_subs_from_menu(query: types.CallbackQuery = None):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton('Клиенты', callback_data='page:empty:1:Клиенты'))
+    keyboard.add(types.InlineKeyboardButton('Сырьевые товары', callback_data='page:empty:1:Сырьевые товары'))
+    keyboard.add(types.InlineKeyboardButton('Отрасли', callback_data='page:empty:1:Отрасли'))
+
+    await bot.send_message(query.from_user.id, 'Выберете раздел', reply_markup=keyboard)
+
+
 async def send_nearest_subjects(message: types.Message):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     ap_obj = ArticleProcess(logger=logger)
@@ -1799,7 +1930,7 @@ async def send_nearest_subjects(message: types.Message):
         chat_id, response, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
     )
     user_logger.info(
-        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы ' f'"{", ".join(nearest_subjects)}"'
+        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы {", ".join(nearest_subjects)}'
     )
 
 
@@ -1960,6 +2091,7 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
             global chat
             global token
             aliases_dict = {
+                **{alias: help_handler for alias in help_aliases},
                 **{alias: bonds_info for alias in bonds_aliases},
                 **{alias: economy_info for alias in eco_aliases},
                 **{alias: metal_info for alias in metal_aliases},
@@ -2089,7 +2221,7 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
         time_to_wait = first_time_to_send - current_time
         next_send_time = str(timedelta(seconds=first_time_to_send))
 
-    logger.info(f'В ожидании рассылки в {next_send_time}.' f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    logger.info(f'В ожидании рассылки в {next_send_time}. До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
@@ -2139,7 +2271,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
 
     row_number = 0
-    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist ' 'WHERE subscriptions IS NOT NULL', con=engine)
+    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
         user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
