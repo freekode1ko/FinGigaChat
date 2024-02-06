@@ -906,7 +906,7 @@ async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
     return subscriptions[0].split(', ') if subscriptions[0] else []
 
 
-async def user_reached_limit(user_id, user_subscriptions_set):
+async def is_subscription_limit_reached(user_id, user_subscriptions_set):
     # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
     if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
         await bot.send_message(user_id, f'Достигнут предел по количеству подписок\n\n'
@@ -939,7 +939,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext):
 
     user_subscriptions_list = await get_list_of_user_subscriptions(user_id)
     user_subscriptions_set = set(user_subscriptions_list)
-    await user_reached_limit(user_id, user_subscriptions_set)
+    await is_subscription_limit_reached(user_id, user_subscriptions_set)
 
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
@@ -1814,7 +1814,7 @@ async def append_new_subscription(query: types.CallbackQuery = None):
     engine = create_engine(psql_engine, poolclass=NullPool)
     user_subscriptions = await get_list_of_user_subscriptions(query.from_user.id)
     user_subscriptions_uniq = set(user_subscriptions)
-    if not await user_reached_limit(query.from_user.id, user_subscriptions_uniq):
+    if not await is_subscription_limit_reached(query.from_user.id, user_subscriptions_uniq):
         if table_name:
             sub_element = pd.read_sql_query(f'SELECT name FROM {table_name} WHERE id = {element_id}', con=engine)
         else:
