@@ -1,3 +1,4 @@
+import datetime
 import json
 import time
 import warnings
@@ -16,30 +17,33 @@ PERIOD = 1
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
-    """Отправляет post запрос при помощи requests, совершает n-1 попыток с перехватом ошибки"""
+    """
+    Отправляет post запрос при помощи requests, совершает n-1 попыток с перехватом ошибки
+    На n-ый раз делает запрос без перехвата ошибки, чтобы внешняя функция могла обработать ошибку
+    """
     for _ in range(n - 1):
         try:
             return requests.post(**kwargs)
         except requests.ConnectTimeout as e:
-            error_msg = f'Время ожидания запроса истекло при попытке подключения к удаленному серверу: {e}'
-            logger.error(error_msg)
-            print(error_msg)
+            error_msg = 'Время ожидания запроса истекло при попытке подключения к удаленному серверу: %s'
+            logger.error(error_msg, e)
+            print(error_msg % e)
         except requests.Timeout as e:
-            error_msg = f'Время ожидания запроса истекло: {e}'
-            logger.error(error_msg)
-            print(error_msg)
+            error_msg = 'Время ожидания запроса истекло: %s'
+            logger.error(error_msg, e)
+            print(error_msg % e)
         except requests.TooManyRedirects as e:
-            error_msg = f'Слишком много перенаправлений: {e}'
-            logger.error(error_msg)
-            print(error_msg)
+            error_msg = 'Слишком много перенаправлений: %s'
+            logger.error(error_msg, e)
+            print(error_msg % e)
         except requests.ConnectionError as e:
-            error_msg = f'Возникла ошибка соединения: {e}'
-            logger.error(error_msg)
-            print(error_msg)
+            error_msg = 'Возникла ошибка соединения: %s'
+            logger.error(error_msg, e)
+            print(error_msg % e)
         except requests.RequestException as e:
-            error_msg = f'При обработке запроса произошло неоднозначное исключение: {e}'
-            logger.error(error_msg)
-            print(error_msg)
+            error_msg = 'При обработке запроса произошло неоднозначное исключение: %s'
+            logger.error(error_msg, e)
+            print(error_msg % e)
 
         time.sleep(config.POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR)
 
@@ -57,10 +61,6 @@ def get_article() -> pd.DataFrame:
         else:
             logger.error(f'{req.status_code} - код ответа ')
             print(f'{req.status_code} - код ответа ')
-
-    except ConnectionError:
-        logger.error('Ошибка при получении новостей: ConnectionError')
-        print('Ошибка при получении новостей: ConnectionError')
 
     except Exception as e:
         logger.error('Ошибка при получении новостей: %s', e)
@@ -129,12 +129,18 @@ if __name__ == '__main__':
         # запускаем периодическое получение/обработку новостей
         ap_obj_online = ArticleProcess(logger)
         while True:
-            logger.info('Запуск pipeline с новостями')
-            print('Запуск pipeline с новостями')
+            start_time = time.time()
+            now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
+            start_msg = f'Запуск pipeline с новостями в {now_str}'
+            logger.info(start_msg)
+            print(start_msg)
             gotten_ids = regular_func()
             post_ids(gotten_ids)
-            print('Конец pipeline с новостями \nОжидайте\n')
-            logger.info('Конец pipeline с новостями\n')
+            now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
+            work_time = time.time() - start_time
+            end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
+            print(end_msg + '\nОжидайте\n')
+            logger.info(end_msg)
             for i in range(PERIOD):
                 time.sleep(3600)
                 logger.debug('Ожидание: {}/{} часов'.format(i + 1, PERIOD))

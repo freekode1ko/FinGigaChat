@@ -76,6 +76,9 @@ POST_TO_GIGAPARSER_TIMEOUT = 180
 POST_TO_GIGAPARSER_ATTEMPTS = 3
 POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
 
+BASE_DATE_FORMAT = '%d.%m.%Y'
+BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
+
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
 mail_imap_server = 'imap.mail.ru'

@@ -327,7 +327,7 @@ class ResearchesGetter:
 
     def save_date_of_last_build(self):
         engine = create_engine(self.psql_engine, poolclass=NullPool)
-        cur_time = datetime.datetime.now().strftime('%d.%m.%Y %H:%M')
+        cur_time = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
         self.logger.info('Таблица date_of_last_build записана')
