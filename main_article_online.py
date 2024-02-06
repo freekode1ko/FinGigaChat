@@ -20,7 +20,7 @@ def get_article() -> pd.DataFrame:
     df_article = pd.DataFrame()
     try:
         url = BASE_GIGAPARSER_URL.format('get_articles/all')
-        req = requests.post(url)
+        req = requests.post(url, timeout=config.POST_TO_GIGAPARSER_TIMEOUT)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
         else:
@@ -76,7 +76,8 @@ def regular_func():
 def post_ids(ids):
     try:
         logger.debug('Отправка id обработанных новостей на сервер')
-        requests.post(BASE_GIGAPARSER_URL.format('success_request'), json=ids)  # ids = {'id': [1,2,3...]}
+        # ids = {'id': [1,2,3...]}
+        requests.post(BASE_GIGAPARSER_URL.format('success_request'), json=ids, timeout=config.POST_TO_GIGAPARSER_TIMEOUT)
     except Exception as e:
         print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
         logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
