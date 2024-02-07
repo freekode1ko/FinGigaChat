@@ -433,8 +433,8 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     runner.save_date_of_last_build()
 
     work_time = time.time() - start_tm
-    end_dt = datetime.datetime.now().strftime('%H:%M %d.%m.%Y')
-    next_collect_dt = get_next_collect_datetime(next_research_getting_time).strftime('%H:%M %d.%m.%Y')
+    end_dt = datetime.datetime.now().strftime(config.INVERT_DATETIME_FORMAT)
+    next_collect_dt = get_next_collect_datetime(next_research_getting_time).strftime(config.INVERT_DATETIME_FORMAT)
     end_msg = f'Сборка завершена за {work_time:.3f} секунд в {end_dt}. Следующая сборка в {next_collect_dt}'
     print(end_msg)
     logger.info(end_msg)
