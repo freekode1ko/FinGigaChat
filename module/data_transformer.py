@@ -198,6 +198,7 @@ class Transformer:
         png_path = '{}/img/{}_table.png'.format('./sources', name)
         plt.savefig(png_path, transparent=False)
 
+    @staticmethod
     def __draw_plot(df, name):
         labels = []
         xticks = []

@@ -140,3 +140,23 @@ industry_base_url = (
     'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_'
     'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
 )
+
+# SELENIUM CONTAINER PARAMS
+# -d -p 4444:4444 -p 7900:7900 --shm-size="2g" --name="selenium" selenium/standalone-firefox:latest
+SELENIUM_IMAGE_NAME = 'selenium/standalone-firefox:latest'
+SELENIUM_CONTAINER_NAME = 'selenium'
+SELENIUM_SHM_SIZE = '2g'
+SELENIUM_PORTS = {
+    4444: 4444,
+    7900: 7900,
+}
+SELENIUM_RUN_KWARGS = {
+    'image': SELENIUM_IMAGE_NAME,
+    'name': SELENIUM_CONTAINER_NAME,
+    'shm_size': SELENIUM_SHM_SIZE,
+    'ports': SELENIUM_PORTS,
+    'detach': True,
+}
+
+# SELENIUM DRIVER PARAMS
+SELENIUM_COMMAND_EXECUTOR = 'http://localhost:4444/wd/hub'
