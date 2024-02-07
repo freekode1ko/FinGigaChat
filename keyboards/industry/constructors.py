@@ -22,7 +22,7 @@ def get_industry_kb(industry_df: pd.DataFrame) -> InlineKeyboardMarkup:
             industry_id=industry['id'],
             my_subscriptions=True,
         )
-        keyboard.row(types.InlineKeyboardButton(text=industry['name'].title(), callback_data=callback_meta.pack()))
+        keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
     return keyboard.as_markup()
 
 

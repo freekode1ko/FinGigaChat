@@ -101,7 +101,7 @@ def get_tg_subs_industries_menu_kb(industry_df: pd.DataFrame) -> InlineKeyboardM
         callback_meta = IndustryTGChannels(
             industry_id=industry['id'],
         )
-        keyboard.row(types.InlineKeyboardButton(text=industry['name'].title(), callback_data=callback_meta.pack()))
+        keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
     keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_MENU))
     return keyboard.as_markup()
 
@@ -132,7 +132,7 @@ def get_industry_tg_channels_kb(industry_id: int, tg_channel_df: pd.DataFrame) -
         )
         mark = SELECTED if item['is_subscribed'] else UNSELECTED
         keyboard.row(types.InlineKeyboardButton(text=mark, callback_data=add_del_call.pack()))
-        keyboard.add(types.InlineKeyboardButton(text=item['name'].title(), callback_data=more_info_call.pack()))
+        keyboard.add(types.InlineKeyboardButton(text=item['name'].capitalize(), callback_data=more_info_call.pack()))
     keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=TG_SUBS_INDUSTRIES_MENU))
     return keyboard.as_markup()
 

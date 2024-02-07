@@ -79,7 +79,7 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
 
     msg_text = (
         f'Выберите период, за который хотите получить сводку новостей из telegram каналов по отрасли '
-        f'<b>{industry_name.title()}</b>\n\n'
+        f'<b>{industry_name.capitalize()}</b>\n\n'
         f'Для получения новостей из telegram каналов, на которые вы подписались в боте, выберите '
         f'<b>"{MY_TG_CHANNELS_CALLBACK_TEXT}"</b>\n'
         f'Для получения новостей из всех telegram каналов, связанных с отраслью, выберите '

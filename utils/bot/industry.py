@@ -15,7 +15,7 @@ async def get_msg_text_for_tg_newsletter(industry_id: int, user_id: int, days: i
     industry_name = get_industry_name(industry_id)
     news = get_industry_tg_news(industry_id, by_my_subscriptions, days, user_id)
     msg_text = f'Сводка новостей по <b>{"подпискам" if by_my_subscriptions else "всем telegram каналам"}</b> по отрасли ' \
-               f'<b>{industry_name.title()}</b>\n\n'
+               f'<b>{industry_name.capitalize()}</b>\n\n'
 
     if not news.empty:
         for index, article in news.iterrows():
