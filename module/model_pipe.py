@@ -53,6 +53,10 @@ STOCK_WORDS = [
     'главный событие месяц',
     'вечерний комментарий',
     'дневной обзор',
+    'что произошло за день',
+    'рассказываем, что интересного пишут',
+    'краткая сводка событий',
+    'пока вы спали',
 ]
 
 
@@ -571,7 +575,7 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df.query('not client_score.isnull() and client_score != -1 or ' 'not commodity_score.isnull() and commodity_score != -1')
+    df = df[(df['client_score'] > 0) | (df['commodity_score'] > 0)]
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
@@ -623,17 +627,17 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
             # для каждого клиента в списке найденных клиентов
             for client in actual_client:
                 # если клиент есть в старой новости, то говорим, что новости имеют одинаковых клиентов
-                if client in previous_client and len(actual_client) > 1 and len(previous_client) > 1:
+                if client in previous_client and len(actual_client) >= 1 and len(previous_client) >= 1:
                     flag_found_same = True
 
             # для каждого товара в списке найденных товаров
             for commodity in actual_commodity:
                 # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
-                if commodity in previous_commodity and len(actual_commodity) > 1 and len(previous_commodity) > 1:
+                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1:
                     flag_found_same = True
 
             # меняем границу, если новости имеют одинаковых клиентов
-            current_threshold = current_threshold if flag_found_same else current_threshold + 0.1
+            current_threshold = current_threshold -0.07 if flag_found_same else current_threshold + 0.2
 
             # если разница между векторами рассматриваемых новостей больше границы, то новость неуникальна
             if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:
