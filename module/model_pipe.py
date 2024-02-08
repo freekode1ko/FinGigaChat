@@ -575,7 +575,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df[(df['client_score'] > 0) | (df['commodity_score'] > 0)]
+    df = df.query('not client_score.isnull() and client_score != -1 or '
+                  'not commodity_score.isnull() and commodity_score != -1')
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
