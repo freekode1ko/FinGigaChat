@@ -6,10 +6,10 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import click
 import numpy as np
 import pandas as pd
 import requests as req
+import schedule
 from selenium import webdriver
 from sqlalchemy import NullPool, create_engine
 from sqlalchemy.orm import sessionmaker
@@ -18,11 +18,10 @@ import config
 import module.crawler as crawler
 import module.data_transformer as dt
 import module.user_emulator as ue
-from module.logger_base import selector_logger
+from module.logger_base import selector_logger, Logger
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
 from utils import sentry
-from utils.cli_utils import get_period
 
 
 class ResearchesGetter:
@@ -370,87 +369,102 @@ class ResearchesGetter:
             companies_writer.close()
 
 
-@click.command()
-@click.option(
-    '-p',
-    '--period',
-    default='4h',
-    show_default=True,
-    type=str,
-    help='Периодичность сборки котировок\n' 's - секунды\n' 'm - минуты (значение по умолчанию)\n' 'h - часы\n' 'd - дни',
-)
-def main(period):
+def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datetime:
+    """
+    Возвращает дату_время следующей сборки
+
+    :param next_research_getting_time: строка формата %H:%M
+    """
+    now = datetime.datetime.now()
+    next_collect_dt = datetime.datetime.strptime(next_research_getting_time, "%H:%M")
+    next_collect_dt = datetime.datetime(now.year, now.month, now.day, next_collect_dt.hour, next_collect_dt.minute)
+
+    if next_collect_dt < now:
+        next_collect_dt += datetime.timedelta(days=1)
+    return next_collect_dt
+
+
+def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
+    start_tm = time.time()
+
+    logger.info('Инициализация сборщика researches и графиков')
+    runner = ResearchesGetter(logger)
+    logger.info('Загрузка прокси')
+    runner.parser_obj.get_proxy_addresses()
+
+    try:
+        # collect and save research data
+        logger.info('Подключение к контейнеру selenium')
+        firefox_options = webdriver.FirefoxOptions()
+        firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
+        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+    except Exception as e:
+        logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
+        driver = None
+
+    if driver:
+        try:
+            logger.info('Начало сборки отчетов с research')
+            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+            logger.info('Сохранение собранных данных')
+            runner.save_clients_financial_indicators(clients_table)
+            runner.save_key_eco_table(key_eco_table)
+            runner.save_reviews(reviews_dict)
+            runner.process_companies_data(companies_pages_html_dict)
+        except Exception as e:
+            logger.error('Ошибка при сборке отчетов с Research: %s', e)
+
+        try:
+            logger.info('Поднятие новой сессии')
+            session = req.Session()
+            logger.info('Сборки графиков')
+            runner.commodities_plot_collect(session, driver)
+        except Exception as e:
+            logger.error('Ошибка при парсинге источников по сырью: %s', e)
+
+        try:
+            driver.close()
+        except Exception as e:
+            # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
+            # тогда вылетает MaxRetryError
+            logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
+
+    logger.info('Запись даты и времени последней успешной сборки researches и графиков')
+    runner.save_date_of_last_build()
+
+    work_time = time.time() - start_tm
+    end_dt = datetime.datetime.now().strftime(config.INVERT_DATETIME_FORMAT)
+    next_collect_dt = get_next_collect_datetime(next_research_getting_time).strftime(config.INVERT_DATETIME_FORMAT)
+    end_msg = f'Сборка завершена за {work_time:.3f} секунд в {end_dt}. Следующая сборка в {next_collect_dt}'
+    print(end_msg)
+    logger.info(end_msg)
+
+
+def main():
     """
     Сборщик researches и графиков
+    Сборка происходит каждый день в '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'
+    Время сборки указано в списке в config.RESEARCH_GETTING_TIMES_LIST
     """
     sentry.init_sentry(dsn=config.SENTRY_RESEARCH_PARSER_DSN)
-    try:
-        period, scale, scale_txt = get_period(period)
-    except ValueError as e:
-        print(e)
-        return
 
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
     logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)
+    res_get_times_len = len(config.RESEARCH_GETTING_TIMES_LIST)
+
+    # сборка происходит каждый день в
+    for index, collect_time in enumerate(config.RESEARCH_GETTING_TIMES_LIST):
+        next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(index + 1) % res_get_times_len]
+
+        schedule.every().day.at(collect_time).do(run_researches_getter, next_research_getting_time=next_collect_time, logger=logger)
+
     while True:
-        current_period = period
-
-        logger.info('Инициализация сборщика котировок')
-        runner = ResearchesGetter(logger)
-        logger.info('Загрузка прокси')
-        runner.parser_obj.get_proxy_addresses()
-
-        try:
-            # collect and save research data
-            logger.info('Подключение к контейнеру selenium')
-            firefox_options = webdriver.FirefoxOptions()
-            firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
-            driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
-        except Exception as e:
-            logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
-            driver = None
-            current_period = 1
-
-        if driver:
-            try:
-                logger.info('Начало сборки отчетов с research')
-                reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
-                logger.info('Сохранение собранных данных')
-                runner.save_clients_financial_indicators(clients_table)
-                runner.save_key_eco_table(key_eco_table)
-                runner.save_reviews(reviews_dict)
-                runner.process_companies_data(companies_pages_html_dict)
-            except Exception as e:
-                logger.error('Ошибка при сборке отчетов с Research: %s', e)
-                current_period = 1
-
-            try:
-                logger.info('Поднятие новой сессии')
-                session = req.Session()
-                logger.info('Сборки графиков')
-                runner.commodities_plot_collect(session, driver)
-            except Exception as e:
-                logger.error('Ошибка при парсинге источников по сырью: %s', e)
-                current_period = 1
-
-            try:
-                driver.close()
-            except Exception as e:
-                # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
-                # тогда вылетает MaxRetryError
-                logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
-                current_period = 1
-
-        logger.info('Запись даты и времени последней успешной сборки котировок')
-        runner.save_date_of_last_build()
-        print(f'Ожидание {current_period} часов перед следующей сборкой...')
-        logger.info(f'Ожидание {current_period} часов перед следующей сборкой...')
-
-        for i in range(current_period, 0, -1):
-            time.sleep(scale)
-            print(f'Ожидание сборки. {i} из {current_period} {scale_txt}')
-            logger.info(f'Ожидание сборки. {i} из {current_period} {scale_txt}')
+        schedule.run_pending()
+        # эту команду можно использовать, если хотим, чтобы сборка началась сразу при запуске файла,
+        # после первого прогона сборка вновь будет собираться по заданному времени
+        # schedule.run_all()
+        time.sleep(config.STATS_COLLECTOR_SLEEP_TIME)
 
 
 if __name__ == '__main__':
