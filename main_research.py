@@ -105,6 +105,7 @@ class ResearchesGetter:
             self.logger.error('При сборке табличных данных для MetalsWire произошла ошибка: %s', e)
 
     def commodities_plot_collect(self, session: req.sessions.Session):
+        # FIXME что делать, если тут произошла ошибка? Пока пропускаю elif
         self.get_metals_wire_table_data()
         commodity_pricing = pd.DataFrame()
         self.logger.info(f'Сборка по сырью {len(self.commodities)}')
@@ -148,11 +149,8 @@ class ResearchesGetter:
 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
-            elif self.commodities[commodity]['naming'] != 'Gas':
+            elif self.commodities[commodity]['naming'] != 'Gas' and self.metals_wire_table is not None:
                 to_take = self.commodities[commodity]['to_take'] + 1
-
-                if self.metals_wire_table is None:
-                    continue
 
                 table = self.metals_wire_table
                 row_index = table.index[table['Resource'] == name][0]
@@ -577,7 +575,7 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
             logger.error('Ошибка при парсинге источников по сырью: %s', e)
 
         try:
-            driver.close()
+            driver.quit()
         except Exception as e:
             # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
             # тогда вылетает MaxRetryError

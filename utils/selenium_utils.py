@@ -2,6 +2,11 @@
 # В случае, если main_research запущен в контейнере,
 # то у него должен быть прописан доступ к сервису docker
 # для удаленного вызова команд
+# ВАЖНО
+# Для корректной работы скрипта должна быть настроена работа с Docker Engine
+# https://docs.docker.com/engine/install/linux-postinstall/
+# по умолчанию docker работает из-под sudo
+# Если данный скрипт запускается не из-под sudo, то возникнет ошибка прав доступа
 
 import logging
 import time
@@ -20,6 +25,7 @@ def restart_container(logger: Logger.logger = None) -> None:
     logger = logger or logging.getLogger(__name__)
     container_name = config.SELENIUM_CONTAINER_NAME
     client = docker.from_env()
+    logger.info('Перезапуск контейнера selenium')
 
     try:
         container = client.containers.get(container_name)
@@ -96,12 +102,14 @@ def get_driver(logger: Logger.logger = None, connect_attempt_number: int = 1) ->
 
     logger.info(f'Подключение к контейнеру selenium, попытка №{connect_attempt_number}')
     try:
+        # Сначала перезапускаем контейнер, потому что после ошибки при взаимодействии с selenium контейнер чаще падает,
+        # чем остается в состоянии up
+        restart_container(logger)
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
         driver = webdriver.Remote(command_executor=config.SELENIUM_COMMAND_EXECUTOR, options=firefox_options)
     except Exception as e:
         logger.error('При подключении к selenium произошла ошибка: %s', e)
-        restart_container(logger)
         time.sleep(10)
         return get_driver(logger, connect_attempt_number + 1)
 
