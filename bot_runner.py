@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import time
 import warnings
 from typing import Dict
 
@@ -23,7 +24,8 @@ from utils.bot.base import (
     wait_until_next_newsletter,
     translate_subscriptions_to_object_id, next_weekday_time, wait_until,
 )
-from utils.bot.industry import get_msg_text_for_tg_newsletter
+from utils.bot.industry import group_news_by_tg_channels, get_tg_channel_news_msg
+from utils.db_api.industry import get_industry_tg_news
 from utils.sentry import init_sentry
 
 storage = MemoryStorage()
@@ -157,50 +159,68 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     return await send_daily_news(client_hours, commodity_hours)
 
 
-async def send_weekly_tg_news(
-        telegram_days: int = 7,
-        newsletter_weekday: int = 0,
-        newsletter_hour: int = 12,
-        newsletter_minute: int = 0
+async def passive_tg_newsletter(
+        newsletter_weekday: int,
+        newsletter_hour: int,
+        newsletter_minute: int,
+        newsletter_timedelta: datetime.timedelta,
 ) -> None:
     """
     Рассылка сводки новостей из telegram каналов по подпискам за 7 дней
     Рассылка производится в такой-то день недели, в такое время ??? FIXME
     По умолчанию в 12 00 каждый понедельник
 
-    :param telegram_days: Период, за который формируется сводка новостей
     :param newsletter_weekday: день недели, в который производим рассылку 0-6 (0 - пн, 6 - вс)
     :param newsletter_hour: час, в который производим рассылку
     :param newsletter_minute: минута, в которую производим рассылку
+    :param newsletter_timedelta: Промежуток, за который формируется сводка новостей до времени рассылки
     """
     while True:
         now = datetime.datetime.now()
-        next_newsletter_date = next_weekday_time(now, newsletter_weekday, newsletter_hour, newsletter_minute)
-        await wait_until(next_newsletter_date)
-        logger.info('Начинается еженедельная рассылка новостей по подпискам на telegram каналы...')
+        next_newsletter_datetime = next_weekday_time(now, newsletter_weekday, newsletter_hour, newsletter_minute)
+        newsletter_dt_str = next_newsletter_datetime.strftime(config.INVERT_DATETIME_FORMAT)
+        await wait_until(next_newsletter_datetime)
+        logger.info(
+            f'Начинается рассылка новостей в {newsletter_dt_str} по '
+            f'подпискам на telegram каналы...'
+        )
+
+        start_tm = time.time()
         # получим словарь id отрасли и ее название (в цикле, потому что справочник может пополняться)
         industry_dict = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
         # получим справочник пользователей (в цикле, потому что справочник может пополняться)
-        user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist WHERE subscriptions IS NOT NULL', con=engine)
+        user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist', con=engine)
 
         for index, user in user_df.iterrows():
             user_id, user_name = user['user_id'], user['username']
             logger.debug(f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
 
             for industry_id, industry_name in industry_dict.items():
-                msg_text = await get_msg_text_for_tg_newsletter(industry_id, user_id, telegram_days)
+                tg_news = get_industry_tg_news(industry_id, True, user_id, newsletter_timedelta, next_newsletter_datetime)
+                if tg_news.empty:
+                    continue
 
-                if not msg_text:
-                    user_logger.info(
-                        f'Нет новых новостей по подпискам на telegram каналы для отрасли {industry_id} для: {user_name}*{user_id}*'
-                    )
-                else:
+                start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по отрасли <b>{industry_name.capitalize()}</b>:'
+                await bot.send_message(user_id, text=start_msg)
+
+                tg_news = group_news_by_tg_channels(tg_news)
+
+                for tg_chan_name, articles in tg_news.items():
+                    msg_text = get_tg_channel_news_msg(tg_chan_name, articles)
                     await bot_send_msg(bot, user_id, msg_text)
-                    user_logger.info(
-                        f'*{user_id}* Пользователю {user_name} пришла еженедельная рассылка сводки новостей из telegram каналов. '
-                    )
-                    await asyncio.sleep(1.1)
-        logger.info('Рассылка успешно завершена. Переходим в ожидание следующей рассылки.')
+
+                user_logger.debug(
+                    f'*{user_id}* Пользователю {user_name} пришла рассылка сводки новостей из telegram каналов по отрасли '
+                    f'{industry_name}. '
+                )
+                await asyncio.sleep(1.1)
+
+        work_time = time.time() - start_tm
+        users_cnt = len(user_df)
+        logger.info(
+            f'Рассылка в {newsletter_dt_str} для {users_cnt} успешно завершена за {work_time:.3f} секунд. '
+            f'Переходим в ожидание следующей рассылки.'
+        )
 
 
 async def set_bot_commands() -> None:
@@ -244,7 +264,16 @@ async def main():
     loop.create_task(send_newsletter(dict(name='weekly_event', weekday=1, hour=11, minute=0)))
     loop.create_task(send_daily_news())
     # рассылка сводки новостей из тг каналов каждый пн в 12:00
-    # loop.create_task(send_weekly_tg_news(telegram_days=7, newsletter_weekday=0, newsletter_hour=12, newsletter_minute=0))
+    for passive_tg_newsletter_config in config.TG_NEWSLETTER_EVERYDAY_PERIODS:
+        send_time = passive_tg_newsletter_config['send_time']
+        send_time_dt = datetime.datetime.strptime(send_time, "%H:%M")
+        loop.create_task(passive_tg_newsletter(
+            newsletter_weekday=passive_tg_newsletter_config['weekday'],
+            newsletter_hour=send_time_dt.hour,
+            newsletter_minute=send_time_dt.minute,
+            newsletter_timedelta=passive_tg_newsletter_config['timedelta'],
+        ))
+
     await start_bot()
 
 

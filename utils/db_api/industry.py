@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 
 import pandas as pd
 from sqlalchemy import text
@@ -20,11 +20,18 @@ def get_industry_name(industry_id: int) -> str:
     return industry_name
 
 
-def get_industry_tg_news(industry_id: int, my_subscriptions: bool, days: int, user_id: int) -> pd.DataFrame:
+def get_industry_tg_news(
+        industry_id: int, by_user_subscriptions: bool, user_id: int, tmdelta: timedelta, to_datetime: datetime = None
+) -> pd.DataFrame:
     """
     Возвращает все тг-новости по отрасли за {days} дней с текущего числа
     Если my_subscriptions == True, то новости вынимаются только из каналов, на которые подписан пользователь
 
+    :param industry_id: ID отрасли, по которой формируется сводка
+    :param by_user_subscriptions: Флаг указания, что сводка по подпискам или по всем тг каналам отрасли
+    :param user_id: telegram ID пользователя, для которого формируется сводка
+    :param tmdelta: Промежуток, за который формируется сводка новостей до to_datetime
+    :param to_datetime: до какой даты_времени вынимаются новости (по умолчанию datetime.datetime.now())
     return: DataFrame['telegram_channel_name', 'telegram_article_link', 'title', 'date']
     """
     query = (
@@ -33,19 +40,19 @@ def get_industry_tg_news(industry_id: int, my_subscriptions: bool, days: int, us
         'JOIN relation_telegram_article ra ON a.id=ra.article_id '
         'JOIN telegram_channel tg ON ra.telegram_id=tg.id '
         'WHERE tg.industry_id=:industry_id AND '
-        'DATE(a.date) BETWEEN :before_date AND :now_date '
+        'a.date BETWEEN :from_datetime AND :to_datetime '
         '{dop_condition} '
-        'ORDER BY a.date DESC, ra.telegram_score DESC'
+        'ORDER BY tg.name ASC, a.date DESC, ra.telegram_score DESC'
     )
-    now_date = date.today()
-    before_date = now_date - timedelta(days=days)
+    to_datetime = to_datetime or datetime.now()
+    from_datetime = to_datetime - tmdelta
     kwargs = {
-        'now_date': now_date,
-        'before_date': before_date,
+        'to_datetime': to_datetime,
+        'from_datetime': from_datetime,
         'industry_id': industry_id,
     }
 
-    if not my_subscriptions:
+    if not by_user_subscriptions:
         dop_condition = ''
     else:
         dop_condition = 'AND tg.id IN (SELECT telegram_id FROM user_telegram_subscription WHERE user_id=:user_id)'

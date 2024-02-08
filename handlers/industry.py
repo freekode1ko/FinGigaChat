@@ -1,4 +1,5 @@
 # import logging
+from datetime import timedelta
 from typing import Union
 
 from aiogram import Router, types, F
@@ -13,7 +14,7 @@ from keyboards.industry.constructors import get_industry_kb, get_select_period_k
 from utils.bot.base import user_in_whitelist, bot_send_msg
 from utils.bot.industry import get_msg_text_for_tg_newsletter
 
-from utils.db_api.industry import get_industry_name, get_industries_with_tg_channels
+from utils.db_api.industry import get_industry_name, get_industries_with_tg_channels, get_industry_tg_news
 
 # logger = logging.getLogger(__name__)
 router = Router()
@@ -106,9 +107,10 @@ async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, call
     user_id = callback_query.from_user.id
     industry_id = callback_data.industry_id
     days = callback_data.days_count
+    by_my_subs = callback_data.my_subscriptions
 
-    msg_text = await get_msg_text_for_tg_newsletter(industry_id, user_id, days, callback_data.my_subscriptions)
+    news = get_industry_tg_news(industry_id, by_my_subs, user_id, timedelta(days=days))
+    msg_text = await get_msg_text_for_tg_newsletter(industry_id, news, callback_data.my_subscriptions)
 
-    # await callback_query.message.answer(msg_text, parse_mode='HTML')  # FIXME MessageIsTooLong
     await bot_send_msg(callback_query.message.bot, user_id, msg_text)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : получил новости по отрасли с id {industry_id} за {days} дней')

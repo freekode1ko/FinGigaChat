@@ -1,6 +1,8 @@
+import calendar
 import json
 import pathlib
 from typing import Dict, List, Union
+from datetime import timedelta
 
 from environs import Env
 
@@ -69,6 +71,63 @@ BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
 PAGE_ELEMENTS_COUNT = 10
+
+# пассивная рассылка новостей по подпискам на тг каналы
+# пн - 09:00 (за период с 16:00 прошлой пятницы дня до 09:00), 17:30 (за период с 09:00 этого дня до 17:30)
+# вт, ср, чт - 09:00 (за период с 17:30 предыдущего дня до 09:00), 17:30 (за период с 09:00 этого дня до 17:30)
+# пт - 09:00 (за период с 17:30 предыдущего дня до 09:00), 16:00 (за период с 16:00 предыдущей пятницы до 16:00)
+TG_NEWSLETTER_EVERYDAY_PERIODS = [
+    {
+        'weekday': calendar.MONDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=65),
+    },
+    {
+        'weekday': calendar.MONDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.TUESDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.TUESDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.WEDNESDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.WEDNESDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.THURSDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.THURSDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.FRIDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.FRIDAY,
+        'send_time': '16:00',
+        'timedelta': timedelta(days=7),
+    },
+]
 
 STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
