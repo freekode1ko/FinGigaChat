@@ -183,6 +183,7 @@ class ResearchParser:
             dates = self.driver.find_elements('css selector', 'span.date')
         except Exception as e:
             dates = []
+            self._logger.error(f'Ошибка при получении даты {type_of_review} отчета: %s', e)
         date = next((date.text for date in dates if date.text != ''), None)
         if date is None:
             self._logger.error(f'Дата {type_of_review} отчета не найдена')

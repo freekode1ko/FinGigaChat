@@ -102,7 +102,7 @@ class ResearchesGetter:
             self.metals_wire_table = metals_wire_parser_obj.get_table_data()
         except Exception as e:
             self.__driver = get_driver(self.logger)
-            self.logger.error('При сборке табличных данных для MetalsWire произошла ошибка: %s', e)
+            self.logger.critical('При сборке табличных данных для MetalsWire произошла ошибка: %s', e)
 
     def commodities_plot_collect(self, session: req.sessions.Session):
         # FIXME что делать, если тут произошла ошибка? Пока пропускаю elif
@@ -120,6 +120,7 @@ class ResearchesGetter:
                 self.graph_collector(link, session, commodity)
             except Exception as e:
                 self.logger.warning(f'Не удалось получить графики для {commodity}: %s', e)
+                continue
 
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
@@ -500,7 +501,13 @@ class ResearchesGetter:
         for comp_num, company in enumerate(company_pages_html):
             self.logger.info('{}/{}'.format(comp_num + 1, comp_size))
             page_html = company_pages_html.get(company)
-            tables = self.transformer_obj.get_table_from_html(True, page_html)
+
+            try:
+                tables = self.transformer_obj.get_table_from_html(True, page_html)
+            except Exception as e:
+                self.logger.error(f'При получении таблицы из html страницы для компании {company} произошла ошибка: %s', e)
+                continue
+
             pd.set_option('display.max_columns', None)
             tables[0]['group_no'] = tables[0].isnull().all(axis=1).cumsum()
             tables = tables[0].dropna(subset='Unnamed: 1')
@@ -514,13 +521,12 @@ class ResearchesGetter:
                 df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
                 page_tables.append([tables_names[i], company, df])
 
-            path_to_companies = 'sources/tables/companies.xlsx'
-            companies_writer = pd.ExcelWriter(path_to_companies)
+        path_to_companies = 'sources/tables/companies.xlsx'
+        with pd.ExcelWriter(path_to_companies) as companies_writer:
             list_of_companies_df.to_excel(companies_writer, sheet_name='head')
             for df in page_tables:
                 df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
             self.logger.info(f'Блок с компаниями записан в {path_to_companies}')
-            companies_writer.close()
 
 
 def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datetime:
