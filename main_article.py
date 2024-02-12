@@ -5,13 +5,15 @@ from pathlib import Path
 
 import pandas as pd
 
+import config
+from config import mail_imap_server, mail_password, mail_username
 from module.article_process import ArticleProcess
-from module.mail_parse import ImapParse
 from module.logger_base import selector_logger
-from config import mail_username, mail_password, mail_imap_server
+from module.mail_parse import ImapParse
+from utils import sentry
 
-CLIENT_FOLDER_DIR = "data/articles/client"
-COMMODITY_FOLDER_DIR = "data/articles/commodity"
+CLIENT_FOLDER_DIR = 'data/articles/client'
+COMMODITY_FOLDER_DIR = 'data/articles/commodity'
 HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 
@@ -83,13 +85,36 @@ def daily_func():
             logger.info('Ожидание 20 минут')
             time.sleep(20 * 60)
 
-    df_client = pd.read_csv(client_filepath, index_col=False) if client_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact',
-                                  'client_score', 'cleaned_data']))
+    df_client = (
+        pd.read_csv(client_filepath, index_col=False)
+        if client_flag
+        else (
+            pd.DataFrame(
+                [], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact', 'client_score', 'cleaned_data']
+            )
+        )
+    )
 
-    df_commodity = pd.read_csv(commodity_filepath, index_col=False) if commodity_flag else (
-        pd.DataFrame([], columns=['link', 'title', 'date', 'text', 'text_sum', 'commodity', 'commodity_impact',
-                                  'commodity_score', 'cleaned_data']))
+    df_commodity = (
+        pd.read_csv(commodity_filepath, index_col=False)
+        if commodity_flag
+        else (
+            pd.DataFrame(
+                [],
+                columns=[
+                    'link',
+                    'title',
+                    'date',
+                    'text',
+                    'text_sum',
+                    'commodity',
+                    'commodity_impact',
+                    'commodity_score',
+                    'cleaned_data',
+                ],
+            )
+        )
+    )
 
     if client_flag or commodity_flag:
         logger.info(f'Получение новостей по клиентам - {client_flag}')
@@ -121,6 +146,7 @@ def daily_func():
 
 
 if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_POLYANALIST_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # инициализируем логгер
     log_name = Path(__file__).stem

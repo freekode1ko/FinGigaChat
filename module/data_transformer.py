@@ -1,20 +1,19 @@
+import copy
+import datetime
 import os
 
-from bot_runner import read_curdatetime
-import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
-import pandas as pd
+import matplotlib.ticker as ticker
 import numpy as np
-import datetime
-import config
-import copy
+import pandas as pd
 import six
 
+import config
+from bot_runner import read_curdatetime
 from module import weekly_pulse_parse as wp_parse
 
 
 class Transformer:
-
     @staticmethod
     def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
         """
@@ -49,7 +48,7 @@ class Transformer:
             f = float(f)
         except ValueError:
             return str(f)
-        except:
+        except Exception:
             pass
 
         if pd.isna(f):
@@ -61,10 +60,23 @@ class Transformer:
                 return '{:,.0f}'.format(f).replace('.00', '').replace('.0', '').replace(',', ' ')
 
     @staticmethod
-    def render_mpl_table(data, name, col_width=1.0, row_height=0.625, font_size=14,
-                         header_color='#000000', row_colors=['#030303', '#0E0E0E'],
-                         edge_color='grey', bbox=[-0.17, -0.145, 1.3, 1.31],
-                         header_columns=0, title=None, alias=None, fin=None, ax=None, **kwargs):
+    def render_mpl_table(
+        data,
+        name,
+        col_width=1.0,
+        row_height=0.625,
+        font_size=14,
+        header_color='#000000',
+        row_colors=['#030303', '#0E0E0E'],
+        edge_color='grey',
+        bbox=[-0.17, -0.145, 1.3, 1.31],
+        header_columns=0,
+        title=None,
+        alias=None,
+        fin=None,
+        ax=None,
+        **kwargs,
+    ):
         data = data.fillna('-')
         if title is None:
             title = name
@@ -95,8 +107,9 @@ class Transformer:
             else:
                 cell_text = data.values
 
-            mpl_table = ax.table(cellText=cell_text, bbox=bbox, colLabels=data.columns, colWidths=col_widths,
-                                 cellLoc='center', **kwargs)
+            mpl_table = ax.table(
+                cellText=cell_text, bbox=bbox, colLabels=data.columns, colWidths=col_widths, cellLoc='center', **kwargs
+            )
 
             plt.subplots_adjust(bottom=0.25)
             mpl_table.auto_set_font_size(False)
@@ -112,8 +125,10 @@ class Transformer:
                     cell.set_text_props(fontsize=18)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
-                    if all(mpl_table._cells.get((k[0], j), None) is None
-                           or mpl_table._cells[(k[0], j)]._text.get_text() == '' for j in range(2, 3)):
+                    if all(
+                        mpl_table._cells.get((k[0], j), None) is None or mpl_table._cells[(k[0], j)]._text.get_text() == ''
+                        for j in range(2, 3)
+                    ):
                         cell.set_text_props(weight='bold', fontsize=20, color='white')
                         cell.set_linewidth(0)
                         rgb_color = (30 / 255, 31 / 255, 36 / 255)
@@ -128,18 +143,36 @@ class Transformer:
                 y_height = 1.1
                 fontsize = 20
 
-            ax.text(0.5, y_height, alias, fontsize=fontsize, fontweight='bold',
-                    color='white', ha=title_loc, va='top', transform=ax.transAxes,
-                    bbox=dict(facecolor='none', edgecolor='none'),
-                    clip_on=False)
+            ax.text(
+                0.5,
+                y_height,
+                alias,
+                fontsize=fontsize,
+                fontweight='bold',
+                color='white',
+                ha=title_loc,
+                va='top',
+                transform=ax.transAxes,
+                bbox=dict(facecolor='none', edgecolor='none'),
+                clip_on=False,
+            )
 
             sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
             sample_of_img_title_view = sample_of_img_title_view.format(read_curdatetime().split()[0])
             title_loc = 'left'
-            ax.text(-0.1, -0.245, sample_of_img_title_view, fontsize=10, fontweight='bold',
-                    color='white', ha=title_loc, va='top', transform=ax.transAxes,
-                    bbox=dict(facecolor='none', edgecolor='none'),
-                    clip_on=False)
+            ax.text(
+                -0.1,
+                -0.245,
+                sample_of_img_title_view,
+                fontsize=10,
+                fontweight='bold',
+                color='white',
+                ha=title_loc,
+                va='top',
+                transform=ax.transAxes,
+                bbox=dict(facecolor='none', edgecolor='none'),
+                clip_on=False,
+            )
         else:
             if ax is None:
                 size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
@@ -147,8 +180,7 @@ class Transformer:
                 fig.facecolor = 'black'
                 ax.axis('off')
 
-            mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns,
-                                 cellLoc='center', **kwargs)
+            mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns, cellLoc='center', **kwargs)
             mpl_table.auto_set_font_size(False)
             mpl_table.set_fontsize(font_size)
 
@@ -228,7 +260,7 @@ class Transformer:
         ax.axhline(y=y, color=color, linestyle='dotted')
 
         x = df['x'].iloc[-1]
-        delta_x = (x / 100)
+        delta_x = x / 100
         y = round(y, 1)
         delta_y = (y / 100) * 5
         x_name = df['x'].iloc[first]
@@ -285,7 +317,7 @@ class Transformer:
     @staticmethod
     def url_updater():
         """
-        Create urls to charts 
+        Create urls to charts
         """
 
         unix_timestamp = Transformer.default_to_unix()
@@ -299,15 +331,14 @@ class Transformer:
             elif commodities[commodity]['naming'] != 'Gas':
                 name = commodities[commodity]['links'][0]
                 commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
-                commodities[commodity]['links'][0] = commodities[commodity]['links'][0] \
-                    .replace('date_date', unix_timestamp)
+                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
         return commodities
 
 
 class Newsletter:
-    """ Создает текста для рассылок """
-    __newsletter_dict = dict(weekly_result='Основные события прошедшей недели',
-                             weekly_event='Календарь и прогнозы текущей недели')
+    """Создает текста для рассылок"""
+
+    __newsletter_dict = dict(weekly_result='Основные события прошедшей недели', weekly_event='Календарь и прогнозы текущей недели')
 
     @classmethod
     def get_newsletter_dict(cls):
@@ -315,23 +346,20 @@ class Newsletter:
 
     @classmethod
     def make_weekly_result(cls):
-        """ Создает текст для рассылки "Итоги недели" """
+        """Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
         weekly_dir = os.path.join(config.path_to_source, 'weeklies')
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
         img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = (f'<b>{title}</b>\n'
-                      f'')
+        newsletter = f'<b>{title}</b>\n' f''
         return title, newsletter, img_path_list
 
     @classmethod
     def make_weekly_event(cls):
-        """ Создает текст для рассылки "Что нас ждет на этой неделе?" """
+        """Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
         weekly_dir = os.path.join(config.path_to_source, 'weeklies')
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
         img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = (f'<b>{title}</b>\n'
-                      f'')
+        newsletter = f'<b>{title}</b>\n' f''
         return title, newsletter, img_path_list
-
