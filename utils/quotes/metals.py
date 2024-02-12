@@ -127,7 +127,8 @@ class MetalsGetter(QuotesGetter):
 
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[list, list, list, pd.DataFrame]:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Tuple[list, list, list, pd.DataFrame], set]:
+        preprocessed_ids = set()
         group_name = self.get_group_name()
         U7N23 = []
         metals_kot = []
@@ -142,13 +143,17 @@ class MetalsGetter(QuotesGetter):
             self.logger.info(f'Сборка таблицы {source_page} из блока {tables_row[0]} ({group_name})')
 
             # METALS BLOCK
-            metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = self.metal_block(tables_row, source_page, session)
-            U7N23 += U7_ls
-            metals_coal_kot += metal_coal_ls
-            metals_kot += metal_cat_ls
-            metals_bloom = pd.concat([metals_bloom, metal_bloom_df])
+            try:
+                metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = self.metal_block(tables_row, source_page, session)
+                U7N23 += U7_ls
+                metals_coal_kot += metal_coal_ls
+                metals_kot += metal_cat_ls
+                metals_bloom = pd.concat([metals_bloom, metal_bloom_df])
+                preprocessed_ids.add(tables_row[1])
+            except Exception as e:
+                self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
-        return U7N23, metals_kot, metals_coal_kot, metals_bloom
+        return (U7N23, metals_kot, metals_coal_kot, metals_bloom), preprocessed_ids
 
     def save(self, data: Tuple[list, list, list, pd.DataFrame]) -> None:
         group_name = self.get_group_name()

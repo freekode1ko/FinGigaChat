@@ -1,6 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod
-from typing import Callable, Any
+from typing import Callable, Any, Tuple
 
 import pandas as pd
 import requests as req
@@ -84,7 +84,7 @@ class QuotesGetter(ABC):
         pass
 
     @abstractmethod
-    def preprocess(self, tables: list, session: req.sessions.Session) -> Any:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Any, set]:
         pass
 
     @abstractmethod
@@ -95,12 +95,11 @@ class QuotesGetter(ABC):
         group_name = self.get_group_name()
         session = req.Session()
         all_tables = self.get_tables(session, self.filter)
-        sources_ids = {i[1] for i in all_tables}
         self.logger.info(f'Котировки ({group_name}) собраны, запускаем обработку')
 
         if extra_data := self.get_extra_data():
             all_tables.append(extra_data)
 
-        data = self.preprocess(all_tables, session)
+        data, preprocessed_ids = self.preprocess(all_tables, session)
         self.save(data)
-        self.save_last_time_update(sources_ids)
+        self.save_last_time_update(preprocessed_ids)

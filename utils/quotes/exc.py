@@ -1,4 +1,5 @@
 import datetime
+from typing import Tuple
 
 import pandas as pd
 import requests as req
@@ -31,7 +32,7 @@ class ExcGetter(QuotesGetter):
         exchange_kot = []
         if exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
             if exchange_page == 'usd-rub':
-                euro_standard, page_html = self.parser_obj.get_html(table_exchange[2], session)
+                euro_standard, page_html = self.parser_obj.get_html(table_exchange[3], session)
                 tables = pd.read_html(page_html)
                 for table in tables:
                     try:
@@ -48,8 +49,7 @@ class ExcGetter(QuotesGetter):
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[4].columns):
                 row = [
                     exchange_page,
-                    table_exchange[4].loc[table_exchange[4]['Exchange'] == 'Real-time Currencies']
-                        ['Last'].values.tolist()[0],
+                    table_exchange[4].loc[table_exchange[4]['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0],
                 ]
                 exchange_kot.append(row)
                 self.logger.info('Таблица exchange_kot (Exchange) собрана')
@@ -64,7 +64,8 @@ class ExcGetter(QuotesGetter):
             self.logger.info('Таблица exchange_kot (usd-cnh) собрана')
         return exchange_kot
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> pd.DataFrame:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
+        preprocessed_ids = set()
         group_name = self.get_group_name()
         exchange_kot = []
 
@@ -76,12 +77,16 @@ class ExcGetter(QuotesGetter):
             self.logger.info(f'Сборка таблицы {source_page} из блока {tables_row[0]} ({group_name})')
 
             # EXCENGE BLOCK
-            exchange_kot += self.exchange_block(tables_row, source_page, session)
+            try:
+                exchange_kot += self.exchange_block(tables_row, source_page, session)
+                preprocessed_ids.add(tables_row[1])
+            except Exception as e:
+                self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
         # Запись Курсов в БД и Локальное хранилище
         fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']).drop_duplicates(subset=['Валюта'],
                                                                                        ignore_index=True)
-        return fx_df
+        return fx_df, preprocessed_ids
 
     def save(self, data: pd.DataFrame) -> None:
         group_name = self.get_group_name()

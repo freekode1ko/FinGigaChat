@@ -1,4 +1,5 @@
 import datetime
+from typing import Tuple
 
 import pandas as pd
 import requests as req
@@ -20,7 +21,8 @@ class BondsGetter(QuotesGetter):
         self.logger.info(f'Таблица Облигации (Котировки) {table_bonds[3]} собрана')
         return bonds_kot
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> pd.DataFrame:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
+        preprocessed_ids = set()
         group_name = self.get_group_name()
         bonds_kot = pd.DataFrame(columns=['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время'])
         size_tables = len(tables)
@@ -30,8 +32,12 @@ class BondsGetter(QuotesGetter):
             source_page = self.get_source_page_from_table_row(tables_row)
             self.logger.info(f'Сборка таблицы {source_page} из блока {tables_row[0]} ({group_name})')
             # BONDS BLOCK
-            bonds_kot = pd.concat([bonds_kot, self.bond_block(tables_row)])
-        return bonds_kot
+            try:
+                bonds_kot = pd.concat([bonds_kot, self.bond_block(tables_row)])
+                preprocessed_ids.add(tables_row[1])
+            except Exception as e:
+                self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
+        return bonds_kot, preprocessed_ids
 
     def save(self, data: pd.DataFrame) -> None:
         group_name = self.get_group_name()

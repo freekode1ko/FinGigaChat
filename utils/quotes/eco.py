@@ -20,8 +20,7 @@ class EcoGetter(QuotesGetter):
     def economic_block(self, table_eco: list, page_eco: str):
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame \
-            (columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
+        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
         if page_eco == 'KeyRate':
             eco_frst_third.append(['Текущая ключевая ставка Банка России', table_eco[4]['Ставка'][0]])
             self.logger.info('Таблица Экономика (KeyRate) собрана')
@@ -46,7 +45,8 @@ class EcoGetter(QuotesGetter):
 
         return eco_frst_third, world_bet, rus_infl
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[list, pd.DataFrame, pd.DataFrame]:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Tuple[list, pd.DataFrame, pd.DataFrame], set]:
+        preprocessed_ids = set()
         group_name = self.get_group_name()
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
@@ -61,12 +61,16 @@ class EcoGetter(QuotesGetter):
             self.logger.info(f'Сборка таблицы {source_page} из блока {tables_row[0]} ({group_name})')
 
             # ECONOMIC BLOCK
-            eco_list, world_bet_df, rus_infl_df = self.economic_block(tables_row, source_page)
-            eco_frst_third += eco_list
-            world_bet = pd.concat([world_bet, world_bet_df])
-            rus_infl = pd.concat([rus_infl, rus_infl_df])
+            try:
+                eco_list, world_bet_df, rus_infl_df = self.economic_block(tables_row, source_page)
+                eco_frst_third += eco_list
+                world_bet = pd.concat([world_bet, world_bet_df])
+                rus_infl = pd.concat([rus_infl, rus_infl_df])
+                preprocessed_ids.add(tables_row[1])
+            except Exception as e:
+                self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
-        return eco_frst_third, world_bet, rus_infl
+        return (eco_frst_third, world_bet, rus_infl), preprocessed_ids
 
     def save(self, data: Tuple[list, pd.DataFrame, pd.DataFrame]) -> None:
         eco_frst_third, world_bet, rus_infl = data
