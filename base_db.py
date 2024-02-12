@@ -1,7 +1,12 @@
-from sqlalchemy import create_engine, text
+import datetime
+
+import numpy as np
 import pandas as pd
+from sqlalchemy import create_engine, text
+
 from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
-    CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE
+    CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, \
+    QUOTES_SOURCES_PATH
 
 # CLIENT_NAME_PATH = 'data/name/client_name.csv'
 # COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
@@ -301,6 +306,32 @@ def update_client_alternative(engine):
             conn.execute(text(sql_text))
             conn.commit()
     print('Client_alternative table is update')
+
+
+def update_quotes_sources_table(engine):
+    path = QUOTES_SOURCES_PATH
+    columns_new_names = {
+        'Алиас': 'alias',
+        'Блок': 'block',
+        'Формат ответа ': 'response_format',
+        'Источник': 'source',
+    }
+
+    # считываем первый листок из файла, отбрасываем строки, где все ячейки пустые, отбрасываем дубли
+    sources_df = pd.read_excel(path)[['Алиас', 'Блок', 'Формат ответа ', 'Источник']]\
+        .dropna()\
+        .rename(columns=columns_new_names)\
+        .drop_duplicates()
+
+    # extra_data = [
+    #     ['Металлы', 'Блок котировки', '', 'https://www.bloomberg.com/quote/LMCADS03:COM'],
+    # ]
+    #
+    # sources_df = pd.concat([sources_df, pd.DataFrame(extra_data, columns=['alias', 'block', 'response_format', 'source'])])
+    sources_len = len(sources_df)
+    sources_df.index = np.arange(1, sources_len + 1)
+    sources_df['last_update_datetime'] = datetime.datetime.now()
+    sources_df.to_sql('quote_source', con=engine, if_exists='replace', index_label='id')
 
 
 def drop_tables(engine):
