@@ -17,7 +17,7 @@ class MetalsGetter(QuotesGetter):
     @staticmethod
     def get_extra_data() -> list:
         with database.engine.connect() as conn:
-            query = text('SELECT alias, id, block, source WHERE source=:source LIMIT 1')
+            query = text('SELECT alias, id, block, source FROM quote_source WHERE source=:source LIMIT 1')
             source = 'https://www.bloomberg.com/quote/LMCADS03:COM'
             row = conn.execute(query.bindparams(source=source)).fetchone()
 

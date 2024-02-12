@@ -1,7 +1,6 @@
 import random
 
 import requests as req
-import requests.status_codes
 
 from config import user_agents
 from module.logger_base import Logger

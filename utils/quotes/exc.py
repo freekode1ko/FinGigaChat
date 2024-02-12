@@ -36,7 +36,7 @@ class ExcGetter(QuotesGetter):
                 tables = pd.read_html(page_html)
                 for table in tables:
                     try:
-                        exchange_table = table[table['Exchange'] == 'Real-time Currencies']
+                        exchange_table = table[table.Exchange.str.startswith('Real-time Currencies')]
                         if not exchange_table.empty:
                             row = ['usd-rub', exchange_table['Last'].values[0]]
                             exchange_kot.append(row)
@@ -49,7 +49,7 @@ class ExcGetter(QuotesGetter):
             elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[4].columns):
                 row = [
                     exchange_page,
-                    table_exchange[4].loc[table_exchange[4]['Exchange'] == 'Real-time Currencies']['Last'].values.tolist()[0],
+                    table_exchange[4].loc[table_exchange[4].Exchange.str.startswith('Real-time Currencies')]['Last'].values.tolist()[0],
                 ]
                 exchange_kot.append(row)
                 self.logger.info('Таблица exchange_kot (Exchange) собрана')
