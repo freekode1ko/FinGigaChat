@@ -4,7 +4,7 @@ import re
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -228,7 +228,7 @@ class ResearchesGetter:
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
-    def collect_research(self) -> (dict, dict):
+    def collect_research(self) -> Tuple[Optional[dict], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         """
         Collect all type of reviews from CIB Research
         And get page html with fin data about companies from CIB Research
@@ -401,26 +401,6 @@ class ResearchesGetter:
             'Commodity day': commodity_day,
         }
 
-        # companies
-        companies_pages_html = dict()
-        for company in self.list_of_companies:
-            try:
-                page_html = authed_user.get_company_html_page(url_part=company[0])
-            except Exception as e:
-                # FIXME ??? как тут лучше сделать, ведь эти данные сохраняются в xlsx, если сделать просто continue,
-                # то там не будет страниц с таблицами из пропущенных страниц
-                # А если что-то сохранять, то какой в этом будет смысл?
-                self.__driver = get_driver(logger=self.logger)
-                authed_user = ue.ResearchParser(self.__driver, self.logger)
-                self.logger.error(
-                    f'При открытии страницы компании {company}: %s',
-                    e,
-                )
-                page_html = None
-                continue
-            companies_pages_html[company[1]] = page_html
-        self.logger.info('Страница с компаниями собрана')
-
         clients_table = authed_user.get_companies_financial_indicators_table()
         self.__driver = authed_user.driver
         self.logger.info('Страница с клиентами собрана')
@@ -436,7 +416,7 @@ class ResearchesGetter:
             self.__driver = get_driver(logger=self.logger)
             self.logger.error('При сборе отчетов weekly pulse произошла ошибка: %s', e)
 
-        return reviews, companies_pages_html, key_eco_table, clients_table
+        return reviews, key_eco_table, clients_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -486,48 +466,6 @@ class ResearchesGetter:
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
         self.logger.info('Таблица date_of_last_build записана')
 
-    def process_companies_data(self, company_pages_html) -> None:
-        """
-        Process and save fin mark of the companies.
-        :param company_pages_html: html page with fin mark from CIB Research
-        """
-        # TODO: изменить сохранение ?
-
-        list_of_companies_df = pd.DataFrame(self.list_of_companies, columns=['ID', 'Name', 'URL'])
-        comp_size = len(self.list_of_companies)
-        page_tables = []
-
-        self.logger.info('Начало процесса обработки фин.показателей компаний')
-        for comp_num, company in enumerate(company_pages_html):
-            self.logger.info('{}/{}'.format(comp_num + 1, comp_size))
-            page_html = company_pages_html.get(company)
-
-            try:
-                tables = self.transformer_obj.get_table_from_html(True, page_html)
-            except Exception as e:
-                self.logger.error(f'При получении таблицы из html страницы для компании {company} произошла ошибка: %s', e)
-                continue
-
-            pd.set_option('display.max_columns', None)
-            tables[0]['group_no'] = tables[0].isnull().all(axis=1).cumsum()
-            tables = tables[0].dropna(subset='Unnamed: 1')
-            tables_names = tables['Unnamed: 0'].dropna().tolist()
-
-            for i in range(0, len(tables_names)):
-                df = tables[tables['group_no'] == i]
-                df.reset_index(inplace=True)
-                df = df.drop(['Unnamed: 0', 'index', 'group_no'], axis=1)
-                df = df.drop(index=df.index[0], axis=0)
-                df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
-                page_tables.append([tables_names[i], company, df])
-
-        path_to_companies = 'sources/tables/companies.xlsx'
-        with pd.ExcelWriter(path_to_companies) as companies_writer:
-            list_of_companies_df.to_excel(companies_writer, sheet_name='head')
-            for df in page_tables:
-                df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
-            self.logger.info(f'Блок с компаниями записан в {path_to_companies}')
-
 
 def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datetime:
     """
@@ -563,12 +501,11 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     if driver:
         try:
             logger.info('Начало сборки отчетов с research')
-            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research()
+            reviews_dict, key_eco_table, clients_table = runner.collect_research()
             logger.info('Сохранение собранных данных')
             runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
-            runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             logger.error('Ошибка при сборке отчетов с Research: %s', e)
 
