@@ -44,7 +44,7 @@ STOCK_WORDS = [
     'дайджест',
     'открытие рынок',
     'закрытие рынок',
-    'комметарий по рынок',
+    'комметарий рынок',
     'утренний обзор',
     'вечерний обзор',
     'главный анонс',
@@ -53,10 +53,8 @@ STOCK_WORDS = [
     'главный событие месяц',
     'вечерний комментарий',
     'дневной обзор',
-    'что произошло за день',
-    'рассказываем, что интересного пишут',
-    'краткая сводка событий',
-    'пока вы спали',
+    'рассказывать интересный писать',
+    'сводка событие',
 ]
 
 
@@ -618,7 +616,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
         for previous_pos in range(actual_pos):
 
             # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
-            current_threshold = threshold + 0.2 if (previous_pos < start and (dt_now - df_previous['date'][previous_pos]).total_seconds() > MAX_TIME_LIM) else threshold
+            time_passed = (dt_now - df_previous['date'][previous_pos]).total_seconds()
+            current_threshold = threshold + 0.2 if (previous_pos < start and time_passed > MAX_TIME_LIM) else threshold
 
             actual_client = df_concat_client[actual_pos].split(';')
             actual_commodity = df_concat_commodity[actual_pos].split(';')
