@@ -286,6 +286,41 @@ query_article_name_impact = ("CREATE TABLE IF NOT EXISTS public.article_name_imp
                              "cleaned_data TEXT)"
                              "TABLESPACE pg_default;")
 
+query_quote_group = (
+    """
+    CREATE TABLE IF NOT EXISTS public.quote_group
+    (
+        id SERIAL PRIMARY KEY,
+        name character varying(64) COLLATE pg_catalog."default" NOT NULL
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.quote_group
+        IS 'Справочник выделенных среди котировок подгрупп';
+    """
+)
+query_quote_source = (
+    """
+    DROP TABLE IF EXISTS public.quote_source CASCADE;
+    CREATE TABLE IF NOT EXISTS public.quote_source
+    (
+        id SERIAL PRIMARY KEY,
+        alias character varying(64) COLLATE pg_catalog."default" NOT NULL,
+        block character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        response_format text COLLATE pg_catalog."default",
+        source text COLLATE pg_catalog."default" NOT NULL,
+        last_update_datetime timestamp without time zone,
+        quote_group_id integer NOT NULL,
+        CONSTRAINT quote_group_id FOREIGN KEY (quote_group_id)
+            REFERENCES public.quote_group (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.quote_source
+        IS 'Справочник источников котировок';
+    """
+)
+
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
@@ -308,7 +343,22 @@ def update_client_alternative(engine):
     print('Client_alternative table is update')
 
 
-def update_quotes_sources_table(engine):
+def update_quote_group_table(engine) -> None:
+    from utils import quotes
+    groups = quotes.get_groups()
+
+    quotes_groups_set = {g.get_group_name() for g in groups}
+    quotes_groups_set = quotes_groups_set - set(pd.read_sql_table('quote_group', con=engine, columns=['name'])['name'].tolist())
+    quotes_groups_df = pd.DataFrame(quotes_groups_set, columns=['name'])
+
+    if not quotes_groups_df.empty:
+        quotes_groups_df.to_sql('quote_group', con=engine, if_exists='append', index=False)
+
+
+def update_quote_source_table(engine):
+    from utils import quotes
+    groups = quotes.get_groups()
+
     path = QUOTES_SOURCES_PATH
     columns_new_names = {
         'Алиас': 'alias',
@@ -317,21 +367,38 @@ def update_quotes_sources_table(engine):
         'Источник': 'source',
     }
 
-    # считываем первый листок из файла, отбрасываем строки, где все ячейки пустые, отбрасываем дубли
+    quotes_groups_df = pd.read_sql_table('quote_group', con=engine, columns=['id', 'name'])
+
+    # считываем первый листок из файла,
+    # отбрасываем строки, где есть пустые ячейки,
+    # переименовываем колонки,
+    # отбрасываем дубли
     sources_df = pd.read_excel(path)[['Алиас', 'Блок', 'Формат ответа ', 'Источник']]\
         .dropna()\
         .rename(columns=columns_new_names)\
         .drop_duplicates()
 
-    # extra_data = [
-    #     ['Металлы', 'Блок котировки', '', 'https://www.bloomberg.com/quote/LMCADS03:COM'],
-    # ]
-    #
-    # sources_df = pd.concat([sources_df, pd.DataFrame(extra_data, columns=['alias', 'block', 'response_format', 'source'])])
-    sources_len = len(sources_df)
-    sources_df.index = np.arange(1, sources_len + 1)
+    sources_df['id'] = 0
     sources_df['last_update_datetime'] = datetime.datetime.now()
-    sources_df.to_sql('quote_source', con=engine, if_exists='replace', index_label='id')
+    sources_df['alias'] = sources_df['alias'].str.split('/', n=1).str[0]
+    sources_df['source'] = sources_df['source'].str.rstrip('/')
+    sources_df['group_name'] = ''
+    sources_df = sources_df[['alias', 'id', 'block', 'source', 'response_format', 'last_update_datetime', 'group_name']]
+
+    for i, row in sources_df.iterrows():
+        for group in groups:
+            if group.filter(row):
+                sources_df.loc[i, 'group_name'] = group.get_group_name()
+                break
+
+    sources_df = (
+        sources_df.merge(quotes_groups_df,  left_on='group_name', right_on='name', suffixes=['', '_y'])
+                  .rename(columns={'id_y': 'quote_group_id'})[
+            ['alias', 'block', 'response_format', 'source', 'quote_group_id', 'last_update_datetime']
+        ]
+    )
+
+    sources_df.to_sql('quote_source', con=engine, if_exists='append', index=False)
 
 
 def drop_tables(engine):
@@ -353,20 +420,27 @@ if __name__ == '__main__':
     # !!! DROP TABLE !!!
     # # # # drop_tables(main_engine)
 
-    # create base table and full it
-    main(main_engine)
-    # create commodity_pricing
-    update_database(main_engine, query_commodity_pricing)
-    # add energy in commodity
-    update_database(main_engine, query_commodity_energy)
-    # delete duplicate commodity
-    update_database(main_engine, query_delete_dupl)
-    # insert new com: olovo
-    update_database(main_engine, query_commodity_olovo)
-    # insert alternative name for new com
-    update_database(main_engine, query_new_alternative_com_electro)
-    update_database(main_engine, query_new_alternative_com_olovo)
-    # make article_name_count
-    update_database(main_engine, query_article_name_impact)
-    # update client_alternative
-    update_client_alternative(main_engine)
+    # # create base table and full it
+    # main(main_engine)
+    # # create commodity_pricing
+    # update_database(main_engine, query_commodity_pricing)
+    # # add energy in commodity
+    # update_database(main_engine, query_commodity_energy)
+    # # delete duplicate commodity
+    # update_database(main_engine, query_delete_dupl)
+    # # insert new com: olovo
+    # update_database(main_engine, query_commodity_olovo)
+    # # insert alternative name for new com
+    # update_database(main_engine, query_new_alternative_com_electro)
+    # update_database(main_engine, query_new_alternative_com_olovo)
+    # # make article_name_count
+    # update_database(main_engine, query_article_name_impact)
+    # # update client_alternative
+    # update_client_alternative(main_engine)
+
+    # create quote_group and quote_source tables
+    update_database(main_engine, query_quote_group)
+    update_database(main_engine, query_quote_source)
+    # update quote_group and quote_source tables
+    update_quote_group_table(main_engine)
+    update_quote_source_table(main_engine)

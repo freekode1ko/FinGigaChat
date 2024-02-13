@@ -1,5 +1,4 @@
-import datetime
-from typing import Tuple
+from typing import Tuple, List
 
 import pandas as pd
 import requests as req
@@ -11,6 +10,9 @@ from utils.quotes.base import QuotesGetter
 class EcoGetter(QuotesGetter):
     NAME = 'eco'
 
+    world_bet_columns: List[str] = ['Country', 'Last', 'Previous', 'Reference', 'Unit']
+    rus_infl_columns: List[str] = ['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %']
+
     @staticmethod
     def filter(table_row: list) -> bool:
         page = QuotesGetter.get_source_page_from_table_row(table_row)
@@ -19,8 +21,8 @@ class EcoGetter(QuotesGetter):
 
     def economic_block(self, table_eco: list, page_eco: str):
         eco_frst_third = []
-        world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame(columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
+        world_bet = pd.DataFrame(columns=self.world_bet_columns)
+        rus_infl = pd.DataFrame(columns=self.rus_infl_columns)
         if page_eco == 'KeyRate':
             eco_frst_third.append(['Текущая ключевая ставка Банка России', table_eco[4]['Ставка'][0]])
             self.logger.info('Таблица Экономика (KeyRate) собрана')
@@ -49,9 +51,8 @@ class EcoGetter(QuotesGetter):
         preprocessed_ids = set()
         group_name = self.get_group_name()
         eco_frst_third = []
-        world_bet = pd.DataFrame(columns=['Country', 'Last', 'Previous', 'Reference', 'Unit'])
-        rus_infl = pd.DataFrame \
-            (columns=['Дата', 'Ключевая ставка, % годовых', 'Инфляция, % г/г', 'Цель по инфляции, %'])
+        world_bet = pd.DataFrame(columns=self.world_bet_columns)
+        rus_infl = pd.DataFrame(columns=self.rus_infl_columns)
 
         size_tables = len(tables)
         self.logger.info(f'Обработка собранных таблиц ({group_name}) ({size_tables}).')

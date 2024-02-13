@@ -67,7 +67,7 @@ def main(period):
         print(start_msg)
         logger.info(start_msg)
 
-        with multiprocessing.Pool(config.QUOTES_GETTING_PROC_NUM) as pool:
+        with multiprocessing.Pool(config.QUOTES_PROCESSING_PROC_NUM) as pool:
             results = pool.starmap(collect_quotes_group, groups_logger_list)
 
         work_time = time.time() - start_tm

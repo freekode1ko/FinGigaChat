@@ -26,28 +26,29 @@ class QuotesGetter(ABC):
 
     @staticmethod
     def get_source_page_from_table_row(tables_row: list) -> str:
-        parts = tables_row[3].split('/')
-        url_index = -1 if parts[-1] else -2
-        return parts[url_index]
+        """Вынимает из ссылки на источник название страницы (кусок url от самого левого /)"""
+        return tables_row[3].rstrip('/').rsplit('/', 1)[-1]
 
-    def get_tables(self, session: req.sessions.Session, filter_function: Callable[[list], bool] = bool) -> list:
+    def get_tables(self, session: req.sessions.Session) -> list:
+        """
+        Выгружает источники для подгруппы котировок
+        Вынимает таблицы с источников
+        Возвращает список источников и собранных для них таблиц
+        """
         all_tables = []
         group_name = self.get_group_name()
-        # urls = self.transformer_obj.load_urls_as_list(self.path_to_source, 'Источник')
-        # df_urls = pd.DataFrame(urls).dropna().drop_duplicates()
-        # urls = df_urls.values.tolist()
-        query = 'SELECT alias, id, block, source FROM quote_source'
+        query = (
+            f'SELECT alias, id, block, source '
+            f'FROM quote_source '
+            f"WHERE quote_group_id in (SELECT id FROM quote_group WHERE name='{group_name}')"
+        )
         df_urls = pd.read_sql(query, con=database.engine)
         urls = df_urls.values.tolist()
         for url in urls:
-            table_row_prefix_list = [url[0].split('/')[0], *url[1:]]  # alias, id, block, source
-            if not filter_function(table_row_prefix_list):
-                continue
-
             euro_standard, page_html = self.parser_obj.get_html(url[3], session)
             try:
                 tables = self.transformer_obj.get_table_from_html(euro_standard, page_html)
-                all_tables.extend([[*table_row_prefix_list, table] for table in tables])
+                all_tables.extend([[*url, table] for table in tables])  # alias, id, block, source
                 self.logger.info(f'Таблиц добавлено ({group_name}): {len(tables)}')
             except ValueError as val_err:
                 self.logger.error(f'Таблицы не найдены ({group_name}). {val_err}: {page_html[:100]}')
@@ -56,6 +57,7 @@ class QuotesGetter(ABC):
         return all_tables
 
     def save_date_of_last_build(self) -> None:
+        """Старый функционал"""
         group_name = self.get_group_name()
         cur_time = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
@@ -63,6 +65,7 @@ class QuotesGetter(ABC):
         self.logger.info(f'Таблица date_of_last_build записана ({group_name})')
 
     def save_last_time_update(self, sources_ids: set):
+        """Обновляет время сбора данных с источников sources_ids"""
         group_name = self.get_group_name()
         with database.engine.connect() as conn:
             query = text('UPDATE quote_source SET last_update_datetime=CURRENT_TIMESTAMP WHERE id = ANY(:sources_ids)')
@@ -72,6 +75,7 @@ class QuotesGetter(ABC):
 
     @staticmethod
     def get_extra_data() -> list:
+        """Используется, если нужно получить источники, которые были отброшены на этапе get_tables"""
         return []
 
     @classmethod
@@ -81,20 +85,30 @@ class QuotesGetter(ABC):
     @staticmethod
     @abstractmethod
     def filter(table_row: list) -> bool:
+        """Используется для отбора данных из ТЗ.xlsx"""
         pass
 
     @abstractmethod
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Any, set]:
+        """
+        Основная функция сбора информации с источников
+
+        :param tables: Таблицы, собранные с источников данных по котировкам
+        :param session: requests Сессия
+        return: Кортеж из результата, который надо сохранить, и множества id источников, с которых удалось собрать данные
+        """
         pass
 
     @abstractmethod
     def save(self, data: Any) -> None:
+        """Сохраняет собранные данные по котировкам"""
         pass
 
     def collect(self) -> None:
+        """Собирает данные по котировкам с источников"""
         group_name = self.get_group_name()
         session = req.Session()
-        all_tables = self.get_tables(session, self.filter)
+        all_tables = self.get_tables(session)
         self.logger.info(f'Котировки ({group_name}) собраны, запускаем обработку')
 
         if extra_data := self.get_extra_data():

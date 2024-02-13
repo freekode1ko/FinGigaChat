@@ -59,7 +59,7 @@ research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 RESEARCH_GETTING_TIMES_LIST = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
 
-QUOTES_GETTING_PROC_NUM = 2
+QUOTES_PROCESSING_PROC_NUM = 2
 
 CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'

@@ -1,5 +1,5 @@
 import datetime
-from typing import Tuple
+from typing import Tuple, List
 
 import pandas as pd
 import requests as req
@@ -14,8 +14,14 @@ from utils.quotes.base import QuotesGetter
 class MetalsGetter(QuotesGetter):
     NAME = 'metals'
 
+    big_table_columns: List[str] = ['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date']
+    metals_coal_kot_table_columns: List[str] = ['Metals', 'Price', 'Weekly', 'Date']
+    U7N23_columns: List[str] = ['Metals', 'Price']
+    metals_bloom_columns: List[str] = ['Metals', 'Price', 'Day']
+
     @staticmethod
     def get_extra_data() -> list:
+        """По этим данным не удалется получить таблицы стандартным способом"""
         with database.engine.connect() as conn:
             query = text('SELECT alias, id, block, source FROM quote_source WHERE source=:source LIMIT 1')
             source = 'https://www.bloomberg.com/quote/LMCADS03:COM'
@@ -34,7 +40,7 @@ class MetalsGetter(QuotesGetter):
         U7N23 = []
         metals_kot = []
         metals_coal_kot = []
-        metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
+        metals_bloom = pd.DataFrame(columns=self.metals_bloom_columns)
 
         if page_metals == 'LMCADS03:COM':
             euro_standard, page_html = self.parser_obj.get_html(table_metals[3], session)
@@ -42,10 +48,10 @@ class MetalsGetter(QuotesGetter):
             object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div/main/div/div[1]/div[4]/div'
             price = tree.xpath('{}/div[1]/text()'.format(object_xpath))
             price_diff = tree.xpath('{}/div[2]/span/span/text()'.format(object_xpath))
-            temp_df = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
+            temp_df = pd.DataFrame(columns=self.metals_bloom_columns)
             try:
                 row = ['Медь', price[0], price_diff[0]]
-                temp_df = pd.DataFrame([row], columns=['Metals', 'Price', 'Day'])
+                temp_df = pd.DataFrame([row], columns=self.metals_bloom_columns)
             except Exception as ex:
                 self.logger.error(f'Ошибка ({ex}) получения таблицы с медью!')
             metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
@@ -53,7 +59,9 @@ class MetalsGetter(QuotesGetter):
 
         elif page_metals == 'U7*0':
             if {'Last', 'Change'}.issubset(table_metals[4].columns):
-                jap_coal = table_metals[4][table_metals[4].Symbol.str.contains('U7.24')]
+                y = datetime.date.today().strftime('%y')
+                jap_coal_pattern = f'U7(M|N){y}'
+                jap_coal = table_metals[4][table_metals[4].Symbol.str.contains(jap_coal_pattern)]
                 U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
                 self.logger.info('Таблица U7N24 собрана')
 
@@ -133,7 +141,7 @@ class MetalsGetter(QuotesGetter):
         U7N23 = []
         metals_kot = []
         metals_coal_kot = []
-        metals_bloom = pd.DataFrame(columns=['Metals', 'Price', 'Day'])
+        metals_bloom = pd.DataFrame(columns=self.metals_bloom_columns)
 
         size_tables = len(tables)
         self.logger.info(f'Обработка собранных таблиц ({group_name}) ({size_tables}).')
@@ -160,9 +168,9 @@ class MetalsGetter(QuotesGetter):
         U7N23, metals_kot, metals_coal_kot, metals_bloom = data
 
         # Запись Металов и Сырья в БД и Локальное хранилище
-        big_table = pd.DataFrame(columns=['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date'])
-        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=['Metals', 'Price', 'Weekly', 'Date'])
-        U7N23_df = pd.DataFrame(U7N23, columns=['Metals', 'Price'])
+        big_table = pd.DataFrame(columns=self.big_table_columns)
+        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=self.metals_coal_kot_table_columns)
+        U7N23_df = pd.DataFrame(U7N23, columns=self.U7N23_columns)
         for table in metals_kot:
             big_table = pd.concat([big_table, table], ignore_index=True)
         big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)

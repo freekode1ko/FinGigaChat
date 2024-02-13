@@ -1,5 +1,5 @@
 import datetime
-from typing import Tuple
+from typing import Tuple, List
 
 import pandas as pd
 import requests as req
@@ -11,6 +11,8 @@ from utils.quotes.base import QuotesGetter
 
 class ExcGetter(QuotesGetter):
     NAME = 'exc'
+
+    fx_columns: List[str] = ['Валюта', 'Курс']
 
     @staticmethod
     def find_number(data_list):
@@ -84,7 +86,7 @@ class ExcGetter(QuotesGetter):
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
         # Запись Курсов в БД и Локальное хранилище
-        fx_df = pd.DataFrame(exchange_kot, columns=['Валюта', 'Курс']).drop_duplicates(subset=['Валюта'],
+        fx_df = pd.DataFrame(exchange_kot, columns=self.fx_columns).drop_duplicates(subset=['Валюта'],
                                                                                        ignore_index=True)
         return fx_df, preprocessed_ids
 
@@ -94,4 +96,4 @@ class ExcGetter(QuotesGetter):
         self.logger.info('Записана страница с Курсами')
         # Write to fx DB
         data.to_sql('exc', if_exists='replace', index=False, con=database.engine)
-        self.logger.info(f'Таблица {group_name}  записана')
+        self.logger.info(f'Таблица {group_name} записана')
