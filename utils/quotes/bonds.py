@@ -39,11 +39,3 @@ class BondsGetter(QuotesGetter):
             except Exception as e:
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
         return bonds_kot, preprocessed_ids
-
-    def save(self, data: pd.DataFrame) -> None:
-        group_name = self.get_group_name()
-        # Запись Котировок в БД и Локальное хранилище
-        data.to_excel('sources/tables/bonds.xlsx', sheet_name='Блок котировки')
-        self.logger.info(f'Записана страница с Котировками ({group_name})')
-        data.to_sql('bonds', if_exists='replace', index=False, con=database.engine)
-        self.logger.info(f'Таблица {group_name} записана')

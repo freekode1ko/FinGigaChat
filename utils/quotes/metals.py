@@ -135,7 +135,7 @@ class MetalsGetter(QuotesGetter):
 
         return metals_coal_kot, metals_kot, metals_bloom, U7N23
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Tuple[list, list, list, pd.DataFrame], set]:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
         preprocessed_ids = set()
         group_name = self.get_group_name()
         U7N23 = []
@@ -161,13 +161,6 @@ class MetalsGetter(QuotesGetter):
             except Exception as e:
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
-        return (U7N23, metals_kot, metals_coal_kot, metals_bloom), preprocessed_ids
-
-    def save(self, data: Tuple[list, list, list, pd.DataFrame]) -> None:
-        group_name = self.get_group_name()
-        U7N23, metals_kot, metals_coal_kot, metals_bloom = data
-
-        # Запись Металов и Сырья в БД и Локальное хранилище
         big_table = pd.DataFrame(columns=self.big_table_columns)
         metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=self.metals_coal_kot_table_columns)
         U7N23_df = pd.DataFrame(U7N23, columns=self.U7N23_columns)
@@ -175,7 +168,4 @@ class MetalsGetter(QuotesGetter):
             big_table = pd.concat([big_table, table], ignore_index=True)
         big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)
 
-        big_table.to_excel('sources/tables/metal.xlsx', sheet_name='Металы')
-        self.logger.info('Записана страница с Металлами')
-        big_table.to_sql('metals', if_exists='replace', index=False, con=database.engine)
-        self.logger.info(f'Таблица {group_name} записана')
+        return big_table, preprocessed_ids

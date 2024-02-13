@@ -47,7 +47,7 @@ class EcoGetter(QuotesGetter):
 
         return eco_frst_third, world_bet, rus_infl
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Tuple[list, pd.DataFrame, pd.DataFrame], set]:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], set]:
         preprocessed_ids = set()
         group_name = self.get_group_name()
         eco_frst_third = []
@@ -71,20 +71,11 @@ class EcoGetter(QuotesGetter):
             except Exception as e:
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
-        return (eco_frst_third, world_bet, rus_infl), preprocessed_ids
+        eco_stake = pd.DataFrame(eco_frst_third)
+        return (eco_stake, world_bet, rus_infl), preprocessed_ids
 
-    def save(self, data: Tuple[list, pd.DataFrame, pd.DataFrame]) -> None:
-        eco_frst_third, world_bet, rus_infl = data
-
-        # Запись Экономики в БД и Локальное хранилище
-        with pd.ExcelWriter('sources/tables/eco.xlsx') as eco_writer:
-            eco_stake = pd.DataFrame(eco_frst_third)
-            eco_stake.to_excel(eco_writer, sheet_name='Ставка')
-            self.logger.info('Записана страница с Ставкой')
-            world_bet.to_excel(eco_writer, sheet_name='Ключевые ставки ЦБ мира')
-            self.logger.info('Записана страница с КС ЦБ')
-            rus_infl.to_excel(eco_writer, sheet_name='Инфляция в России')
-            self.logger.info('Записана страница с Инфляцией')
+    def save(self, data: Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]) -> None:
+        eco_stake, world_bet, rus_infl = data
 
         eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=database.engine)
         self.logger.info('Таблица eco_stake записана')

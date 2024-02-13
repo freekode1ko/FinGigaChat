@@ -1,6 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod
-from typing import Callable, Any, Tuple
+from typing import Callable, Any, Tuple, Union
 
 import pandas as pd
 import requests as req
@@ -99,10 +99,11 @@ class QuotesGetter(ABC):
         """
         pass
 
-    @abstractmethod
-    def save(self, data: Any) -> None:
+    def save(self, data: Union[pd.DataFrame, Any]) -> None:
         """Сохраняет собранные данные по котировкам"""
-        pass
+        group_name = self.get_group_name()
+        data.to_sql(group_name, if_exists='replace', index=False, con=database.engine)
+        self.logger.info(f'Таблица {group_name} записана')
 
     def collect(self) -> None:
         """Собирает данные по котировкам с источников"""
