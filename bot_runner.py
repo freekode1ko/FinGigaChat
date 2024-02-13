@@ -104,7 +104,7 @@ view_aliases = [
 ]
 
 sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
-handbook_format = '<b>{}</b>\n\n{}'
+handbook_prefix = '<b>{}</b>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
@@ -880,11 +880,13 @@ async def whatinthisindustry(callback_query: types.CallbackQuery, state: FSMCont
     industry_id = pd.read_sql_query(f"SELECT id FROM industry where name = '{ref_book}'", con=engine)['id'].tolist()[0]
     clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
     commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
-    all_objects = pd.concat([clients, commodity], ignore_index=True)
-    await bot.send_message(
+    all_objects = pd.concat([clients, commodity], ignore_index=True)['name'].tolist()
+
+    await bot_send_msg(
         chat_id,
-        handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in all_objects['name'].tolist()])),
-        parse_mode='HTML',
+        '\n'.join([name.title() for name in all_objects]),
+        delimiter='\n',
+        prefix=handbook_prefix.format(ref_book.upper()),
     )
     await bot.send_message(
         chat_id,
@@ -1278,7 +1280,7 @@ async def ref_books(callback_query: types.CallbackQuery):
     for handbook in handbooks:
         head = handbook['industry_name'].tolist()
         if len(head) > 0:
-            block_head = head[0].upper()
+            block_head = handbook_prefix.format(head[0].upper())
             block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
         else:
             block_head = ''
@@ -1290,7 +1292,7 @@ async def ref_books(callback_query: types.CallbackQuery):
                 'или просто введите их диалоговую строку, чтобы получить текущие новости.'
             )
 
-        await bot.send_message(chat_id, handbook_format.format(block_head, block_body), parse_mode='HTML')
+        await bot_send_msg(chat_id, block_body, delimiter='\n', prefix=block_head)
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Да', callback_data='isthisall:yes'))
     keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data='isthisall:no'))
@@ -2226,10 +2228,10 @@ async def newsletter_scheduler(time_to_wait: int = 0, first_time_to_send: int = 
     return None
 
 
-async def bot_send_msg(user_id: Union[int, str], msg: str, delimiter: str = '\n\n'):
+async def bot_send_msg(user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = ''):
     """Делит сообщение на батчи, если длина больше допустимой"""
     batches = []
-    current_batch = ''
+    current_batch = prefix
     max_batch_length = 4096
 
     for paragraph in msg.split(delimiter):
@@ -2237,7 +2239,7 @@ async def bot_send_msg(user_id: Union[int, str], msg: str, delimiter: str = '\n\
             current_batch += paragraph + delimiter
         else:
             batches.append(current_batch.strip())
-            current_batch = paragraph + delimiter
+            current_batch = prefix + paragraph + delimiter
 
     if current_batch:
         batches.append(current_batch.strip())
