@@ -59,11 +59,14 @@ research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 RESEARCH_GETTING_TIMES_LIST = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
 
+QUOTES_PROCESSING_PROC_NUM = 2
+
 CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
+QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
