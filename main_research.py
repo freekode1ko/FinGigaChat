@@ -4,14 +4,13 @@ import re
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
 import requests as req
 import schedule
-from selenium import webdriver
-from sqlalchemy import NullPool, create_engine
+from selenium.webdriver.remote.webdriver import WebDriver
 from sqlalchemy.orm import sessionmaker
 
 import config
@@ -19,9 +18,11 @@ import module.crawler as crawler
 import module.data_transformer as dt
 import module.user_emulator as ue
 from module.logger_base import selector_logger, Logger
+from database import engine
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
 from utils import sentry
+from utils.selenium_utils import get_driver
 
 
 class ResearchesGetter:
@@ -40,13 +41,24 @@ class ResearchesGetter:
         self.data_market_base_url = data_market_base_url
         self.commodities = self.transformer_obj.url_updater()
         self.metals_wire_table = None
+        self.__driver = None
 
-    def graph_collector(self, url, session: req.sessions.Session, driver, name=''):
+    def set_driver(self, driver: WebDriver):
+        self.__driver = driver
+
+    def graph_collector(self, url, session: req.sessions.Session, name=''):
         self.logger.info(f'Сборка графиков. Источник: {url}')
         if 'api.investing' in url:
-            InvAPI_obj = ue.InvestingAPIParser(driver, self.logger)
-            data = InvAPI_obj.get_graph_investing(url)
-            self.transformer_obj.five_year_graph(data, name)
+            try:
+                InvAPI_obj = ue.InvestingAPIParser(self.__driver, self.logger)
+                data = InvAPI_obj.get_graph_investing(url)
+            except Exception as e:
+                self.logger.error('При загрузке данных для графика с investing.com произошла ошибка: %s', e)
+                self.__driver = get_driver(self.logger)
+                raise Exception('get graph investing error: %s' % e)  # FIXME криво, подумать еще
+
+            if data is not None:
+                self.transformer_obj.five_year_graph(data, name)
 
         elif 'metals-wire' in url:
             euro_standard, page_html = self.parser_obj.get_html(url, session)
@@ -84,12 +96,17 @@ class ResearchesGetter:
 
             self.transformer_obj.five_year_graph(data, name)
 
-    def get_metals_wire_table_data(self, driver):
-        metals_wire_parser_obj = ue.MetalsWireParser(driver, self.logger)
-        self.metals_wire_table = metals_wire_parser_obj.get_table_data()
+    def get_metals_wire_table_data(self):
+        try:
+            metals_wire_parser_obj = ue.MetalsWireParser(self.__driver, self.logger)
+            self.metals_wire_table = metals_wire_parser_obj.get_table_data()
+        except Exception as e:
+            self.__driver = get_driver(self.logger)
+            self.logger.critical('При сборке табличных данных для MetalsWire произошла ошибка: %s', e)
 
-    def commodities_plot_collect(self, session: req.sessions.Session, driver):
-        self.get_metals_wire_table_data(driver)
+    def commodities_plot_collect(self, session: req.sessions.Session):
+        # FIXME что делать, если тут произошла ошибка? Пока пропускаю elif
+        self.get_metals_wire_table_data()
         commodity_pricing = pd.DataFrame()
         self.logger.info(f'Сборка по сырью {len(self.commodities)}')
         for commodity in self.commodities:
@@ -98,11 +115,26 @@ class ResearchesGetter:
             self.logger.info(commodity)
             self.logger.info(self.commodities[commodity]['links'][0])
 
-            self.graph_collector(link, session, driver, commodity)
+            # FIXME что делать, если мы не смогли сохранить картинку, потому что возникла ошибка получения данных?
+            try:
+                self.graph_collector(link, session, commodity)
+            except Exception as e:
+                self.logger.warning(f'Не удалось получить графики для {commodity}: %s', e)
+                continue
+
             if len(self.commodities[commodity]['links']) > 1:
                 url = self.commodities[commodity]['links'][1]
-                InvAPI_obj = ue.InvestingAPIParser(driver, self.logger)
-                streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
+
+                try:
+                    InvAPI_obj = ue.InvestingAPIParser(self.__driver, self.logger)
+                    streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
+                except Exception as e:
+                    self.logger.error(
+                        f'При обработке данных для стримингового графика с investing.com ({url}) произошла ошибка: %s',
+                        e,
+                    )
+                    self.__driver = get_driver(self.logger)
+                    continue
 
                 ''' What's the difference?
                 dict_row = {'Resource': commodity.split(',')[0], 'SPOT': round(float(streaming_price), 1),
@@ -118,8 +150,9 @@ class ResearchesGetter:
 
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
-            elif self.commodities[commodity]['naming'] != 'Gas':
+            elif self.commodities[commodity]['naming'] != 'Gas' and self.metals_wire_table is not None:
                 to_take = self.commodities[commodity]['to_take'] + 1
+
                 table = self.metals_wire_table
                 row_index = table.index[table['Resource'] == name][0]
                 dict_row = {}
@@ -139,7 +172,6 @@ class ResearchesGetter:
                 dict_row['Resource'] = commodity.split(',')[0]
                 commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
 
-        engine = create_engine(self.psql_engine, poolclass=NullPool)
         commodity = pd.read_sql_query('SELECT * FROM commodity', con=engine)
         commodity_ids = pd.DataFrame()
 
@@ -156,50 +188,47 @@ class ResearchesGetter:
         df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
         df_combined = df_combined.drop(columns=['alias'])
 
-        engine = create_engine(self.psql_engine, poolclass=NullPool)
         Session = sessionmaker(bind=engine)
-        session = Session()
-        q = session.query(CommodityPricing)
+        with Session() as session:
+            q = session.query(CommodityPricing)
 
-        if q.count() == 28:
-            for i, row in df_combined.iterrows():
-                session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).update(
-                    {
-                        'price': row['price'],
-                        'm_delta': np.nan,
-                        'y_delta': row['y_delta'],
-                        'cons': row['cons'],
-                    }
-                )
-                # update({"price": row['price'], "m_delta": row['m_delta'],
-                # "y_delta": row['y_delta'], "cons": row['cons']})
+            if q.count() == 28:
+                for i, row in df_combined.iterrows():
+                    session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).update(
+                        {
+                            'price': row['price'],
+                            'm_delta': np.nan,
+                            'y_delta': row['y_delta'],
+                            'cons': row['cons'],
+                        }
+                    )
+                    # update({"price": row['price'], "m_delta": row['m_delta'],
+                    # "y_delta": row['y_delta'], "cons": row['cons']})
 
-                session.commit()
-        else:
-            for i, row in df_combined.iterrows():
+                    session.commit()
+            else:
+                for i, row in df_combined.iterrows():
+                    commodity_price_obj = CommodityPricing(
+                        commodity_id=int(row['commodity_id']),
+                        subname=row['subname'],
+                        unit=row['unit'],
+                        price=row['price'],
+                        m_delta=np.nan,
+                        # m_delta=row['m_delta'],
+                        y_delta=row['y_delta'],
+                        cons=row['cons'],
+                    )
+                    session.merge(commodity_price_obj, load=True)
+                    session.commit()
+
+                q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
                 commodity_price_obj = CommodityPricing(
-                    commodity_id=int(row['commodity_id']),
-                    subname=row['subname'],
-                    unit=row['unit'],
-                    price=row['price'],
-                    m_delta=np.nan,
-                    # m_delta=row['m_delta'],
-                    y_delta=row['y_delta'],
-                    cons=row['cons'],
+                    commodity_id=q_gas[0].id, subname='Газ', unit=np.nan, price=np.nan, m_delta=np.nan, y_delta=np.nan, cons=np.nan
                 )
                 session.merge(commodity_price_obj, load=True)
                 session.commit()
 
-            q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
-            commodity_price_obj = CommodityPricing(
-                commodity_id=q_gas[0].id, subname='Газ', unit=np.nan, price=np.nan, m_delta=np.nan, y_delta=np.nan, cons=np.nan
-            )
-            session.merge(commodity_price_obj, load=True)
-            session.commit()
-
-        session.close()
-
-    def collect_research(self, driver) -> (dict, dict):
+    def collect_research(self) -> Tuple[Optional[dict], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         """
         Collect all type of reviews from CIB Research
         And get page html with fin data about companies from CIB Research
@@ -208,56 +237,158 @@ class ResearchesGetter:
 
         self.logger.info('Начало сборки с research')
         economy, money, comm = 'econ', 'money', 'comm'
-        authed_user = ue.ResearchParser(driver, self.logger)
+
+        try:
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+        except Exception as e:
+            error_msg = 'Не удалось авторизоваться на Sberbank CIB Research: %s'
+            self.logger.error(error_msg, e)
+            raise Exception(error_msg % e)
 
         # economy
-        key_eco_table = authed_user.get_key_econ_ind_table()
-        eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        eco_month = authed_user.get_reviews(
-            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Экономика России. Ежемесячный обзор'
-        )
+        try:
+            key_eco_table = authed_user.get_key_econ_ind_table()
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error('При сборе ключевых показателей компании произошла ошибка: %s', e)
+            key_eco_table = None
+
+        try:
+            eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error('При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Ежедневные" произошла ошибка: %s', e)
+            eco_day = None
+
+        try:
+            eco_month = authed_user.get_reviews(
+                url_part=economy,
+                tab='Все',
+                title='Экономика - Sberbank CIB',
+                name_of_review='Экономика России. Ежемесячный обзор',
+            )
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
+                'name_of_review="Экономика России. Ежемесячный обзор" произошла ошибка: %s',
+                e,
+            )
+            eco_month = None
         self.logger.info('Блок по экономике собран')
 
         # bonds
-        bonds_day = authed_user.get_reviews(
-            url_part=money,
-            tab='Ежедневные',
-            title='FX &amp; Ставки - Sberbank CIB',
-            name_of_review='Валютный рынок и процентные ставки',
-            type_of_review='bonds',
-            count_of_review=2,
-        )
-        bonds_month = authed_user.get_reviews(
-            url_part=money, tab='Все', title='FX &amp; Ставки - Sberbank CIB', name_of_review='Обзор рынка процентных ставок'
-        )
+        try:
+            bonds_day = authed_user.get_reviews(
+                url_part=money,
+                tab='Ежедневные',
+                title='FX &amp; Ставки - Sberbank CIB',
+                name_of_review='Валютный рынок и процентные ставки',
+                type_of_review='bonds',
+                count_of_review=2,
+            )
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
+                'name_of_review="Валютный рынок и процентные ставки", '
+                'type_of_review="bonds", '
+                'count_of_review=2 произошла ошибка: %s',
+                e,
+            )
+            bonds_day = None
+
+        try:
+            bonds_month = authed_user.get_reviews(
+                url_part=money,
+                tab='Все',
+                title='FX &amp; Ставки - Sberbank CIB',
+                name_of_review='Обзор рынка процентных ставок',
+            )
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Все",'
+                'name_of_review="Обзор рынка процентных ставок" произошла ошибка: %s',
+                e,
+            )
+            bonds_month = None
         self.logger.info('Блок по ставкам собран')
 
         # exchange
-        exchange_day = authed_user.get_reviews(
-            url_part=money,
-            tab='Ежедневные',
-            title='FX &amp; Ставки - Sberbank CIB',
-            name_of_review='Валютный рынок и процентные ставки',
-            type_of_review='exchange',
-            count_of_review=2,
-        )
-        exchange_month_uan = authed_user.get_reviews(
-            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по юаню'
-        )
-        exchange_month_soft = authed_user.get_reviews(
-            url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный дайджест по мягким валютам'
-        )
+        try:
+            exchange_day = authed_user.get_reviews(
+                url_part=money,
+                tab='Ежедневные',
+                title='FX &amp; Ставки - Sberbank CIB',
+                name_of_review='Валютный рынок и процентные ставки',
+                type_of_review='exchange',
+                count_of_review=2,
+            )
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
+                'name_of_review="Валютный рынок и процентные ставки", '
+                'type_of_review="exchange",'
+                'count_of_review=2 произошла ошибка: %s',
+                e,
+            )
+            exchange_day = None
+        try:
+            exchange_month_uan = authed_user.get_reviews(
+                url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по юаню'
+            )
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все",'
+                'name_of_review="Ежемесячный обзор по юаню" произошла ошибка: %s',
+                e,
+            )
+            exchange_month_uan = None
+        try:
+            exchange_month_soft = authed_user.get_reviews(
+                url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный дайджест по мягким валютам'
+            )
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
+                'name_of_review="Ежемесячный дайджест по мягким валютам" произошла ошибка: %s',
+                e,
+            )
+            exchange_month_soft = None
         self.logger.info('Блок по курсам валют собран')
 
         # commodity
-        commodity_day = authed_user.get_reviews(
-            url_part=comm,
-            tab='Ежедневные',
-            title='Сырьевые товары - Sberbank CIB',
-            name_of_review='Сырьевые рынки',
-            type_of_review='commodity',
-        )
-        self.logger.info('Блок по сырью собран')
+        try:
+            commodity_day = authed_user.get_reviews(
+                url_part=comm,
+                tab='Ежедневные',
+                title='Сырьевые товары - Sberbank CIB',
+                name_of_review='Сырьевые рынки',
+                type_of_review='commodity',
+            )
+            self.logger.info('Блок по сырью собран')
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            self.logger.error(
+                'При сборе отчетов по "Сырьевые товары - Sberbank CIB" во вкладке "Ежедневные", '
+                'name_of_review="Сырьевые рынки", '
+                'type_of_review="commodity" произошла ошибка: %s',
+                e,
+            )
+            commodity_day = None
 
         exchange_month = exchange_month_uan + exchange_month_soft
         reviews = {
@@ -270,23 +401,22 @@ class ResearchesGetter:
             'Commodity day': commodity_day,
         }
 
-        # companies
-        companies_pages_html = dict()
-        for company in self.list_of_companies:
-            page_html = authed_user.get_company_html_page(url_part=company[0])
-            companies_pages_html[company[1]] = page_html
-        self.logger.info('Страница с компаниями собрана')
-
         clients_table = authed_user.get_companies_financial_indicators_table()
+        self.__driver = authed_user.driver
         self.logger.info('Страница с клиентами собрана')
 
         authed_user.get_industry_reviews()
+        self.__driver = authed_user.driver
         self.logger.info('Страница с отчетами по направлениям собрана')
 
-        authed_user.get_weekly_review()
-        self.logger.info('Weekly pulse собран')
+        try:
+            authed_user.get_weekly_review()
+            self.logger.info('Weekly pulse собран')
+        except Exception as e:
+            self.__driver = get_driver(logger=self.logger)
+            self.logger.error('При сборе отчетов weekly pulse произошла ошибка: %s', e)
 
-        return reviews, companies_pages_html, key_eco_table, clients_table
+        return reviews, key_eco_table, clients_table
 
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
@@ -295,7 +425,6 @@ class ResearchesGetter:
         """
         # TODO: мб сделать одну таблицу для обзоров ?
 
-        engine = create_engine(self.psql_engine, poolclass=NullPool)
         table_name_for_review = {
             'Economy day': 'report_eco_day',
             'Economy month': 'report_eco_mon',
@@ -306,67 +435,36 @@ class ResearchesGetter:
             'Commodity day': 'report_met_day',
         }
 
-        for review_name in table_name_for_review:
-            table_name = table_name_for_review.get(review_name)
+        for review_name, table_name in table_name_for_review.items():
             reviews_list = reviews_to_save.get(review_name)
-            pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
-            self.logger.info(f'Таблица {reviews_list} записана')
+
+            if reviews_list is not None:
+                pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
+                self.logger.info(f'Таблица {table_name} записана: {reviews_list}')
+            else:
+                self.logger.warning(f'Таблица {table_name} не обновлена: {reviews_list}')
 
         self.logger.info('Все собранные отчеты с research записаны')
 
     def save_clients_financial_indicators(self, clients_table):
-        engine = create_engine(self.psql_engine, poolclass=NullPool)
-        clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
-        self.logger.info('Таблица financial_indicators записана')
+        if clients_table is not None:
+            clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
+            self.logger.info('Таблица financial_indicators записана')
+        else:
+            self.logger.warning(f'Таблица financial_indicators не обновлена')
 
     def save_key_eco_table(self, key_eco_table):
-        engine = create_engine(self.psql_engine, poolclass=NullPool)
-        key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
-        self.logger.info('Таблица key_eco записана')
+        if key_eco_table is not None:
+            key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
+            self.logger.info('Таблица key_eco записана')
+        else:
+            self.logger.warning(f'Таблица key_eco не обновлена')
 
     def save_date_of_last_build(self):
-        engine = create_engine(self.psql_engine, poolclass=NullPool)
         cur_time = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
         self.logger.info('Таблица date_of_last_build записана')
-
-    def process_companies_data(self, company_pages_html) -> None:
-        """
-        Process and save fin mark of the companies.
-        :param company_pages_html: html page with fin mark from CIB Research
-        """
-        # TODO: изменить сохранение ?
-
-        list_of_companies_df = pd.DataFrame(self.list_of_companies, columns=['ID', 'Name', 'URL'])
-        comp_size = len(self.list_of_companies)
-        page_tables = []
-
-        self.logger.info('Начало процесса обработки фин.показателей компаний')
-        for comp_num, company in enumerate(company_pages_html):
-            self.logger.info('{}/{}'.format(comp_num + 1, comp_size))
-            page_html = company_pages_html.get(company)
-            tables = self.transformer_obj.get_table_from_html(True, page_html)
-            pd.set_option('display.max_columns', None)
-            tables[0]['group_no'] = tables[0].isnull().all(axis=1).cumsum()
-            tables = tables[0].dropna(subset='Unnamed: 1')
-            tables_names = tables['Unnamed: 0'].dropna().tolist()
-
-            for i in range(0, len(tables_names)):
-                df = tables[tables['group_no'] == i]
-                df.reset_index(inplace=True)
-                df = df.drop(['Unnamed: 0', 'index', 'group_no'], axis=1)
-                df = df.drop(index=df.index[0], axis=0)
-                df.rename(columns={'Unnamed: 1': 'Показатели'}, inplace=True)
-                page_tables.append([tables_names[i], company, df])
-
-            path_to_companies = 'sources/tables/companies.xlsx'
-            companies_writer = pd.ExcelWriter(path_to_companies)
-            list_of_companies_df.to_excel(companies_writer, sheet_name='head')
-            for df in page_tables:
-                df[2].to_excel(companies_writer, sheet_name='{}_{}'.format(df[1], df[0]))
-            self.logger.info(f'Блок с компаниями записан в {path_to_companies}')
-            companies_writer.close()
 
 
 def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datetime:
@@ -393,24 +491,21 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     runner.parser_obj.get_proxy_addresses()
 
     try:
-        # collect and save research data
-        logger.info('Подключение к контейнеру selenium')
-        firefox_options = webdriver.FirefoxOptions()
-        firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
-        driver = webdriver.Remote(command_executor='http://localhost:4444/wd/hub', options=firefox_options)
+        driver = get_driver(logger)
     except Exception as e:
         logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
         driver = None
 
+    runner.set_driver(driver)
+
     if driver:
         try:
             logger.info('Начало сборки отчетов с research')
-            reviews_dict, companies_pages_html_dict, key_eco_table, clients_table = runner.collect_research(driver)
+            reviews_dict, key_eco_table, clients_table = runner.collect_research()
             logger.info('Сохранение собранных данных')
             runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
-            runner.process_companies_data(companies_pages_html_dict)
         except Exception as e:
             logger.error('Ошибка при сборке отчетов с Research: %s', e)
 
@@ -418,12 +513,12 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
             logger.info('Поднятие новой сессии')
             session = req.Session()
             logger.info('Сборки графиков')
-            runner.commodities_plot_collect(session, driver)
+            runner.commodities_plot_collect(session)
         except Exception as e:
             logger.error('Ошибка при парсинге источников по сырью: %s', e)
 
         try:
-            driver.close()
+            driver.quit()
         except Exception as e:
             # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
             # тогда вылетает MaxRetryError

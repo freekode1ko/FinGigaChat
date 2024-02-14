@@ -61,12 +61,16 @@ research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 RESEARCH_GETTING_TIMES_LIST = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
 
+QUOTES_PROCESSING_PROC_NUM = 2
+
 CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
+QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
+
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 20
@@ -201,3 +205,23 @@ industry_base_url = (
     'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_'
     'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
 )
+
+# SELENIUM CONTAINER PARAMS
+# -d -p 4444:4444 -p 7900:7900 --shm-size="2g" --name="selenium" selenium/standalone-firefox:latest
+SELENIUM_IMAGE_NAME = 'selenium/standalone-firefox:latest'
+SELENIUM_CONTAINER_NAME = 'selenium'
+SELENIUM_SHM_SIZE = '2g'
+SELENIUM_PORTS = {
+    4444: 4444,
+    7900: 7900,
+}
+SELENIUM_RUN_KWARGS = {
+    'image': SELENIUM_IMAGE_NAME,
+    'name': SELENIUM_CONTAINER_NAME,
+    'shm_size': SELENIUM_SHM_SIZE,
+    'ports': SELENIUM_PORTS,
+    'detach': True,
+}
+
+# SELENIUM DRIVER PARAMS
+SELENIUM_COMMAND_EXECUTOR = 'http://localhost:4444/wd/hub'
