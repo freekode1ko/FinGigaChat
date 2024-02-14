@@ -170,7 +170,7 @@ class ArticleProcess:
         """Call func to delete similar articles"""
         dt_now = dt.datetime.now()
         old_query = (
-            f'SELECT a.id, '
+            f'SELECT a.id, a.date,'
             f"STRING_AGG(DISTINCT client.name, ';') AS client, "
             f"STRING_AGG(DISTINCT commodity.name, ';') AS commodity, "
             f'ani.cleaned_data '
@@ -181,10 +181,20 @@ class ArticleProcess:
             f'LEFT JOIN commodity ON r_commodity.commodity_id = commodity.id '
             f'JOIN article_name_impact ani ON ani.article_id = a.id '
             f"WHERE '{dt_now}' - a.date < '15 day' "
-            f'GROUP BY a.id, ani.cleaned_data'
+            f'GROUP BY a.id, a.date, ani.cleaned_data'
         )
         old_articles = pd.read_sql(old_query, con=self.engine)
-        self.df_article = deduplicate(self._logger, self.df_article, old_articles)
+        # заполняем нулями пустые значения, чтобы разделить новости на релевантные и нерелевантные
+        self.df_article['client_score'] = self.df_article['client_score'].fillna(0)
+        self.df_article['commodity_score'] = self.df_article['commodity_score'].fillna(0)
+        # делим новости на релевантные и нерелевантные
+        articles_relevant = self.df_article[(self.df_article['client_score'] > 0) | (self.df_article['commodity_score'] > 0)]
+        articles_not_relevant = self.df_article[(self.df_article['client_score'] <= 0) & (self.df_article['commodity_score'] <= 0)]
+        # отдельно их дедублицируем
+        articles_relevant = deduplicate(self._logger, articles_relevant, old_articles)
+        articles_not_relevant = deduplicate(self._logger, articles_not_relevant, old_articles)
+        # соединяем обратно в один батч
+        self.df_article = pd.concat([articles_relevant, articles_not_relevant], ignore_index=True)
 
     def make_text_sum(self):
         """Call summary func"""
