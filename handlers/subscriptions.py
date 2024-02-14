@@ -1,3 +1,4 @@
+import copy
 import json
 from typing import List
 
@@ -12,10 +13,12 @@ from sqlalchemy import text
 
 import config
 from bot_logger import logger, user_logger
-from constants.bot.constants import handbook_format
+from constants.bot.constants import handbook_prefix
 from database import engine
 from module.article_process import ArticleProcess
-from utils.bot_utils import user_in_whitelist
+from utils.bot_utils import user_in_whitelist, bot_send_msg
+
+emoji = copy.deepcopy(config.dict_of_emoji)
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -47,7 +50,7 @@ async def add_subscriptions_body(
         keyboard.row(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data='showmeindustry:yes'))
         keyboard.row(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='showmeindustry:no'))
         await message.answer(
-            'Сформируйте полный список интересующих клиентов или commodities '
+            'Сформируйте полный список интересующих клиентов и/или commodities, и/или отрасли '
             'для подписки на пассивную отправку новостей по ним.\n'
             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
             '\nНапример:\nгаз\nгазпром\nнефть\nзолото\nбалтика\n\n'
@@ -73,17 +76,130 @@ async def add_new_subscriptions_command(message: types.Message, state: FSMContex
 
 
 @router.callback_query(F.data.startswith('addnewsubscriptions'))
-async def add_new_subscriptions_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+async def select_or_write(callback_query: types.CallbackQuery):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
+    keyboard.add(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
+    keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='cancel_subs'))
+
+    await callback_query.message.answer('Как вы хотите заполнить подписки?', reply_markup=keyboard.as_markup())
+
+
+@router.callback_query(F.data.startswith('cancel_subs'))
+async def cancel_add_new_subs(callback_query: types.CallbackQuery):
+    await callback_query.message.answer('Отмена создания подписок')
+
+
+@router.callback_query(F.data.startswith('writesubs'))
+async def write_new_subscriptions_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """
     Входная точка для добавления подписок на новостные объекты себе для получения новостей
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Состояние FSM
     """
-    user_msg = 'addnewsubscriptions'
+    user_msg = 'writesubs'
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await add_subscriptions_body(callback_query.message, full_name, user_msg, from_user.model_dump_json(), state)
+
+
+@router.callback_query(F.data.startswith('addsub'))
+async def append_new_subscription(callback_query: types.CallbackQuery = None):
+    element_id, table_name = callback_query.data.split(':')[2], callback_query.data.split(':')[1]
+    user_subscriptions = await get_list_of_user_subscriptions(callback_query.from_user.id)
+    user_subscriptions_uniq = set(user_subscriptions)
+    if not await is_subscription_limit_reached(callback_query.message, user_subscriptions_uniq):
+        sub_element = pd.read_sql_query(f'SELECT name FROM {table_name} WHERE id = {element_id}', con=engine)
+        element_to_add = sub_element.values.tolist()[0][0]
+        subs_count = len(user_subscriptions)
+
+        user_subscriptions.append(element_to_add)
+        new_user_subscription = list(set(user_subscriptions))
+        new_user_subscription.sort()
+        new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
+
+        with engine.connect() as conn:
+            sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {callback_query.from_user.id}"
+            conn.execute(text(sql_text))
+            conn.commit()
+
+        if subs_count < len(new_user_subscription):
+            await callback_query.message.answer(
+                f'{element_to_add.capitalize()} - добавлен к вашим подпискам\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел',
+            )
+        else:
+            await callback_query.message.answer(
+                f'{element_to_add.capitalize()} - уже есть в ваших подписках\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел',
+            )
+
+
+async def pagination(pages, search, cur_page: int = 0) -> types.InlineKeyboardMarkup:
+    buttons = []
+    for element in pages[cur_page].values.tolist():
+        buttons.append([types.InlineKeyboardButton(text=f'{element[1].capitalize()}', callback_data=f'addsub:{search}:{element[0]}')])
+    bottom_buttons = []
+    if cur_page != 0:
+        callback = 'page:back:{}:{}'.format(cur_page, search)
+        bottom_buttons.append(types.InlineKeyboardButton(text=emoji['backward'], callback_data=callback))
+    else:
+        bottom_buttons.append(types.InlineKeyboardButton(text=emoji['block'], callback_data='stop'))
+
+    bottom_buttons.append(types.InlineKeyboardButton(text=f'{cur_page + 1}/{len(pages)}', callback_data='pagination'))
+
+    if cur_page == len(pages) - 1:
+        bottom_buttons.append(types.InlineKeyboardButton(text=emoji['block'], callback_data='stop'))
+    else:
+        callback = 'page:forward:{}:{}'.format(cur_page, search)
+        bottom_buttons.append(types.InlineKeyboardButton(text=emoji['forward'], callback_data=callback))
+
+    buttons.append(bottom_buttons)
+    buttons.append([types.InlineKeyboardButton(text='Назад к выбору раздела', callback_data='selectsubs')])
+    keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
+    return keyboard
+
+
+@router.callback_query(F.data.startswith('page'))
+async def scroller(query: types.CallbackQuery = None):
+    input_params = query.data.split(':')
+    direction = input_params[1]
+    cur_page = int(input_params[2])
+    search = input_params[3]
+    table_ru_names = {
+        'client': 'Клиенты',
+        'commodity': 'Сырьевые товары',
+        'industry': 'Отрасли',
+    }
+
+    try:
+        table = pd.read_sql_query(f'SELECT id, name FROM {search}', con=engine)
+    except Exception as e:
+        table = pd.DataFrame(columns=['id', 'name'])
+
+    page_elements_cnt = 10
+    chunks = []
+    num_chunks = len(table) // page_elements_cnt + 1
+    for index in range(num_chunks):
+        chunks.append(table[index * page_elements_cnt : (index + 1) * page_elements_cnt])
+
+    domain = table_ru_names.get(search, 'Ошибка')
+    cur_page += 1 if direction == 'forward' else -1
+    keyboard = await pagination(chunks, search, cur_page)
+    await query.message.edit_text(text=f'{domain}\nСтраница {cur_page+1} из {len(chunks)}', reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith('selectsubs'))
+async def select_subs_from_menu(callback_query: types.CallbackQuery = None):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data='page:empty:1:client'))
+    keyboard.add(types.InlineKeyboardButton(text='Сырьевые товары', callback_data='page:empty:1:commodity'))
+    keyboard.add(types.InlineKeyboardButton(text='Отрасли', callback_data='page:empty:1:industry'))
+
+    await callback_query.message.answer(text='Выберете раздел', reply_markup=keyboard.as_markup())
 
 
 @router.callback_query(SubscriptionsStates.user_subscriptions, F.data.startswith('showmeindustry'))
@@ -124,10 +240,14 @@ async def whatinthisindustry(callback_query: types.CallbackQuery) -> None:
     industry_id = pd.read_sql_query(f"SELECT id FROM industry where name = '{ref_book}'", con=engine)['id'].tolist()[0]
     clients = pd.read_sql_query(f"SELECT name FROM client where industry_id = '{industry_id}'", con=engine)
     commodity = pd.read_sql_query(f"SELECT name FROM commodity where industry_id = '{industry_id}'", con=engine)
-    all_objects = pd.concat([clients, commodity], ignore_index=True)
-    await callback_query.message.answer(
-        handbook_format.format(ref_book.upper(), '\n'.join([name.title() for name in all_objects['name'].tolist()])),
-        parse_mode='HTML',
+    all_objects = pd.concat([clients, commodity], ignore_index=True)['name'].tolist()
+
+    await bot_send_msg(
+        callback_query.message.bot,
+        chat_id,
+        '\n'.join([name.title() for name in all_objects]),
+        delimiter='\n',
+        prefix=handbook_prefix.format(ref_book.upper()),
     )
     await callback_query.message.answer(
         text='Вы можете скопировать список выше, отредактировать, если это необходимо и '
@@ -145,6 +265,19 @@ async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
         'subscriptions'
     ].values.tolist()
     return subscriptions[0].split(', ') if subscriptions[0] else []
+
+
+async def is_subscription_limit_reached(message: types.Message, user_subscriptions_set):
+    # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
+    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
+        user_id = message.from_user.id
+        await message.answer(
+            f'Достигнут предел по количеству подписок\n\n'
+            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
+        )
+        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+        return True
+    return False
 
 
 @router.message(SubscriptionsStates.user_subscriptions)
@@ -168,12 +301,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
     user_subscriptions_set = set(user_subscriptions_list)
 
     # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
-    if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
-        await message.reply(
-            f'Достигнут предел по количеству подписок\n\n'
-            f'Ваш текущий список подписок:\n\n{", ".join(user_subscriptions_set).title()}'
-        )
-        user_logger.info(f'*{user_id}* у пользователя уже достигнут предел по количеству подписок')
+    await is_subscription_limit_reached(message, user_subscriptions_set)
 
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)

@@ -1,3 +1,4 @@
+import copy
 import datetime as dt
 import json
 import os
@@ -11,7 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from config import NEWS_LIMIT, psql_engine, BASE_DATE_FORMAT
+from config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
 from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
@@ -169,7 +170,7 @@ class ArticleProcess:
         """Call func to delete similar articles"""
         dt_now = dt.datetime.now()
         old_query = (
-            f'SELECT a.id, '
+            f'SELECT a.id, a.date,'
             f"STRING_AGG(DISTINCT client.name, ';') AS client, "
             f"STRING_AGG(DISTINCT commodity.name, ';') AS commodity, "
             f'ani.cleaned_data '
@@ -180,10 +181,20 @@ class ArticleProcess:
             f'LEFT JOIN commodity ON r_commodity.commodity_id = commodity.id '
             f'JOIN article_name_impact ani ON ani.article_id = a.id '
             f"WHERE '{dt_now}' - a.date < '15 day' "
-            f'GROUP BY a.id, ani.cleaned_data'
+            f'GROUP BY a.id, a.date, ani.cleaned_data'
         )
         old_articles = pd.read_sql(old_query, con=self.engine)
-        self.df_article = deduplicate(self._logger, self.df_article, old_articles)
+        # заполняем нулями пустые значения, чтобы разделить новости на релевантные и нерелевантные
+        self.df_article['client_score'] = self.df_article['client_score'].fillna(0)
+        self.df_article['commodity_score'] = self.df_article['commodity_score'].fillna(0)
+        # делим новости на релевантные и нерелевантные
+        articles_relevant = self.df_article[(self.df_article['client_score'] > 0) | (self.df_article['commodity_score'] > 0)]
+        articles_not_relevant = self.df_article[(self.df_article['client_score'] <= 0) & (self.df_article['commodity_score'] <= 0)]
+        # отдельно их дедублицируем
+        articles_relevant = deduplicate(self._logger, articles_relevant, old_articles)
+        articles_not_relevant = deduplicate(self._logger, articles_not_relevant, old_articles)
+        # соединяем обратно в один батч
+        self.df_article = pd.concat([articles_relevant, articles_not_relevant], ignore_index=True)
 
     def make_text_sum(self):
         """Call summary func"""
@@ -198,7 +209,7 @@ class ArticleProcess:
             f'(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn '
             f'from relation_client_article r '
             f'join article a on r.article_id = a.id) t1 '
-            f'where rn <= {count_to_keep} and t1.client_score > 0'
+            f'where rn <= {count_to_keep} and t1.client_score > 0 '
             f'UNION '
             f'select distinct article_id from '
             f'(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn '
@@ -835,7 +846,7 @@ class ArticleProcessAdmin:
 class FormatText:
     """Форматирует текст для передачи в Телеграмм"""
 
-    MARKER = '&#128204;'
+    MARKER = copy.deepcopy(dict_of_emoji)['marker']  # '&#128204;'
 
     def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '', title: str = '', text_sum: str = ''):
         self.__subject = subject  # имя клиента/товара

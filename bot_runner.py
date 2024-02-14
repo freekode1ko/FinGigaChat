@@ -101,7 +101,7 @@ async def send_daily_news(client_hours: int = 7, commodity_hours: int = 7, sched
     industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
 
     row_number = 0
-    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist ' 'WHERE subscriptions IS NOT NULL', con=engine)
+    users = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist WHERE subscriptions IS NOT NULL', con=engine)
     for index, user in users.iterrows():
         user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')

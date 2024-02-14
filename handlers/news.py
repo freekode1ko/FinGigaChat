@@ -17,10 +17,10 @@ from constants.bot.aliases import (
     eco_aliases,
     exchange_aliases,
     metal_aliases,
-    view_aliases,
+    view_aliases, help_aliases,
 )
 from constants.bot.constants import PATH_TO_COMMODITY_GRAPH
-from handlers import quotes
+from handlers import common, quotes
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.bot_utils import __create_fin_table, bot_send_msg, user_in_whitelist
@@ -204,7 +204,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
 
     await message.answer(response, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard)
     user_logger.info(
-        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы ' f'"{", ".join(nearest_subjects)}"'
+        f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы {", ".join(nearest_subjects)}'
     )
 
 
@@ -298,6 +298,7 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
         else:
             aliases_dict = {
+                **{alias: common.help_handler for alias in help_aliases},
                 **{alias: quotes.bonds_info for alias in bonds_aliases},
                 **{alias: quotes.economy_info for alias in eco_aliases},
                 **{alias: quotes.metal_info for alias in metal_aliases},
