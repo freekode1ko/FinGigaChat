@@ -5,6 +5,7 @@ from aiogram import F, Router, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
+from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
@@ -17,10 +18,10 @@ from constants.bot.aliases import (
     eco_aliases,
     exchange_aliases,
     metal_aliases,
-    view_aliases, help_aliases,
+    view_aliases, help_aliases, gigachat_aliases,
 )
 from constants.bot.constants import PATH_TO_COMMODITY_GRAPH
-from handlers import common, quotes
+from handlers import common, quotes, gigachat
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.bot_utils import __create_fin_table, bot_send_msg, user_in_whitelist
@@ -192,12 +193,15 @@ async def send_nearest_subjects(message: types.Message) -> None:
     nearest_subjects = ap_obj.find_nearest_to_subject(user_msg)
 
     cancel_command = 'отмена'
-    buttons = [[types.KeyboardButton(text=cancel_command)]]
+    buttons = [
+        [types.KeyboardButton(text=cancel_command)],
+        [types.KeyboardButton(text='Спросить у GigaChat')],
+    ]
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
 
     cancel_msg = f'Напишите «{cancel_command}» для очистки'
-    response = 'Не удалось обработать ваш запрос.\n\nВозможно, вы имели в виду один из следующих вариантов:'
+    response = 'Такого я пока не знаю.\n\nВозможно, вы имели в виду один из следующих вариантов:'
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
     )
@@ -209,7 +213,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
 
 
 @router.message(F.text)
-async def find_news(message: types.Message, prompt: str = '', return_ans: bool = False) -> None:
+async def find_news(message: types.Message, state: FSMContext, prompt: str = '', return_ans: bool = False) -> None:
     """Обработка пользовательского сообщения"""
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
@@ -298,17 +302,18 @@ async def find_news(message: types.Message, prompt: str = '', return_ans: bool =
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
         else:
             aliases_dict = {
-                **{alias: common.help_handler for alias in help_aliases},
-                **{alias: quotes.bonds_info for alias in bonds_aliases},
-                **{alias: quotes.economy_info for alias in eco_aliases},
-                **{alias: quotes.metal_info for alias in metal_aliases},
-                **{alias: quotes.exchange_info for alias in exchange_aliases},
-                **{alias: quotes.data_mart for alias in view_aliases},
+                **{alias: (common.help_handler, {}) for alias in help_aliases},
+                **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in gigachat_aliases},
+                **{alias: (quotes.bonds_info, {}) for alias in bonds_aliases},
+                **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
+                **{alias: (quotes.metal_info, {}) for alias in metal_aliases},
+                **{alias: (quotes.exchange_info, {}) for alias in exchange_aliases},
+                **{alias: (quotes.data_mart, {}) for alias in view_aliases},
             }
             message_text = message.text.lower().strip()
-            function_to_call = aliases_dict.get(message_text)
+            function_to_call, kwargs = aliases_dict.get(message_text, (None, None))
             if function_to_call:
-                await function_to_call(message)
+                await function_to_call(message, **kwargs)
             else:
                 await send_nearest_subjects(message)
                 # await ask_giga_chat(message, prompt)
