@@ -1,5 +1,6 @@
 import copy
 import json
+import math
 from typing import List
 
 import pandas as pd
@@ -78,9 +79,9 @@ async def add_new_subscriptions_command(message: types.Message, state: FSMContex
 @router.callback_query(F.data.startswith('addnewsubscriptions'))
 async def select_or_write(callback_query: types.CallbackQuery):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
-    keyboard.add(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
-    keyboard.add(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='cancel_subs'))
+    keyboard.row(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
+    keyboard.row(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
+    keyboard.row(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='cancel_subs'))
 
     await callback_query.message.answer('Как вы хотите заполнить подписки?', reply_markup=keyboard.as_markup())
 
@@ -144,7 +145,7 @@ async def pagination(pages, search, cur_page: int = 0) -> types.InlineKeyboardMa
         buttons.append([types.InlineKeyboardButton(text=f'{element[1].capitalize()}', callback_data=f'addsub:{search}:{element[0]}')])
     bottom_buttons = []
     if cur_page != 0:
-        callback = 'page:back:{}:{}'.format(cur_page, search)
+        callback = f'page:back:{cur_page}:{search}'
         bottom_buttons.append(types.InlineKeyboardButton(text=emoji['backward'], callback_data=callback))
     else:
         bottom_buttons.append(types.InlineKeyboardButton(text=emoji['block'], callback_data='stop'))
@@ -154,7 +155,7 @@ async def pagination(pages, search, cur_page: int = 0) -> types.InlineKeyboardMa
     if cur_page == len(pages) - 1:
         bottom_buttons.append(types.InlineKeyboardButton(text=emoji['block'], callback_data='stop'))
     else:
-        callback = 'page:forward:{}:{}'.format(cur_page, search)
+        callback = f'page:forward:{cur_page}:{search}'
         bottom_buttons.append(types.InlineKeyboardButton(text=emoji['forward'], callback_data=callback))
 
     buttons.append(bottom_buttons)
@@ -182,9 +183,9 @@ async def scroller(query: types.CallbackQuery = None):
 
     page_elements_cnt = 10
     chunks = []
-    num_chunks = len(table) // page_elements_cnt + 1
+    num_chunks = math.ceil(len(table) / page_elements_cnt)
     for index in range(num_chunks):
-        chunks.append(table[index * page_elements_cnt : (index + 1) * page_elements_cnt])
+        chunks.append(table[index * page_elements_cnt: (index + 1) * page_elements_cnt])
 
     domain = table_ru_names.get(search, 'Ошибка')
     cur_page += 1 if direction == 'forward' else -1
@@ -195,9 +196,9 @@ async def scroller(query: types.CallbackQuery = None):
 @router.callback_query(F.data.startswith('selectsubs'))
 async def select_subs_from_menu(callback_query: types.CallbackQuery = None):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(types.InlineKeyboardButton(text='Клиенты', callback_data='page:empty:1:client'))
-    keyboard.add(types.InlineKeyboardButton(text='Сырьевые товары', callback_data='page:empty:1:commodity'))
-    keyboard.add(types.InlineKeyboardButton(text='Отрасли', callback_data='page:empty:1:industry'))
+    keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='page:empty:1:client'))
+    keyboard.row(types.InlineKeyboardButton(text='Сырьевые товары', callback_data='page:empty:1:commodity'))
+    keyboard.row(types.InlineKeyboardButton(text='Отрасли', callback_data='page:empty:1:industry'))
 
     await callback_query.message.answer(text='Выберете раздел', reply_markup=keyboard.as_markup())
 
