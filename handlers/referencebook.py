@@ -7,8 +7,8 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot_logger import logger, user_logger
-from constants.bot.constants import handbook_format
-from utils.bot.base import show_ref_book_by_request, user_in_whitelist
+from constants.bot.constants import handbook_prefix
+from utils.bot.base import show_ref_book_by_request, user_in_whitelist, bot_send_msg
 
 # logger = logging.getLogger(__name__)
 router = Router()
@@ -62,7 +62,7 @@ async def ref_books(callback_query: types.CallbackQuery, state: FSMContext) -> N
     for handbook in handbooks:
         head = handbook['industry_name'].tolist()
         if len(head) > 0:
-            block_head = head[0].upper()
+            block_head = handbook_prefix.format(head[0].upper())
             block_body = '\n'.join([news_object.title() for news_object in handbook['object'].tolist()])
         else:
             block_head = ''
@@ -74,7 +74,7 @@ async def ref_books(callback_query: types.CallbackQuery, state: FSMContext) -> N
                 'или просто введите их диалоговую строку, чтобы получить текущие новости.'
             )
 
-        await callback_query.message.answer(handbook_format.format(block_head, block_body), parse_mode='HTML')
+        await bot_send_msg(callback_query.bot, chat_id, block_body, delimiter='\n', prefix=block_head)
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text='Да', callback_data='isthisall:yes'))
     keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data='isthisall:no'))

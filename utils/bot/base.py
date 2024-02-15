@@ -16,7 +16,7 @@ from database import engine
 from module.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n') -> None:
+async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> None:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -24,9 +24,10 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     :param user_id: ID пользователя для которого будет произведена отправка
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
+    :param prefix: Начало каждого нового сообщения
     """
     batches = []
-    current_batch = ''
+    current_batch = prefix
     max_batch_length = 4096
 
     for paragraph in msg.split(delimiter):
@@ -34,7 +35,7 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
             current_batch += paragraph + delimiter
         else:
             batches.append(current_batch.strip())
-            current_batch = paragraph + delimiter
+            current_batch = prefix + paragraph + delimiter
 
     if current_batch:
         batches.append(current_batch.strip())
@@ -268,7 +269,7 @@ async def wait_until_next_newsletter(
         time_to_wait = first_time_to_send - current_time
         next_send_time = str(timedelta(seconds=first_time_to_send))
 
-    logger.info(f'В ожидании рассылки в {next_send_time}.' f' До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
+    logger.info(f'В ожидании рассылки в {next_send_time}. До следующей отправки: {str(timedelta(seconds=time_to_wait))}')
     await asyncio.sleep(time_to_wait)
     return None
 
