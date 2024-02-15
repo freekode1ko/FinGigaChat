@@ -292,7 +292,6 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: настройка пользовательских подписок')
     message_text = ''
-    await state.clear()
     subscriptions = []
     quotes = ['\"', '«', '»']
 
@@ -302,7 +301,9 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
     user_subscriptions_set = set(user_subscriptions_list)
 
     # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
-    await is_subscription_limit_reached(message, user_subscriptions_set)
+    if await is_subscription_limit_reached(message, user_subscriptions_set):
+        await state.clear()
+        return
 
     industry_df = pd.read_sql_query('SELECT * FROM "industry_alternative"', con=engine)
     com_df = pd.read_sql_query('SELECT * FROM "client_alternative"', con=engine)
@@ -326,38 +327,76 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
                 if subscription == other_name:
                     subscriptions.append(other_name)
 
+    continue_keyboard = InlineKeyboardBuilder()
+    continue_keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+    continue_keyboard = continue_keyboard.as_markup()
+    continue_msg = '\n\nЕсли хотите завершить формирование подписок, то нажмите кнопку "Завершить"'
+
     if len(subscriptions) < len(user_request):
         list_of_unknown = list(set(user_request) - set(subscriptions))
         ap_obj = ArticleProcess(logger=logger)
         near_to_list_of_unknown = '\n'.join(ap_obj.find_nearest_to_subjects_list(list_of_unknown))
-        user_logger.debug(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: {list_of_unknown}')
+        user_logger.info(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: {list_of_unknown}')
         reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
         reply_msg += f'\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}'
-        await message.reply(reply_msg)
+        # Если нет корректных названий, то новых подписок не добавляем и предлагаем пользователю продолжить формирование
+        # Иначе предлагаем продолжить в сообщении об успешном добавлении новых подписок
+        keyboard = None
+        if len(subscriptions) == 0:
+            keyboard = continue_keyboard
+            reply_msg += continue_msg
+        await message.reply(reply_msg, reply_markup=keyboard)
 
+    # Если есть новые подписки, которые можем добавить
     if subscriptions:
         num_of_add_subscriptions = config.USER_SUBSCRIPTIONS_LIMIT - len(user_subscriptions_set)
-        user_subscriptions_set.update(subscriptions[:num_of_add_subscriptions])
+        new_subs = subscriptions[:num_of_add_subscriptions]
+        user_subscriptions_set.update(new_subs)
         not_added_subscriptions = ', '.join(subscriptions[num_of_add_subscriptions:]).title()
+        new_subs = ', '.join(new_subs).title()
         subscriptions = ', '.join(user_subscriptions_set).replace("'", "''")
         with engine.connect() as conn:
             conn.execute(text(f"UPDATE whitelist SET subscriptions = '{subscriptions}' WHERE user_id = '{user_id}'"))
             conn.commit()
 
-        msg_txt = f'Ваш новый список подписок:\n\n{subscriptions.title()}'
+        user_logger.info(f'*{user_id}* Пользователь подписался на : {new_subs}')
+
+        keyboard = continue_keyboard
+        msg_txt = f'Ваш список подписок:\n\n{subscriptions.title()}'
+        limit_msg = ''
+        unsaved_subs_msg = ''
 
         if len(user_subscriptions_set) == config.USER_SUBSCRIPTIONS_LIMIT:
-            msg_txt += '\n\nДостигнут предел по количеству подписок'
+            keyboard = None
+            continue_msg = ''
+            limit_msg = '\n\nДостигнут предел по количеству подписок'
+            await state.clear()
 
         if not_added_subscriptions:
-            msg_txt += f'\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
+            unsaved_subs_msg = f'\n\nСледующие подписки не были сохранены:\n\n{not_added_subscriptions}'
 
-        if len(msg_txt) < 4096:
-            await message.reply(msg_txt)
-        else:
-            await message.reply('Ваши подписки были сохранены')
+        if len(msg_txt) + len(limit_msg) + len(unsaved_subs_msg) + len(continue_msg) > 4096:
+            msg_txt = 'Ваши подписки были сохранены'
 
-        user_logger.info(f'*{user_id}* Пользователь подписался на : {subscriptions.title()}')
+        msg_txt += limit_msg + unsaved_subs_msg + continue_msg
+
+        await message.reply(msg_txt, reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith('continue_write_subs'))
+async def continue_write_subs(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(SubscriptionsStates.user_subscriptions)
+    await callback_query.message.edit_reply_markup()
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+    await callback_query.message.answer(text='Продолжайте вводить подписки', reply_markup=keyboard.as_markup())
+
+
+@router.callback_query(F.data.startswith('end_write_subs'))
+async def end_write_subs(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    await callback_query.message.edit_reply_markup()
+    await callback_query.message.answer(text='Формирование подписок завершено')
 
 
 async def get_user_subscriptions_body(message: types.Message, user_id: int) -> None:
