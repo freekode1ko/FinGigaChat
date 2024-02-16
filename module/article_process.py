@@ -672,8 +672,8 @@ class ArticleProcess:
                 # subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
                 price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com['price'] else None
                 m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
-                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
-                cons = f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com['cons'] else None
+                y_delta = None  # f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                cons = None  # f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com['cons'] else None
                 # join rows
                 row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
                 com_format = '\n'.join(row_list)

@@ -2,6 +2,7 @@
 import re
 import textwrap
 from pathlib import Path
+from PIL import Image
 
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ async def bonds_info(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        columns = ['Название', 'Доходность', 'Изм, %']
+        columns = ['Название', 'Доходность', 'Изм, % за день']
         bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
         bonds = bonds[columns].dropna(axis=0)
         bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
@@ -52,7 +53,7 @@ async def bonds_info(message: types.Message) -> None:
         photo = types.FSInputFile(png_path)
         day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
         month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
-        title = 'ОФЗ'
+        title = 'Доходность ОФЗ'
         data_source = 'investing.com'
         await __sent_photo_and_msg(
             message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())
@@ -151,10 +152,28 @@ async def economy_info(message: types.Message) -> None:
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
-        title = 'Прогноз валютных курсов и динамики ключевой ставки'
+        title = 'Прогноз динамики ключевой ставки'
         data_source = 'Sber analytical research'
-        png_path = Path(path_to_source) / 'weeklies' / 'exc_rate_prediction.png'
-        photo = types.FSInputFile(png_path)
+        png_path = Path(path_to_source) / 'weeklies' / 'exc_rate_prediction.png'  # FIXME обрезать, чтоб выдавать только ключ ставку
+
+        # Opens a image in RGB mode
+        im = Image.open(png_path)
+
+        # Setting the points for cropped image
+        # {'left': 675, 'top': 100, 'right': 1350, 'bottom': 1290}
+        width, height = im.size
+        left = int(width * 0.5)
+        top = int(height * 0.15)
+        right = width
+        bottom = int(height * 0.7)
+
+        # Cropped image of above dimension
+        # (It will not change original image)
+        sub_img = im.crop((left, top, right, bottom))
+        sub_img_path = png_path.parent / "key_rate_dynamics_table.png"
+        sub_img.save(sub_img_path)
+
+        photo = types.FSInputFile(sub_img_path)
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -310,8 +329,24 @@ async def exchange_info(message: types.Message) -> None:
         title = 'Прогноз валютных курсов'
         data_source = 'Sber analytical research'
         transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0, col_width=1.5, title=title)
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'fx_predict')
-        photo = types.FSInputFile(png_path)
+        png_path = Path('{}/weeklies/{}.png'.format(path_to_source, 'exc_rate_prediction'))
+
+        im = Image.open(png_path)
+
+        # Setting the points for cropped image
+        # {'left': 70, 'top': 200, 'right': 675, 'bottom': 1290}
+        width, height = im.size
+        left = 0
+        top = int(height * 0.15)
+        right = int(width * 0.5)
+        bottom = int(height * 0.8)
+
+        # Cropped image of above dimension
+        # (It will not change original image)
+        sub_img = im.crop((left, top, right, bottom))
+        sub_img_path = png_path.parent / "exc_rate_prediction_table.png"
+        sub_img.save(sub_img_path)
+        photo = types.FSInputFile(sub_img_path)
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -385,7 +420,7 @@ async def metal_info(message: types.Message) -> None:
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
         day = pd.read_sql_query('SELECT * FROM "report_met_day"', con=engine).values.tolist()
         photo = types.FSInputFile(png_path)
-        title = ' Сырьевые товары'
+        title = 'Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
         await __sent_photo_and_msg(
             message, photo, day, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())

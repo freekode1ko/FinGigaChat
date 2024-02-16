@@ -80,8 +80,8 @@ def main(period):
         print(collect_end_msg)
         logger.info(collect_end_msg)
 
-        print(f'Ожидание {current_period} часов перед следующей сборкой...')
-        logger.info(f'Ожидание {current_period} часов перед следующей сборкой...')
+        print(f'Ожидание {current_period} {scale_txt} перед следующей сборкой...')
+        logger.info(f'Ожидание {current_period} {scale_txt} перед следующей сборкой...')
 
         for i in range(current_period, 0, -1):
             time.sleep(scale)
