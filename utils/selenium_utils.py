@@ -105,6 +105,8 @@ def get_driver(logger: Logger.logger = None, connect_attempt_number: int = 1) ->
         # Сначала перезапускаем контейнер, потому что после ошибки при взаимодействии с selenium контейнер чаще падает,
         # чем остается в состоянии up
         restart_container(logger)
+        # даем время на перезапуск
+        time.sleep(5)
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
         driver = webdriver.Remote(command_executor=config.SELENIUM_COMMAND_EXECUTOR, options=firefox_options)
