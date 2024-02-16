@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text
 
 from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
     CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, \
-    QUOTES_SOURCES_PATH
+    TELEGRAM_CHANNELS_DATA_PATH, QUOTES_SOURCES_PATH
 
 # CLIENT_NAME_PATH = 'data/name/client_name.csv'
 # COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
@@ -286,6 +286,69 @@ query_article_name_impact = ("CREATE TABLE IF NOT EXISTS public.article_name_imp
                              "cleaned_data TEXT)"
                              "TABLESPACE pg_default;")
 
+
+query_tg_channels = (
+    """
+    CREATE TABLE IF NOT EXISTS public.telegram_channel
+    (
+        id serial PRIMARY KEY,
+        name character varying(128) COLLATE pg_catalog."default" NOT NULL,
+        link character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        industry_id integer NOT NULL
+        CONSTRAINT industry_id FOREIGN KEY (industry_id)
+            REFERENCES public.industry (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.telegram_channel
+        IS 'Справочник telegram каналов, из которых вынимаются новости';
+    """
+)
+query_tg_article_relations = (
+    """
+    CREATE TABLE IF NOT EXISTS public.relation_telegram_article
+    (
+        telegram_id integer NOT NULL,
+        article_id integer NOT NULL,
+        telegram_score integer,
+        CONSTRAINT relation_telegram_article_pkey PRIMARY KEY (telegram_id, article_id),
+        CONSTRAINT article_id FOREIGN KEY (article_id)
+            REFERENCES public.article (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+        CONSTRAINT telegram_id FOREIGN KEY (telegram_id)
+            REFERENCES public.telegram_channel (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.relation_telegram_article
+        IS 'Связь новостей с telegram каналами';
+    """
+)
+query_tg_subscriptions = (
+    """
+    CREATE TABLE IF NOT EXISTS public.user_telegram_subscription
+    (
+        user_id bigint NOT NULL,
+        telegram_id integer NOT NULL,
+        CONSTRAINT user_telegram_subscription_pkey PRIMARY KEY (user_id, telegram_id),
+        CONSTRAINT telegram_id FOREIGN KEY (telegram_id)
+            REFERENCES public.telegram_channel (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+        CONSTRAINT user_id FOREIGN KEY (user_id)
+            REFERENCES public.whitelist (user_id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.user_telegram_subscription
+        IS 'Справочник подписок пользователя на новостые telegram каналы';
+    """
+)           
+
 query_quote_group = (
     """
     CREATE TABLE IF NOT EXISTS public.quote_group
@@ -341,6 +404,13 @@ def update_client_alternative(engine):
             conn.execute(text(sql_text))
             conn.commit()
     print('Client_alternative table is update')
+
+
+
+def update_tg_channels(engine):
+    df_db = pd.read_excel(TELEGRAM_CHANNELS_DATA_PATH, index_col=False)
+    df_db.to_sql('telegram_channel', con=engine)
+    print('Telegram channel table was updated')
 
 
 def update_quote_group_table(engine) -> None:
@@ -437,6 +507,15 @@ if __name__ == '__main__':
     # update_database(main_engine, query_article_name_impact)
     # # update client_alternative
     # update_client_alternative(main_engine)
+
+    # add table telegram_channel
+    update_database(main_engine, query_tg_channels)
+    # add table relation_telegram_article
+    update_database(main_engine, query_tg_article_relations)
+    # add table user_telegram_subscription
+    update_database(main_engine, query_tg_subscriptions)
+    # update table telegram_channel
+    update_tg_channels(main_engine)
 
     # create quote_group and quote_source tables
     update_database(main_engine, query_quote_group)

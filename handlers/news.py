@@ -24,7 +24,7 @@ from constants.bot.constants import PATH_TO_COMMODITY_GRAPH
 from handlers import common, quotes, gigachat
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
-from utils.bot_utils import __create_fin_table, bot_send_msg, user_in_whitelist
+from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
 
 # logger = logging.getLogger(__name__)
 router = Router()

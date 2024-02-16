@@ -14,7 +14,7 @@ from bot_logger import logger, user_logger
 from database import engine
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
-from utils.bot_utils import (
+from utils.bot.base import (
     is_admin_user,
     file_cleaner,
     send_msg_to,

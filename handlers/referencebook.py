@@ -1,5 +1,3 @@
-# import logging
-
 import pandas as pd
 from aiogram import F, Router, types
 from aiogram.filters import Command
@@ -10,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot_logger import logger, user_logger
 from constants.bot.constants import handbook_prefix
-from utils.bot_utils import show_ref_book_by_request, user_in_whitelist, bot_send_msg
+from utils.bot.base import show_ref_book_by_request, user_in_whitelist, bot_send_msg
 
 # logger = logging.getLogger(__name__)
 router = Router()

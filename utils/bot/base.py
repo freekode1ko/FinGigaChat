@@ -2,14 +2,15 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta
-from typing import List, Union
+from datetime import datetime, timedelta, date
+from math import ceil
+from typing import List, Union, Tuple
 
 import pandas as pd
 from aiogram import Bot, types
 
 import module.data_transformer as dt
-from config import path_to_source
+from config import path_to_source, PAGE_ELEMENTS_COUNT
 from constants.bot.constants import research_footer
 from database import engine
 from module.logger_base import Logger
@@ -329,3 +330,71 @@ async def __create_fin_table(message: types.Message, client_name: str, client_fi
     png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
     photo = types.FSInputFile(png_path)
     await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+
+
+def get_page_data_and_info(
+        all_data_df: pd.DataFrame,
+        page: int,
+        page_elements: int = PAGE_ELEMENTS_COUNT,
+) -> Tuple[pd.DataFrame, str, int]:
+    """
+    1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
+    2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
+    3)Вычисляет кол-во страниц
+
+    :param all_data_df: Набор данных для постраничной навигации
+    :param page: Текущая страница
+    :param page_elements: Число элементов на странице
+    return: (Данные для страницы, сбщ о числе элементов на странице, число страниц всего)
+    """
+    elements_cnt = len(all_data_df)
+    from_ = page * page_elements
+    to_ = (page + 1) * page_elements
+    to_ = to_ if to_ < elements_cnt else elements_cnt
+    data_df = all_data_df[from_: to_]
+
+    from_ = (from_ + 1) if from_ < elements_cnt else elements_cnt
+    info = f'{from_}-{to_} из {elements_cnt}'
+    return data_df, info, ceil(elements_cnt / page_elements)
+
+
+def wrap_callback_data(data: str) -> str:
+    return data.replace(':', ';')
+
+
+def unwrap_callback_data(data: str) -> str:
+    return data.replace(';', ':')
+
+
+def next_weekday(d: Union[date, datetime], weekday: int) -> Union[date, datetime]:
+    """
+    Вычисляет дату/дату_время следующего дня недели относительно переданной даты/даты_времени
+
+    :param d: переданная дата/дата_время
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    """
+    days_ahead = ((weekday - d.weekday()) % 7) or 7
+    return d + timedelta(days_ahead)
+
+
+def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: int = 0) -> datetime:
+    """
+    Вычисляет ближайшую дату_время относительно переданной по заданным параметрам
+    next_weekday_time(datetime(2024, 1, 1, 12, 0), 0, 15, 30) -> datetime(2024, 1, 1, 15, 30)
+    next_weekday_time(datetime(2024, 1, 1, 16, 0), 0, 15, 30) -> datetime(2024, 1, 8, 15, 30)
+
+    :param from_dt: переданная дата_время
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    :param hour: числовое значение часа недели 0-23
+    :param minute: числовое значение минуты недели 0-59
+    """
+    if from_dt.weekday() == weekday and (from_dt.hour < hour or (from_dt.hour == hour and from_dt.minute < minute)):
+        return datetime(from_dt.year, from_dt.month, from_dt.day, hour, minute)
+
+    ndt = next_weekday(from_dt, weekday)
+    return datetime(ndt.year, ndt.month, ndt.day, hour, minute)
+
+
+async def wait_until(to_dt: datetime) -> None:
+    """Спит до переданного datetime"""
+    await asyncio.sleep((to_dt - datetime.now()).total_seconds())
