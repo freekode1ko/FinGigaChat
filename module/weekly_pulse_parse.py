@@ -13,6 +13,7 @@ __all__ = ['ParsePresentationPDF', 'ReportTypes']
 
 
 HEADER_MAX_LEN = 256
+PERCENT_HEIGHT_OF_USEFUL_INFO = 94
 
 
 def default_slide_item() -> dict:

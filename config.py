@@ -1,6 +1,8 @@
+import calendar
 import json
 import pathlib
 from typing import Dict, List, Union
+from datetime import timedelta
 
 from environs import Env
 
@@ -34,6 +36,9 @@ SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', de
 SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
+api_token: str = env.str('BOT_API_TOKEN', default='')
+psql_engine: str = env.str('PSQL_ENGINE', default='')
+
 log_file = 'logs/{}.log'
 LOG_LEVEL_DEBUG = 10
 LOG_LEVEL_INFO = 20
@@ -54,25 +59,93 @@ user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
-# api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
-api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
+RESEARCH_GETTING_TIMES_LIST = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
 
-psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
+QUOTES_PROCESSING_PROC_NUM = 2
 
 CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
+TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
+QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
+
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 70
+PAGE_ELEMENTS_COUNT = 10
+
+# пассивная рассылка новостей по подпискам на тг каналы
+# пн - 09:00 (за период с 16:00 прошлой пятницы дня до 09:00), 17:30 (за период с 09:00 этого дня до 17:30)
+# вт, ср, чт - 09:00 (за период с 17:30 предыдущего дня до 09:00), 17:30 (за период с 09:00 этого дня до 17:30)
+# пт - 09:00 (за период с 17:30 предыдущего дня до 09:00), 16:00 (за период с 16:00 предыдущей пятницы до 16:00)
+TG_NEWSLETTER_EVERYDAY_PERIODS = [
+    {
+        'weekday': calendar.MONDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=65),
+    },
+    {
+        'weekday': calendar.MONDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.TUESDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.TUESDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.WEDNESDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.WEDNESDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.THURSDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.THURSDAY,
+        'send_time': '17:30',
+        'timedelta': timedelta(hours=8, minutes=30),
+    },
+    {
+        'weekday': calendar.FRIDAY,
+        'send_time': '09:00',
+        'timedelta': timedelta(hours=15, minutes=30),
+    },
+    {
+        'weekday': calendar.FRIDAY,
+        'send_time': '16:00',
+        'timedelta': timedelta(days=7),
+    },
+]
 
 STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
+POST_TO_GIGAPARSER_TIMEOUT = 180
+POST_TO_GIGAPARSER_ATTEMPTS = 3
+POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
+
+BASE_DATE_FORMAT = '%d.%m.%Y'
+BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
+
+INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
@@ -147,3 +220,23 @@ industry_base_url = (
     'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_'
     'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
 )
+
+# SELENIUM CONTAINER PARAMS
+# -d -p 4444:4444 -p 7900:7900 --shm-size="2g" --name="selenium" selenium/standalone-firefox:latest
+SELENIUM_IMAGE_NAME = 'selenium/standalone-firefox:latest'
+SELENIUM_CONTAINER_NAME = 'selenium'
+SELENIUM_SHM_SIZE = '2g'
+SELENIUM_PORTS = {
+    4444: 4444,
+    7900: 7900,
+}
+SELENIUM_RUN_KWARGS = {
+    'image': SELENIUM_IMAGE_NAME,
+    'name': SELENIUM_CONTAINER_NAME,
+    'shm_size': SELENIUM_SHM_SIZE,
+    'ports': SELENIUM_PORTS,
+    'detach': True,
+}
+
+# SELENIUM DRIVER PARAMS
+SELENIUM_COMMAND_EXECUTOR = 'http://localhost:4444/wd/hub'
