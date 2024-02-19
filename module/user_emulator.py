@@ -610,7 +610,22 @@ class ResearchParser:
                 useful_height = height * weekly_pulse_parse.PERCENT_HEIGHT_OF_USEFUL_INFO // 100
                 img = self.crop_image(img, 0, 0, width, useful_height)
                 if slide_meta['crop']:
-                    img = self.crop_image(img)
+                    img = self.crop_image(img, **slide_meta['crop_params'])
+
+                for sub_img_params in slide_meta['sub_images']:
+                    crop_params = sub_img_params['crop_params'].copy()
+                    if sub_img_params['relative']:
+                        width, height = img.size
+
+                        crop_params = {
+                            'left': int(width * sub_img_params['crop_params']['left']),
+                            'top': int(height * sub_img_params['crop_params']['top']),
+                            'right': int(width * sub_img_params['crop_params']['right']),
+                            'bottom': int(height * sub_img_params['crop_params']['bottom']),
+                        }
+                    sub_img = self.crop_image(img, **crop_params)
+                    sub_img.save(f"{weekly_dir}/{sub_img_params['name']}.png")
+
                 img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
 
         self._logger.info('Weekly review готов')
