@@ -307,6 +307,9 @@ class ArticleProcess:
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
+        if not links_value:
+            return
+
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
