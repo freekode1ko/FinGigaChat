@@ -38,6 +38,7 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
+giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 
 log_file = 'logs/{}.log'
 LOG_LEVEL_DEBUG = 10
@@ -51,11 +52,14 @@ user_agents: List[str] = read_asset_from_json(file_name='user_agents.json')
 
 list_of_companies: List[List] = read_asset_from_json('companies_list.json')
 
-chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
+giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
+giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
+giga_scope = 'GIGACHAT_API_CORP'
+giga_model = 'GigaChat-Pro'
+
 research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
-user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
