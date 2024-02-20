@@ -1,43 +1,53 @@
+from uuid import uuid4
 import json
 
 import requests as req
 
-from config import chat_base_url, user_cred
+from config import giga_oauth_url, giga_chat_url, giga_scope, giga_model, giga_credentials
 
 
 class GigaChat:
-    chat_base_url = chat_base_url
+    oauth_url = giga_oauth_url
+    chat_url = giga_chat_url
+    scope = giga_scope
+    model = giga_model
+
+    def __init__(self):
+        self._credentials = giga_credentials
 
     def get_user_token(self) -> str:
-        """
-        Get user token
-        :return: User token as string.
-        """
-        headers = {'content-type': 'application/json'}
-        ans = req.post(
-            '{}token'.format(self.chat_base_url), timeout=30, headers=headers, auth=(user_cred[0], user_cred[1]), verify=False
-        )
-        token = ans.json()['tok']
+        """Получение токена доступа к модели GigaChat"""
 
+        headers = {
+            'Authorization': f'Basic {self._credentials}',
+            'RqUID': str(uuid4()),
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        data = {'scope': self.scope}
+        response = req.post(self.oauth_url, headers=headers, data=data, verify=False)
+        token = response.json()['access_token']
         return token
 
     def ask_giga_chat(self, token: str, text: str, prompt: str = '') -> req.models.Response:
         """
-        Make summarization or make answer by GigaChat
-        :param prompt: system prompt to GigaChat
-        :param text: text
-        :param token: User token
-        :return: GigaChat answer as object requests.models.Response
+        Получение ответа от модели GigaChat
+        :param token: токен доступа к модели
+        :param text: токен доступа к модели
+        :param prompt: системный промпт
+        return response с результатом ответа модели
         """
-        payload = json.dumps(
-            {
-                'messages': [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': text}],
-                'model': 'GigaChat:latest',
-                'profanity_check': False,
-                # "repetition_penalty": 1,
-                # "temperature": 0.1
-            }
-        )
-        headers = {'Authorization': 'Bearer {}'.format(token), 'Content-Type': 'application/json', 'accept': 'application/json'}
 
-        return req.request('POST', '{}chat/completions'.format(self.chat_base_url), headers=headers, data=payload, verify=False)
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        data = json.dumps({
+            'model': self.model,
+            'messages': [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': text}],
+            'profanity_check': False
+        })
+
+        response = req.post(url=self.chat_url, headers=headers, data=data, verify=False)
+        # answer = req.json()['choices'][0]['message']['content']
+        return response

@@ -294,11 +294,11 @@ query_tg_channels = (
         id serial PRIMARY KEY,
         name character varying(128) COLLATE pg_catalog."default" NOT NULL,
         link character varying(255) COLLATE pg_catalog."default" NOT NULL,
-        industry_id integer NOT NULL
+        industry_id integer NOT NULL, 
         CONSTRAINT industry_id FOREIGN KEY (industry_id)
             REFERENCES public.industry (id) MATCH SIMPLE
             ON UPDATE CASCADE
-            ON DELETE CASCADE,
+            ON DELETE CASCADE
     )
     TABLESPACE pg_default;
     COMMENT ON TABLE public.telegram_channel
