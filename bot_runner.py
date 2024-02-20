@@ -10,7 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 import config
-import newsletter_config
+from configs import newsletter_config
 from bot_logger import logger
 from constants.bot.commands import PUBLIC_COMMANDS
 from database import engine
@@ -60,7 +60,7 @@ async def passive_newsletter(
         work_time = time.time() - start_tm
         users_cnt = len(user_df)
         logger.info(
-            f'Рассылка в {newsletter_dt_str} для {users_cnt} успешно завершена за {work_time:.3f} секунд. '
+            f'Рассылка в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
             f'Переходим в ожидание следующей рассылки.'
         )
 

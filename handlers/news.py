@@ -140,7 +140,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 async def dailynews(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
-    user_df = pd.DataFrame([[message.from_user.id, full_name, '']])
+    user_df = pd.DataFrame([[message.from_user.id, full_name, '']], columns=['user_id', 'username', 'subscriptions'])
     await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
 
 
@@ -204,7 +204,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
         buttons.append([types.KeyboardButton(text=subject_name)])
 
     cancel_msg = f'Напишите «{cancel_command}» для очистки'
-    response = 'Такого я пока не знаю.\n\nВозможно, вы имели в виду один из следующих вариантов:'
+    response = 'Уточните, пожалуйста, ваш запрос..\n\nВозможно, вы имели в виду один из следующих вариантов:'
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
     )

@@ -5,12 +5,14 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.utils.media_group import MediaGroupBuilder
 
+import config
 import module.data_transformer as dt
 from bot_logger import logger, user_logger
 from database import engine
 from module.article_process import ArticleProcess
 from utils.bot.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.bot.industry import get_tg_channel_news_msg, group_news_by_tg_channels
+from utils.db_api import research_source
 from utils.db_api.industry import get_industry_tg_news
 
 
@@ -40,7 +42,7 @@ async def tg_newsletter(
                 continue
 
             start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по отрасли <b>{industry_name.capitalize()}</b>:'
-            await bot.send_message(user_id, text=start_msg)
+            await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
 
             tg_news = group_news_by_tg_channels(tg_news)
 
@@ -133,14 +135,31 @@ async def weekly_pulse_newsletter(
         **kwargs,
 ) -> None:
     newsletter_type = kwargs.get('newsletter_type', '')
+    base_url = f'{config.research_base_url}group/guest/money'
+    source_name = 'Weekly Pulse'
+    # проверяем, что данные обновились с последней рассылки
+    last_update_time = research_source.get_source_last_update_datetime(source_name=source_name, source_link=base_url)
+    now = datetime.datetime.now()
 
     # получаем текст рассылки
     if newsletter_type == 'weekly_result':
+        # рассылается в пятницу
+        check_days = 1
         title, newsletter, img_path_list = dt.Newsletter.make_weekly_result()
     elif newsletter_type == 'weekly_event':
+        # рассылается в пн
+        check_days = 3
         title, newsletter, img_path_list = dt.Newsletter.make_weekly_event()
     else:
         return
+
+    while not last_update_time >= (now - datetime.timedelta(days=check_days)):
+        # check if weekly pulse was updated
+        warn_msg = 'Данные по Weekly Pulse не были обновлены, рассылка приостановлена'
+        logger.warning(warn_msg)
+        last_update_time = research_source.get_source_last_update_datetime(source_name=source_name, source_link=base_url)
+        now = datetime.datetime.now()
+        await asyncio.sleep(config.CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME)
 
     for _, user_data in user_df.iterrows():
         user_id, user_name = user_data['id'], user_data['username']
