@@ -63,7 +63,10 @@ path_to_source = './sources'
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
-RESEARCH_GETTING_TIMES_LIST = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00']
+RESEARCH_GETTING_TIMES_LIST = [
+    '08:00', '10:00', '12:00', '14:00', '16:00',
+    '17:00', '17:10', '17:20', '17:30', '17:40', '17:50', '18:00',
+]
 
 QUOTES_PROCESSING_PROC_NUM = 2
 

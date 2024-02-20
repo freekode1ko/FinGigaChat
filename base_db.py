@@ -294,7 +294,7 @@ query_tg_channels = (
         id serial PRIMARY KEY,
         name character varying(128) COLLATE pg_catalog."default" NOT NULL,
         link character varying(255) COLLATE pg_catalog."default" NOT NULL,
-        industry_id integer NOT NULL, 
+        industry_id integer NOT NULL,
         CONSTRAINT industry_id FOREIGN KEY (industry_id)
             REFERENCES public.industry (id) MATCH SIMPLE
             ON UPDATE CASCADE
@@ -443,10 +443,12 @@ def update_quote_source_table(engine):
     # отбрасываем строки, где есть пустые ячейки,
     # переименовываем колонки,
     # отбрасываем дубли
+    # отбрасываем по источникам (Алюминий и Эн. уголь (Eu))
     sources_df = pd.read_excel(path)[['Алиас', 'Блок', 'Формат ответа ', 'Источник']]\
         .dropna()\
         .rename(columns=columns_new_names)\
-        .drop_duplicates()
+        .drop_duplicates()\
+        .drop_duplicates('source')
 
     sources_df['id'] = 0
     sources_df['last_update_datetime'] = datetime.datetime.now()
