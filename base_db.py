@@ -1,9 +1,9 @@
 import datetime
 
-import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine, text
 
+import config
 from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
     CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, \
     TELEGRAM_CHANNELS_DATA_PATH, QUOTES_SOURCES_PATH
@@ -384,6 +384,25 @@ query_quote_source = (
     """
 )
 
+query_research_source_table = (
+    """
+    DROP TABLE IF EXISTS public.research_source CASCADE;
+    CREATE TABLE IF NOT EXISTS public.research_source
+    (
+        id SERIAL PRIMARY KEY,
+        name character varying(64) COLLATE pg_catalog."default" NOT NULL,
+        description character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        response_format text COLLATE pg_catalog."default",
+        source text COLLATE pg_catalog."default" NOT NULL,
+        last_update_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+        previous_update_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.quote_source
+        IS 'Справочник источников котировок';
+    """
+)
+
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
@@ -406,10 +425,9 @@ def update_client_alternative(engine):
     print('Client_alternative table is update')
 
 
-
 def update_tg_channels(engine):
-    df_db = pd.read_excel(TELEGRAM_CHANNELS_DATA_PATH, index_col=False)
-    df_db.to_sql('telegram_channel', con=engine)
+    df_db = pd.read_excel(TELEGRAM_CHANNELS_DATA_PATH)[['name', 'link', 'industry_id']]
+    df_db.to_sql('telegram_channel', con=engine, if_exists='append', index=False)
     print('Telegram channel table was updated')
 
 
@@ -471,6 +489,87 @@ def update_quote_source_table(engine):
     sources_df.to_sql('quote_source', con=engine, if_exists='append', index=False)
 
 
+def update_research_source_table(engine):
+    # выгрузить данные из xlsx
+    # выгрузить данные из БД
+    # объединить (
+    #   обновить информацию о смежных источниках
+    #   источники, которые есть в БД, но нет в xlsx - удалить
+    #   источники, которых нет в БД, добавить туда
+    # )
+    # IF THERE WILL BE SUBSCRIPTIONS ON RESEARCH SOURCES, WE HAVE TO UPDATE TABLE WITH SUBS
+    path = config.RESEARCH_SOURCES_PATH
+    db_cols = ['id', 'name', 'description', 'response_format', 'source', 'last_update_datetime', 'previous_update_datetime']
+    sources_from_db_df = pd.read_sql_table('research_source', con=engine, columns=db_cols)
+
+    excel_cols = ['name', 'description', 'response_format', 'source']
+    sources_df = (
+        pd.read_excel(path)[excel_cols]
+        .dropna(subset=['source', 'name'])
+        .drop_duplicates('source')
+        .drop_duplicates('name')
+    )
+
+    query = text(
+        'UPDATE research_source '
+        'SET name=:name, description=:description, response_format=:response_format, source=:source '
+        'WHERE id=:row_id'
+    )
+    query_update_sources_list = []
+    delete_sources_ids = []
+    for _, row in sources_from_db_df.iterrows():
+        # print('row')
+        # print(row)
+        # print('same_row in sources_df')
+        # print(sources_df[(sources_df['name'] == row['name']) | (sources_df['source'] == row['source'])])
+        if not (same_row := sources_df[(sources_df['name'] == row['name']) | (sources_df['source'] == row['source'])]).empty:
+            # add update query, if there are new info about source
+            # print(f'{all(same_row.isin(row).all().tolist())=:}')
+            if all(same_row.isin(row).all().tolist()):
+                continue
+
+            # delete updated value from new values
+            sources_df.drop(same_row.index.tolist(), inplace=True)
+            row_id = row['id']
+            same_row = same_row.to_dict(orient='records')[0]
+            query_update_sources_list.append(query.bindparams(row_id=row_id, **same_row))
+        else:
+            delete_sources_ids.append(row['id'])
+
+    if query_update_sources_list:
+        with engine.connect() as conn:
+            for q in query_update_sources_list:
+                conn.execute(q)
+
+            conn.commit()
+
+    if delete_sources_ids:
+        with engine.connect() as conn:
+            query = text(
+                'DELETE FROM research_source WHERE id  = ANY(:delete_sources_ids);'
+            )
+            conn.execute(query.bindparams(delete_sources_ids=delete_sources_ids))
+            conn.commit()
+
+    if not sources_df.empty:
+        sources_df.to_sql('research_source', con=engine, if_exists='append', index=False)
+
+
+def alter_to_quote_source_column(engine):
+    query_alter = (
+        'ALTER TABLE IF EXISTS quote_source '
+        'ADD COLUMN IF NOT EXISTS previous_update_datetime timestamp with time zone;'
+    )
+    query_update = (
+        'UPDATE quote_source SET previous_update_datetime=last_update_datetime;'
+    )
+
+    with engine.connect() as conn:
+        conn.execute(text(query_alter))
+        conn.execute(text(query_update))
+        conn.commit()
+
+
 def drop_tables(engine):
     tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
               'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
@@ -508,18 +607,26 @@ if __name__ == '__main__':
     # # update client_alternative
     # update_client_alternative(main_engine)
 
-    # add table telegram_channel
-    update_database(main_engine, query_tg_channels)
-    # add table relation_telegram_article
-    update_database(main_engine, query_tg_article_relations)
-    # add table user_telegram_subscription
-    update_database(main_engine, query_tg_subscriptions)
-    # update table telegram_channel
-    update_tg_channels(main_engine)
+    # # add table telegram_channel
+    # update_database(main_engine, query_tg_channels)
+    # # add table relation_telegram_article
+    # update_database(main_engine, query_tg_article_relations)
+    # # add table user_telegram_subscription
+    # update_database(main_engine, query_tg_subscriptions)
+    # # update table telegram_channel
+    # update_tg_channels(main_engine)
+    #
+    # # create quote_group and quote_source tables
+    # update_database(main_engine, query_quote_group)
+    # update_database(main_engine, query_quote_source)
+    # # update quote_group and quote_source tables
+    # update_quote_group_table(main_engine)
+    # update_quote_source_table(main_engine)
 
-    # create quote_group and quote_source tables
-    update_database(main_engine, query_quote_group)
-    update_database(main_engine, query_quote_source)
-    # update quote_group and quote_source tables
-    update_quote_group_table(main_engine)
-    update_quote_source_table(main_engine)
+    # alter to quote_source table column
+    alter_to_quote_source_column(main_engine)
+
+    # create research_source table
+    update_database(main_engine, query_research_source_table)
+    # update research_source table
+    update_research_source_table(main_engine)
