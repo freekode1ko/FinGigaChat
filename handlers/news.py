@@ -1,6 +1,7 @@
 import asyncio
 # import logging
 
+import pandas as pd
 from aiogram import F, Router, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -12,7 +13,6 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 import config
 from bot_logger import logger, user_logger
-from bot_runner import send_daily_news
 from constants.bot.aliases import (
     bonds_aliases,
     eco_aliases,
@@ -27,6 +27,8 @@ from module.article_process import ArticleProcess
 from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
 
 # logger = logging.getLogger(__name__)
+from utils.bot.newsletter import subscriptions_newsletter
+
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
@@ -138,7 +140,8 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 async def dailynews(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
-    await send_daily_news(20, 20, 1)
+    user_df = pd.DataFrame([[message.from_user.id, full_name, '']])
+    await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
 
 
 @router.message(Command('newsletter'))
