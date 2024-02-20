@@ -503,11 +503,11 @@ def update_research_source_table(engine):
     sources_from_db_df = pd.read_sql_table('research_source', con=engine, columns=db_cols)
 
     excel_cols = ['name', 'description', 'response_format', 'source']
+    # считаем здесь каждый источник уникальным по паре ключей (name, source)
     sources_df = (
         pd.read_excel(path)[excel_cols]
         .dropna(subset=['source', 'name'])
-        .drop_duplicates('source')
-        .drop_duplicates('name')
+        .drop_duplicates(subset=['name', 'source'])
     )
 
     query = text(

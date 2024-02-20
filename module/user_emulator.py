@@ -22,6 +22,7 @@ import config
 from module import data_transformer as Transformer
 from module import weekly_pulse_parse
 from module.logger_base import Logger
+from utils.db_api import research_source
 from utils.selenium_utils import get_driver
 
 
@@ -613,6 +614,7 @@ class ResearchParser:
                     img = self.crop_image(img)
                 img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
 
+        research_source.update_get_datetime(source_name='Weekly Pulse', source_link=base_url)
         self._logger.info('Weekly review готов')
         print('Weekly review готов')
 
