@@ -28,6 +28,7 @@ from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
 
 # logger = logging.getLogger(__name__)
 from utils.bot.newsletter import subscriptions_newsletter
+from utils.db_api import research_source
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -181,7 +182,11 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     else:
         return
 
-    media = MediaGroupBuilder()
+    base_url = f'{config.research_base_url}group/guest/money'
+    weekly_pulse_date_str = research_source.get_source_last_update_datetime(source_name='Weekly Pulse', source_link=base_url).strftime(config.BASE_DATE_FORMAT)
+    weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
+
+    media = MediaGroupBuilder(caption=weekly_pulse_date_str)
     for path in img_path_list:
         media.add_photo(types.FSInputFile(path))
     await callback_query.message.answer(text=newsletter, parse_mode='HTML', protect_content=True)

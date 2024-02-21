@@ -161,9 +161,12 @@ async def weekly_pulse_newsletter(
         now = datetime.datetime.now()
         await asyncio.sleep(config.CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME)
 
+    weekly_pulse_date_str = last_update_time.strftime(config.BASE_DATE_FORMAT)
+    weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
+
     for _, user_data in user_df.iterrows():
         user_id, user_name = user_data['id'], user_data['username']
-        media = MediaGroupBuilder()
+        media = MediaGroupBuilder(caption=weekly_pulse_date_str)
         for path in img_path_list:
             media.add_photo(types.FSInputFile(path))
         try:
