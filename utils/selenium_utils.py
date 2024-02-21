@@ -78,7 +78,7 @@ def run_container(logger: Logger.logger = None) -> None:
     client = docker.from_env()
 
     try:
-        client.containers.run(config.SELENIUM_RUN_KWARGS)
+        client.containers.run(**config.SELENIUM_RUN_KWARGS)
         # docker.errors.ContainerError – If the container exits with a non-zero exit code and detach is False.
         # docker.errors.ImageNotFound – If the specified image does not exist.
         # docker.errors.APIError – If the server returns an error.
