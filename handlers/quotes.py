@@ -37,11 +37,11 @@ async def bonds_info(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        columns = ['Название', 'Доходность', 'Изм, % за день']
+        columns = ['Название', 'Доходность', 'Изм, %']
         bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
         bonds = bonds[columns].dropna(axis=0)
         bond_ru = bonds.loc[bonds['Название'].str.contains(r'Россия')].round(2)
-        bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения', 'Доходность': 'Доходность, %'})
+        bond_ru = bond_ru.rename(columns={'Название': 'Cрок до погашения', 'Доходность': 'Доходность, %', 'Изм, %': 'Изм, % за день'})
         years = ['1 год', '2 года', '3 года', '5 лет', '7 лет', '10 лет', '15 лет', '20 лет']
         for num, name in enumerate(bond_ru['Cрок до погашения'].values):
             bond_ru['Cрок до погашения'].values[num] = years[num]
