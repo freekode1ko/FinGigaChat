@@ -1,8 +1,6 @@
-import calendar
 import json
 import pathlib
 from typing import Dict, List, Union
-from datetime import timedelta
 
 from environs import Env
 
@@ -77,68 +75,12 @@ COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xl
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
 QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
+RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
 
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 70
 PAGE_ELEMENTS_COUNT = 10
-
-# пассивная рассылка новостей по подпискам на тг каналы
-# пн - 09:00 (за период с 16:00 прошлой пятницы дня до 09:00), 17:30 (за период с 09:00 этого дня до 17:30)
-# вт, ср, чт - 09:00 (за период с 17:30 предыдущего дня до 09:00), 17:30 (за период с 09:00 этого дня до 17:30)
-# пт - 09:00 (за период с 17:30 предыдущего дня до 09:00), 16:00 (за период с 16:00 предыдущей пятницы до 16:00)
-TG_NEWSLETTER_EVERYDAY_PERIODS = [
-    {
-        'weekday': calendar.MONDAY,
-        'send_time': '09:00',
-        'timedelta': timedelta(hours=65),
-    },
-    {
-        'weekday': calendar.MONDAY,
-        'send_time': '17:30',
-        'timedelta': timedelta(hours=8, minutes=30),
-    },
-    {
-        'weekday': calendar.TUESDAY,
-        'send_time': '09:00',
-        'timedelta': timedelta(hours=15, minutes=30),
-    },
-    {
-        'weekday': calendar.TUESDAY,
-        'send_time': '17:30',
-        'timedelta': timedelta(hours=8, minutes=30),
-    },
-    {
-        'weekday': calendar.WEDNESDAY,
-        'send_time': '09:00',
-        'timedelta': timedelta(hours=15, minutes=30),
-    },
-    {
-        'weekday': calendar.WEDNESDAY,
-        'send_time': '17:30',
-        'timedelta': timedelta(hours=8, minutes=30),
-    },
-    {
-        'weekday': calendar.THURSDAY,
-        'send_time': '09:00',
-        'timedelta': timedelta(hours=15, minutes=30),
-    },
-    {
-        'weekday': calendar.THURSDAY,
-        'send_time': '17:30',
-        'timedelta': timedelta(hours=8, minutes=30),
-    },
-    {
-        'weekday': calendar.FRIDAY,
-        'send_time': '09:00',
-        'timedelta': timedelta(hours=15, minutes=30),
-    },
-    {
-        'weekday': calendar.FRIDAY,
-        'send_time': '16:00',
-        'timedelta': timedelta(days=7),
-    },
-]
 
 STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
@@ -148,6 +90,7 @@ STATS_COLLECTOR_SLEEP_TIME = 60
 POST_TO_GIGAPARSER_TIMEOUT = 180
 POST_TO_GIGAPARSER_ATTEMPTS = 3
 POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
+CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'

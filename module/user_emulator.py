@@ -22,6 +22,7 @@ import config
 from module import data_transformer as Transformer
 from module import weekly_pulse_parse
 from module.logger_base import Logger
+from utils.db_api import research_source
 from utils.selenium_utils import get_driver
 
 
@@ -557,7 +558,7 @@ class ResearchParser:
                 self._logger.info('Загрузка следующих публикаций')
                 more.click()
                 self._logger.info('Ожидание доступности дополнительных отчетов для открытия')
-                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
                 weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
         except Exception as e:
@@ -628,6 +629,7 @@ class ResearchParser:
 
                 img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
 
+        research_source.update_get_datetime(source_name='Weekly Pulse', source_link=base_url)
         self._logger.info('Weekly review готов')
         print('Weekly review готов')
 

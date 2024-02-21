@@ -384,13 +384,15 @@ def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: in
     next_weekday_time(datetime(2024, 1, 1, 16, 0), 0, 15, 30) -> datetime(2024, 1, 8, 15, 30)
 
     :param from_dt: переданная дата_время
-    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс) (-1 для ближайшей даты времени сегодня или завтра)
     :param hour: числовое значение часа недели 0-23
     :param minute: числовое значение минуты недели 0-59
     """
-    if from_dt.weekday() == weekday and (from_dt.hour < hour or (from_dt.hour == hour and from_dt.minute < minute)):
+    if (from_dt.weekday() == weekday or weekday == -1) and (from_dt.hour < hour or (from_dt.hour == hour and from_dt.minute < minute)):
         return datetime(from_dt.year, from_dt.month, from_dt.day, hour, minute)
 
+    if weekday < 0:
+        weekday = from_dt.weekday() + 1
     ndt = next_weekday(from_dt, weekday)
     return datetime(ndt.year, ndt.month, ndt.day, hour, minute)
 

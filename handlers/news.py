@@ -1,6 +1,7 @@
 import asyncio
 # import logging
 
+import pandas as pd
 from aiogram import F, Router, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -12,7 +13,6 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 import config
 from bot_logger import logger, user_logger
-from bot_runner import send_daily_news
 from constants.bot.aliases import (
     bonds_aliases,
     eco_aliases,
@@ -27,6 +27,9 @@ from module.article_process import ArticleProcess
 from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
 
 # logger = logging.getLogger(__name__)
+from utils.bot.newsletter import subscriptions_newsletter
+from utils.db_api import research_source
+
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
@@ -138,7 +141,8 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 async def dailynews(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
-    await send_daily_news(20, 20, 1)
+    user_df = pd.DataFrame([[message.from_user.id, full_name, '']], columns=['user_id', 'username', 'subscriptions'])
+    await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
 
 
 @router.message(Command('newsletter'))
@@ -178,7 +182,11 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     else:
         return
 
-    media = MediaGroupBuilder()
+    base_url = f'{config.research_base_url}group/guest/money'
+    weekly_pulse_date_str = research_source.get_source_last_update_datetime(source_name='Weekly Pulse', source_link=base_url).strftime(config.BASE_DATE_FORMAT)
+    weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
+
+    media = MediaGroupBuilder(caption=weekly_pulse_date_str)
     for path in img_path_list:
         media.add_photo(types.FSInputFile(path))
     await callback_query.message.answer(text=newsletter, parse_mode='HTML', protect_content=True)
@@ -201,7 +209,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
         buttons.append([types.KeyboardButton(text=subject_name)])
 
     cancel_msg = f'Напишите «{cancel_command}» для очистки'
-    response = 'Такого я пока не знаю.\n\nВозможно, вы имели в виду один из следующих вариантов:'
+    response = 'Уточните, пожалуйста, ваш запрос..\n\nВозможно, вы имели в виду один из следующих вариантов:'
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
     )
