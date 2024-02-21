@@ -107,7 +107,7 @@ NEWSLETTER_CONFIG = [
         'params': [
             {
                 'weekday': calendar.FRIDAY,
-                'send_time': '18:30',
+                'send_time': '18:00',
                 'kwargs': dict(newsletter_type='weekly_result'),
             }
         ],
