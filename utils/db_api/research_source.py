@@ -28,7 +28,9 @@ def update_get_datetime(source_name: str, source_link: str) -> None:
 
 def get_source_last_update_datetime(source_name: str, source_link: str) -> datetime.datetime:
     """
-
+    Метод получения времени сбора данных research с источника
+    :param source_name: Имя собираемых данных
+    :param source_link: Ссылка, где данные собираются
     """
     query = text(
         f'SELECT last_update_datetime '

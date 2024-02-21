@@ -399,7 +399,7 @@ query_research_source_table = (
     )
     TABLESPACE pg_default;
     COMMENT ON TABLE public.quote_source
-        IS 'Справочник источников котировок';
+        IS 'Справочник источников CIB Research';
     """
 )
 
