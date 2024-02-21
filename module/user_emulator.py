@@ -22,6 +22,8 @@ import config
 from module import data_transformer as Transformer
 from module import weekly_pulse_parse
 from module.logger_base import Logger
+from utils.db_api import research_source
+from utils.selenium_utils import get_driver
 
 
 class ResearchError(Exception):
@@ -157,7 +159,7 @@ class ResearchParser:
                     break
                 else:
                     # load more reviews
-                    self._logger.info('Загрузка больше отчетов')
+                    self._logger.info('Загрузка большего числа отчетов')
                     button_show_more = self.driver.find_element('id', 'loadMorePublications')
                     button_show_more.click()
                     self.__sleep_some_time(3, 6)
@@ -173,15 +175,19 @@ class ResearchParser:
         :param element: web element of the review
         :return: clear text of the review
         """
-        self._logger.info('Получаем дату и текст отчета')
+        self._logger.info(f'Получаем дату и текст {type_of_review} отчета')
         element.find_element('tag name', 'a').click()
         self.__sleep_some_time()
 
         # get date
-        dates = self.driver.find_elements('css selector', 'span.date')
+        try:
+            dates = self.driver.find_elements('css selector', 'span.date')
+        except Exception as e:
+            dates = []
+            self._logger.error(f'Ошибка при получении даты {type_of_review} отчета: %s', e)
         date = next((date.text for date in dates if date.text != ''), None)
         if date is None:
-            self._logger.error('Дата отчета не найдена')
+            self._logger.error(f'Дата {type_of_review} отчета не найдена')
             raise ResearchError('Did not find date of the review')
 
         # get text
@@ -402,7 +408,12 @@ class ResearchParser:
             link = link.replace('id_id', companies[company]['company_id'])
             self.__sleep_some_time(3.0, 4.0)
             # time.sleep(3)
-            self.driver.get(link)
+            try:
+                self.driver.get(link)
+            except Exception as e:
+                self._logger.error(f'При получении таблицы с фин. показателями для {company} произошла ошибка: %s', e)
+                self.driver = get_driver(self._logger)
+                continue
 
             page_html = self.driver.page_source
             fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
@@ -511,6 +522,7 @@ class ResearchParser:
             except Exception as e:
                 self._logger.error(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
                 print(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
+                self.driver = get_driver(self._logger)
 
     @staticmethod
     def crop_image(img: Image, left: int = 70, top: int = 40, right: int = 1350, bottom: int = 1290) -> Image:
@@ -546,7 +558,7 @@ class ResearchParser:
                 self._logger.info('Загрузка следующих публикаций')
                 more.click()
                 self._logger.info('Ожидание доступности дополнительных отчетов для открытия')
-                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected((By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")))
+                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
                 weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
         except Exception as e:
@@ -595,10 +607,29 @@ class ResearchParser:
                 continue
 
             with images[slide_info['page_number']] as img:
+                width, height = img.size
+                useful_height = height * weekly_pulse_parse.PERCENT_HEIGHT_OF_USEFUL_INFO // 100
+                img = self.crop_image(img, 0, 0, width, useful_height)
                 if slide_meta['crop']:
-                    img = self.crop_image(img)
+                    img = self.crop_image(img, **slide_meta['crop_params'])
+
+                for sub_img_params in slide_meta['sub_images']:
+                    crop_params = sub_img_params['crop_params'].copy()
+                    if sub_img_params['relative']:
+                        width, height = img.size
+
+                        crop_params = {
+                            'left': int(width * sub_img_params['crop_params']['left']),
+                            'top': int(height * sub_img_params['crop_params']['top']),
+                            'right': int(width * sub_img_params['crop_params']['right']),
+                            'bottom': int(height * sub_img_params['crop_params']['bottom']),
+                        }
+                    sub_img = self.crop_image(img, **crop_params)
+                    sub_img.save(f"{weekly_dir}/{sub_img_params['name']}.png")
+
                 img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
 
+        research_source.update_get_datetime(source_name='Weekly Pulse', source_link=base_url)
         self._logger.info('Weekly review готов')
         print('Weekly review готов')
 

@@ -13,6 +13,7 @@ __all__ = ['ParsePresentationPDF', 'ReportTypes']
 
 
 HEADER_MAX_LEN = 256
+PERCENT_HEIGHT_OF_USEFUL_INFO = 94
 
 
 def default_slide_item() -> dict:
@@ -127,6 +128,8 @@ class ParsePresentationPDF:
                 'title': 'Основные события недели',
                 'eng_name': 'week_results',
                 'crop': False,
+                'crop_params': {},
+                'sub_images': [],
                 'report_type': ReportTypes.weekly_results,
                 'table': False,
             },
@@ -134,6 +137,8 @@ class ParsePresentationPDF:
                 'title': 'Пульс рынка',
                 'eng_name': 'rialto_pulse',
                 'crop': True,
+                'crop_params': {'left': 70, 'top': 40, 'right': 1350, 'bottom': 1290},
+                'sub_images': [],
                 'report_type': ReportTypes.weekly_results,
                 'table': False,  # True
                 'area': (15, 0, 90, 50),  # top, left, bottom, right in %
@@ -143,6 +148,8 @@ class ParsePresentationPDF:
                 'title': 'Следите за важным',
                 'eng_name': 'important_events',
                 'crop': False,
+                'crop_params': {},
+                'sub_images': [],
                 'report_type': ReportTypes.weekly_event,
                 'table': False,
             },
@@ -150,6 +157,19 @@ class ParsePresentationPDF:
                 'title': 'Прогноз валютных курсов',
                 'eng_name': 'exc_rate_prediction',
                 'crop': False,
+                'crop_params': {},
+                'sub_images': [
+                    {
+                        'name': 'exc_rate_prediction_table',
+                        'relative': True,
+                        'crop_params': {'left': 0, 'top': 0.15, 'right': 0.5, 'bottom': 0.9},
+                    },
+                    {
+                        'name': 'key_rate_dynamics_table',
+                        'relative': True,
+                        'crop_params': {'left': 0.5, 'top': 0.15, 'right': 1, 'bottom': 0.8},
+                    },
+                ],
                 'report_type': ReportTypes.weekly_event,
                 'table': False,  # True
                 'area': (15, 0, 90, 100),

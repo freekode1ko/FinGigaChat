@@ -78,6 +78,9 @@ class Parser:
                 self._logger.warning('При сборке нас обнаружил DDoS Guard, попытка другим методом сбора')
                 raise req.exceptions.ConnectionError
 
+            if req_page.status_code == 403:
+                self._logger.critical(f'При запросе html страницы по адресу {url} было отказано в доступе')
+
         except req.exceptions.ConnectionError:
             session = req.Session()
             random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
@@ -86,7 +89,10 @@ class Parser:
             html = req_page.text
             self._logger.info(f'{url} Прокси ПРОВАЛ')
 
+            if req_page.status_code == 403:
+                self._logger.critical(f'При запросе html страницы по адресу {url} было отказано в доступе')
+
         except Exception as ex:
-            self._logger.error(f'При сборке данных с{url}, возникла ошибка: {ex}')
+            self._logger.error(f'При сборке данных с {url}, возникла ошибка: {ex}')
 
         return euro_standard, html

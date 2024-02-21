@@ -1,7 +1,12 @@
-from sqlalchemy import create_engine, text
+import datetime
+
 import pandas as pd
+from sqlalchemy import create_engine, text
+
+import config
 from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
-    CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE
+    CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, \
+    TELEGRAM_CHANNELS_DATA_PATH, QUOTES_SOURCES_PATH
 
 # CLIENT_NAME_PATH = 'data/name/client_name.csv'
 # COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
@@ -281,6 +286,123 @@ query_article_name_impact = ("CREATE TABLE IF NOT EXISTS public.article_name_imp
                              "cleaned_data TEXT)"
                              "TABLESPACE pg_default;")
 
+
+query_tg_channels = (
+    """
+    CREATE TABLE IF NOT EXISTS public.telegram_channel
+    (
+        id serial PRIMARY KEY,
+        name character varying(128) COLLATE pg_catalog."default" NOT NULL,
+        link character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        industry_id integer NOT NULL,
+        CONSTRAINT industry_id FOREIGN KEY (industry_id)
+            REFERENCES public.industry (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.telegram_channel
+        IS 'Справочник telegram каналов, из которых вынимаются новости';
+    """
+)
+query_tg_article_relations = (
+    """
+    CREATE TABLE IF NOT EXISTS public.relation_telegram_article
+    (
+        telegram_id integer NOT NULL,
+        article_id integer NOT NULL,
+        telegram_score integer,
+        CONSTRAINT relation_telegram_article_pkey PRIMARY KEY (telegram_id, article_id),
+        CONSTRAINT article_id FOREIGN KEY (article_id)
+            REFERENCES public.article (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+        CONSTRAINT telegram_id FOREIGN KEY (telegram_id)
+            REFERENCES public.telegram_channel (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.relation_telegram_article
+        IS 'Связь новостей с telegram каналами';
+    """
+)
+query_tg_subscriptions = (
+    """
+    CREATE TABLE IF NOT EXISTS public.user_telegram_subscription
+    (
+        user_id bigint NOT NULL,
+        telegram_id integer NOT NULL,
+        CONSTRAINT user_telegram_subscription_pkey PRIMARY KEY (user_id, telegram_id),
+        CONSTRAINT telegram_id FOREIGN KEY (telegram_id)
+            REFERENCES public.telegram_channel (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+        CONSTRAINT user_id FOREIGN KEY (user_id)
+            REFERENCES public.whitelist (user_id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.user_telegram_subscription
+        IS 'Справочник подписок пользователя на новостые telegram каналы';
+    """
+)           
+
+query_quote_group = (
+    """
+    CREATE TABLE IF NOT EXISTS public.quote_group
+    (
+        id SERIAL PRIMARY KEY,
+        name character varying(64) COLLATE pg_catalog."default" NOT NULL
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.quote_group
+        IS 'Справочник выделенных среди котировок подгрупп';
+    """
+)
+query_quote_source = (
+    """
+    DROP TABLE IF EXISTS public.quote_source CASCADE;
+    CREATE TABLE IF NOT EXISTS public.quote_source
+    (
+        id SERIAL PRIMARY KEY,
+        alias character varying(64) COLLATE pg_catalog."default" NOT NULL,
+        block character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        response_format text COLLATE pg_catalog."default",
+        source text COLLATE pg_catalog."default" NOT NULL,
+        last_update_datetime timestamp without time zone,
+        quote_group_id integer NOT NULL,
+        CONSTRAINT quote_group_id FOREIGN KEY (quote_group_id)
+            REFERENCES public.quote_group (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.quote_source
+        IS 'Справочник источников котировок';
+    """
+)
+
+query_research_source_table = (
+    """
+    DROP TABLE IF EXISTS public.research_source CASCADE;
+    CREATE TABLE IF NOT EXISTS public.research_source
+    (
+        id SERIAL PRIMARY KEY,
+        name character varying(64) COLLATE pg_catalog."default" NOT NULL,
+        description character varying(255) COLLATE pg_catalog."default" NOT NULL,
+        response_format text COLLATE pg_catalog."default",
+        source text COLLATE pg_catalog."default" NOT NULL,
+        last_update_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+        previous_update_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.quote_source
+        IS 'Справочник источников CIB Research';
+    """
+)
+
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
 query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
@@ -303,6 +425,153 @@ def update_client_alternative(engine):
     print('Client_alternative table is update')
 
 
+def update_tg_channels(engine):
+    df_db = pd.read_excel(TELEGRAM_CHANNELS_DATA_PATH)[['name', 'link', 'industry_id']]
+    df_db.to_sql('telegram_channel', con=engine, if_exists='append', index=False)
+    print('Telegram channel table was updated')
+
+
+def update_quote_group_table(engine) -> None:
+    from utils import quotes
+    groups = quotes.get_groups()
+
+    quotes_groups_set = {g.get_group_name() for g in groups}
+    quotes_groups_set = quotes_groups_set - set(pd.read_sql_table('quote_group', con=engine, columns=['name'])['name'].tolist())
+    quotes_groups_df = pd.DataFrame(quotes_groups_set, columns=['name'])
+
+    if not quotes_groups_df.empty:
+        quotes_groups_df.to_sql('quote_group', con=engine, if_exists='append', index=False)
+
+
+def update_quote_source_table(engine):
+    from utils import quotes
+    groups = quotes.get_groups()
+
+    path = QUOTES_SOURCES_PATH
+    columns_new_names = {
+        'Алиас': 'alias',
+        'Блок': 'block',
+        'Формат ответа ': 'response_format',
+        'Источник': 'source',
+    }
+
+    quotes_groups_df = pd.read_sql_table('quote_group', con=engine, columns=['id', 'name'])
+
+    # считываем первый листок из файла,
+    # отбрасываем строки, где есть пустые ячейки,
+    # переименовываем колонки,
+    # отбрасываем дубли
+    # отбрасываем по источникам (Алюминий и Эн. уголь (Eu))
+    sources_df = pd.read_excel(path)[['Алиас', 'Блок', 'Формат ответа ', 'Источник']]\
+        .dropna()\
+        .rename(columns=columns_new_names)\
+        .drop_duplicates()\
+        .drop_duplicates('source')
+
+    sources_df['id'] = 0
+    sources_df['last_update_datetime'] = datetime.datetime.now()
+    sources_df['alias'] = sources_df['alias'].str.split('/', n=1).str[0]
+    sources_df['source'] = sources_df['source'].str.rstrip('/')
+    sources_df['group_name'] = ''
+    sources_df = sources_df[['alias', 'id', 'block', 'source', 'response_format', 'last_update_datetime', 'group_name']]
+
+    for i, row in sources_df.iterrows():
+        for group in groups:
+            if group.filter(row):
+                sources_df.loc[i, 'group_name'] = group.get_group_name()
+                break
+
+    sources_df = (
+        sources_df.merge(quotes_groups_df,  left_on='group_name', right_on='name', suffixes=['', '_y'])
+                  .rename(columns={'id_y': 'quote_group_id'})[
+            ['alias', 'block', 'response_format', 'source', 'quote_group_id', 'last_update_datetime']
+        ]
+    )
+
+    sources_df.to_sql('quote_source', con=engine, if_exists='append', index=False)
+
+
+def update_research_source_table(engine):
+    # выгрузить данные из xlsx
+    # выгрузить данные из БД
+    # объединить (
+    #   обновить информацию о смежных источниках
+    #   источники, которые есть в БД, но нет в xlsx - удалить
+    #   источники, которых нет в БД, добавить туда
+    # )
+    # IF THERE WILL BE SUBSCRIPTIONS ON RESEARCH SOURCES, WE HAVE TO UPDATE TABLE WITH SUBS
+    path = config.RESEARCH_SOURCES_PATH
+    db_cols = ['id', 'name', 'description', 'response_format', 'source', 'last_update_datetime', 'previous_update_datetime']
+    sources_from_db_df = pd.read_sql_table('research_source', con=engine, columns=db_cols)
+
+    excel_cols = ['name', 'description', 'response_format', 'source']
+    # считаем здесь каждый источник уникальным по паре ключей (name, source)
+    sources_df = (
+        pd.read_excel(path)[excel_cols]
+        .dropna(subset=['source', 'name'])
+        .drop_duplicates(subset=['name', 'source'])
+    )
+
+    query = text(
+        'UPDATE research_source '
+        'SET name=:name, description=:description, response_format=:response_format, source=:source '
+        'WHERE id=:row_id'
+    )
+    query_update_sources_list = []
+    delete_sources_ids = []
+    for _, row in sources_from_db_df.iterrows():
+        # print('row')
+        # print(row)
+        # print('same_row in sources_df')
+        # print(sources_df[(sources_df['name'] == row['name']) | (sources_df['source'] == row['source'])])
+        if not (same_row := sources_df[(sources_df['name'] == row['name']) | (sources_df['source'] == row['source'])]).empty:
+            # add update query, if there are new info about source
+            # print(f'{all(same_row.isin(row).all().tolist())=:}')
+            if all(same_row.isin(row).all().tolist()):
+                continue
+
+            # delete updated value from new values
+            sources_df.drop(same_row.index.tolist(), inplace=True)
+            row_id = row['id']
+            same_row = same_row.to_dict(orient='records')[0]
+            query_update_sources_list.append(query.bindparams(row_id=row_id, **same_row))
+        else:
+            delete_sources_ids.append(row['id'])
+
+    if query_update_sources_list:
+        with engine.connect() as conn:
+            for q in query_update_sources_list:
+                conn.execute(q)
+
+            conn.commit()
+
+    if delete_sources_ids:
+        with engine.connect() as conn:
+            query = text(
+                'DELETE FROM research_source WHERE id  = ANY(:delete_sources_ids);'
+            )
+            conn.execute(query.bindparams(delete_sources_ids=delete_sources_ids))
+            conn.commit()
+
+    if not sources_df.empty:
+        sources_df.to_sql('research_source', con=engine, if_exists='append', index=False)
+
+
+def alter_to_quote_source_column(engine):
+    query_alter = (
+        'ALTER TABLE IF EXISTS quote_source '
+        'ADD COLUMN IF NOT EXISTS previous_update_datetime timestamp with time zone;'
+    )
+    query_update = (
+        'UPDATE quote_source SET previous_update_datetime=last_update_datetime;'
+    )
+
+    with engine.connect() as conn:
+        conn.execute(text(query_alter))
+        conn.execute(text(query_update))
+        conn.commit()
+
+
 def drop_tables(engine):
     tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
               'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
@@ -322,20 +591,44 @@ if __name__ == '__main__':
     # !!! DROP TABLE !!!
     # # # # drop_tables(main_engine)
 
-    # create base table and full it
-    main(main_engine)
-    # create commodity_pricing
-    update_database(main_engine, query_commodity_pricing)
-    # add energy in commodity
-    update_database(main_engine, query_commodity_energy)
-    # delete duplicate commodity
-    update_database(main_engine, query_delete_dupl)
-    # insert new com: olovo
-    update_database(main_engine, query_commodity_olovo)
-    # insert alternative name for new com
-    update_database(main_engine, query_new_alternative_com_electro)
-    update_database(main_engine, query_new_alternative_com_olovo)
-    # make article_name_count
-    update_database(main_engine, query_article_name_impact)
-    # update client_alternative
-    update_client_alternative(main_engine)
+    # # create base table and full it
+    # main(main_engine)
+    # # create commodity_pricing
+    # update_database(main_engine, query_commodity_pricing)
+    # # add energy in commodity
+    # update_database(main_engine, query_commodity_energy)
+    # # delete duplicate commodity
+    # update_database(main_engine, query_delete_dupl)
+    # # insert new com: olovo
+    # update_database(main_engine, query_commodity_olovo)
+    # # insert alternative name for new com
+    # update_database(main_engine, query_new_alternative_com_electro)
+    # update_database(main_engine, query_new_alternative_com_olovo)
+    # # make article_name_count
+    # update_database(main_engine, query_article_name_impact)
+    # # update client_alternative
+    # update_client_alternative(main_engine)
+
+    # # add table telegram_channel
+    # update_database(main_engine, query_tg_channels)
+    # # add table relation_telegram_article
+    # update_database(main_engine, query_tg_article_relations)
+    # # add table user_telegram_subscription
+    # update_database(main_engine, query_tg_subscriptions)
+    # # update table telegram_channel
+    # update_tg_channels(main_engine)
+    #
+    # # create quote_group and quote_source tables
+    # update_database(main_engine, query_quote_group)
+    # update_database(main_engine, query_quote_source)
+    # # update quote_group and quote_source tables
+    # update_quote_group_table(main_engine)
+    # update_quote_source_table(main_engine)
+
+    # alter to quote_source table column
+    alter_to_quote_source_column(main_engine)
+
+    # create research_source table
+    update_database(main_engine, query_research_source_table)
+    # update research_source table
+    update_research_source_table(main_engine)

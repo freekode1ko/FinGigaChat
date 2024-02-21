@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from config import NEWS_LIMIT, dict_of_emoji, psql_engine
+from config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
 from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
@@ -161,6 +161,42 @@ class ArticleProcess:
 
         return df, gotten_ids
 
+    def get_tg_articles(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Вынимает новости, которые связаны с тг-каналами, добавляет колонку с telegram_id
+
+        :param df: DataFrame с предобработанными даннымы новостей (link, title, date, text, [id])
+        return: DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id)
+        """
+        query = 'SELECT id, link FROM telegram_channel;'
+        tg_channels_df = pd.read_sql(query, con=self.engine)
+
+        if 'id' not in df.columns:
+            df = df.assign(id=None)
+
+        # save only tg news
+        df_tg_news = (
+            df.assign(telegram_link=df['link'].str.rsplit('/', n=1).str[0])
+              .merge(tg_channels_df, left_on='telegram_link', right_on='link', suffixes=('', '_y'))
+              .drop(['telegram_link', 'link_y'], axis=1)
+        )
+
+        # rename column 'id' from tg_channels_df to 'telegram_id'
+        return df_tg_news.rename(columns={'id_y': 'telegram_id'})
+
+    @staticmethod
+    def update_tg_articles(saved_tg_articles: pd.DataFrame, all_tg_articles: pd.DataFrame) -> pd.DataFrame:
+        """
+        Соединение DataFrame сохраненных тг-новостей со всеми тг-новостями
+
+        :param saved_tg_articles: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :param all_tg_articles: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        return: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        """
+        saved_tg_articles = saved_tg_articles[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        all_tg_articles = all_tg_articles[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        return pd.concat([saved_tg_articles, all_tg_articles]).drop_duplicates('link').reset_index()
+
     def throw_the_models(self, df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
         """Call model pipe func"""
         df = model_func_online(self._logger, df) if online_flag else model_func(self._logger, df, name)
@@ -170,7 +206,7 @@ class ArticleProcess:
         """Call func to delete similar articles"""
         dt_now = dt.datetime.now()
         old_query = (
-            f'SELECT a.id, '
+            f'SELECT a.id, a.date,'
             f"STRING_AGG(DISTINCT client.name, ';') AS client, "
             f"STRING_AGG(DISTINCT commodity.name, ';') AS commodity, "
             f'ani.cleaned_data '
@@ -181,10 +217,20 @@ class ArticleProcess:
             f'LEFT JOIN commodity ON r_commodity.commodity_id = commodity.id '
             f'JOIN article_name_impact ani ON ani.article_id = a.id '
             f"WHERE '{dt_now}' - a.date < '15 day' "
-            f'GROUP BY a.id, ani.cleaned_data'
+            f'GROUP BY a.id, a.date, ani.cleaned_data'
         )
         old_articles = pd.read_sql(old_query, con=self.engine)
-        self.df_article = deduplicate(self._logger, self.df_article, old_articles)
+        # заполняем нулями пустые значения, чтобы разделить новости на релевантные и нерелевантные
+        self.df_article['client_score'] = self.df_article['client_score'].fillna(0)
+        self.df_article['commodity_score'] = self.df_article['commodity_score'].fillna(0)
+        # делим новости на релевантные и нерелевантные
+        articles_relevant = self.df_article[(self.df_article['client_score'] > 0) | (self.df_article['commodity_score'] > 0)]
+        articles_not_relevant = self.df_article[(self.df_article['client_score'] <= 0) & (self.df_article['commodity_score'] <= 0)]
+        # отдельно их дедублицируем
+        articles_relevant = deduplicate(self._logger, articles_relevant, old_articles)
+        articles_not_relevant = deduplicate(self._logger, articles_not_relevant, old_articles)
+        # соединяем обратно в один батч
+        self.df_article = pd.concat([articles_relevant, articles_not_relevant], ignore_index=True)
 
     def make_text_sum(self):
         """Call summary func"""
@@ -261,6 +307,9 @@ class ArticleProcess:
         # TODO: оставляет 8 дублирующих новостей
         # filter dubl news if they in DB and in new df
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
+        if not links_value:
+            return
+
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
@@ -311,6 +360,30 @@ class ArticleProcess:
         # save relation df to database
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         self._logger.info(f'В таблицу relation_{name}_article добавлено {len(df_relation_subject_article)} строк')
+
+    def save_tg_tables(self) -> None:
+        """Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами"""
+        subject = 'telegram'
+        links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
+        # make article table and save it in database
+        unsaved_article = self.df_article[self.df_article['id'].isnull()]
+        article = unsaved_article[['link', 'title', 'date', 'text', 'text_sum']]
+        article.to_sql('article', con=self.engine, if_exists='append', index=False)
+        self._logger.info(f'Сохранено {subject} {len(article)} новостей')
+
+        # add ids to df_article from article table from db
+        query_ids = f'SELECT id, link FROM article WHERE link IN ({links_value})'
+        ids = pd.read_sql(query_ids, con=self.engine)
+
+        # merge ids from db with df_article
+        self.df_article = self.df_article.drop(columns=['id']).merge(pd.DataFrame(ids), on='link').drop_duplicates('link')
+
+        # make relation tables between articles and telegram
+        df_article_subject = self.df_article[['id', f'{subject}_id']]
+        df_article_subject.rename(columns={'id': 'article_id'}, inplace=True)
+        df_article_subject[f'{subject}_score'] = 0
+
+        df_article_subject.to_sql(f'relation_{subject}_article', con=self.engine, if_exists='append', index=False)
 
     def find_subject_id(self, message: str, subject: str):
         """
@@ -602,8 +675,8 @@ class ArticleProcess:
                 # subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
                 price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com['price'] else None
                 m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
-                y_delta = f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
-                cons = f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com['cons'] else None
+                y_delta = None  # f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                cons = None  # f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com['cons'] else None
                 # join rows
                 row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
                 com_format = '\n'.join(row_list)
@@ -858,7 +931,7 @@ class FormatText:
     @property
     def date(self):
         if self.__date:
-            return f'\n<i>{self.__date.strftime("%d.%m.%Y")}</i>'
+            return f'\n<i>{self.__date.strftime(BASE_DATE_FORMAT)}</i>'
         else:
             return self.__date
 

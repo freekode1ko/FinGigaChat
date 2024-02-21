@@ -34,6 +34,10 @@ SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', de
 SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
+api_token: str = env.str('BOT_API_TOKEN', default='')
+psql_engine: str = env.str('PSQL_ENGINE', default='')
+giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
+
 log_file = 'logs/{}.log'
 LOG_LEVEL_DEBUG = 10
 LOG_LEVEL_INFO = 20
@@ -46,33 +50,52 @@ user_agents: List[str] = read_asset_from_json(file_name='user_agents.json')
 
 list_of_companies: List[List] = read_asset_from_json('companies_list.json')
 
-chat_base_url = 'https://beta.saluteai.sberdevices.ru/v1/'
+giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
+giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
+giga_scope = 'GIGACHAT_API_CORP'
+giga_model = 'GigaChat-Pro'
+
 research_base_url = 'https://research.sberbank-cib.com/'
 data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
-user_cred = ('oddryabkov', 'gEq8oILFVFTV')  # ('nvzamuldinov', 'E-zZ5mRckID2')
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
-api_token = '6191720187:AAFF0SVqRi6J88NDSEhTctFN-QjwB0ekWjU'  # PROM
-# api_token = '6558730131:AAELuoqsV5Ii1n6cO0iYWqh-lmCG9s9LLyc'  # DEV
+RESEARCH_GETTING_TIMES_LIST = [
+    '08:00', '10:00', '12:00', '14:00', '16:00',
+    '17:00', '17:10', '17:20', '17:30', '17:40', '17:50', '18:00',
+]
 
-psql_engine = 'postgresql://bot:12345@0.0.0.0:5432/users'
+QUOTES_PROCESSING_PROC_NUM = 2
 
 CLIENT_NAME_PATH = 'data/name/client_name.csv'
 COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
 CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
 COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
 CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
+TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
+QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
+RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
+
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 70
+PAGE_ELEMENTS_COUNT = 10
 
 STATISTICS_PATH = 'statistics'
 BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
+POST_TO_GIGAPARSER_TIMEOUT = 180
+POST_TO_GIGAPARSER_ATTEMPTS = 3
+POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
+CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
+
+BASE_DATE_FORMAT = '%d.%m.%Y'
+BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
+
+INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
@@ -147,3 +170,23 @@ industry_base_url = (
     'equities?sector={}#cibViewReportContainer_cibequitypublicationsportlet_'
     'WAR_cibpublicationsportlet_INSTANCE_gnfy_'
 )
+
+# SELENIUM CONTAINER PARAMS
+# -d -p 4444:4444 -p 7900:7900 --shm-size="2g" --name="selenium" selenium/standalone-firefox:latest
+SELENIUM_IMAGE_NAME = 'selenium/standalone-firefox:latest'
+SELENIUM_CONTAINER_NAME = 'selenium'
+SELENIUM_SHM_SIZE = '2g'
+SELENIUM_PORTS = {
+    4444: 4444,
+    7900: 7900,
+}
+SELENIUM_RUN_KWARGS = {
+    'image': SELENIUM_IMAGE_NAME,
+    'name': SELENIUM_CONTAINER_NAME,
+    'shm_size': SELENIUM_SHM_SIZE,
+    'ports': SELENIUM_PORTS,
+    'detach': True,
+}
+
+# SELENIUM DRIVER PARAMS
+SELENIUM_COMMAND_EXECUTOR = 'http://localhost:4444/wd/hub'
