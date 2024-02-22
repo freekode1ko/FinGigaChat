@@ -398,8 +398,52 @@ query_research_source_table = (
         previous_update_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP
     )
     TABLESPACE pg_default;
-    COMMENT ON TABLE public.quote_source
+    COMMENT ON TABLE public.research_source
         IS 'Справочник источников CIB Research';
+    """
+)
+
+query_message_type_table = (
+    """
+    DROP TABLE IF EXISTS public.message_type;
+    CREATE TABLE IF NOT EXISTS public.message_type
+    (
+        id integer NOT NULL DEFAULT nextval('message_type_id_seq'::regclass),
+        name character varying(64) COLLATE pg_catalog."default" NOT NULL,
+        is_default boolean DEFAULT false,
+        description character varying(255) COLLATE pg_catalog."default" DEFAULT ''::character varying,
+        CONSTRAINT message_type_pkey PRIMARY KEY (id)
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.message_type
+        IS 'Справочник типов отправленных сообщений (пассивная рассылка, ответ на запрос такой-то)';
+    """
+)
+
+query_message_table = (
+    """
+    DROP TABLE IF EXISTS public.message;
+    CREATE TABLE IF NOT EXISTS public.message
+    (
+        id bigint NOT NULL DEFAULT nextval('message_id_seq'::regclass),
+        user_id bigint NOT NULL,
+        message_id bigint NOT NULL,
+        message_type_id integer NOT NULL,
+        send_datetime timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+        function_name text COLLATE pg_catalog."default" NOT NULL,
+        CONSTRAINT message_pkey PRIMARY KEY (id),
+        CONSTRAINT chat_id FOREIGN KEY (user_id)
+            REFERENCES public.whitelist (user_id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+        CONSTRAINT message_type FOREIGN KEY (message_type_id)
+            REFERENCES public.message_type (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.message
+        IS 'Хранилище отправленных пользователям сообщений';
     """
 )
 
@@ -572,6 +616,38 @@ def alter_to_quote_source_column(engine):
         conn.commit()
 
 
+def update_message_type_table(engine):
+    values = [
+        {
+            'name': 'default',
+            'description': 'Значение по умолчанию',
+            'is_default': True,
+        },
+        {
+            'name': 'weekly_event',
+            'description': 'Рассылка слайдов weekly_event',
+            'is_default': False,
+        },
+        {
+            'name': 'weekly_result',
+            'description': 'Рассылка слайдов weekly_result',
+            'is_default': False,
+        },
+        {
+            'name': 'subscriptions_news',
+            'description': 'Рассылка новостей по подпискам',
+            'is_default': False,
+        },
+        {
+            'name': 'tg_subscriptions_news',
+            'description': 'Рассылка новостей по telegram подпискам',
+            'is_default': False,
+        },
+    ]
+    types_df = pd.DataFrame(values)
+    types_df.to_sql('message_type', con=engine, if_exists='append', index=False)
+
+
 def drop_tables(engine):
     tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
               'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
@@ -625,10 +701,16 @@ if __name__ == '__main__':
     # update_quote_group_table(main_engine)
     # update_quote_source_table(main_engine)
 
-    # alter to quote_source table column
-    alter_to_quote_source_column(main_engine)
+    # # alter to quote_source table column
+    # alter_to_quote_source_column(main_engine)
+    #
+    # # create research_source table
+    # update_database(main_engine, query_research_source_table)
+    # # update research_source table
+    # update_research_source_table(main_engine)
 
-    # create research_source table
-    update_database(main_engine, query_research_source_table)
-    # update research_source table
+    # create message_type table and message table
+    update_database(main_engine, query_message_type_table)
+    update_database(main_engine, query_message_table)
+    # update query_message_table table
     update_research_source_table(main_engine)

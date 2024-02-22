@@ -1,0 +1,83 @@
+import inspect
+from datetime import datetime, timedelta
+
+import pandas as pd
+from sqlalchemy import text
+
+import config
+import database
+from utils.db_api.message_type import message_types
+
+
+__table_name__ = 'message'
+
+
+def get_messages_by_type(message_type_id: int):
+    """
+    Возвращает список id сообщений grouped by user_id с указанным типом message_type_id,
+    которые были отправлены за последние 48 часов
+    (https://core.telegram.org/bots/api#deletemessage)
+
+    :param message_type_id: id типа сообщения из таблицы message_type
+    return: DataFrame[[user_id: int, messages: list[int]]]
+    """
+    to_dt = datetime.now()
+    from_df = (to_dt - timedelta(days=2)).strftime(config.BASE_DATETIME_FORMAT)
+    to_dt = to_dt.strftime(config.BASE_DATETIME_FORMAT)
+
+    query = (
+        f'SELECT user_id, ARRAY_AGG(message_id) as messages FROM {__table_name__} '
+        f'WHERE {message_type_id=:} AND send_datetime BETWEEN {from_df} AND {to_dt} '
+        f'GROUP BY user_id;'
+    )
+
+    return pd.read_sql_query(query, con=database.engine)
+
+
+def get_messages_by_user_id(user_id: int):
+    pass
+
+
+def get_messages_by_function_name(function_name: str):
+    pass
+
+
+def add_message(user_id: int, message_id: int, message_type: str = None, function_name: str = None) -> int:
+    """
+    Добавляет в БД запись, что пользователю user_id было отправлено сообщение с id = message_id
+
+    :param user_id: telegram user_id
+    :param message_id: id отправленного ботом сообщения
+    :param message_type: название типа сообщения, если имя типа сообщения None или таковое отстутствует в БД,
+                         то в качестве message_type будет использоваться значени по умолчанию
+    :param function_name: Имя функции, которая вызвала данный метод, если None, то используется имя вызвавшей функции
+                          (при использовании внутри декоратора будет получение имя декоратора, а не изначальной функции)
+    return: id созданной записи
+    """
+    query = text(
+        f'INSERT INTO {__table_name__} (user_id, message_id, message_type_id, function_name) '
+        f'VALUES (:user_id, :message_id, :message_type_id, :function_name) '
+        f'RETURNING id;'
+    )
+
+    if function_name is None:
+        func = inspect.currentframe().f_back.f_code
+        function_name = func.co_name
+
+    try:
+        message_type_id = message_types.get_by_name(message_type)['id']
+    except (IndexError, KeyError):
+        message_type_id = message_types.default['id']
+
+    params = {
+        'user_id': user_id,
+        'message_id': message_id,
+        'message_type_id': message_type_id,
+        'function_name': function_name,
+    }
+
+    with database.engine.connect() as conn:
+        result = conn.execute(query.bindparams(**params)).scalar_one()
+        conn.commit()
+
+    return result
