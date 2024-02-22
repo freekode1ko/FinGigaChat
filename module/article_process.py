@@ -299,24 +299,22 @@ class ArticleProcess:
         self._logger.info(f'Количество одинаковых новостей в выгрузках по клиентам и товарам - {len(df_client_commodity)}')
         self._logger.info(f'Количество новостей после объединения выгрузок - {len(df_article)}')
 
-    def save_tables(self) -> None:
+    def save_tables(self) -> list:
         """
         Save article, get ids for original df from db,
         And call make_save method for relation table.
         """
-        # TODO: оставляет 8 дублирующих новостей
-        # filter dubl news if they in DB and in new df
+
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         if not links_value:
-            return
+            return []
 
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
             self._logger.warning(
-                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - ' f'{len(self.df_article)}'
-            )
+                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
@@ -341,6 +339,8 @@ class ArticleProcess:
         self._make_save_relation_article_table('client')
         self._make_save_relation_article_table('commodity')
 
+        return self.df_article['link'].values.tolist()
+
     def _make_save_relation_article_table(self, name: str) -> None:
         """
         Make relation table and save it to database.
@@ -361,7 +361,7 @@ class ArticleProcess:
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         self._logger.info(f'В таблицу relation_{name}_article добавлено {len(df_relation_subject_article)} строк')
 
-    def save_tg_tables(self) -> None:
+    def save_tg_tables(self) -> list:
         """Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами"""
         subject = 'telegram'
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
@@ -384,6 +384,8 @@ class ArticleProcess:
         df_article_subject[f'{subject}_score'] = 0
 
         df_article_subject.to_sql(f'relation_{subject}_article', con=self.engine, if_exists='append', index=False)
+
+        return article['link'].values.tolist()
 
     def find_subject_id(self, message: str, subject: str):
         """
