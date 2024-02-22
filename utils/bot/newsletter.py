@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from typing import List
 
 import pandas as pd
 from aiogram import Bot, types
@@ -12,7 +13,7 @@ from database import engine
 from module.article_process import ArticleProcess
 from utils.bot.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.bot.industry import get_tg_channel_news_msg, group_news_by_tg_channels
-from utils.db_api import research_source
+from utils.db_api import research_source, message
 from utils.db_api.industry import get_industry_tg_news
 
 
@@ -81,9 +82,11 @@ async def subscriptions_newsletter(
 
     row_number = 0
     for index, user in user_df.iterrows():
-        user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
+        user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions']
         if not subscriptions:
             continue
+
+        subscriptions = subscriptions.split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
 
         # получим списки id объектов, на которые подписан пользователь
@@ -170,8 +173,13 @@ async def weekly_pulse_newsletter(
         for path in img_path_list:
             media.add_photo(types.FSInputFile(path))
         try:
-            await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-            await bot.send_media_group(user_id, media=media.build(), protect_content=True)
+            msg_title: types.Message = await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+            msg_photos: List[types.Message] = await bot.send_media_group(user_id, media=media.build(), protect_content=True)
+
+            message.add_message(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type, )
+            for msg in msg_photos:
+                message.add_message(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type, )
+
             user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
         # except BotBlocked:
         #     user_logger.warning(f'*{user_id}* Пользователь не получил рассылку "{title}" : бот в блоке')
