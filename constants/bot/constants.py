@@ -14,3 +14,5 @@ DELETE_CROSS = '❌'
 NEXT_PAGE = '➡'
 PREV_PAGE = '⬅'
 STOP = '⛔'
+
+CANCEL_CALLBACK = 'cancel'

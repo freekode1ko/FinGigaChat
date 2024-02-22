@@ -86,10 +86,14 @@ SECRET_COMMANDS: List[dict] = [
     },
     {
         'command': 'daylynews',
-        'description': 'Краткая сводка новостей',
+        'description': 'Рассылка краткой сводки новостей всем пользователям',
     },
     {
         'command': 'start',
         'description': 'Начать работу с ботом',
+    },
+    {
+        'command': 'delete_newsletter_messages',
+        'description': 'Удаление сообщений, отправленных с помощью пассивной рассылки',
     },
 ]

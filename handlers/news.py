@@ -1,7 +1,5 @@
 import asyncio
-# import logging
 
-import pandas as pd
 from aiogram import F, Router, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -25,9 +23,6 @@ from handlers import common, quotes, gigachat
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
-
-# logger = logging.getLogger(__name__)
-from utils.bot.newsletter import subscriptions_newsletter
 from utils.db_api import research_source
 
 router = Router()
@@ -135,14 +130,6 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         return True
     else:
         return False
-
-
-@router.message(Command('dailynews'))
-async def dailynews(message: types.Message) -> None:
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
-    user_df = pd.DataFrame([[message.from_user.id, full_name, '']], columns=['user_id', 'username', 'subscriptions'])
-    await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
 
 
 @router.message(Command('newsletter'))

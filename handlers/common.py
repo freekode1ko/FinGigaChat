@@ -2,12 +2,14 @@ import json
 
 import pandas as pd
 from aiogram import F, Router, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
 import config
 from bot_logger import user_logger
+from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
 from utils.bot.base import user_in_whitelist
 
@@ -69,6 +71,15 @@ async def exit_handler(message: types.Message, state: FSMContext) -> None:
 @router.message(F.text.lower().in_({'cancel', 'отмена'}))
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     await finish_state(message, state, 'Отменено')
+
+
+@router.callback_query(F.data.startswith(CANCEL_CALLBACK))
+async def cancel_callback(callback_query: types.CallbackQuery) -> None:
+    """Удаляет сообщение, у которого нажали на отмену"""
+    try:
+        await callback_query.message.delete()
+    except TelegramBadRequest:
+        await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
 @router.message(Command('addmetowhitelist'))

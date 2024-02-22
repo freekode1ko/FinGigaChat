@@ -405,14 +405,13 @@ query_research_source_table = (
 
 query_message_type_table = (
     """
-    DROP TABLE IF EXISTS public.message_type;
+    DROP TABLE IF EXISTS public.message_type CASCADE;
     CREATE TABLE IF NOT EXISTS public.message_type
     (
-        id integer NOT NULL DEFAULT nextval('message_type_id_seq'::regclass),
+        id serial PRIMARY KEY,
         name character varying(64) COLLATE pg_catalog."default" NOT NULL,
         is_default boolean DEFAULT false,
-        description character varying(255) COLLATE pg_catalog."default" DEFAULT ''::character varying,
-        CONSTRAINT message_type_pkey PRIMARY KEY (id)
+        description character varying(255) COLLATE pg_catalog."default" DEFAULT ''::character varying
     )
     TABLESPACE pg_default;
     COMMENT ON TABLE public.message_type
@@ -425,13 +424,12 @@ query_message_table = (
     DROP TABLE IF EXISTS public.message;
     CREATE TABLE IF NOT EXISTS public.message
     (
-        id bigint NOT NULL DEFAULT nextval('message_id_seq'::regclass),
+        id bigserial PRIMARY KEY,
         user_id bigint NOT NULL,
         message_id bigint NOT NULL,
         message_type_id integer NOT NULL,
         send_datetime timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
         function_name text COLLATE pg_catalog."default" NOT NULL,
-        CONSTRAINT message_pkey PRIMARY KEY (id),
         CONSTRAINT chat_id FOREIGN KEY (user_id)
             REFERENCES public.whitelist (user_id) MATCH SIMPLE
             ON UPDATE CASCADE
@@ -620,7 +618,7 @@ def update_message_type_table(engine):
     values = [
         {
             'name': 'default',
-            'description': 'Значение по умолчанию',
+            'description': 'Обычные сообщения',
             'is_default': True,
         },
         {
@@ -712,5 +710,5 @@ if __name__ == '__main__':
     # create message_type table and message table
     update_database(main_engine, query_message_type_table)
     update_database(main_engine, query_message_table)
-    # update query_message_table table
-    update_research_source_table(main_engine)
+    # update message_type table
+    update_message_type_table(main_engine)

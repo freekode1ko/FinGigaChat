@@ -1,5 +1,6 @@
 import inspect
 from datetime import datetime, timedelta
+from typing import List
 
 import pandas as pd
 from sqlalchemy import text
@@ -19,15 +20,15 @@ def get_messages_by_type(message_type_id: int):
     (https://core.telegram.org/bots/api#deletemessage)
 
     :param message_type_id: id типа сообщения из таблицы message_type
-    return: DataFrame[[user_id: int, messages: list[int]]]
+    return: DataFrame[[user_id: int, message_ids: list[int]]]
     """
     to_dt = datetime.now()
     from_df = (to_dt - timedelta(days=2)).strftime(config.BASE_DATETIME_FORMAT)
     to_dt = to_dt.strftime(config.BASE_DATETIME_FORMAT)
 
     query = (
-        f'SELECT user_id, ARRAY_AGG(message_id) as messages FROM {__table_name__} '
-        f'WHERE {message_type_id=:} AND send_datetime BETWEEN {from_df} AND {to_dt} '
+        f'SELECT user_id, ARRAY_AGG(message_id) as message_ids FROM {__table_name__} '
+        f"WHERE {message_type_id=:} AND send_datetime BETWEEN '{from_df}' AND '{to_dt}' "
         f'GROUP BY user_id;'
     )
 
@@ -81,3 +82,17 @@ def add_message(user_id: int, message_id: int, message_type: str = None, functio
         conn.commit()
 
     return result
+
+
+def delete_messages(user_id: int, message_ids: List[int]) -> None:
+    """
+    Удаляет запись в БД о сообщении, где user_id=user_id AND message_id=message_id
+
+    :param user_id: telegram user_id
+    :param message_ids: Список id сообщений
+    """
+    query = text(f'DELETE FROM {__table_name__} WHERE user_id=:user_id AND message_id = ANY(:message_ids);')
+
+    with database.engine.connect() as conn:
+        conn.execute(query.bindparams(user_id=user_id, message_ids=message_ids))
+        conn.commit()

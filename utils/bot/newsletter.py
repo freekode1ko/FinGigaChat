@@ -168,7 +168,7 @@ async def weekly_pulse_newsletter(
     weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
 
     for _, user_data in user_df.iterrows():
-        user_id, user_name = user_data['id'], user_data['username']
+        user_id, user_name = user_data['user_id'], user_data['username']
         media = MediaGroupBuilder(caption=weekly_pulse_date_str)
         for path in img_path_list:
             media.add_photo(types.FSInputFile(path))
