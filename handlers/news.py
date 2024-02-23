@@ -323,8 +323,9 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             if function_to_call:
                 await function_to_call(message, **kwargs)
             else:
+                await state.set_state(gigachat.GigaChatState.gigachat_query)
+                await state.update_data(gigachat_query=message.text)
                 await send_nearest_subjects(message)
-                # await ask_giga_chat(message, prompt)
 
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
