@@ -1,4 +1,3 @@
-# import logging
 
 from aiogram import Router, types
 from aiogram.filters import Command
@@ -11,16 +10,14 @@ from bot_logger import logger, user_logger
 from constants.bot.constants import giga_ans_footer
 from utils.bot.base import user_in_whitelist
 
-token = ''
-chat = ''
-
-# logger = logging.getLogger(__name__)
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+chat = gig.GigaChat(logger)
 
 
-class GigaChat(StatesGroup):
+class GigaChatState(StatesGroup):
     gigachat_mode = State()
+    gigachat_query = State()
 
 
 @router.message(Command('gigachat'))
@@ -34,60 +31,56 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        await state.set_state(GigaChat.gigachat_mode)
+        await state.set_state(GigaChatState.gigachat_mode)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
         cancel_command = 'завершить'
         cancel_msg = f'Напишите «{cancel_command}» для завершения общения с Gigachat'
         msg_text = 'Начато общение с Gigachat\n\n' + cancel_msg
-        buttons = [[types.KeyboardButton(text=cancel_command)]]
 
+        buttons = [[types.KeyboardButton(text=cancel_command)]]
         keyboard = types.ReplyKeyboardMarkup(
             keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
         )
-        await message.answer(msg_text, reply_markup=keyboard)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+        data = await state.get_data()
+        first_user_query = data.get('gigachat_query', None)
+
+        if first_user_query:
+            await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
+                                 reply_markup=keyboard)
+            answer = route_query(chat_id, full_name, first_user_query)
+            await message.answer(answer)
+        else:
+            await message.answer(msg_text, reply_markup=keyboard)
+
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-# @dp.message(F.text.lower().startswith('askgigachat') | F.text.lower().startswith('спросить'))
-@router.message(GigaChat.gigachat_mode)
-async def ask_giga_chat(message: types.Message, prompt: str = '') -> None:
+@router.message(GigaChatState.gigachat_mode)
+async def ask_giga_chat(message: types.Message) -> None:
     """Отправка пользователю ответа, сформированного Gigachat, на сообщение пользователя"""
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    global chat
-    global token
-    msg = f'{prompt} {message.text}'
-    msg = msg.replace('/bonds', '')
-    msg = msg.replace('/eco', '')
-    msg = msg.replace('/commodities', '')
-    msg = msg.replace('/fx', '')
+
+    response = route_query(chat_id, full_name, user_msg)
+    await message.answer(response, protect_content=False)
+
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{response}"')
+
+
+def route_query(chat_id: int, full_name: str, user_msg: str):
+    """Будущая маршрутизация рага(ов) и запросов к гиге"""
 
     try:
-        giga_answer = chat.ask_giga_chat(token=token, text=msg)
-        giga_js = giga_answer.json()['choices'][0]['message']['content']
-    except AttributeError:
-        chat = gig.GigaChat()
-        token = chat.get_user_token()
-        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-        giga_answer = chat.ask_giga_chat(token=token, text=msg)
-        giga_js = giga_answer.json()['choices'][0]['message']['content']
-    except KeyError:
-        chat = gig.GigaChat()
-        token = chat.get_user_token()
-        logger.debug(f'*{chat_id}* {full_name} : перевыпуск токена для общения с GigaChat')
-        giga_answer = chat.ask_giga_chat(token=token, text=msg)
-        giga_js = giga_answer.json()['choices'][0]['message']['content']
-        user_logger.critical(
-            f'*{chat_id}* {full_name} - {user_msg} :'
-            f' KeyError (некорректная выдача ответа GigaChat),'
-            f' ответ после переформирования запроса'
-        )
-    response = f'{giga_js}\n\n{giga_ans_footer}'
-    try:
-        await message.answer(response, protect_content=False)
+        giga_answer = chat.get_giga_answer(text=user_msg)
+        user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_answer}"')
     except Exception as e:
-        logger.error(f'ERROR: {e}')
+        logger.error(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
+        user_logger.error(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
+        giga_answer = 'Извините, я пока не могу ответить на ваш запрос'
 
-    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_js}"')
+    response = f'{giga_answer}\n\n{giga_ans_footer}'
+    return response
+
