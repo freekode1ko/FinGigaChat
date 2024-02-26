@@ -48,7 +48,7 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     return messages
 
 
-async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> None:
+async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> types.Message:
     """
     Рассылка текста и/или файлов(документы и фотокарточки) на выбранного пользователя
 
@@ -57,16 +57,19 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     :param message_text: Текст для отправки или подпись к файлу
     :param file_name: Текст содержащий в себе название сохраненного файла
     :param file_type: Тип файла для отправки. Может быть None, str("Document") и str("Picture")
+    return: aiogram.types.Message отправленное сообщение
     """
     if file_name:
         if file_type == 'photo':
             file = types.FSInputFile('sources/{}.jpg'.format(file_name))
-            await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
-        elif file_type == 'document':
+            msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+        else:
             file = types.FSInputFile('sources/{}'.format(file_name))
-            await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
     else:
-        await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+
+    return msg
 
 
 async def user_in_whitelist(user: str) -> bool:

@@ -1,6 +1,6 @@
 import json
 # import logging
-from typing import Union
+from typing import Union, List
 
 import pandas as pd
 from aiogram import F, Router, types
@@ -27,7 +27,7 @@ from utils.bot.base import (
     user_in_whitelist,
 )
 from utils.bot.newsletter import subscriptions_newsletter
-from utils.db_api.message import get_messages_by_type, delete_messages
+from utils.db_api.message import get_messages_by_type, delete_messages, add_all
 from utils.db_api.message_type import message_types
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
@@ -106,18 +106,22 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
+    saved_messages: List[dict] = []
+    newsletter_type = 'default'
     successful_sending = 0
     for user_id in users_ids:
         try:
             user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
-            await send_msg_to(message.bot, user_id, msg, file_name, file_type)
-            user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+            m = await send_msg_to(message.bot, user_id, msg, file_name, file_type)
+            saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
+            user_logger.debug(f'*{user_id}* Пользователю пришло сообщение {m.message_id} от админа')
             successful_sending += 1
         # except BotBlocked:
         #     user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
         except Exception as ex:
             user_logger.error(f'*{user_id}* Пользователь не получил сообщения из-за ошибки: {ex}')
 
+    add_all(saved_messages)
     await message.answer('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
     logger.info('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
 
@@ -476,7 +480,7 @@ async def delete_messages_by_type(callback_query: types.CallbackQuery, callback_
                 delete_messages(user_id, ids)
             except TelegramBadRequest as e:
                 info_msg = f'Не удалось удалить сообщения у пользователя {user_id}: %s'
-                logger.info(info_msg, e)
+                logger.error(info_msg, e)
         logger.info(f'Удаление сообщений типа {msg_type_descr} у пользователя {user_id} завершено')
 
     msg_text = (

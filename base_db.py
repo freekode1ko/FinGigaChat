@@ -618,7 +618,7 @@ def update_message_type_table(engine):
     values = [
         {
             'name': 'default',
-            'description': 'Обычные сообщения',
+            'description': 'Рассылка от админа',
             'is_default': True,
         },
         {
