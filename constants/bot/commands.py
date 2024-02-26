@@ -31,7 +31,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'newsletter',
-        'description': 'Weekly pulse',
+        'description': 'События недели',
     },
     {
         'command': 'referencebook',
