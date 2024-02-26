@@ -33,7 +33,7 @@ class EcoGetter(QuotesGetter):
             self.logger.info('Таблица Экономика (ruonia) собрана')
 
         elif page_eco == 'interest-rate':
-            if 'Actual' in table_eco[4]:
+            if 'Actual' in table_eco[4] and 'Unit' in table_eco[4]:
                 eco_frst_third.append(['LPR Китай', table_eco[4]['Actual'][0]])
                 self.logger.info('Таблица interest-rate (LPR Китай) собрана')
 
