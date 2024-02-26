@@ -89,7 +89,9 @@ def route_query(chat_id: int, full_name: str, user_msg: str):
     try:
         query = urllib.parse.quote(user_msg)
         query_part = f'queries?query={query}'
-        rag_answer = requests.get(url=config.BASE_QABANKER_URL.format(query_part), timeout=45).text
+        rag_answer = requests.get(
+            url=config.BASE_QABANKER_URL.format(query_part),
+            timeout=config.POST_TO_SERVICE_TIMEOUT).text
         if rag_answer:
             response = f'{rag_answer}\n\n{giga_rag_footer}'
             user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat RAG ответил: "{rag_answer}"')

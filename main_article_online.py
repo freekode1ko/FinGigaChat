@@ -55,7 +55,7 @@ def get_article() -> pd.DataFrame:
     df_article = pd.DataFrame()
     try:
         url = BASE_GIGAPARSER_URL.format('get_articles/all')
-        req = try_post_n_times(config.POST_TO_SERVICE_ATTEMPTS, url=url, timeout=config.POST_TO_SERVICE_TIMEOUT)
+        req = try_post_n_times(config.POST_TO_SERVICE_ATTEMPTS, url=url, timeout=config.POST_TO_GIGAPARSER_TIMEOUT)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
         else:
