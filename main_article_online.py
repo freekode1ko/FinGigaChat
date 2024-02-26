@@ -133,7 +133,7 @@ def post_ids(ids):
 
 
 def post_new_links(subject_links: list, tg_links: list):
-    links_json = {
+    links_dict = {
             "subject_links": subject_links,  # ссылки на новости по клиентам и коммодам
             "tg_links": tg_links  # ссылки на новости из тг каналов
                 }
@@ -141,7 +141,7 @@ def post_new_links(subject_links: list, tg_links: list):
         response = try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
             url=config.BASE_QABANKER_URL.format('articles'),
-            json=links_json,
+            json=links_dict,
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
 
@@ -149,8 +149,8 @@ def post_new_links(subject_links: list, tg_links: list):
         print(msg)
         logger.info(msg)
     except Exception as e:
-        print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
-        logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
+        print(f'Ошибка при отправке ссылок новостей в QABanker: {e}')
+        logger.error('ООшибка при отправке ссылок новостей в QABanker:: %s', e)
 
 
 if __name__ == '__main__':
