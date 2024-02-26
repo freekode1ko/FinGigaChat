@@ -47,7 +47,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'tg_subscriptions_menu',
-        'description': 'Меню редактирования подписок на telegram каналы',
+        'description': 'Подписки на telegram каналы',
     },
     {
         'command': 'delete_article',
