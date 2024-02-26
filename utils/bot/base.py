@@ -25,6 +25,7 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
+    return: List[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
     current_batch = prefix

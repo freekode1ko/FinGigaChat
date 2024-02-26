@@ -22,13 +22,9 @@ def get_messages_by_type(message_type_id: int):
     :param message_type_id: id типа сообщения из таблицы message_type
     return: DataFrame[[user_id: int, message_ids: list[int]]]
     """
-    to_dt = datetime.now()
-    from_df = (to_dt - timedelta(days=2)).strftime(config.BASE_DATETIME_FORMAT)
-    to_dt = to_dt.strftime(config.BASE_DATETIME_FORMAT)
-
     query = (
         f'SELECT user_id, ARRAY_AGG(message_id) as message_ids FROM {__table_name__} '
-        f"WHERE {message_type_id=:} AND send_datetime BETWEEN '{from_df}' AND '{to_dt}' "
+        f"WHERE {message_type_id=:} AND send_datetime > (CURRENT_TIMESTAMP -  INTERVAL '2 days') "
         f'GROUP BY user_id;'
     )
 

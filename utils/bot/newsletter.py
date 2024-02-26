@@ -45,7 +45,6 @@ async def tg_newsletter(
                 continue
 
             start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по отрасли <b>{industry_name.capitalize()}</b>:'
-            # FIXME сохранять message_id
             msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
             saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 
@@ -115,7 +114,6 @@ async def subscriptions_newsletter(
             try:
                 industry_name_list = user_industry_df['industry'].drop_duplicates().values.tolist()
                 client_commodity_name_list = user_client_comm_df['name'].drop_duplicates().values.tolist()
-                # FIXME сохранять message_id
                 msg_title = await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:')
                 saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 

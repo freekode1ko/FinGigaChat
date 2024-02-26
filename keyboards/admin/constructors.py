@@ -34,7 +34,6 @@ def get_message_types_kb() -> InlineKeyboardMarkup:
 def get_approve_delete_messages_by_type_kb(message_type_id: int) -> InlineKeyboardMarkup:
     """
     Создает клавиатуру для типа рассылки, по которой можно удалить сообщения
-    Отмена удаляет данное сообщение, если прошло менее 48 часов, либо заменяет текст и клавиатуру
 
     return: Клавиатура с кнопками
             1a) да
