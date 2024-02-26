@@ -449,24 +449,17 @@ def union_name(p_row: str, r_row: str) -> str:
     return ';'.join(common_set)
 
 
-def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str, text: str) -> str:
+def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, content: str) -> str:
     """
     Создание краткой версии новостного текста с помощью GigaChat
     :param logger: экземпляр класса логер для логирования процесса
     :param giga_chat: экземпляр класса GigaChat
-    :param token: токен авторизации в GigaChat
-    :param text: текст новости
+    :param content: текст новости
     :return: суммаризированный текст
     """
 
     try:
-        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
-        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
-    except ConnectionError:
-        giga_chat = GigaChat()
-        token = giga_chat.get_user_token()
-        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
-        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
+        giga_answer = giga_chat.get_giga_answer(text=content, prompt=summarization_prompt)
     except Exception as e:
         logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
@@ -581,9 +574,8 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
-    giga_chat = GigaChat()
-    token = giga_chat.get_user_token()
-    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(logger, giga_chat, token, text))
+    giga_chat = GigaChat(logger)
+    df['text_sum'] = df['text'].apply(lambda text_: summarization_by_giga(logger, giga_chat, text_))
     df['text_sum'] = df.apply(lambda row: change_bad_summary(logger, row), axis=1)
     return df
 
