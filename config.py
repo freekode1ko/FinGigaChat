@@ -90,6 +90,7 @@ STATS_COLLECTOR_SLEEP_TIME = 60
 # config для взаимодействия со смежными сервисами (gigaparsers, qabanker)
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
+POST_TO_GIGAPARSER_TIMEOUT = 600
 POST_TO_SERVICE_TIMEOUT = 180
 POST_TO_SERVICE_ATTEMPTS = 3
 POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10

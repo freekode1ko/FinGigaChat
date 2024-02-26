@@ -1,10 +1,13 @@
 import json
 from logging import Logger
 from uuid import uuid4
+import warnings
 
 import requests as req
 
 from config import giga_oauth_url, giga_chat_url, giga_scope, giga_model, giga_credentials
+
+warnings.filterwarnings('ignore')
 
 
 class GigaChat:
@@ -31,7 +34,7 @@ class GigaChat:
         token = response.json()['access_token']
         return token
 
-    def make_giga_query(self, text: str, prompt: str = '') -> str:
+    def post_giga_query(self, text: str, prompt: str = '') -> str:
         """
         Получение ответа от модели GigaChat
         :param text: токен доступа к модели
@@ -56,22 +59,17 @@ class GigaChat:
     def get_giga_answer(self, text: str, prompt: str = ''):
         """Обработчик исключений при получении ответа от GigaChat"""
         try:
-            giga_answer = self.make_giga_query(text=text, prompt=prompt)
+            giga_answer = self.post_giga_query(text=text, prompt=prompt)
         except AttributeError:
             self.logger.debug('Перевыпуск токена для общения с GigaChat')
             self.token = self.get_user_token()
-            giga_answer = self.make_giga_query(text=text)
+            giga_answer = self.post_giga_query(text=text)
         except KeyError:
             self.logger.debug('Перевыпуск токена для общения с GigaChat')
             self.token = self.get_user_token()
-            giga_answer = self.make_giga_query(text=text)
+            giga_answer = self.post_giga_query(text=text)
             self.logger.critical(f'msg - {text}, prompt - {prompt}'
                                  f'KeyError (некорректная выдача ответа GigaChat), '
                                  f'ответ после переформирования запроса')
         return giga_answer
-
-
-# TODO:  InsecureRequestWarning: Unverified HTTPS request is being made to host 'ngw.devices.sberbank.ru'. Adding certificate verification is strongly advised.
-
-
 

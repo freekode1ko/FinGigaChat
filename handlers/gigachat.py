@@ -1,5 +1,5 @@
-import requests
 import urllib.parse
+import requests
 
 from aiogram import Router, types
 from aiogram.filters import Command
@@ -8,6 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import module.gigachat as gig
+from bot_runner import bot
 from bot_logger import logger, user_logger
 from constants.bot.constants import giga_ans_footer, giga_rag_footer
 from utils.bot.base import user_in_whitelist
@@ -52,8 +53,7 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            answer = route_query(chat_id, full_name, first_user_query)
-            await message.answer(answer, parse_mode='HTML', disable_web_page_preview=True)
+            await ask_giga_chat(message)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -62,11 +62,15 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(GigaChatState.gigachat_mode)
-async def ask_giga_chat(message: types.Message) -> None:
+async def handler_gigachat_mode(message: types.Message) -> None:
     """Отправка пользователю ответа, сформированного Gigachat, на сообщение пользователя"""
+    await ask_giga_chat(message)
 
+
+async def ask_giga_chat(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
+    await bot.send_chat_action(message.chat.id, 'typing')
     response = route_query(chat_id, full_name, user_msg)
     await message.answer(response, parse_mode='HTML', disable_web_page_preview=True)
 
@@ -74,7 +78,10 @@ async def ask_giga_chat(message: types.Message) -> None:
 
 
 def route_query(chat_id: int, full_name: str, user_msg: str):
-    """Будущая маршрутизация рага(ов) и запросов к гиге"""
+    """
+    Будущая маршрутизация рага(ов) и запросов к гиге
+    Будет изменяться
+    """
 
     try:
         query = urllib.parse.quote(user_msg)
@@ -94,5 +101,3 @@ def route_query(chat_id: int, full_name: str, user_msg: str):
 
     return response
 
-
-# TODO: typing пока гигачат думает
