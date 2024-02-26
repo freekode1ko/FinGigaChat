@@ -68,13 +68,16 @@ async def handler_gigachat_mode(message: types.Message) -> None:
 
 
 async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> None:
+    """
+    Отправляет ответ на запрос пользователя
+    :param message: Message от пользователя
+    :param first_user_query: запрос от пользователя вне режима gigachat
+    """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     await bot.send_chat_action(message.chat.id, 'typing')
     response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
     await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
-
-    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{response}"')
 
 
 def route_query(chat_id: int, full_name: str, user_msg: str):
