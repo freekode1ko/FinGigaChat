@@ -42,14 +42,6 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Меню редактирования подписок',
     },
     {
-        'command': 'myactivesubscriptions',
-        'description': 'Список активных подписок (Скоро будет удалено)',
-    },
-    {
-        'command': 'addnewsubscriptions',
-        'description': 'Создать новый набор подписок (Скоро будет удалено)',
-    },
-    {
         'command': 'industry_tgnews',
         'description': 'Сводка новостей из telegram каналов по отраслям',
     },
