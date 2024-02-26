@@ -125,7 +125,7 @@ def post_ids(ids):
             config.POST_TO_SERVICE_ATTEMPTS,
             url=BASE_GIGAPARSER_URL.format('success_request'),
             json=ids,
-            timeout=config.POST_TO_SERVICE_TIMEOUT
+            timeout=config.POST_TO_GIGAPARSER_TIMEOUT
         )
     except Exception as e:
         print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
