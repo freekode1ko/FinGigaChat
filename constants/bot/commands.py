@@ -39,7 +39,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'subscriptions_menu',
-        'description': 'Меню редактирования подписок',
+        'description': 'Меню подписок',
     },
     {
         'command': 'industry_tgnews',
