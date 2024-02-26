@@ -6,6 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import module.gigachat as gig
+from bot_runner import bot
 from bot_logger import logger, user_logger
 from constants.bot.constants import giga_ans_footer
 from utils.bot.base import user_in_whitelist
@@ -49,8 +50,7 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            answer = route_query(chat_id, full_name, first_user_query)
-            await message.answer(answer)
+            await ask_giga_chat(message)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -59,11 +59,15 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(GigaChatState.gigachat_mode)
-async def ask_giga_chat(message: types.Message) -> None:
+async def handler_gigachat_mode(message: types.Message) -> None:
     """Отправка пользователю ответа, сформированного Gigachat, на сообщение пользователя"""
+    await ask_giga_chat(message)
 
+
+async def ask_giga_chat(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
+    await bot.send_chat_action(message.chat.id, 'typing')
     response = route_query(chat_id, full_name, user_msg)
     await message.answer(response, protect_content=False)
 
@@ -71,11 +75,13 @@ async def ask_giga_chat(message: types.Message) -> None:
 
 
 def route_query(chat_id: int, full_name: str, user_msg: str):
-    """Будущая маршрутизация рага(ов) и запросов к гиге"""
+    """
+    Будущая маршрутизация рага(ов) и запросов к гиге
+    Будет изменяться
+    """
 
     try:
         giga_answer = chat.get_giga_answer(text=user_msg)
-        user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_answer}"')
     except Exception as e:
         logger.error(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
         user_logger.error(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
