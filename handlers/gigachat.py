@@ -50,7 +50,7 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_giga_chat(message)
+            await ask_giga_chat(message, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -64,11 +64,11 @@ async def handler_gigachat_mode(message: types.Message) -> None:
     await ask_giga_chat(message)
 
 
-async def ask_giga_chat(message: types.Message) -> None:
+async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     await bot.send_chat_action(message.chat.id, 'typing')
-    response = route_query(chat_id, full_name, user_msg)
+    response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
     await message.answer(response, protect_content=False)
 
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{response}"')
