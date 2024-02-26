@@ -16,7 +16,7 @@ from database import engine
 from module.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> None:
+async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> List[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -29,6 +29,7 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     batches = []
     current_batch = prefix
     max_batch_length = 4096
+    messages: List[types.Message] = []
 
     for paragraph in msg.split(delimiter):
         if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
@@ -41,7 +42,9 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
         batches.append(current_batch.strip())
 
     for batch in batches:
-        await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
+        msg = await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
+        messages.append(msg)
+    return messages
 
 
 async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> None:

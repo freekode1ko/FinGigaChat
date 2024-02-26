@@ -84,6 +84,44 @@ def add_message(user_id: int, message_id: int, message_type: str = None, functio
     return result
 
 
+def add_all(messages: List[dict], function_name: str = None) -> None:
+    """
+    Сохраняет в базу все сообщения из списка messages
+
+    :param messages: Список словарей с полями {user_id: int, message_id: int, message_type: str}
+    :param function_name: Имя функции, которая вызвала данный метод, если None, то используется имя вызвавшей функции
+                          (при использовании внутри декоратора будет получение имя декоратора, а не изначальной функции)
+    """
+    queries = []
+    query = text(
+        f'INSERT INTO {__table_name__} (user_id, message_id, message_type_id, function_name) '
+        f'VALUES (:user_id, :message_id, :message_type_id, :function_name) '
+        f'RETURNING id;'
+    )
+
+    if function_name is None:
+        func = inspect.currentframe().f_back.f_code
+        function_name = func.co_name
+
+    for m in messages:
+        try:
+            message_type_id = message_types.get_by_name(m['message_type'])['id']
+        except (IndexError, KeyError):
+            message_type_id = message_types.default['id']
+        m = {
+            'user_id': m['user_id'],
+            'message_id': m['message_id'],
+            'message_type_id': message_type_id,
+            'function_name': function_name,
+        }
+        queries.append(query.bindparams(**m))
+
+    with database.engine.connect() as conn:
+        for q in queries:
+            conn.execute(q)
+        conn.commit()
+
+
 def delete_messages(user_id: int, message_ids: List[int]) -> None:
     """
     Удаляет запись в БД о сообщении, где user_id=user_id AND message_id=message_id
