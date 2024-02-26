@@ -4,10 +4,23 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.bot.constants import DELETE_CROSS, PREV_PAGE, NEXT_PAGE, STOP, UNSELECTED, SELECTED
-from constants.bot.subscriptions import BACK_TO_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_INDUSTRIES_MENU, \
-    TG_SUBS_DELETE_ALL
+from constants.bot.subscriptions import BACK_TO_TG_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_INDUSTRIES_MENU, \
+    TG_SUBS_DELETE_ALL, SUBS_MENU, SUBS_DELETE_ALL_DONE
 from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, IndustryTGChannels, TGSubAction
 from utils.bot.base import wrap_callback_data, unwrap_callback_data
+
+
+def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: str) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Да ][ Нет ]
+    [   назад   ]
+    """
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=yes_callback))
+    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=no_callback))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=back_callback))
+    return keyboard.as_markup()
 
 
 def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
@@ -53,7 +66,7 @@ def get_tg_subs_watch_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> 
     else:
         keyboard.row(types.InlineKeyboardButton(text=STOP, callback_data='stop'))
 
-    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_MENU))
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_TG_MENU))
 
     if page < max_pages - 1:
         keyboard.add(types.InlineKeyboardButton(text=NEXT_PAGE, callback_data=UserTGSubs(page=page + 1).pack()))
@@ -102,7 +115,7 @@ def get_tg_subs_industries_menu_kb(industry_df: pd.DataFrame) -> InlineKeyboardM
             industry_id=industry['id'],
         )
         keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_TG_MENU))
     return keyboard.as_markup()
 
 
@@ -143,11 +156,7 @@ def get_prepare_tg_subs_delete_all_kb() -> InlineKeyboardMarkup:
     [ Да ][ Нет ]
     [   назад   ]
     """
-    keyboard = InlineKeyboardBuilder()
-    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data=TG_SUBS_DELETE_ALL_DONE))
-    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=BACK_TO_MENU))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_MENU))
-    return keyboard.as_markup()
+    return get_approve_action_kb(TG_SUBS_DELETE_ALL_DONE, BACK_TO_TG_MENU, BACK_TO_TG_MENU)
 
 
 def get_back_to_tg_subs_menu_kb() -> InlineKeyboardMarkup:
@@ -156,5 +165,40 @@ def get_back_to_tg_subs_menu_kb() -> InlineKeyboardMarkup:
     [   назад в меню   ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_TG_MENU))
+    return keyboard.as_markup()
+
+
+def get_prepare_subs_delete_all_kb() -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Да ][ Нет ]
+    [   назад   ]
+    """
+    return get_approve_action_kb(SUBS_DELETE_ALL_DONE, SUBS_MENU, SUBS_MENU)
+
+
+def get_back_to_subs_menu_kb() -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [   назад в меню   ]
+    """
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=SUBS_MENU))
+    return keyboard.as_markup()
+
+
+def get_subscriptions_kb() -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Список активных подписок ]
+    [ Добавить новые подписки  ]
+    [ Удалить подписки  ]
+    [ Удалить все подписки ]
+    """
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
+    keyboard.row(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
+    keyboard.row(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
+    keyboard.row(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
     return keyboard.as_markup()

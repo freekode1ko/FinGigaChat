@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta, date
 from math import ceil
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 import pandas as pd
 from aiogram import Bot, types
@@ -400,3 +400,17 @@ def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: in
 async def wait_until(to_dt: datetime) -> None:
     """Спит до переданного datetime"""
     await asyncio.sleep((to_dt - datetime.now()).total_seconds())
+
+
+async def send_or_edit(
+        message: Union[types.CallbackQuery, types.Message],
+        msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
+) -> None:
+    # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
+    if isinstance(message, types.Message):
+        await message.answer(msg_text, reply_markup=keyboard)
+
+    # Если CallbackQuery - изменяем это сообщение
+    else:
+        call = message
+        await call.message.edit_text(msg_text, reply_markup=keyboard)
