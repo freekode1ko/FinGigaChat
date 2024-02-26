@@ -150,7 +150,7 @@ def post_new_links(subject_links: list, tg_links: list):
         logger.info(msg)
     except Exception as e:
         print(f'Ошибка при отправке ссылок новостей в QABanker: {e}')
-        logger.error('ООшибка при отправке ссылок новостей в QABanker:: %s', e)
+        logger.error('Ошибка при отправке ссылок новостей в QABanker:: %s', e)
 
 
 if __name__ == '__main__':
