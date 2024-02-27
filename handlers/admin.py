@@ -1,8 +1,10 @@
 import json
 # import logging
+from typing import Union, List
 
 import pandas as pd
 from aiogram import F, Router, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -10,8 +12,12 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import config
+import database
 from bot_logger import logger, user_logger
+from constants.bot.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
 from database import engine
+from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
+import keyboards.admin.constructors as kb_maker
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
 from utils.bot.base import (
@@ -20,8 +26,12 @@ from utils.bot.base import (
     send_msg_to,
     user_in_whitelist,
 )
+from utils.bot.newsletter import subscriptions_newsletter
+from utils.db_api.message import get_messages_by_type, delete_messages, add_all
+from utils.db_api.message_type import message_types
 
-# logger = logging.getLogger(__name__)
+TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
+
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
@@ -96,18 +106,22 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
+    saved_messages: List[dict] = []
+    newsletter_type = 'default'
     successful_sending = 0
     for user_id in users_ids:
         try:
             user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
-            await send_msg_to(message.bot, user_id, msg, file_name, file_type)
-            user_logger.debug(f'*{user_id}* Пользователю пришло сообщение от админа')
+            m = await send_msg_to(message.bot, user_id, msg, file_name, file_type)
+            saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
+            user_logger.debug(f'*{user_id}* Пользователю пришло сообщение {m.message_id} от админа')
             successful_sending += 1
         # except BotBlocked:
         #     user_logger.warning(f'*{user_id}* Пользователь поместил бота в блок, он не получил сообщения')
         except Exception as ex:
             user_logger.error(f'*{user_id}* Пользователь не получил сообщения из-за ошибки: {ex}')
 
+    add_all(saved_messages)
     await message.answer('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
     logger.info('Рассылка отправлена для {} из {} пользователей'.format(successful_sending, len(users_ids)))
 
@@ -361,3 +375,134 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text='Команда использована', callback_data='none'))
     await callback_query.message.edit_reply_markup(reply_markup=keyboard.as_markup())
+
+
+@router.message(Command('dailynews'))
+async def dailynews(message: types.Message) -> None:
+    user = json.loads(message.from_user.model_dump_json())
+    admin_flag = await is_admin_user(user)
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
+    if admin_flag:
+        user_df = pd.read_sql_table('whitelist', con=database.engine, columns=['user_id', 'username', 'subscriptions'])
+        await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
+    else:
+        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
+
+
+async def delete_newsletter_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+    """Отправляет или изменяет сообщение, формируя там клавиатуру выбора типов сообщений"""
+    keyboard = kb_maker.get_message_types_kb()
+    msg_text = (
+        'Выберите рассылку, сообщения по которой хотите удалить.\n\n'
+        'Удалены могут быть лишь те сообщения, с момента отправки которых прошло менее 48 часов.'
+    )
+
+    # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
+    if isinstance(message, types.Message):
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML', disable_web_page_preview=True)
+
+    # Если CallbackQuery - изменяем это сообщение
+    else:
+        call = message
+        await call.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML', disable_web_page_preview=True)
+
+
+@router.message(Command('delete_newsletter_messages'))
+async def delete_newsletter_messages(message: types.Message) -> None:
+    """
+    Формирует меню для выбора типа сообщения, по которому будут удалены все сообщения с этим типом младше 48 часов
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
+    user = json.loads(message.from_user.model_dump_json())
+    admin_flag = await is_admin_user(user)
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+
+    if admin_flag:
+        await delete_newsletter_menu(message)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    else:
+        await message.answer('У Вас недостаточно прав для использования данной команды.')
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+
+
+@router.callback_query(ApproveDeleteMessageByType.filter())
+async def approve_delete_messages_by_type(callback_query: types.CallbackQuery, callback_data: ApproveDeleteMessageByType) -> None:
+    """
+    Формирует сообщение с подтверждением действия по удалению сообщений выбранного типа
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе информацию o message_type_id
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    msg_type_descr = message_types[callback_data.message_type_id]['description']
+    msg_text = (
+        f'Вы уверены, что хотите удалить сообщения с типом "<b>{msg_type_descr}</b>", которые были отправлены за последние 48 часов, '
+        f'у всех пользователей?'
+    )
+    keyboard = kb_maker.get_approve_delete_messages_by_type_kb(callback_data.message_type_id)
+
+    await callback_query.message.edit_text(text=msg_text, reply_markup=keyboard, parse_mode='HTML', disable_web_page_preview=True)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(DeleteMessageByType.filter())
+async def delete_messages_by_type(callback_query: types.CallbackQuery, callback_data: DeleteMessageByType) -> None:
+    """
+    Удаляет сообщения переданного типа
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе информацию o message_type_id
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    user_msgs_df = get_messages_by_type(callback_data.message_type_id)
+    msg_type_descr = message_types[callback_data.message_type_id]['description']
+
+    for _, row in user_msgs_df.iterrows():
+        user_id = row['user_id']
+        message_ids = row['message_ids']
+
+        for i in range(0, len(message_ids), TG_DELETE_MESSAGE_IDS_LEN_LIMIT):
+            try:
+                ids = message_ids[i: i + TG_DELETE_MESSAGE_IDS_LEN_LIMIT]
+                await callback_query.bot.delete_messages(
+                    user_id, ids, config.DELETE_TG_MESSAGES_TIMEOUT
+                )
+                delete_messages(user_id, ids)
+            except TelegramBadRequest as e:
+                info_msg = f'Не удалось удалить сообщения у пользователя {user_id}: %s'
+                logger.error(info_msg, e)
+        logger.info(f'Удаление сообщений типа {msg_type_descr} у пользователя {user_id} завершено')
+
+    msg_text = (
+        f'Готово!\nСообщения с типом "<b>{msg_type_descr}</b>", отправленные менее 48 часов назад, были удалены у всех пользователей'
+    )
+    keyboard = None
+
+    await callback_query.message.edit_text(text=msg_text, reply_markup=keyboard, parse_mode='HTML', disable_web_page_preview=True)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(F.data.startswith(BACK_TO_DELETE_NEWSLETTER_MSG_MENU))
+async def back_to_delete_newsletter_msg_menu(callback_query: types.CallbackQuery) -> None:
+    """
+    Фозвращает пользователя в меню (меняет сообщение, с которым связан колбэк)
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    await delete_newsletter_menu(callback_query)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
