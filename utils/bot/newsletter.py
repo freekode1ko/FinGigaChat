@@ -81,9 +81,10 @@ async def subscriptions_newsletter(
 
     row_number = 0
     for index, user in user_df.iterrows():
-        user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions'].split(', ')
+        user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions']
         if not subscriptions:
             continue
+        subscriptions = subscriptions.split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
 
         # получим списки id объектов, на которые подписан пользователь
