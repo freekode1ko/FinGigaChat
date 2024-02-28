@@ -12,6 +12,7 @@ from bot_logger import user_logger
 from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
 from utils.bot.base import user_in_whitelist
+from module.mail_parse import ImapParse
 
 
 # States
@@ -110,6 +111,23 @@ async def user_to_whitelist(message: types.Message):
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. ' f'\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+    else:
+        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
+
+
+@router.message(Command('addme'))
+async def user_registration(message: types.Message):
+    """
+    Регистрация нового пользователя
+    """
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    if not await user_in_whitelist(message.from_user.model_dump_json()):
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
+        user_reg_code = chat_id  # TODO: Encrypt chat_id with key (static or dynamic?)
+        imap_obj = ImapParse()
+        imap_obj.send_msg(config.mail_username, config.mail_password, 'freekode1ko@gmail.com',
+                          config.reg_mail_text.format(user_reg_code))
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')

@@ -2,8 +2,11 @@ import email
 import imaplib
 import os
 import shutil
+import smtplib
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from module.article_process import ArticleProcess
 
@@ -69,6 +72,20 @@ class ImapParse:
         if status_msg == 'OK':
             return email.message_from_bytes(msg[0][1])
         raise ImapError('Some error with get new message.')
+
+    @staticmethod
+    def send_msg(sender, password, recipient, message):
+        msg = MIMEMultipart()
+        msg['From'] = sender
+        msg['To'] = recipient
+        msg['Subject'] = 'Регистрация в AI-помощнике'
+
+        msg.attach(MIMEText(message, 'plain'))
+        server = smtplib.SMTP_SSL('smtp.mail.ru', 465)
+        server.login(sender, password)
+        text = msg.as_string()
+        server.sendmail(sender, recipient, text)
+        server.quit()
 
     def get_and_download_attachment(self, folder_name: str) -> str:
         """
