@@ -31,7 +31,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'newsletter',
-        'description': 'Weekly pulse',
+        'description': 'События недели',
     },
     {
         'command': 'referencebook',
@@ -39,15 +39,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'subscriptions_menu',
-        'description': 'Меню редактирования подписок',
-    },
-    {
-        'command': 'myactivesubscriptions',
-        'description': 'Список активных подписок (Скоро будет удалено)',
-    },
-    {
-        'command': 'addnewsubscriptions',
-        'description': 'Создать новый набор подписок (Скоро будет удалено)',
+        'description': 'Меню подписок',
     },
     {
         'command': 'industry_tgnews',
@@ -55,7 +47,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'tg_subscriptions_menu',
-        'description': 'Меню редактирования подписок на telegram каналы',
+        'description': 'Подписки на telegram каналы',
     },
     {
         'command': 'delete_article',
