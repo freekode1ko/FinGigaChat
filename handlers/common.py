@@ -125,6 +125,16 @@ async def user_registration(message: types.Message):
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
         user_reg_code = chat_id  # TODO: Encrypt chat_id with key (static or dynamic?)
+        '''
+        Надо добавить вывод сообщения: "Введите свою почту", там сделать проверку что это @sberbank.ru
+        Если почта @sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
+            После ввода следующего сообщения раскодируем его и сверяем с chat_id сообщения, если ок - добавляем в бд,
+            Если не сходится, то пишем что код не верный и просим проверить и повторить отправку
+            Так до тех пор пока не получим правильный код.
+        Если почта не @sberbank.ru, то сообщить что почта должна быть корпоративной и так пока не получим валидную почту
+        
+        По слову "отмена" - отменить регистрацию
+        '''
         imap_obj = ImapParse()
         imap_obj.send_msg(config.mail_username, config.mail_password, 'freekode1ko@gmail.com',
                           config.reg_mail_text.format(user_reg_code))
