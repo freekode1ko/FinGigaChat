@@ -13,6 +13,7 @@ from bot_logger import user_logger
 from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
 from utils.bot.base import user_in_whitelist
+from utils.data_crypto import AESCrypther
 from module.mail_parse import ImapParse
 
 
@@ -89,20 +90,20 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
 @router.message(Command('addme'))
 async def user_registration(message: types.Message, state: FSMContext):
     """
-    Регистрация нового пользователя
+    Регистрация нового пользователя.
+    Если почта \\w+@sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
+        После ввода следующего сообщения раскодируем его и сверяем с chat_id сообщения, если ок - добавляем в БД,
+        Если не сходится, то пишем что код не верный и просим проверить и повторить отправку
+        Так до тех пор, пока не получим правильный код.
+    Если почта не \\w+@sberbank.ru, то сообщить что почта должна быть корпоративной и так пока не получим валидную почту
+
+    По слову "отмена" в чате - отменить регистрацию
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
         '''
-        Надо добавить вывод сообщения: "Введите свою почту", там сделать проверку что это @sberbank.ru
-        Если почта @sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
-            После ввода следующего сообщения раскодируем его и сверяем с chat_id сообщения, если ок - добавляем в бд,
-            Если не сходится, то пишем что код не верный и просим проверить и повторить отправку
-            Так до тех пор пока не получим правильный код.
-        Если почта не @sberbank.ru, то сообщить что почта должна быть корпоративной и так пока не получим валидную почту
-        
-        По слову "отмена" - отменить регистрацию
+
         '''
         await state.set_state(Form.new_user_reg)
         await message.answer('Введите свою корпоративную почту для получения кода '
@@ -117,24 +118,37 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if re.search('\w+@sberbank.ru', user_msg.strip()):
-        user_reg_code = chat_id  # TODO: Encrypt chat_id with key
+        chat_id = str(chat_id)
         imap_obj = ImapParse()
-        imap_obj.send_msg(config.mail_username, config.mail_password, 'freekode1ko@gmail.com',  # Поменять на user_msg.strip()
-                          config.reg_mail_text.format(user_reg_code))
+        user_reg_code = str(AESCrypther(chat_id).encrypt(chat_id))
+        imap_obj.send_msg(config.mail_username, config.mail_password, user_msg.strip(),
+                          config.reg_mail_text.format(chat_id, user_reg_code[2:-1]))
         await state.clear()
         await state.set_state(Form.continue_user_reg)
         await state.update_data(user_email=user_msg.strip())
-        await message.answer(f'Введите код из конца письма, '
+        await message.answer(f'Введите код из конца письма (любой из двух), '
                              f'который был выслан вам на указанную почту ({user_msg.strip()})', protect_content=False)
     else:
-        await message.answer(f'Не корректный ввод: {user_msg.strip()}', protect_content=False)
+        await message.answer(f'Некорректный значение. проверьте, что указанная '
+                             f'почта заканчивается на @sberbank.ru', protect_content=False)
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(Form.continue_user_reg)
 async def validate_user_reg_code(message: types.Message, state: FSMContext):
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    user_reg_code = user_msg  # TODO: Dencrypt user_msg with key
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
+    try:
+        user_reg_code = AESCrypther(str(chat_id)).decrypt(user_msg.encode('utf-8'))
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : {user_reg_code}')
+    except ValueError:
+        '''
+        Я забыл что с коп. почты на телефоне нельзя скопировать текст письма, так что добавим 
+        проверку user_msg на схожесть с chat_id и отправим его вместе с закодированным
+        '''
+        user_reg_code = 'ERROR_USER_CODE'
+        if user_msg == str(chat_id):
+            user_reg_code = user_msg
+
     if str(chat_id) == str(user_reg_code):
         user_raw = json.loads(message.from_user.model_dump_json())
         user_email = await state.get_data()
@@ -144,8 +158,8 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             user_username = 'Empty_username'
         user_id = user_raw['id']
         user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None]],  # TODO: добавить user_email
-            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'],
+            [[user_id, user_username, full_name, 'user', 'active', None, user_email['user_email']]],
+            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'],
         )
         try:
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
@@ -157,5 +171,6 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
             await state.clear()
     else:
-        await message.answer('Введен некорректный регистрационный код, проверьте написание и отправьте еще раз',
-                             protect_content=False)
+        await message.answer('Введен некорректный регистрационный код, '
+                             'проверьте написание и отправьте еще раз', protect_content=False)
+        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
