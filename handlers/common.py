@@ -1,4 +1,5 @@
 import json
+import re
 
 import pandas as pd
 from aiogram import F, Router, types
@@ -19,6 +20,8 @@ from module.mail_parse import ImapParse
 class Form(StatesGroup):
     permission_to_delete = State()
     send_to_users = State()
+    new_user_reg = State()
+    continue_user_reg = State()
 
 
 # logger = logging.getLogger(__name__)
@@ -83,18 +86,55 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-@router.message(Command('addmetowhitelist'))
-async def user_to_whitelist(message: types.Message):
+@router.message(Command('addme'))
+async def user_registration(message: types.Message, state: FSMContext):
     """
-    Добавление нового пользователя в список на доступ
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    return None
+    Регистрация нового пользователя
     """
-    user_raw = json.loads(message.from_user.model_dump_json())
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
     if not await user_in_whitelist(message.from_user.model_dump_json()):
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
+        '''
+        Надо добавить вывод сообщения: "Введите свою почту", там сделать проверку что это @sberbank.ru
+        Если почта @sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
+            После ввода следующего сообщения раскодируем его и сверяем с chat_id сообщения, если ок - добавляем в бд,
+            Если не сходится, то пишем что код не верный и просим проверить и повторить отправку
+            Так до тех пор пока не получим правильный код.
+        Если почта не @sberbank.ru, то сообщить что почта должна быть корпоративной и так пока не получим валидную почту
+        
+        По слову "отмена" - отменить регистрацию
+        '''
+        await state.set_state(Form.new_user_reg)
+        await message.answer('Введите свою корпоративную почту для получения кода '
+                             'необходимый для завершения регистрации')
+    else:
+        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
+
+
+@router.message(Form.new_user_reg)
+async def ask_user_mail(message: types.Message, state: FSMContext):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    if re.search('\w+@sberbank.ru', user_msg.strip()):
+        user_reg_code = chat_id  # TODO: Encrypt chat_id with key (static or dynamic?)
+        imap_obj = ImapParse()
+        imap_obj.send_msg(config.mail_username, config.mail_password, 'freekode1ko@gmail.com',  # Поменять на user_msg.strip()
+                          config.reg_mail_text.format(user_reg_code))
+        await state.clear()
+        await state.set_state(Form.continue_user_reg)
+        await message.answer(f'Введите код из конца письма, '
+                             f'который был выслан вам на указанную почту ({user_msg.strip()})', protect_content=False)
+    else:
+        await message.answer(f'Не корректный ввод: {user_msg.strip()}', protect_content=False)
+
+
+@router.message(Form.continue_user_reg)
+async def validate_user_reg_code(message: types.Message, state: FSMContext):
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    if str(chat_id) == str(user_msg):
+        user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
@@ -108,36 +148,11 @@ async def user_to_whitelist(message: types.Message):
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
+            await state.clear()
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. ' f'\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+            await state.clear()
     else:
-        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
-
-
-@router.message(Command('addme'))
-async def user_registration(message: types.Message):
-    """
-    Регистрация нового пользователя
-    """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if not await user_in_whitelist(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
-        user_reg_code = chat_id  # TODO: Encrypt chat_id with key (static or dynamic?)
-        '''
-        Надо добавить вывод сообщения: "Введите свою почту", там сделать проверку что это @sberbank.ru
-        Если почта @sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
-            После ввода следующего сообщения раскодируем его и сверяем с chat_id сообщения, если ок - добавляем в бд,
-            Если не сходится, то пишем что код не верный и просим проверить и повторить отправку
-            Так до тех пор пока не получим правильный код.
-        Если почта не @sberbank.ru, то сообщить что почта должна быть корпоративной и так пока не получим валидную почту
-        
-        По слову "отмена" - отменить регистрацию
-        '''
-        imap_obj = ImapParse()
-        imap_obj.send_msg(config.mail_username, config.mail_password, 'freekode1ko@gmail.com',
-                          config.reg_mail_text.format(user_reg_code))
-    else:
-        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
+        await message.answer('Введен некорректный регистрационный код, проверьте написание и отправьте еще раз',
+                             protect_content=False)
