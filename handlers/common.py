@@ -117,7 +117,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if re.search('\w+@sberbank.ru', user_msg.strip()):
-        user_reg_code = chat_id  # TODO: Encrypt chat_id with key (static or dynamic?)
+        user_reg_code = chat_id  # TODO: Encrypt chat_id with key
         imap_obj = ImapParse()
         imap_obj.send_msg(config.mail_username, config.mail_password, 'freekode1ko@gmail.com',  # Поменять на user_msg.strip()
                           config.reg_mail_text.format(user_reg_code))
@@ -133,7 +133,8 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
 async def validate_user_reg_code(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    if str(chat_id) == str(user_msg):
+    user_reg_code = user_msg  # TODO: Dencrypt user_msg with key
+    if str(chat_id) == str(user_reg_code):
         user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
             user_username = user_raw['username']
