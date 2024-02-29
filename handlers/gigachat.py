@@ -8,7 +8,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import module.gigachat as gig
-from bot_runner import bot
 from bot_logger import logger, user_logger
 from constants.bot.constants import giga_ans_footer, giga_rag_footer
 from utils.bot.base import user_in_whitelist
@@ -75,7 +74,7 @@ async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> N
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    await bot.send_chat_action(message.chat.id, 'typing')
+    await message.bot.send_chat_action(message.chat.id, 'typing')
     response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
     await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
 

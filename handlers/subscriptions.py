@@ -15,14 +15,14 @@ from sqlalchemy import text
 import config
 from bot_logger import logger, user_logger
 from constants.bot.constants import handbook_prefix, DELETE_CROSS, UNSELECTED, SELECTED
-from constants.bot.subscriptions import BACK_TO_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_DELETE_ALL, \
-    TG_SUBS_INDUSTRIES_MENU, TG_CHANNEL_INFO, USER_TG_SUBS, TG_SUB_ACTION
+from constants.bot.subscriptions import BACK_TO_TG_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_DELETE_ALL, \
+    TG_SUBS_INDUSTRIES_MENU, TG_CHANNEL_INFO, USER_TG_SUBS, TG_SUB_ACTION, SUBS_MENU, SUBS_DELETE_ALL_DONE
 from database import engine
 from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, IndustryTGChannels, TGSubAction
 from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
 from module.article_process import ArticleProcess
-from utils.bot.base import user_in_whitelist, get_page_data_and_info, bot_send_msg
+from utils.bot.base import user_in_whitelist, get_page_data_and_info, bot_send_msg, send_or_edit
 from utils.db_api.industry import get_industries_with_tg_channels, get_industry_name
 from utils.db_api.subscriptions import get_user_tg_subscriptions_df, delete_user_telegram_subscription, \
     delete_all_user_telegram_subscriptions, get_industry_tg_channels_df, get_telegram_channel_info, \
@@ -553,7 +553,7 @@ async def delete_subscriptions(callback_query: types.CallbackQuery, state: FSMCo
     await callback_query.message.answer(msg_txt, reply_markup=keyboard)
 
 
-@router.callback_query(F.data.startswith('deleteallsubscriptions'))
+@router.callback_query(F.data.startswith(SUBS_DELETE_ALL_DONE))
 async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     """
     Получение сообщением информации о своих подписках для их удаления
@@ -561,7 +561,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = 'deleteallsubscriptions'
+    user_msg = SUBS_DELETE_ALL_DONE
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -571,10 +571,60 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
         conn.commit()
 
     msg_txt = 'Подписки удалены'
-    await callback_query.message.answer(msg_txt, reply_markup=types.ReplyKeyboardRemove())
+    keyboard = kb_maker.get_back_to_subs_menu_kb()
+    await callback_query.message.edit_text(text=msg_txt, reply_markup=keyboard)
 
 
-@router.message(Command('subscriptions_menu'))
+@router.callback_query(F.data.startswith('deleteallsubscriptions'))
+async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
+    """
+    Подтвреждение действия
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = 'deleteallsubscriptions'
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_id = callback_query.from_user.id
+
+    user_subs = await get_list_of_user_subscriptions(user_id=user_id)
+
+    if not user_subs:
+        msg_text = 'У вас отсутствуют подписки'
+        keyboard = kb_maker.get_back_to_subs_menu_kb()
+    else:
+        msg_text = 'Вы уверены, что хотите удалить все подписки?'
+        keyboard = kb_maker.get_prepare_subs_delete_all_kb()
+
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+async def subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+    """Формирует меню подписок"""
+    keyboard = kb_maker.get_subscriptions_kb()
+    msg_text = 'Меню управления подписками\n'
+    await send_or_edit(message, msg_text, keyboard)
+
+
+@router.callback_query(F.data.startswith(SUBS_MENU))
+async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> None:
+    """
+    Получение меню для взаимодействия с подписками
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = SUBS_MENU
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    await subs_menu(callback_query)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.message(Command(SUBS_MENU))
 async def subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками
@@ -585,14 +635,7 @@ async def subscriptions_menu(message: types.Message) -> None:
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-
-        keyboard = InlineKeyboardBuilder()
-        keyboard.row(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
-        keyboard.row(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
-        keyboard.row(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
-        keyboard.row(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
-
-        await message.answer(text='Меню управления подписками\n', reply_markup=keyboard.as_markup())
+        await subs_menu(message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
@@ -796,18 +839,10 @@ async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> No
         'Меню управления подписками на telegram каналы\n\n'
         'На основе ваших подписок формируется сводка новостей по отрасли, с которой связаны telegram каналы'
     )
-
-    # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
-    if isinstance(message, types.Message):
-        await message.answer(msg_text, reply_markup=keyboard)
-
-    # Если CallbackQuery - изменяем это сообщение
-    else:
-        call = message
-        await call.message.edit_text(msg_text, reply_markup=keyboard)
+    await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(BACK_TO_MENU))
+@router.callback_query(F.data.startswith(BACK_TO_TG_MENU))
 async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     """
     Фозвращает пользователя в меню (меняет сообщение, с которым связан колбэк)
@@ -815,7 +850,7 @@ async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = BACK_TO_MENU
+    user_msg = BACK_TO_TG_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await tg_subs_menu(callback_query)
