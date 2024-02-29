@@ -123,6 +123,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
                           config.reg_mail_text.format(user_reg_code))
         await state.clear()
         await state.set_state(Form.continue_user_reg)
+        await state.update_data(user_email=user_msg.strip())
         await message.answer(f'Введите код из конца письма, '
                              f'который был выслан вам на указанную почту ({user_msg.strip()})', protect_content=False)
     else:
@@ -136,13 +137,14 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
     user_reg_code = user_msg  # TODO: Dencrypt user_msg with key
     if str(chat_id) == str(user_reg_code):
         user_raw = json.loads(message.from_user.model_dump_json())
+        user_email = await state.get_data()
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
         user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None]],
+            [[user_id, user_username, full_name, 'user', 'active', None]],  # TODO: добавить user_email
             columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions'],
         )
         try:
