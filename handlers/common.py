@@ -12,9 +12,9 @@ import config
 from bot_logger import user_logger
 from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
+from module.mail_parse import SmtpSend
 from utils.bot.base import user_in_whitelist
 from utils.data_crypto import AESCrypther
-from module.mail_parse import ImapParse
 
 
 # States
@@ -106,8 +106,7 @@ async def user_registration(message: types.Message, state: FSMContext):
 
         '''
         await state.set_state(Form.new_user_reg)
-        await message.answer('Введите свою корпоративную почту для получения кода '
-                             'необходимый для завершения регистрации')
+        await message.answer('Введите свою корпоративную почту для получения кода ' 'необходимый для завершения регистрации')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
@@ -119,18 +118,30 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if re.search('\w+@sberbank.ru', user_msg.strip()):
         chat_id = str(chat_id)
-        imap_obj = ImapParse()
-        user_reg_code = str(AESCrypther(chat_id).encrypt(chat_id))
-        imap_obj.send_msg(config.mail_username, config.mail_password, user_msg.strip(),
-                          config.reg_mail_text.format(chat_id, user_reg_code[2:-1]))
+        user_reg_code = str(AESCrypther(chat_id).encrypt(chat_id))  # Генерация уникального кода
+
+        # Отправка письма с кодом
+        SS = SmtpSend()
+        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
+        SS.send_msg(
+            config.mail_username,
+            user_msg.strip(),
+            config.mail_register_subject,
+            config.reg_mail_text.format(chat_id, user_reg_code[2:-1]),
+        )
+        SS.close_connection()
+
         await state.clear()
         await state.set_state(Form.continue_user_reg)
         await state.update_data(user_email=user_msg.strip())
-        await message.answer(f'Введите код из конца письма (любой из двух), '
-                             f'который был выслан вам на указанную почту ({user_msg.strip()})', protect_content=False)
+        await message.answer(
+            f'Введите код из конца письма (любой из двух), который был выслан вам на указанную почту ({user_msg.strip()})',
+            protect_content=False,
+        )
     else:
-        await message.answer(f'Некорректный значение. проверьте, что указанная '
-                             f'почта заканчивается на @sberbank.ru', protect_content=False)
+        await message.answer(
+            'Некорректный значение. проверьте, что указанная почта заканчивается на @sberbank.ru', protect_content=False
+        )
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -142,7 +153,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : {user_reg_code}')
     except ValueError:
         '''
-        Я забыл что с коп. почты на телефоне нельзя скопировать текст письма, так что добавим 
+        Я забыл что с коп. почты на телефоне нельзя скопировать текст письма, так что добавим
         проверку user_msg на схожесть с chat_id и отправим его вместе с закодированным
         '''
         user_reg_code = 'ERROR_USER_CODE'
@@ -171,6 +182,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
             await state.clear()
     else:
-        await message.answer('Введен некорректный регистрационный код, '
-                             'проверьте написание и отправьте еще раз', protect_content=False)
+        await message.answer(
+            'Введен некорректный регистрационный код, ' 'проверьте написание и отправьте еще раз', protect_content=False
+        )
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
