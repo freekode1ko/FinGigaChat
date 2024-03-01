@@ -11,7 +11,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'know',
-        'description': 'Спросить у базы знаний',
+        'description': 'Спросить у Базы Знаний',
     },
     {
         'command': 'eco',
