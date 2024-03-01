@@ -115,7 +115,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
-        user_reg_code_1 = str(chat_id + random.randint(1, 100))  # Генерация уникального кода № 1
+        user_reg_code_1 = str(chat_id + random.randint(1, 1000))  # Генерация уникального кода № 1
         user_reg_code_2 = str(AESCrypther(user_reg_code_1).encrypt(user_reg_code_1))  # Генерация уникального кода № 2
 
         # Отправка письма с регистрационными кодами (user_id (key1) и зашифрованный ключ (key2))
@@ -154,8 +154,6 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
         if user_msg == str(user_reg_info['user_reg_code']):
             user_reg_code = user_msg
 
-    print(type(str(user_reg_info['user_reg_code'])), str(user_reg_info['user_reg_code']))
-    print(type(str(user_reg_code)), str(user_reg_code))
     if str(user_reg_info['user_reg_code']) == str(user_reg_code):
         user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
