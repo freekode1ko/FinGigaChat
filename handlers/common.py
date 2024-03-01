@@ -1,4 +1,5 @@
 import json
+import random
 import re
 
 import pandas as pd
@@ -114,23 +115,23 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
-        chat_id = str(chat_id)
-        user_reg_code = str(AESCrypther(chat_id).encrypt(chat_id))  # Генерация уникального кода
+        user_reg_code_1 = str(chat_id + random.randint(1, 100))  # Генерация уникального кода № 1
+        user_reg_code_2 = str(AESCrypther(user_reg_code_1).encrypt(user_reg_code_1))  # Генерация уникального кода № 2
 
-        # Отправка письма с регистрационными кодами (user_id и зашифрованный ключ)
+        # Отправка письма с регистрационными кодами (user_id (key1) и зашифрованный ключ (key2))
         SS = SmtpSend()
         SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
         SS.send_msg(
             config.mail_username,
             user_msg.strip(),
             config.mail_register_subject,
-            config.reg_mail_text.format(chat_id, user_reg_code[2:-1]),
+            config.reg_mail_text.format(user_reg_code_1, user_reg_code_2[2:-1]),
         )
         SS.close_connection()
 
         await state.clear()
         await state.set_state(Form.continue_user_reg)
-        await state.update_data(user_email=user_msg.strip())
+        await state.update_data(user_email=user_msg.strip(), user_reg_code=user_reg_code_1)
         await message.answer('Для завершения регистрации, введите любой код, отправленный вам на почту', protect_content=False)
     else:
         await message.answer('Указана не корпоративная почта', protect_content=False)
@@ -140,8 +141,9 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
 @router.message(Form.continue_user_reg)
 async def validate_user_reg_code(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
+    user_reg_info = await state.get_data()
     try:
-        user_reg_code = AESCrypther(str(chat_id)).decrypt(user_msg.encode('utf-8'))
+        user_reg_code = AESCrypther(str(user_reg_info['user_reg_code'])).decrypt(user_msg.encode('utf-8'))
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : {user_reg_code}')
     except ValueError:
         '''
@@ -149,19 +151,20 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
         проверку user_msg на схожесть с chat_id и отправим его вместе с закодированным
         '''
         user_reg_code = 'ERROR_USER_CODE'
-        if user_msg == str(chat_id):
+        if user_msg == str(user_reg_info['user_reg_code']):
             user_reg_code = user_msg
 
-    if str(chat_id) == str(user_reg_code):
+    print(type(str(user_reg_info['user_reg_code'])), str(user_reg_info['user_reg_code']))
+    print(type(str(user_reg_code)), str(user_reg_code))
+    if str(user_reg_info['user_reg_code']) == str(user_reg_code):
         user_raw = json.loads(message.from_user.model_dump_json())
-        user_email = await state.get_data()
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
         user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None, user_email['user_email']]],
+            [[user_id, user_username, full_name, 'user', 'active', None, user_reg_info['user_email']]],
             columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'],
         )
         try:
