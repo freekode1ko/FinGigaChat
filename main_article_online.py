@@ -77,7 +77,7 @@ def regular_func():
     список ссылок на тг новости об отраслях
     """
 
-    subject_links, tg_links = '', ''
+    subject_links, tg_links = [], []
     df_article = get_article()
 
     if not df_article.empty:
@@ -114,8 +114,10 @@ def regular_func():
             logger.error(f'Ошибка при обработке новостей: {exp}')
             print(f'Ошибка при обработке новостей: {exp}')
             ids = json.dumps({'id': []})
+            subject_links, tg_links = [], []
     else:
         ids = json.dumps({'id': []})
+        subject_links, tg_links = [], []
         logger.error('Не были получены новости')
         print('Не были получены новости')
 
