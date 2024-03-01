@@ -102,11 +102,8 @@ async def user_registration(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
-        '''
-
-        '''
         await state.set_state(Form.new_user_reg)
-        await message.answer('Введите свою корпоративную почту для получения кода ' 'необходимый для завершения регистрации')
+        await message.answer('Введите свою корпоративную почту для получения кода необходимый для завершения регистрации')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
@@ -120,7 +117,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         chat_id = str(chat_id)
         user_reg_code = str(AESCrypther(chat_id).encrypt(chat_id))  # Генерация уникального кода
 
-        # Отправка письма с кодом
+        # Отправка письма с регистрационными кодами (user_id и зашифрованный ключ)
         SS = SmtpSend()
         SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
         SS.send_msg(
