@@ -1,5 +1,3 @@
-import urllib.parse
-import requests
 
 from aiogram import Router, types
 from aiogram.filters import Command
@@ -9,9 +7,8 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 import module.gigachat as gig
 from bot_logger import logger, user_logger
-from constants.bot.constants import giga_ans_footer, giga_rag_footer
+from constants.bot.constants import giga_ans_footer
 from utils.bot.base import user_in_whitelist
-import config
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -72,37 +69,17 @@ async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> N
     :param message: Message от пользователя
     :param first_user_query: запрос от пользователя вне режима gigachat
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
+    user_msg = first_user_query if first_user_query else message.text
+    chat_id, full_name = message.chat.id, message.from_user.full_name
     await message.bot.send_chat_action(message.chat.id, 'typing')
-    response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
-    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
-
-
-def route_query(chat_id: int, full_name: str, user_msg: str):
-    """
-    Будущая маршрутизация рага(ов) и запросов к гиге
-    Будет изменяться
-    """
 
     try:
-        query = urllib.parse.quote(user_msg)
-        query_part = f'queries?query={query}'
-        rag_response = requests.get(
-            url=config.BASE_QABANKER_URL.format(query_part),
-            timeout=config.POST_TO_SERVICE_TIMEOUT)
-        if rag_response.status_code == 200:
-            rag_answer = rag_response.text
-            response = f'{rag_answer}\n\n{giga_rag_footer}'
-            user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat RAG ответил: "{rag_answer}"')
-        else:
-            giga_answer = chat.get_giga_answer(text=user_msg)
-            user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_answer}"')
-            response = f'{giga_answer}\n\n{giga_ans_footer}'
+        giga_answer = chat.get_giga_answer(text=user_msg)
+        user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_answer}"')
+        response = f'{giga_answer}\n\n{giga_ans_footer}'
     except Exception as e:
         logger.error(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
         user_logger.error(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
         response = 'Извините, я пока не могу ответить на ваш запрос'
 
-    return response
-
+    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)

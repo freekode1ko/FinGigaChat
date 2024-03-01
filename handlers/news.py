@@ -16,10 +16,10 @@ from constants.bot.aliases import (
     eco_aliases,
     exchange_aliases,
     metal_aliases,
-    view_aliases, help_aliases, gigachat_aliases,
+    view_aliases, help_aliases, gigachat_aliases, rag_aliases
 )
 from constants.bot.constants import PATH_TO_COMMODITY_GRAPH
-from handlers import common, quotes, gigachat
+from handlers import common, quotes, gigachat, rag
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
@@ -191,6 +191,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
     buttons = [
         [types.KeyboardButton(text=cancel_command)],
         [types.KeyboardButton(text='Спросить у GigaChat')],
+        [types.KeyboardButton(text='Спросить у Базы Знаний')],
     ]
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
@@ -299,6 +300,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             aliases_dict = {
                 **{alias: (common.help_handler, {}) for alias in help_aliases},
                 **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in gigachat_aliases},
+                **{alias: (rag.set_rag_mode, {'state': state}) for alias in rag_aliases},
                 **{alias: (quotes.bonds_info, {}) for alias in bonds_aliases},
                 **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
                 **{alias: (quotes.metal_info, {}) for alias in metal_aliases},
@@ -312,6 +314,8 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             else:
                 await state.set_state(gigachat.GigaChatState.gigachat_query)
                 await state.update_data(gigachat_query=message.text)
+                await state.set_state(rag.RagState.rag_query)
+                await state.update_data(rag_query=message.text)
                 await send_nearest_subjects(message)
 
     else:

@@ -301,8 +301,9 @@ class ArticleProcess:
 
     def save_tables(self) -> list:
         """
-        Save article, get ids for original df from db,
-        And call make_save method for relation table.
+        Сохраняет новости, получает id сохраненных новостей из бд,
+        вызывает методы по сохранению таблиц отношений
+        return: список ссылок сохраненных новостей
         """
 
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
@@ -362,7 +363,10 @@ class ArticleProcess:
         self._logger.info(f'В таблицу relation_{name}_article добавлено {len(df_relation_subject_article)} строк')
 
     def save_tg_tables(self) -> list:
-        """Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами"""
+        """
+        Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами
+        return: список ссылок сохраненных новостей
+        """
         subject = 'telegram'
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         # make article table and save it in database

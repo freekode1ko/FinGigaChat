@@ -14,7 +14,7 @@ from configs import newsletter_config
 from bot_logger import logger
 from constants.bot.commands import PUBLIC_COMMANDS
 from database import engine
-from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry
+from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag
 from utils.bot.base import (
     next_weekday_time, wait_until,
 )
@@ -88,6 +88,7 @@ async def start_bot():
         gigachat.router,
         referencebook.router,
         industry.router,
+        rag.router,
         news.router,
     )
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
