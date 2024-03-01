@@ -115,11 +115,12 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
+        # TODO: оставить только 1 ключ и сократить количество знаков до 4-5
         user_reg_code_1 = str(chat_id + random.randint(1, 1000))  # Генерация уникального кода № 1
         user_reg_code_2 = str(AESCrypther(user_reg_code_1).encrypt(user_reg_code_1))  # Генерация уникального кода № 2
 
         # Отправка письма с регистрационными кодами (user_id (key1) и зашифрованный ключ (key2))
-        SS = SmtpSend()
+        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
         SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
         SS.send_msg(
             config.mail_username,
