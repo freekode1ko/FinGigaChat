@@ -103,7 +103,7 @@ async def user_registration(message: types.Message, state: FSMContext):
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
         await state.set_state(Form.new_user_reg)
-        await message.answer('Введите свою корпоративную почту для получения кода необходимый для завершения регистрации')
+        await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
@@ -113,7 +113,7 @@ async def user_registration(message: types.Message, state: FSMContext):
 async def ask_user_mail(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    if re.search('\w+@sberbank.ru', user_msg.strip()):
+    if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
         chat_id = str(chat_id)
         user_reg_code = str(AESCrypther(chat_id).encrypt(chat_id))  # Генерация уникального кода
 
@@ -131,14 +131,9 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         await state.clear()
         await state.set_state(Form.continue_user_reg)
         await state.update_data(user_email=user_msg.strip())
-        await message.answer(
-            f'Введите код из конца письма (любой из двух), который был выслан вам на указанную почту ({user_msg.strip()})',
-            protect_content=False,
-        )
+        await message.answer('Для завершения регистрации, введите любой код, отправленный вам на почту', protect_content=False)
     else:
-        await message.answer(
-            'Некорректный значение. проверьте, что указанная почта заканчивается на @sberbank.ru', protect_content=False
-        )
+        await message.answer('Указана не корпоративная почта', protect_content=False)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -175,11 +170,9 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await state.clear()
         except Exception as e:
-            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже. ' f'\n\n{e}', protect_content=False)
+            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже.\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
             await state.clear()
     else:
-        await message.answer(
-            'Введен некорректный регистрационный код, ' 'проверьте написание и отправьте еще раз', protect_content=False
-        )
+        await message.answer('Введен некорректный регистрационный код', protect_content=False)
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
