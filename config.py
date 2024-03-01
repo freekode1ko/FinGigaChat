@@ -62,8 +62,18 @@ api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 RESEARCH_GETTING_TIMES_LIST = [
-    '08:00', '10:00', '12:00', '14:00', '16:00',
-    '17:00', '17:10', '17:20', '17:30', '17:40', '17:50', '18:00',
+    '08:00',
+    '10:00',
+    '12:00',
+    '14:00',
+    '16:00',
+    '17:00',
+    '17:10',
+    '17:20',
+    '17:30',
+    '17:40',
+    '17:50',
+    '18:00',
 ]
 
 QUOTES_PROCESSING_PROC_NUM = 2
@@ -102,6 +112,16 @@ INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
 mail_imap_server = 'imap.mail.ru'
+mail_smpt_server = 'smtp.mail.ru'
+mail_smpt_port = 465
+mail_register_subject = 'Регистрация в AI-помощнике'
+
+reg_mail_text = (
+    'Привет!\nВы получили данное письмо потому, что указали данный адрес в AI-помощнике Банкира.\n\n'
+    'Коды для завершения регистрации:\n\n{}\n{}\n\n'
+    'Никому не сообщайте эти коды.'
+)
+
 summarization_prompt = (
     'Ты - суммаризатор новостной ленты.'
     'На вход тебе будут подаваться новости.'
