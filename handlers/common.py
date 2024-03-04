@@ -15,7 +15,8 @@ from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
 from module.mail_parse import SmtpSend
 from utils.bot.base import user_in_whitelist
-from utils.data_crypto import AESCrypther
+
+# from utils.data_crypto import AESCrypther
 
 
 # States
@@ -117,7 +118,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
     if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
         # TODO: оставить только 1 ключ и сократить количество знаков до 4-5
         user_reg_code_1 = str(chat_id + random.randint(1, 1000))  # Генерация уникального кода № 1
-        user_reg_code_2 = str(AESCrypther(user_reg_code_1).encrypt(user_reg_code_1))  # Генерация уникального кода № 2
+        # user_reg_code_2 = str(AESCrypther(user_reg_code_1).encrypt(user_reg_code_1))  # Генерация уникального кода № 2
 
         # Отправка письма с регистрационными кодами (user_id (key1) и зашифрованный ключ (key2))
         SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
@@ -126,7 +127,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
             config.mail_username,
             user_msg.strip(),
             config.mail_register_subject,
-            config.reg_mail_text.format(user_reg_code_1, user_reg_code_2[2:-1]),
+            config.reg_mail_text.format(user_reg_code_1),
         )
         SS.close_connection()
 
@@ -143,18 +144,18 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
 async def validate_user_reg_code(message: types.Message, state: FSMContext):
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
     user_reg_info = await state.get_data()
-    try:
-        user_reg_code = AESCrypther(str(user_reg_info['user_reg_code'])).decrypt(user_msg.encode('utf-8'))
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : {user_reg_code}')
-    except ValueError:
-        '''
-        Я забыл что с коп. почты на телефоне нельзя скопировать текст письма, так что добавим
-        проверку user_msg на схожесть с chat_id и отправим его вместе с закодированным
-        '''
-        user_reg_code = 'ERROR_USER_CODE'
-        if user_msg == str(user_reg_info['user_reg_code']):
-            user_reg_code = user_msg
-
+    # try:
+    #     user_reg_code = AESCrypther(str(user_reg_info['user_reg_code'])).decrypt(user_msg.encode('utf-8'))
+    #     user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : {user_reg_code}')
+    # except ValueError:
+    #     '''
+    #     Я забыл что с коп. почты на телефоне нельзя скопировать текст письма, так что добавим
+    #     проверку user_msg на схожесть с chat_id и отправим его вместе с закодированным
+    #     '''
+    #     user_reg_code = 'ERROR_USER_CODE'
+    #     if user_msg == str(user_reg_info['user_reg_code']):
+    #         user_reg_code = user_msg
+    user_reg_code = user_msg
     if str(user_reg_info['user_reg_code']) == str(user_reg_code):
         user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
