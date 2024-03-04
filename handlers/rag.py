@@ -21,7 +21,7 @@ class RagState(StatesGroup):
     rag_query = State()
 
 
-@router.message(Command('know'))
+@router.message(Command('knowledgebase'))
 async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС)
@@ -96,8 +96,8 @@ def route_query(chat_id: int, full_name: str, user_msg: str):
         else:
             response = 'Извините, я пока не могу ответить на ваш запрос'
     except Exception as e:
-        logger.error(f'ERROR : ВОС не сформировал ответ по причине: {e}"')
-        user_logger.error(f'*{chat_id}* {full_name} - "{user_msg}" : ВОС не сформировал ответ по причине: {e}"')
+        logger.critical(f'ERROR : ВОС не сформировал ответ по причине: {e}"')
+        user_logger.critical(f'*{chat_id}* {full_name} - "{user_msg}" : ВОС не сформировал ответ по причине: {e}"')
         response = 'Извините, я пока не могу ответить на ваш запрос'
 
     return response

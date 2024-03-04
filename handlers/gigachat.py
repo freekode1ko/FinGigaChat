@@ -78,8 +78,8 @@ async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> N
         user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_answer}"')
         response = f'{giga_answer}\n\n{giga_ans_footer}'
     except Exception as e:
-        logger.error(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
-        user_logger.error(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
+        logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
+        user_logger.critical(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
         response = 'Извините, я пока не могу ответить на ваш запрос'
 
     await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)

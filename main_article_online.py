@@ -140,6 +140,7 @@ def post_ids(ids):
 
 
 def post_new_links(subject_links: list, tg_links: list):
+    logger.debug('Отправка ссылок сохраненных новостей на сервер')
     links_dict = {
             "subject_links": subject_links,  # ссылки на новости по клиентам и коммодам
             "tg_links": tg_links  # ссылки на новости из тг каналов
@@ -153,7 +154,6 @@ def post_new_links(subject_links: list, tg_links: list):
         )
 
         msg = response.json()['message']
-        print(msg)
         logger.info(msg)
     except Exception as e:
         print(f'Ошибка при отправке ссылок новостей в QABanker: {e}')
