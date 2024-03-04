@@ -109,6 +109,13 @@ def get_driver(logger: Logger.logger = None, connect_attempt_number: int = 1) ->
         time.sleep(5)
         firefox_options = webdriver.FirefoxOptions()
         firefox_options.add_argument(f'--user-agent={config.user_agents[0]}')
+        firefox_options.add_argument('start-maximized')
+        firefox_options.add_argument('disable-infobars')
+        firefox_options.add_argument('--disable-extensions')
+        firefox_options.add_argument('--no-sandbox')
+        firefox_options.add_argument('--disable-application-cache')
+        firefox_options.add_argument('--disable-gpu')
+        firefox_options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Remote(command_executor=config.SELENIUM_COMMAND_EXECUTOR, options=firefox_options)
     except Exception as e:
         logger.error('При подключении к selenium произошла ошибка: %s', e)
