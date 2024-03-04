@@ -65,8 +65,8 @@ SECRET_COMMANDS: List[dict] = [
         'description': 'Отправить сообщение всем пользователем от имени бота',
     },
     {
-        'command': 'addmetowhitelist',
-        'description': 'Добавить в список пользователей',
+        'command': 'addme',
+        'description': 'Зарегистрироваться',
     },
     {
         'command': 'show_article',
