@@ -140,7 +140,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         await state.clear()
         await state.set_state(Form.continue_user_reg)
         await state.update_data(user_email=user_msg.strip(), user_reg_code=user_reg_code_1)
-        await message.answer('Для завершения регистрации, введите любой код, отправленный вам на почту', protect_content=False)
+        await message.answer('Для завершения регистрации, введите код, отправленный вам на почту', protect_content=False)
     else:
         await message.answer('Указана не корпоративная почта', protect_content=False)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
@@ -178,6 +178,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await state.clear()
+            await help_handler(message)
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже.\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
