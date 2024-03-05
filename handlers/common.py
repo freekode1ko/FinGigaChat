@@ -32,16 +32,16 @@ router = Router()
 
 
 @router.message(Command('start', 'help'))
-async def help_handler(message: types.Message) -> None:
+async def help_handler(message: types.Message, state: FSMContext) -> None:
     """
     Вывод приветственного окна, с описанием бота и лицами для связи
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state:
     """
-    help_text = config.help_text
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
     if await user_in_whitelist(message.from_user.model_dump_json()):
+        help_text = config.help_text
         to_pin = await message.answer(help_text, protect_content=False)
         msg_id = to_pin.message_id
         await message.bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
@@ -49,6 +49,7 @@ async def help_handler(message: types.Message) -> None:
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+        await user_registration(message, state)
 
 
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
@@ -89,7 +90,6 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-@router.message(Command('addme'))
 async def user_registration(message: types.Message, state: FSMContext):
     """
     Регистрация нового пользователя.
@@ -105,7 +105,9 @@ async def user_registration(message: types.Message, state: FSMContext):
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
         await state.set_state(Form.new_user_reg)
-        await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
+        new_user_start = config.new_user_start
+        await message.answer(new_user_start, protect_content=False)
+        # await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
@@ -134,7 +136,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         await state.clear()
         await state.set_state(Form.continue_user_reg)
         await state.update_data(user_email=user_msg.strip(), user_reg_code=user_reg_code_1)
-        await message.answer('Для завершения регистрации, введите любой код, отправленный вам на почту', protect_content=False)
+        await message.answer('Для завершения регистрации, введите код, отправленный вам на почту', protect_content=False)
     else:
         await message.answer('Указана не корпоративная почта', protect_content=False)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
@@ -171,6 +173,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
+            await help_handler(message, state)
             await state.clear()
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже.\n\n{e}', protect_content=False)
