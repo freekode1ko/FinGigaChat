@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from typing import List
 
 import pandas as pd
 from aiogram import Bot, types
@@ -12,7 +13,7 @@ from database import engine
 from module.article_process import ArticleProcess
 from utils.bot.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.bot.industry import get_tg_channel_news_msg, group_news_by_tg_channels
-from utils.db_api import research_source
+from utils.db_api import research_source, message
 from utils.db_api.industry import get_industry_tg_news
 
 
@@ -30,6 +31,8 @@ async def tg_newsletter(
 
     # получим словарь id отрасли и ее название (в цикле, потому что справочник может пополняться)
     industry_dict = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
+    saved_messages: List[dict] = []
+    newsletter_type = 'tg_subscriptions_news'
 
     for index, user in user_df.iterrows():
         user_id, user_name = user['user_id'], user['username']
@@ -42,19 +45,24 @@ async def tg_newsletter(
                 continue
 
             start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по отрасли <b>{industry_name.capitalize()}</b>:'
-            await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
+            msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
+            saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 
             tg_news = group_news_by_tg_channels(tg_news)
 
             for tg_chan_name, articles in tg_news.items():
                 msg_text = get_tg_channel_news_msg(tg_chan_name, articles)
-                await bot_send_msg(bot, user_id, msg_text)
+                messages = await bot_send_msg(bot, user_id, msg_text)
+                for m in messages:
+                    saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
 
             user_logger.debug(
                 f'*{user_id}* Пользователю {user_name} пришла рассылка сводки новостей из telegram каналов по отрасли '
                 f'{industry_name}. '
             )
             await asyncio.sleep(1.1)
+
+    message.add_all(saved_messages)
 
 
 async def subscriptions_newsletter(
@@ -78,12 +86,15 @@ async def subscriptions_newsletter(
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
     # получим словари новостных объектов {id: [альтернативные названия], ...}
     industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
+    saved_messages: List[dict] = []
+    newsletter_type = 'subscriptions_news'
 
     row_number = 0
     for index, user in user_df.iterrows():
         user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions']
         if not subscriptions:
             continue
+
         subscriptions = subscriptions.split(', ')
         logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
 
@@ -103,17 +114,21 @@ async def subscriptions_newsletter(
             try:
                 industry_name_list = user_industry_df['industry'].drop_duplicates().values.tolist()
                 client_commodity_name_list = user_client_comm_df['name'].drop_duplicates().values.tolist()
-                await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:')
+                msg_title = await bot.send_message(user_id, text='Ваша новостная подборка по подпискам:')
+                saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 
                 for industry in industry_name_list:
                     articles = user_industry_df.loc[user_industry_df['industry'] == industry]
                     msg = ArticleProcess.make_format_industry_msg(articles.values.tolist())
-                    await bot_send_msg(bot, user_id, msg)
+                    messages = await bot_send_msg(bot, user_id, msg)
+                    for m in messages:
+                        saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
 
                 for subject in client_commodity_name_list:
                     articles = user_client_comm_df.loc[user_client_comm_df['name'] == subject]
                     _, msg, _ = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
-                    await bot.send_message(user_id, text=msg, parse_mode='HTML', disable_web_page_preview=True)
+                    msg = await bot.send_message(user_id, text=msg, parse_mode='HTML', disable_web_page_preview=True)
+                    saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
                 user_logger.debug(
                     f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. '
@@ -127,6 +142,8 @@ async def subscriptions_newsletter(
                 user_logger.error(f'ERROR *{user_id}* {user_name} - {e}')
         else:
             user_logger.info(f'Нет новых новостей по подпискам для: {user_name}*{user_id}*')
+
+    message.add_all(saved_messages)
 
 
 async def weekly_pulse_newsletter(
@@ -145,11 +162,11 @@ async def weekly_pulse_newsletter(
     # получаем текст рассылки
     if newsletter_type == 'weekly_result':
         # рассылается в пятницу
-        check_days = 1
+        check_days = 2
         title, newsletter, img_path_list = dt.Newsletter.make_weekly_result()
     elif newsletter_type == 'weekly_event':
         # рассылается в пн
-        check_days = 3
+        check_days = 4
         title, newsletter, img_path_list = dt.Newsletter.make_weekly_event()
     else:
         return
@@ -164,17 +181,25 @@ async def weekly_pulse_newsletter(
 
     weekly_pulse_date_str = last_update_time.strftime(config.BASE_DATE_FORMAT)
     weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
+    saved_messages: List[dict] = []
 
     for _, user_data in user_df.iterrows():
-        user_id, user_name = user_data['id'], user_data['username']
+        user_id, user_name = user_data['user_id'], user_data['username']
         media = MediaGroupBuilder(caption=weekly_pulse_date_str)
         for path in img_path_list:
             media.add_photo(types.FSInputFile(path))
         try:
-            await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-            await bot.send_media_group(user_id, media=media.build(), protect_content=True)
+            msg_title: types.Message = await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
+            msg_photos: List[types.Message] = await bot.send_media_group(user_id, media=media.build(), protect_content=True)
+
+            saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
+            for msg in msg_photos:
+                saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+
             user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка "{title}"')
         # except BotBlocked:
         #     user_logger.warning(f'*{user_id}* Пользователь не получил рассылку "{title}" : бот в блоке')
         except Exception as e:
             logger.error(f'ERROR *{user_id}* Пользователь не получил рассылку "{title}" : {e}')
+
+    message.add_all(saved_messages)

@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta, date
 from math import ceil
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 import pandas as pd
 from aiogram import Bot, types
@@ -16,7 +16,7 @@ from database import engine
 from module.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> None:
+async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> List[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -25,10 +25,12 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
+    return: List[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
     current_batch = prefix
     max_batch_length = 4096
+    messages: List[types.Message] = []
 
     for paragraph in msg.split(delimiter):
         if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
@@ -41,10 +43,12 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
         batches.append(current_batch.strip())
 
     for batch in batches:
-        await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
+        msg = await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
+        messages.append(msg)
+    return messages
 
 
-async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> None:
+async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> types.Message:
     """
     Рассылка текста и/или файлов(документы и фотокарточки) на выбранного пользователя
 
@@ -53,16 +57,19 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     :param message_text: Текст для отправки или подпись к файлу
     :param file_name: Текст содержащий в себе название сохраненного файла
     :param file_type: Тип файла для отправки. Может быть None, str("Document") и str("Picture")
+    return: aiogram.types.Message отправленное сообщение
     """
     if file_name:
         if file_type == 'photo':
             file = types.FSInputFile('sources/{}.jpg'.format(file_name))
-            await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
-        elif file_type == 'document':
+            msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+        else:
             file = types.FSInputFile('sources/{}'.format(file_name))
-            await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
     else:
-        await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+
+    return msg
 
 
 async def user_in_whitelist(user: str) -> bool:
@@ -400,3 +407,17 @@ def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: in
 async def wait_until(to_dt: datetime) -> None:
     """Спит до переданного datetime"""
     await asyncio.sleep((to_dt - datetime.now()).total_seconds())
+
+
+async def send_or_edit(
+        message: Union[types.CallbackQuery, types.Message],
+        msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
+) -> None:
+    # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
+    if isinstance(message, types.Message):
+        await message.answer(msg_text, reply_markup=keyboard)
+
+    # Если CallbackQuery - изменяем это сообщение
+    else:
+        call = message
+        await call.message.edit_text(msg_text, reply_markup=keyboard)

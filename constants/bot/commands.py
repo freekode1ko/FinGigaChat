@@ -31,7 +31,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'newsletter',
-        'description': 'Weekly pulse',
+        'description': 'События недели',
     },
     {
         'command': 'referencebook',
@@ -39,15 +39,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'subscriptions_menu',
-        'description': 'Меню редактирования подписок',
-    },
-    {
-        'command': 'myactivesubscriptions',
-        'description': 'Список активных подписок (Скоро будет удалено)',
-    },
-    {
-        'command': 'addnewsubscriptions',
-        'description': 'Создать новый набор подписок (Скоро будет удалено)',
+        'description': 'Меню подписок',
     },
     {
         'command': 'industry_tgnews',
@@ -55,7 +47,7 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'tg_subscriptions_menu',
-        'description': 'Меню редактирования подписок на telegram каналы',
+        'description': 'Подписки на telegram каналы',
     },
     {
         'command': 'delete_article',
@@ -73,8 +65,8 @@ SECRET_COMMANDS: List[dict] = [
         'description': 'Отправить сообщение всем пользователем от имени бота',
     },
     {
-        'command': 'addmetowhitelist',
-        'description': 'Добавить в список пользователей',
+        'command': 'addme',
+        'description': 'Зарегистрироваться',
     },
     {
         'command': 'show_article',
@@ -85,11 +77,15 @@ SECRET_COMMANDS: List[dict] = [
         'description': 'Изменить краткое содержание',
     },
     {
-        'command': 'daylynews',
-        'description': 'Краткая сводка новостей',
+        'command': 'dailynews',
+        'description': 'Рассылка краткой сводки новостей всем пользователям',
     },
     {
         'command': 'start',
         'description': 'Начать работу с ботом',
+    },
+    {
+        'command': 'delete_newsletter_messages',
+        'description': 'Удаление сообщений, отправленных с помощью пассивной рассылки',
     },
 ]

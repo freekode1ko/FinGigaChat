@@ -62,8 +62,18 @@ api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 RESEARCH_GETTING_TIMES_LIST = [
-    '08:00', '10:00', '12:00', '14:00', '16:00',
-    '17:00', '17:10', '17:20', '17:30', '17:40', '17:50', '18:00',
+    '08:00',
+    '10:00',
+    '12:00',
+    '14:00',
+    '16:00',
+    '17:00',
+    '17:10',
+    '17:20',
+    '17:30',
+    '17:40',
+    '17:50',
+    '18:00',
 ]
 
 QUOTES_PROCESSING_PROC_NUM = 2
@@ -87,10 +97,12 @@ BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
-POST_TO_GIGAPARSER_TIMEOUT = 60 * 10
+POST_TO_GIGAPARSER_TIMEOUT = 1200
 POST_TO_GIGAPARSER_ATTEMPTS = 3
 POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
+
+DELETE_TG_MESSAGES_TIMEOUT = 5
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
@@ -100,6 +112,22 @@ INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'
 mail_imap_server = 'imap.mail.ru'
+mail_smpt_server = 'smtp.mail.ru'
+mail_smpt_port = 465
+mail_register_subject = 'Регистрация в AI-помощнике'
+
+reg_mail_text = (
+    'Добрый день!\n\nВы получили данное письмо, потому что указали данный адрес в AI-помощнике Банкира.\n\n'
+    'Код для завершения регистрации:\n\n{}\n'
+    'Никому не сообщайте этот код.'
+)
+
+new_user_start = (
+    'Рады приветствовать Вас в AI-помощнике банкира!\n'
+    'Для того, чтобы начать пользоваться ботом нужно пройти идентификацию.\n\n'
+    'Введите корпоративную почту, на нее будет выслан код для завершения регистрации.'
+)
+
 summarization_prompt = (
     'Ты - суммаризатор новостной ленты.'
     'На вход тебе будут подаваться новости.'
@@ -119,9 +147,8 @@ summarization_prompt = (
 )
 
 help_text = (
-    'Всем привет! Рады приветствовать Вас в AI-помощнике банкира!\n\n'
-    'Для того, чтобы начать пользоваться ботом нужно ввести специальную команду для идентификации. '
-    'Вы ее можете уточнить у Максима Королькова. \n\nБот позволяет оперативно получить информацию о ситуации на рынке, '
+    'Рады приветствовать Вас в AI-помощнике банкира!\n\n'
+    'Бот позволяет оперативно получить информацию о ситуации на рынке, '
     'в отрасли, у клиента в сжатом виде.\n\nНа данный момент в AI-помощнике доступен следующий функционал и контент:\n'
     '—> новости по отраслям, клиентам, бенефициарам, ЛПР, commodities из более 200 источников '
     'включая ключевые отраслевые телеграмм каналы (есть возможность настроить ежедневную рассылку);\n'
@@ -149,13 +176,13 @@ help_text = (
     'Закрепите бота в своей ленте, чтобы не пропустить самый полезный контент и новости! '
     'Для этого сделайте долгое нажатие на бота в своей ленте новостей и в выпадающем списке нажмите «закрепить».\n\n'
     'Бот постоянно совершенствуется и дообучается, поэтому присылайте, пожалуйста, '
-    'обратную связь по контенту, функционалу и новым идеям Максиму Королькову @korolkov_m и Александру Юдину.'
+    'обратную связь по контенту, функционалу и новым идеям команде проекта.'
 )
 
 table_link = 'https://metals-wire.com/data'
 
 charts_links = {
-    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/' '?to=date_date&countBack=1825',
+    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
     'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
 }
 

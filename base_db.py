@@ -4,9 +4,16 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 
 import config
-from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
-    CLIENT_ALTERNATIVE_NAME_PATH, COMMODITY_ALTERNATIVE_NAME_PATH, CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, \
-    TELEGRAM_CHANNELS_DATA_PATH, QUOTES_SOURCES_PATH
+from config import (
+    CLIENT_ALTERNATIVE_NAME_PATH,
+    CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE,
+    CLIENT_NAME_PATH,
+    COMMODITY_ALTERNATIVE_NAME_PATH,
+    COMMODITY_NAME_PATH,
+    QUOTES_SOURCES_PATH,
+    TELEGRAM_CHANNELS_DATA_PATH,
+    psql_engine,
+)
 
 # CLIENT_NAME_PATH = 'data/name/client_name.csv'
 # COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
@@ -16,7 +23,7 @@ from config import psql_engine, CLIENT_NAME_PATH, COMMODITY_NAME_PATH, \
 
 
 def make_alternative_tables(engine, subject, filepath):
-    """ Make values for table with alternative names """
+    """Make values for table with alternative names"""
 
     df_alternative_names = pd.read_excel(filepath, index_col=False)
     df_alternative_names = df_alternative_names.applymap(lambda x: x.lower().strip() if isinstance(x, str) else x)
@@ -29,7 +36,7 @@ def make_alternative_tables(engine, subject, filepath):
         subject_id = df_subject['id'][df_subject['name'] == main_name].values[0]
         names_list.append(f"({subject_id}, '{names}')")
 
-    values = ", ".join(names_list)
+    values = ', '.join(names_list)
     query_insert = f'INSERT INTO public.{subject}_alternative ({subject}_id, other_names) VALUES {values}'
 
     return query_insert
@@ -37,192 +44,230 @@ def make_alternative_tables(engine, subject, filepath):
 
 def main(engine):
     # query to make client table
-    query_client = ('CREATE TABLE IF NOT EXISTS public.client '
-                    '('
-                    'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                    '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                    'name text NOT NULL,'
-                    'CONSTRAINT client_pkey PRIMARY KEY (id)'
-                    ')'
-                    'TABLESPACE pg_default;')
+    query_client = (
+        'CREATE TABLE IF NOT EXISTS public.client '
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'name text NOT NULL,'
+        'CONSTRAINT client_pkey PRIMARY KEY (id)'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # query to make commodity table
-    query_commodity = ('CREATE TABLE IF NOT EXISTS public.commodity '
-                       '('
-                       'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                       '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                       'name text NOT NULL,'
-                       'CONSTRAINT commodity_pkey PRIMARY KEY (id)'
-                       ')'
-                       'TABLESPACE pg_default;')
+    query_commodity = (
+        'CREATE TABLE IF NOT EXISTS public.commodity '
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'name text NOT NULL,'
+        'CONSTRAINT commodity_pkey PRIMARY KEY (id)'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # query to make article table
-    query_article = ('CREATE TABLE IF NOT EXISTS public.article'
-                     '('
-                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                     '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                     'link text NOT NULL,'
-                     'title text,'
-                     'date timestamp without time zone NOT NULL,'
-                     'text text NOT NULL,'
-                     'text_sum text,'
-                     'CONSTRAINT article_pkey PRIMARY KEY (id)'
-                     ')'
-                     'TABLESPACE pg_default;')
+    query_article = (
+        'CREATE TABLE IF NOT EXISTS public.article'
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'link text NOT NULL,'
+        'title text,'
+        'date timestamp without time zone NOT NULL,'
+        'text text NOT NULL,'
+        'text_sum text,'
+        'CONSTRAINT article_pkey PRIMARY KEY (id)'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create relation_client_article
-    query_relation_client = ('CREATE TABLE IF NOT EXISTS public.relation_client_article'
-                             '('
-                             'client_id integer NOT NULL,'
-                             'article_id integer NOT NULL,'
-                             'client_score integer,'
-                             'CONSTRAINT relation_client_article_pkey PRIMARY KEY (client_id, article_id), '
-                             'CONSTRAINT client_id FOREIGN KEY (client_id)'
-                             '  REFERENCES public.client (id) MATCH SIMPLE'
-                             '  ON UPDATE CASCADE'
-                             '  ON DELETE CASCADE,'
-                             'CONSTRAINT article_id FOREIGN KEY (article_id)'
-                             '  REFERENCES public.article (id) MATCH SIMPLE'
-                             '  ON UPDATE CASCADE'
-                             '  ON DELETE CASCADE'
-                             ')'
-                             'TABLESPACE pg_default;')
+    query_relation_client = (
+        'CREATE TABLE IF NOT EXISTS public.relation_client_article'
+        '('
+        'client_id integer NOT NULL,'
+        'article_id integer NOT NULL,'
+        'client_score integer,'
+        'CONSTRAINT relation_client_article_pkey PRIMARY KEY (client_id, article_id), '
+        'CONSTRAINT client_id FOREIGN KEY (client_id)'
+        '  REFERENCES public.client (id) MATCH SIMPLE'
+        '  ON UPDATE CASCADE'
+        '  ON DELETE CASCADE,'
+        'CONSTRAINT article_id FOREIGN KEY (article_id)'
+        '  REFERENCES public.article (id) MATCH SIMPLE'
+        '  ON UPDATE CASCADE'
+        '  ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create relation_commodity_article
-    query_relation_commodity = ('CREATE TABLE IF NOT EXISTS relation_commodity_article '
-                                '('
-                                'commodity_id integer NOT NULL,'
-                                'article_id integer NOT NULL,'
-                                'commodity_score integer, '
-                                'CONSTRAINT relation_commodity_article_pkey PRIMARY KEY (commodity_id, article_id),'
-                                'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
-                                '   REFERENCES public.commodity (id) MATCH SIMPLE'
-                                '   ON UPDATE CASCADE'
-                                '   ON DELETE CASCADE, '
-                                'CONSTRAINT article_id FOREIGN KEY (article_id)'
-                                '   REFERENCES public.article (id) MATCH SIMPLE'
-                                '   ON UPDATE CASCADE'
-                                '   ON DELETE CASCADE'
-                                ')'
-                                'TABLESPACE pg_default;')
+    query_relation_commodity = (
+        'CREATE TABLE IF NOT EXISTS relation_commodity_article '
+        '('
+        'commodity_id integer NOT NULL,'
+        'article_id integer NOT NULL,'
+        'commodity_score integer, '
+        'CONSTRAINT relation_commodity_article_pkey PRIMARY KEY (commodity_id, article_id),'
+        'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
+        '   REFERENCES public.commodity (id) MATCH SIMPLE'
+        '   ON UPDATE CASCADE'
+        '   ON DELETE CASCADE, '
+        'CONSTRAINT article_id FOREIGN KEY (article_id)'
+        '   REFERENCES public.article (id) MATCH SIMPLE'
+        '   ON UPDATE CASCADE'
+        '   ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create client alternative names
-    query_client_alternative = ('CREATE TABLE IF NOT EXISTS public.client_alternative'
-                                '('
-                                'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                                '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                                'client_id integer NOT NULL,'
-                                'other_names text,'
-                                'CONSTRAINT client_alternative_pkey PRIMARY KEY (id),'
-                                'CONSTRAINT client_id FOREIGN KEY (client_id)'
-                                '   REFERENCES public.client (id) MATCH SIMPLE'
-                                '   ON UPDATE CASCADE'
-                                '   ON DELETE CASCADE'
-                                ')'
-                                'TABLESPACE pg_default;')
+    query_client_alternative = (
+        'CREATE TABLE IF NOT EXISTS public.client_alternative'
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'client_id integer NOT NULL,'
+        'other_names text,'
+        'CONSTRAINT client_alternative_pkey PRIMARY KEY (id),'
+        'CONSTRAINT client_id FOREIGN KEY (client_id)'
+        '   REFERENCES public.client (id) MATCH SIMPLE'
+        '   ON UPDATE CASCADE'
+        '   ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create commodity alternative names
-    query_commodity_alternative = ('CREATE TABLE IF NOT EXISTS public.commodity_alternative'
-                                   '('
-                                   'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                                   '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                                   'commodity_id integer NOT NULL,'
-                                   'other_names text,'
-                                   'CONSTRAINT commodity_alternative_pkey PRIMARY KEY (id),'
-                                   'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
-                                   '   REFERENCES public.commodity (id) MATCH SIMPLE'
-                                   '   ON UPDATE CASCADE'
-                                   '   ON DELETE CASCADE'
-                                   ')'
-                                   'TABLESPACE pg_default;')
+    query_commodity_alternative = (
+        'CREATE TABLE IF NOT EXISTS public.commodity_alternative'
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'commodity_id integer NOT NULL,'
+        'other_names text,'
+        'CONSTRAINT commodity_alternative_pkey PRIMARY KEY (id),'
+        'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
+        '   REFERENCES public.commodity (id) MATCH SIMPLE'
+        '   ON UPDATE CASCADE'
+        '   ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create chat
-    query_chat = ('CREATE TABLE IF NOT EXISTS public.chat'
-                  '('
-                  'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                  '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                  'name text NOT NULL,'
-                  'type text NOT NULL,'
-                  'CONSTRAINT chat_pkey PRIMARY KEY (id)'
-                  ')'
-                  'TABLESPACE pg_default;')
+    query_chat = (
+        'CREATE TABLE IF NOT EXISTS public.chat'
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'name text NOT NULL,'
+        'type text NOT NULL,'
+        'CONSTRAINT chat_pkey PRIMARY KEY (id)'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create message
-    query_message = ('CREATE TABLE IF NOT EXISTS public.message'
-                     '('
-                     'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                     '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                     'chat_id integer NOT NULL, '
-                     'link text, '
-                     'date timestamp without time zone NOT NULL,'
-                     'text text NOT NULL, '
-                     'text_sum text, '
-                     'CONSTRAINT message_pkey PRIMARY KEY (id),'
-                     'CONSTRAINT chat_id FOREIGN KEY (chat_id)'
-                     '  REFERENCES public.client (id) MATCH SIMPLE'
-                     '  ON UPDATE CASCADE'
-                     '  ON DELETE CASCADE'
-                     ')'
-                     'TABLESPACE pg_default;')
+    query_message = (
+        'CREATE TABLE IF NOT EXISTS public.message'
+        '('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'chat_id integer NOT NULL, '
+        'link text, '
+        'date timestamp without time zone NOT NULL,'
+        'text text NOT NULL, '
+        'text_sum text, '
+        'CONSTRAINT message_pkey PRIMARY KEY (id),'
+        'CONSTRAINT chat_id FOREIGN KEY (chat_id)'
+        '  REFERENCES public.client (id) MATCH SIMPLE'
+        '  ON UPDATE CASCADE'
+        '  ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create relation_client_message
-    query_relation_client_msg = ('CREATE TABLE IF NOT EXISTS public.relation_client_message'
-                                 '('
-                                 'client_id integer NOT NULL,'
-                                 'message_id integer NOT NULL,'
-                                 'client_score integer,'
-                                 'CONSTRAINT relation_client_message_pkey PRIMARY KEY (client_id, message_id), '
-                                 'CONSTRAINT client_id FOREIGN KEY (client_id)'
-                                 '  REFERENCES public.client (id) MATCH SIMPLE'
-                                 '  ON UPDATE CASCADE'
-                                 '  ON DELETE CASCADE,'
-                                 'CONSTRAINT message_id FOREIGN KEY (message_id)'
-                                 '  REFERENCES public.message (id) MATCH SIMPLE'
-                                 '  ON UPDATE CASCADE'
-                                 '  ON DELETE CASCADE'
-                                 ')'
-                                 'TABLESPACE pg_default;')
+    query_relation_client_msg = (
+        'CREATE TABLE IF NOT EXISTS public.relation_client_message'
+        '('
+        'client_id integer NOT NULL,'
+        'message_id integer NOT NULL,'
+        'client_score integer,'
+        'CONSTRAINT relation_client_message_pkey PRIMARY KEY (client_id, message_id), '
+        'CONSTRAINT client_id FOREIGN KEY (client_id)'
+        '  REFERENCES public.client (id) MATCH SIMPLE'
+        '  ON UPDATE CASCADE'
+        '  ON DELETE CASCADE,'
+        'CONSTRAINT message_id FOREIGN KEY (message_id)'
+        '  REFERENCES public.message (id) MATCH SIMPLE'
+        '  ON UPDATE CASCADE'
+        '  ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
     # create relation_commodity_message
-    query_relation_commodity_msg = ('CREATE TABLE IF NOT EXISTS public.relation_commodity_message'
-                                    '('
-                                    'commodity_id integer NOT NULL,'
-                                    'message_id integer NOT NULL,'
-                                    'commodity_score integer, '
-                                    'CONSTRAINT relation_commodity_message_pkey PRIMARY KEY (commodity_id, message_id),'
-                                    'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
-                                    '   REFERENCES public.commodity (id) MATCH SIMPLE'
-                                    '   ON UPDATE CASCADE'
-                                    '   ON DELETE CASCADE, '
-                                    'CONSTRAINT message_id FOREIGN KEY (message_id)'
-                                    '   REFERENCES public.message (id) MATCH SIMPLE'
-                                    '   ON UPDATE CASCADE'
-                                    '   ON DELETE CASCADE'
-                                    ')'
-                                    'TABLESPACE pg_default;')
+    query_relation_commodity_msg = (
+        'CREATE TABLE IF NOT EXISTS public.relation_commodity_message'
+        '('
+        'commodity_id integer NOT NULL,'
+        'message_id integer NOT NULL,'
+        'commodity_score integer, '
+        'CONSTRAINT relation_commodity_message_pkey PRIMARY KEY (commodity_id, message_id),'
+        'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
+        '   REFERENCES public.commodity (id) MATCH SIMPLE'
+        '   ON UPDATE CASCADE'
+        '   ON DELETE CASCADE, '
+        'CONSTRAINT message_id FOREIGN KEY (message_id)'
+        '   REFERENCES public.message (id) MATCH SIMPLE'
+        '   ON UPDATE CASCADE'
+        '   ON DELETE CASCADE'
+        ')'
+        'TABLESPACE pg_default;'
+    )
 
-    query_whitelist = ('CREATE TABLE IF NOT EXISTS public.whitelist ('
-                       'user_id integer NOT NULL, '
-                       'username text NOT NULL, '
-                       'email text, '
-                       'user_type text NOT NULL, '
-                       'user_status text NOT NULL, '
-                       'CONSTRAINT user_id_pkey PRIMARY KEY (user_id)) '
-                       'TABLESPACE pg_default;')
+    query_whitelist = (
+        'CREATE TABLE IF NOT EXISTS public.whitelist ('
+        'user_id integer NOT NULL, '
+        'username text NOT NULL, '
+        'full_name text, '
+        'user_type text NOT NULL, '
+        'user_status text NOT NULL, '
+        'subscriptions text, '
+        'user_email text NOT NULL, '
+        'CONSTRAINT user_id_pkey PRIMARY KEY (user_id)) '
+        'TABLESPACE pg_default;'
+    )
 
-    query_date_of_last_build = ('CREATE TABLE IF NOT EXISTS public.date_of_last_build ('
-                                'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                                '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                                'date_time text NOT NULL,'
-                                'CONSTRAINT date_time_pkey PRIMARY KEY (id))'
-                                'TABLESPACE pg_default;')
+    query_date_of_last_build = (
+        'CREATE TABLE IF NOT EXISTS public.date_of_last_build ('
+        'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+        '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+        'date_time text NOT NULL,'
+        'CONSTRAINT date_time_pkey PRIMARY KEY (id))'
+        'TABLESPACE pg_default;'
+    )
 
     # create tables
-    queries = [query_client, query_commodity, query_article,
-               query_relation_client, query_relation_commodity,
-               query_client_alternative, query_commodity_alternative,
-               query_chat, query_message, query_relation_client_msg,
-               query_relation_commodity_msg, query_whitelist, query_date_of_last_build]
+    queries = [
+        query_client,
+        query_commodity,
+        query_article,
+        query_relation_client,
+        query_relation_commodity,
+        query_client_alternative,
+        query_commodity_alternative,
+        query_chat,
+        query_message,
+        query_relation_client_msg,
+        query_relation_commodity_msg,
+        query_whitelist,
+        query_date_of_last_build,
+    ]
 
     with engine.connect() as conn:
         for query in queries:
@@ -252,43 +297,46 @@ def main(engine):
 
 
 def update_database(engine, query: str):
-    """ Update database by query """
+    """Update database by query"""
     with engine.connect() as conn:
         conn.execute(text(query))
         conn.commit()
 
 
-query_commodity_pricing = ('CREATE TABLE IF NOT EXISTS public.commodity_pricing'
-                           '('
-                           'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                           '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
-                           'commodity_id integer NOT NULL,'
-                           'subname text NOT NULL,'
-                           'unit text,'
-                           'price float,'
-                           'm_delta float,'
-                           'y_delta float,'
-                           'cons float,'
-                           'CONSTRAINT commodity_pricing_pkey PRIMARY KEY (id),'
-                           'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
-                           '   REFERENCES public.commodity (id) MATCH SIMPLE'
-                           '   ON UPDATE CASCADE'
-                           '   ON DELETE CASCADE'
-                           ')'
-                           'TABLESPACE pg_default;')
+query_commodity_pricing = (
+    'CREATE TABLE IF NOT EXISTS public.commodity_pricing'
+    '('
+    'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+    '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
+    'commodity_id integer NOT NULL,'
+    'subname text NOT NULL,'
+    'unit text,'
+    'price float,'
+    'm_delta float,'
+    'y_delta float,'
+    'cons float,'
+    'CONSTRAINT commodity_pricing_pkey PRIMARY KEY (id),'
+    'CONSTRAINT commodity_id FOREIGN KEY (commodity_id)'
+    '   REFERENCES public.commodity (id) MATCH SIMPLE'
+    '   ON UPDATE CASCADE'
+    '   ON DELETE CASCADE'
+    ')'
+    'TABLESPACE pg_default;'
+)
 
-query_article_name_impact = ("CREATE TABLE IF NOT EXISTS public.article_name_impact "
-                             "("
-                             "id SERIAL PRIMARY KEY, "
-                             "article_id INTEGER REFERENCES article(id) ON UPDATE CASCADE ON DELETE CASCADE, "
-                             "commodity_impact JSON, "
-                             "client_impact JSON, "
-                             "cleaned_data TEXT)"
-                             "TABLESPACE pg_default;")
+query_article_name_impact = (
+    'CREATE TABLE IF NOT EXISTS public.article_name_impact '
+    '('
+    'id SERIAL PRIMARY KEY, '
+    'article_id INTEGER REFERENCES article(id) ON UPDATE CASCADE ON DELETE CASCADE, '
+    'commodity_impact JSON, '
+    'client_impact JSON, '
+    'cleaned_data TEXT)'
+    'TABLESPACE pg_default;'
+)
 
 
-query_tg_channels = (
-    """
+query_tg_channels = """
     CREATE TABLE IF NOT EXISTS public.telegram_channel
     (
         id serial PRIMARY KEY,
@@ -304,9 +352,7 @@ query_tg_channels = (
     COMMENT ON TABLE public.telegram_channel
         IS 'Справочник telegram каналов, из которых вынимаются новости';
     """
-)
-query_tg_article_relations = (
-    """
+query_tg_article_relations = """
     CREATE TABLE IF NOT EXISTS public.relation_telegram_article
     (
         telegram_id integer NOT NULL,
@@ -326,9 +372,7 @@ query_tg_article_relations = (
     COMMENT ON TABLE public.relation_telegram_article
         IS 'Связь новостей с telegram каналами';
     """
-)
-query_tg_subscriptions = (
-    """
+query_tg_subscriptions = """
     CREATE TABLE IF NOT EXISTS public.user_telegram_subscription
     (
         user_id bigint NOT NULL,
@@ -347,10 +391,8 @@ query_tg_subscriptions = (
     COMMENT ON TABLE public.user_telegram_subscription
         IS 'Справочник подписок пользователя на новостые telegram каналы';
     """
-)           
 
-query_quote_group = (
-    """
+query_quote_group = """
     CREATE TABLE IF NOT EXISTS public.quote_group
     (
         id SERIAL PRIMARY KEY,
@@ -360,9 +402,7 @@ query_quote_group = (
     COMMENT ON TABLE public.quote_group
         IS 'Справочник выделенных среди котировок подгрупп';
     """
-)
-query_quote_source = (
-    """
+query_quote_source = """
     DROP TABLE IF EXISTS public.quote_source CASCADE;
     CREATE TABLE IF NOT EXISTS public.quote_source
     (
@@ -382,10 +422,8 @@ query_quote_source = (
     COMMENT ON TABLE public.quote_source
         IS 'Справочник источников котировок';
     """
-)
 
-query_research_source_table = (
-    """
+query_research_source_table = """
     DROP TABLE IF EXISTS public.research_source CASCADE;
     CREATE TABLE IF NOT EXISTS public.research_source
     (
@@ -398,19 +436,60 @@ query_research_source_table = (
         previous_update_datetime timestamp without time zone DEFAULT CURRENT_TIMESTAMP
     )
     TABLESPACE pg_default;
-    COMMENT ON TABLE public.quote_source
+    COMMENT ON TABLE public.research_source
         IS 'Справочник источников CIB Research';
     """
-)
+
+query_message_type_table = """
+    DROP TABLE IF EXISTS public.message_type CASCADE;
+    CREATE TABLE IF NOT EXISTS public.message_type
+    (
+        id serial PRIMARY KEY,
+        name character varying(64) COLLATE pg_catalog."default" NOT NULL,
+        is_default boolean DEFAULT false,
+        description character varying(255) COLLATE pg_catalog."default" DEFAULT ''::character varying
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.message_type
+        IS 'Справочник типов отправленных сообщений (пассивная рассылка, ответ на запрос такой-то)';
+    """
+
+query_message_table = """
+    DROP TABLE IF EXISTS public.message;
+    CREATE TABLE IF NOT EXISTS public.message
+    (
+        id bigserial PRIMARY KEY,
+        user_id bigint NOT NULL,
+        message_id bigint NOT NULL,
+        message_type_id integer NOT NULL,
+        send_datetime timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+        function_name text COLLATE pg_catalog."default" NOT NULL,
+        CONSTRAINT chat_id FOREIGN KEY (user_id)
+            REFERENCES public.whitelist (user_id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE,
+        CONSTRAINT message_type FOREIGN KEY (message_type_id)
+            REFERENCES public.message_type (id) MATCH SIMPLE
+            ON UPDATE CASCADE
+            ON DELETE CASCADE
+    )
+    TABLESPACE pg_default;
+    COMMENT ON TABLE public.message
+        IS 'Хранилище отправленных пользователям сообщений';
+    """
 
 query_commodity_energy = "INSERT INTO public.commodity (name) VALUES ('электроэнергия')"
-query_delete_dupl = "DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;"
+query_delete_dupl = 'DELETE FROM commodity a USING commodity b WHERE a.id < b.id AND a.name = b.name;'
 query_commodity_olovo = "INSERT INTO public.commodity (name) VALUES ('олово')"
-query_new_alternative_com_olovo = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
-                                   "values ((SELECT id FROM public.commodity WHERE name = 'олово'), 'олово')")
-query_new_alternative_com_electro = ("INSERT INTO public.commodity_alternative (commodity_id, other_names) "
-                                     "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), "
-                                     "'электроэнергия')")
+query_new_alternative_com_olovo = (
+    'INSERT INTO public.commodity_alternative (commodity_id, other_names) '
+    "values ((SELECT id FROM public.commodity WHERE name = 'олово'), 'олово')"
+)
+query_new_alternative_com_electro = (
+    'INSERT INTO public.commodity_alternative (commodity_id, other_names) '
+    "values ((SELECT id FROM public.commodity WHERE name = 'электроэнергия'), "
+    "'электроэнергия')"
+)
 
 
 def update_client_alternative(engine):
@@ -433,6 +512,7 @@ def update_tg_channels(engine):
 
 def update_quote_group_table(engine) -> None:
     from utils import quotes
+
     groups = quotes.get_groups()
 
     quotes_groups_set = {g.get_group_name() for g in groups}
@@ -445,6 +525,7 @@ def update_quote_group_table(engine) -> None:
 
 def update_quote_source_table(engine):
     from utils import quotes
+
     groups = quotes.get_groups()
 
     path = QUOTES_SOURCES_PATH
@@ -462,11 +543,13 @@ def update_quote_source_table(engine):
     # переименовываем колонки,
     # отбрасываем дубли
     # отбрасываем по источникам (Алюминий и Эн. уголь (Eu))
-    sources_df = pd.read_excel(path)[['Алиас', 'Блок', 'Формат ответа ', 'Источник']]\
-        .dropna()\
-        .rename(columns=columns_new_names)\
-        .drop_duplicates()\
+    sources_df = (
+        pd.read_excel(path)[['Алиас', 'Блок', 'Формат ответа ', 'Источник']]
+        .dropna()
+        .rename(columns=columns_new_names)
+        .drop_duplicates()
         .drop_duplicates('source')
+    )
 
     sources_df['id'] = 0
     sources_df['last_update_datetime'] = datetime.datetime.now()
@@ -481,12 +564,9 @@ def update_quote_source_table(engine):
                 sources_df.loc[i, 'group_name'] = group.get_group_name()
                 break
 
-    sources_df = (
-        sources_df.merge(quotes_groups_df,  left_on='group_name', right_on='name', suffixes=['', '_y'])
-                  .rename(columns={'id_y': 'quote_group_id'})[
-            ['alias', 'block', 'response_format', 'source', 'quote_group_id', 'last_update_datetime']
-        ]
-    )
+    sources_df = sources_df.merge(quotes_groups_df, left_on='group_name', right_on='name', suffixes=['', '_y']).rename(
+        columns={'id_y': 'quote_group_id'}
+    )[['alias', 'block', 'response_format', 'source', 'quote_group_id', 'last_update_datetime']]
 
     sources_df.to_sql('quote_source', con=engine, if_exists='append', index=False)
 
@@ -506,11 +586,7 @@ def update_research_source_table(engine):
 
     excel_cols = ['name', 'description', 'response_format', 'source']
     # считаем здесь каждый источник уникальным по паре ключей (name, source)
-    sources_df = (
-        pd.read_excel(path)[excel_cols]
-        .dropna(subset=['source', 'name'])
-        .drop_duplicates(subset=['name', 'source'])
-    )
+    sources_df = pd.read_excel(path)[excel_cols].dropna(subset=['source', 'name']).drop_duplicates(subset=['name', 'source'])
 
     query = text(
         'UPDATE research_source '
@@ -547,9 +623,7 @@ def update_research_source_table(engine):
 
     if delete_sources_ids:
         with engine.connect() as conn:
-            query = text(
-                'DELETE FROM research_source WHERE id  = ANY(:delete_sources_ids);'
-            )
+            query = text('DELETE FROM research_source WHERE id  = ANY(:delete_sources_ids);')
             conn.execute(query.bindparams(delete_sources_ids=delete_sources_ids))
             conn.commit()
 
@@ -558,13 +632,8 @@ def update_research_source_table(engine):
 
 
 def alter_to_quote_source_column(engine):
-    query_alter = (
-        'ALTER TABLE IF EXISTS quote_source '
-        'ADD COLUMN IF NOT EXISTS previous_update_datetime timestamp with time zone;'
-    )
-    query_update = (
-        'UPDATE quote_source SET previous_update_datetime=last_update_datetime;'
-    )
+    query_alter = 'ALTER TABLE IF EXISTS quote_source ' 'ADD COLUMN IF NOT EXISTS previous_update_datetime timestamp with time zone;'
+    query_update = 'UPDATE quote_source SET previous_update_datetime=last_update_datetime;'
 
     with engine.connect() as conn:
         conn.execute(text(query_alter))
@@ -572,10 +641,54 @@ def alter_to_quote_source_column(engine):
         conn.commit()
 
 
+def update_message_type_table(engine):
+    values = [
+        {
+            'name': 'default',
+            'description': 'Рассылка от админа',
+            'is_default': True,
+        },
+        {
+            'name': 'weekly_event',
+            'description': 'Рассылка слайдов weekly_event',
+            'is_default': False,
+        },
+        {
+            'name': 'weekly_result',
+            'description': 'Рассылка слайдов weekly_result',
+            'is_default': False,
+        },
+        {
+            'name': 'subscriptions_news',
+            'description': 'Рассылка новостей по подпискам',
+            'is_default': False,
+        },
+        {
+            'name': 'tg_subscriptions_news',
+            'description': 'Рассылка новостей по telegram подпискам',
+            'is_default': False,
+        },
+    ]
+    types_df = pd.DataFrame(values)
+    types_df.to_sql('message_type', con=engine, if_exists='append', index=False)
+
+
 def drop_tables(engine):
-    tables = ['article', 'chat', 'client', 'client_alternative', 'commodity', 'commodity_alternative',
-              'commodity_pricing', 'message', 'relation_client_message', 'relation_client_article',
-              'relation_commodity_article', 'relation_commodity_message', 'article_name_impact']
+    tables = [
+        'article',
+        'chat',
+        'client',
+        'client_alternative',
+        'commodity',
+        'commodity_alternative',
+        'commodity_pricing',
+        'message',
+        'relation_client_message',
+        'relation_client_article',
+        'relation_commodity_article',
+        'relation_commodity_message',
+        'article_name_impact',
+    ]
 
     with engine.connect() as conn:
         for table in tables:
@@ -625,10 +738,16 @@ if __name__ == '__main__':
     # update_quote_group_table(main_engine)
     # update_quote_source_table(main_engine)
 
-    # alter to quote_source table column
-    alter_to_quote_source_column(main_engine)
+    # # alter to quote_source table column
+    # alter_to_quote_source_column(main_engine)
+    #
+    # # create research_source table
+    # update_database(main_engine, query_research_source_table)
+    # # update research_source table
+    # update_research_source_table(main_engine)
 
-    # create research_source table
-    update_database(main_engine, query_research_source_table)
-    # update research_source table
-    update_research_source_table(main_engine)
+    # create message_type table and message table
+    update_database(main_engine, query_message_type_table)
+    update_database(main_engine, query_message_table)
+    # update message_type table
+    update_message_type_table(main_engine)
