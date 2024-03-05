@@ -32,11 +32,12 @@ router = Router()
 
 
 @router.message(Command('start', 'help'))
-async def help_handler(message: types.Message) -> None:
+async def help_handler(message: types.Message, state: FSMContext) -> None:
     """
     Вывод приветственного окна, с описанием бота и лицами для связи
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if await user_in_whitelist(message.from_user.model_dump_json()):
@@ -48,7 +49,7 @@ async def help_handler(message: types.Message) -> None:
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-        await user_registration(message)
+        await user_registration(message, state)
 
 
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
@@ -172,8 +173,8 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
+            await help_handler(message, state)
             await state.clear()
-            await help_handler(message)
         except Exception as e:
             await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже.\n\n{e}', protect_content=False)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
