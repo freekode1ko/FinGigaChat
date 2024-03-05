@@ -177,7 +177,7 @@ help_text = (
 table_link = 'https://metals-wire.com/data'
 
 charts_links = {
-    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/' '?to=date_date&countBack=1825',
+    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
     'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
 }
 
