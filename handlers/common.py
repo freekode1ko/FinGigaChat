@@ -8,6 +8,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import config
 from bot_logger import user_logger
@@ -38,17 +39,21 @@ async def help_handler(message: types.Message) -> None:
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    help_text = config.help_text
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
     if await user_in_whitelist(message.from_user.model_dump_json()):
+        help_text = config.help_text
         to_pin = await message.answer(help_text, protect_content=False)
         msg_id = to_pin.message_id
         await message.bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
+        new_user_start = config.new_user_start
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+        keyboard = InlineKeyboardBuilder()
+        keyboard.row(types.InlineKeyboardButton(text='Регистрация', callback_data='addme'))
+        await message.answer(new_user_start, reply_markup=keyboard.as_markup(), protect_content=False)
 
 
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
@@ -89,8 +94,8 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-@router.message(Command('addme'))
-async def user_registration(message: types.Message, state: FSMContext):
+@router.callback_query(F.data.startswith('addme'))
+async def user_registration(callback_query: types.CallbackQuery, state: FSMContext):
     """
     Регистрация нового пользователя.
     Если почта \\w+@sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
@@ -101,6 +106,7 @@ async def user_registration(message: types.Message, state: FSMContext):
 
     По слову "отмена" в чате - отменить регистрацию
     """
+    message = callback_query.message
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
