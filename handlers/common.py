@@ -8,7 +8,6 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import config
 from bot_logger import user_logger
@@ -48,12 +47,8 @@ async def help_handler(message: types.Message) -> None:
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        new_user_start = config.new_user_start
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-
-        keyboard = InlineKeyboardBuilder()
-        keyboard.row(types.InlineKeyboardButton(text='Регистрация', callback_data='addme'))
-        await message.answer(new_user_start, reply_markup=keyboard.as_markup(), protect_content=False)
+        await user_registration(message)
 
 
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
@@ -94,8 +89,7 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-@router.callback_query(F.data.startswith('addme'))
-async def user_registration(callback_query: types.CallbackQuery, state: FSMContext):
+async def user_registration(message: types.Message, state: FSMContext):
     """
     Регистрация нового пользователя.
     Если почта \\w+@sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
@@ -106,12 +100,13 @@ async def user_registration(callback_query: types.CallbackQuery, state: FSMConte
 
     По слову "отмена" в чате - отменить регистрацию
     """
-    message = callback_query.message
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if not await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
         await state.set_state(Form.new_user_reg)
-        await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
+        new_user_start = config.new_user_start
+        await message.answer(new_user_start, protect_content=False)
+        # await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
     else:
         await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
