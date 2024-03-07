@@ -9,7 +9,7 @@ from aiogram.fsm.context import FSMContext
 from configs import config
 from log.bot_logger import user_logger
 from db.database import engine
-from utils.bot.base import user_in_whitelist
+from utils.base import user_in_whitelist
 
 
 # States

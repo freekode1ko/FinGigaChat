@@ -9,7 +9,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 import module.gigachat as gig
 from log.bot_logger import logger, user_logger
 from constants.constants import giga_ans_footer
-from utils.bot.base import user_in_whitelist
+from utils.base import user_in_whitelist
 
 token = ''
 chat = ''

@@ -103,28 +103,6 @@ services:
             - ./logs:/code/logs
         restart: always
 
-#        networks:
-#            - postgres-network
-#        volumes:
-#            - ./db-data/:/var/lib/postgresql/data/
-#            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-#        healthcheck:
-#            test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "root" ]
-#            timeout: 45s
-#            interval: 10s
-#            retries: 10
 
 volumes:
     logs_volume:
-
-#networks:
-#    postgres-network:
-#        driver: bridge
-
-#volumes:
-#  data-volume:
-#    type: bind
-#    source: ./code
-#    target: /var/www/html
-#    volume:
-#      nocopy: true

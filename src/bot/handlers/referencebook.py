@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from log.bot_logger import logger, user_logger
 from constants.constants import handbook_prefix
-from utils.bot.base import show_ref_book_by_request, user_in_whitelist, bot_send_msg
+from utils.base import show_ref_book_by_request, user_in_whitelist, bot_send_msg
 
 # logger = logging.getLogger(__name__)
 router = Router()

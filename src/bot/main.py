@@ -15,7 +15,7 @@ from log.bot_logger import logger
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
 from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry
-from utils.bot.base import (
+from utils.base import (
     next_weekday_time, wait_until,
 )
 from log.sentry import init_sentry

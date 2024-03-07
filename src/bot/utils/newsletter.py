@@ -10,8 +10,8 @@ import module.data_transformer as dt
 from log.bot_logger import logger, user_logger
 from db.database import engine
 from module.article_process import ArticleProcess
-from utils.bot.base import bot_send_msg, translate_subscriptions_to_object_id
-from utils.bot.industry import get_tg_channel_news_msg, group_news_by_tg_channels
+from utils.base import bot_send_msg, translate_subscriptions_to_object_id
+from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
 from db import research_source
 from db.industry import get_industry_tg_news
 

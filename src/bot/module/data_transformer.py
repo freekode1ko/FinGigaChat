@@ -10,7 +10,7 @@ import six
 
 from configs import config
 from module import weekly_pulse_parse as wp_parse
-from utils.bot.base import read_curdatetime
+from utils.base import read_curdatetime
 
 
 class Transformer:

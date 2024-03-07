@@ -22,7 +22,7 @@ from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, Ind
 from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
 from module.article_process import ArticleProcess
-from utils.bot.base import user_in_whitelist, get_page_data_and_info, bot_send_msg
+from utils.base import user_in_whitelist, get_page_data_and_info, bot_send_msg
 from db.industry import get_industries_with_tg_channels, get_industry_name
 from db.subscriptions import get_user_tg_subscriptions_df, delete_user_telegram_subscription, \
     delete_all_user_telegram_subscriptions, get_industry_tg_channels_df, get_telegram_channel_info, \

@@ -14,7 +14,7 @@ from configs.config import path_to_source
 from constants.constants import sample_of_img_title
 from db.database import engine
 from module import data_transformer as dt
-from utils.bot.base import (
+from utils.base import (
     __replacer,
     __sent_photo_and_msg,
     read_curdatetime,

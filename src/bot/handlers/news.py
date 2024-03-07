@@ -24,10 +24,10 @@ from constants.constants import PATH_TO_COMMODITY_GRAPH
 from handlers import common, quotes, gigachat
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
-from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
+from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
 
 # logger = logging.getLogger(__name__)
-from utils.bot.newsletter import subscriptions_newsletter
+from utils.newsletter import subscriptions_newsletter
 from db import research_source
 
 router = Router()

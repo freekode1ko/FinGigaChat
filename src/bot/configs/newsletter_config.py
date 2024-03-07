@@ -1,7 +1,7 @@
 import calendar
 import datetime
 
-from utils.bot import newsletter
+from utils import newsletter
 
 NEWSLETTER_CONFIG = [
     # send daily news
