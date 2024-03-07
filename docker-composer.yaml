@@ -1,8 +1,130 @@
-version: '24.0.2'
+version: "3"
 
+#    backend:
 services:
-  fingigachat:
-    build: ./
-    volumes:
-      - /var/log/fingigachat_log:/var/log
+    database:
+        image: 'postgres:latest'
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=password
+            - POSTGRES_DB=postgres
+        volumes:
+            - ./db_files/db-data/:/var/lib/postgresql/data/
+            - ./db_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+        env_file:
+            - .env
+        restart: always
 
+    article:
+        build:
+            context: ./src/article
+            dockerfile: Dockerfile
+        container_name: article_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+        restart: always
+
+    article_online:
+        build:
+            context: ./src/article_online
+            dockerfile: Dockerfile
+        container_name: article_online_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+        restart: always
+
+
+    bot:
+        build:
+            context: ./src/bot
+            dockerfile: Dockerfile
+        container_name: bot_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+        restart: always
+
+    quotes:
+        build:
+            context: ./src/quotes
+            dockerfile: Dockerfile
+        container_name: quotes_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: always
+
+    research:
+        build:
+            context: ./src/research
+            dockerfile: Dockerfile
+        container_name: research_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+        restart: always
+
+    users_statistics:
+        build:
+            context: ./src/users_statistics
+            dockerfile: Dockerfile
+        container_name: users_statistics_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+        restart: always
+
+#        networks:
+#            - postgres-network
+#        volumes:
+#            - ./db-data/:/var/lib/postgresql/data/
+#            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+#        healthcheck:
+#            test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "root" ]
+#            timeout: 45s
+#            interval: 10s
+#            retries: 10
+
+volumes:
+    logs_volume:
+
+#networks:
+#    postgres-network:
+#        driver: bridge
+
+#volumes:
+#  data-volume:
+#    type: bind
+#    source: ./code
+#    target: /var/www/html
+#    volume:
+#      nocopy: true
