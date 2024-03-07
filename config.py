@@ -87,7 +87,6 @@ TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.
 QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
 RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
 
-BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 70
 PAGE_ELEMENTS_COUNT = 10
@@ -97,9 +96,15 @@ BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
+
+# config для взаимодействия со смежными сервисами (gigaparsers, qabanker)
+BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
+BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
 POST_TO_GIGAPARSER_TIMEOUT = 1200
-POST_TO_GIGAPARSER_ATTEMPTS = 3
-POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
+POST_TO_SERVICE_TIMEOUT = 90
+POST_TO_SERVICE_ATTEMPTS = 3
+POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10
+
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 
 DELETE_TG_MESSAGES_TIMEOUT = 5

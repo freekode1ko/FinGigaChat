@@ -10,6 +10,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Переход в режим общения с GigaChat',
     },
     {
+        'command': 'knowledgebase',
+        'description': 'Спросить у Базы Знаний',
+    },
+    {
         'command': 'eco',
         'description': 'Экономика',
     },

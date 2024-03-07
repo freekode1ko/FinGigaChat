@@ -64,28 +64,22 @@ async def handler_gigachat_mode(message: types.Message) -> None:
 
 
 async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> None:
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
+    """
+    Отправляет ответ на запрос пользователя
+    :param message: Message от пользователя
+    :param first_user_query: запрос от пользователя вне режима gigachat
+    """
+    user_msg = first_user_query if first_user_query else message.text
+    chat_id, full_name = message.chat.id, message.from_user.full_name
     await message.bot.send_chat_action(message.chat.id, 'typing')
-    response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
-    await message.answer(response, protect_content=False)
-
-    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{response}"')
-
-
-def route_query(chat_id: int, full_name: str, user_msg: str):
-    """
-    Будущая маршрутизация рага(ов) и запросов к гиге
-    Будет изменяться
-    """
 
     try:
         giga_answer = chat.get_giga_answer(text=user_msg)
+        user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос GigaChat ответил: "{giga_answer}"')
+        response = f'{giga_answer}\n\n{giga_ans_footer}'
     except Exception as e:
-        logger.error(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
-        user_logger.error(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
-        giga_answer = 'Извините, я пока не могу ответить на ваш запрос'
+        logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
+        user_logger.critical(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
+        response = 'Извините, я пока не могу ответить на ваш запрос'
 
-    response = f'{giga_answer}\n\n{giga_ans_footer}'
-    return response
-
+    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)

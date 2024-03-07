@@ -13,6 +13,7 @@ help_aliases = [
     'что умеет этот бот',
 ]
 gigachat_aliases = ['спросить', 'спросить у gigachat']
+rag_aliases = ['спросить у базы знаний']
 eco_aliases = [
     'экономика',
     'ставки',
