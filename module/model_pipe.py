@@ -18,7 +18,7 @@ from module.logger_base import Logger
 
 import datetime as dt
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_binary_best2.pkl'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_relevance_model_0.5_threshold_upd.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
@@ -363,7 +363,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
     return labels
 
 
-def rate_client(df, rating_dict, threshold: float = 0.65) -> pd.DataFrame:
+def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
     :param rating_dict: dict with rating

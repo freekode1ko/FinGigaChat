@@ -100,7 +100,7 @@ STATS_COLLECTOR_SLEEP_TIME = 60
 # config для взаимодействия со смежными сервисами (gigaparsers, qabanker)
 BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
 BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
-POST_TO_GIGAPARSER_TIMEOUT = 600
+POST_TO_GIGAPARSER_TIMEOUT = 1200
 POST_TO_SERVICE_TIMEOUT = 90
 POST_TO_SERVICE_ATTEMPTS = 3
 POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10
@@ -122,9 +122,15 @@ mail_smpt_port = 465
 mail_register_subject = 'Регистрация в AI-помощнике'
 
 reg_mail_text = (
-    'Привет!\nВы получили данное письмо потому, что указали данный адрес в AI-помощнике Банкира.\n\n'
-    'Коды для завершения регистрации:\n\n{}\n{}\n\n'
-    'Никому не сообщайте эти коды.'
+    'Добрый день!\n\nВы получили данное письмо, потому что указали данный адрес в AI-помощнике Банкира.\n\n'
+    'Код для завершения регистрации:\n\n{}\n'
+    'Никому не сообщайте этот код.'
+)
+
+new_user_start = (
+    'Рады приветствовать Вас в AI-помощнике банкира!\n'
+    'Для того, чтобы начать пользоваться ботом нужно пройти идентификацию.\n\n'
+    'Введите корпоративную почту, на нее будет выслан код для завершения регистрации.'
 )
 
 summarization_prompt = (
@@ -146,9 +152,8 @@ summarization_prompt = (
 )
 
 help_text = (
-    'Всем привет! Рады приветствовать Вас в AI-помощнике банкира!\n\n'
-    'Для того, чтобы начать пользоваться ботом нужно ввести специальную команду для идентификации. '
-    'Вы ее можете уточнить у команды проекта. \n\nБот позволяет оперативно получить информацию о ситуации на рынке, '
+    'Рады приветствовать Вас в AI-помощнике банкира!\n\n'
+    'Бот позволяет оперативно получить информацию о ситуации на рынке, '
     'в отрасли, у клиента в сжатом виде.\n\nНа данный момент в AI-помощнике доступен следующий функционал и контент:\n'
     '—> новости по отраслям, клиентам, бенефициарам, ЛПР, commodities из более 200 источников '
     'включая ключевые отраслевые телеграмм каналы (есть возможность настроить ежедневную рассылку);\n'
@@ -182,7 +187,7 @@ help_text = (
 table_link = 'https://metals-wire.com/data'
 
 charts_links = {
-    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/' '?to=date_date&countBack=1825',
+    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
     'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
 }
 
