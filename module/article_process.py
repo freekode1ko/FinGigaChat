@@ -2,7 +2,7 @@ import copy
 import datetime as dt
 import json
 import os
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union
 from urllib.parse import unquote, urlparse
 
 import numpy as np
