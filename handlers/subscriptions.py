@@ -14,9 +14,8 @@ from sqlalchemy import text
 
 import config
 from bot_logger import logger, user_logger
+from constants.bot import subscriptions as callback_prefixes
 from constants.bot.constants import handbook_prefix, DELETE_CROSS, UNSELECTED, SELECTED
-from constants.bot.subscriptions import BACK_TO_TG_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_DELETE_ALL, \
-    TG_SUBS_INDUSTRIES_MENU, TG_CHANNEL_INFO, USER_TG_SUBS, TG_SUB_ACTION, SUBS_MENU, SUBS_DELETE_ALL_DONE
 from database import engine
 from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, IndustryTGChannels, TGSubAction
 from keyboards.subscriptions import constructors as kb_maker
@@ -39,27 +38,44 @@ class SubscriptionsStates(StatesGroup):
     delete_user_subscriptions = State()
 
 
-async def add_subscriptions_body(
-    message: types.Message, full_name: str, user_msg: str, from_user_json: str, state: FSMContext
-) -> None:
+@router.callback_query(F.data.startswith('addnewsubscriptions'))
+async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
+    keyboard.row(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.SUBS_MENU))
+    await state.clear()
+
+    await callback_query.message.edit_text('Как вы хотите заполнить подписки?', reply_markup=keyboard.as_markup())
+
+
+@router.callback_query(F.data.startswith('end_subs'))
+async def cancel_add_new_subs(callback_query: types.CallbackQuery):
+    await callback_query.message.answer('Формирование подписок завершено')
+
+
+@router.callback_query(F.data.startswith('writesubs'))
+async def write_new_subscriptions_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """
     Формирует ответное сообщение для добавления подписок
 
-    :param chat_id: int - ID чата с пользователем
-    :param full_name: str - имя пользователя (first_name + last_name)
-    :param user_msg: str - сообщение пользователя
-    :param from_user_json: str - данные из aiogram.types.Message.from_user.model_dump_json()
-                                содержит ID пользователя и прочую информацию о пользователе
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Состояние FSM
     """
-    chat_id = message.chat.id
-    if await user_in_whitelist(from_user_json):
+    user_msg = 'writesubs'
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    chat_id = from_user.id
+
+    if await user_in_whitelist(from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await state.set_state(SubscriptionsStates.user_subscriptions)
         keyboard = InlineKeyboardBuilder()
         keyboard.row(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data='showmeindustry:yes'))
-        keyboard.row(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='showmeindustry:no'))
-        await message.answer(
+        keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+        keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data='addnewsubscriptions'))
+        await callback_query.message.edit_text(
             'Сформируйте полный список интересующих клиентов и/или commodities, и/или отрасли '
             'для подписки на пассивную отправку новостей по ним.\n'
             'Перечислите их в одном следующем сообщении каждую с новой строки.\n'
@@ -71,47 +87,6 @@ async def add_subscriptions_body(
         )
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-
-
-@router.message(Command('addnewsubscriptions'))
-async def add_new_subscriptions_command(message: types.Message, state: FSMContext) -> None:
-    """
-    Входная точка для добавления подписок на новостные объекты себе для получения новостей
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: Состояние FSM
-    """
-    full_name, user_msg = message.from_user.full_name, message.text
-    await add_subscriptions_body(message, full_name, user_msg, message.from_user.model_dump_json(), state)
-
-
-@router.callback_query(F.data.startswith('addnewsubscriptions'))
-async def select_or_write(callback_query: types.CallbackQuery):
-    keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
-    keyboard.row(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
-    keyboard.row(types.InlineKeyboardButton(text='Отменить создание подписок', callback_data='cancel_subs'))
-
-    await callback_query.message.answer('Как вы хотите заполнить подписки?', reply_markup=keyboard.as_markup())
-
-
-@router.callback_query(F.data.startswith('cancel_subs'))
-async def cancel_add_new_subs(callback_query: types.CallbackQuery):
-    await callback_query.message.answer('Отмена создания подписок')
-
-
-@router.callback_query(F.data.startswith('writesubs'))
-async def write_new_subscriptions_callback(callback_query: types.CallbackQuery, state: FSMContext) -> None:
-    """
-    Входная точка для добавления подписок на новостные объекты себе для получения новостей
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: Состояние FSM
-    """
-    user_msg = 'writesubs'
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await add_subscriptions_body(callback_query.message, full_name, user_msg, from_user.model_dump_json(), state)
 
 
 @router.callback_query(F.data.startswith('addsub'))
@@ -168,6 +143,7 @@ async def pagination(pages, search, cur_page: int = 0) -> types.InlineKeyboardMa
         bottom_buttons.append(types.InlineKeyboardButton(text=emoji['forward'], callback_data=callback))
 
     buttons.append(bottom_buttons)
+    buttons.append([types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs')])
     buttons.append([types.InlineKeyboardButton(text='Назад к выбору раздела', callback_data='selectsubs')])
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
     return keyboard
@@ -208,8 +184,10 @@ async def select_subs_from_menu(callback_query: types.CallbackQuery = None):
     keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='page:empty:1:client'))
     keyboard.row(types.InlineKeyboardButton(text='Сырьевые товары', callback_data='page:empty:1:commodity'))
     keyboard.row(types.InlineKeyboardButton(text='Отрасли', callback_data='page:empty:1:industry'))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data='addnewsubscriptions'))
 
-    await callback_query.message.answer(text='Выберете раздел', reply_markup=keyboard.as_markup())
+    await callback_query.message.edit_text(text='Выберете раздел', reply_markup=keyboard.as_markup())
 
 
 @router.callback_query(SubscriptionsStates.user_subscriptions, F.data.startswith('showmeindustry'))
@@ -408,15 +386,21 @@ async def end_write_subs(callback_query: types.CallbackQuery, state: FSMContext)
     await callback_query.message.answer(text='Формирование подписок завершено')
 
 
-async def get_user_subscriptions_body(message: types.Message, user_id: int) -> None:
+@router.callback_query(F.data.startswith('myactivesubscriptions'))
+async def get_user_subscriptions_callback(callback_query: types.CallbackQuery) -> None:
     """
-    Формирует ответное сообщение с подписками пользователя
+    Получение сообщением информации о своих подписках
 
-    :param chat_id: int - ID чата с пользователем
-    :param user_id: int - telegram ID пользователя
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
+    chat_id = callback_query.message.chat.id
+    user_msg = 'myactivesubscriptions'
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_id = from_user.id  # Get user_ID from message
+
     subscriptions = await get_list_of_user_subscriptions(user_id)
-    chat_id = message.chat.id
 
     if not subscriptions:
         keyboard = types.ReplyKeyboardRemove()
@@ -431,36 +415,7 @@ async def get_user_subscriptions_body(message: types.Message, user_id: int) -> N
         cancel_msg = f'Напишите «{cancel_command}» для завершения просмотра своих подписок'
         msg_txt = 'Выберите подписку\n\n' + cancel_msg
         keyboard = types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg)
-    await message.answer(msg_txt, reply_markup=keyboard)
-
-
-@router.message(Command('myactivesubscriptions'))
-async def get_user_subscriptions_command(message: types.Message) -> None:
-    """
-    Получение сообщением информации о своих подписках
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    user_id = message.from_user.id  # Get user_ID from message
-    await get_user_subscriptions_body(message, user_id)
-
-
-@router.callback_query(F.data.startswith('myactivesubscriptions'))
-async def get_user_subscriptions_callback(callback_query: types.CallbackQuery) -> None:
-    """
-    Получение сообщением информации о своих подписках
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    chat_id = callback_query.message.chat.id
-    user_msg = 'myactivesubscriptions'
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    user_id = from_user.id  # Get user_ID from message
-    await get_user_subscriptions_body(callback_query.message, user_id)
+    await callback_query.message.answer(msg_txt, reply_markup=keyboard)
 
 
 @router.message(SubscriptionsStates.delete_user_subscriptions)
@@ -553,7 +508,7 @@ async def delete_subscriptions(callback_query: types.CallbackQuery, state: FSMCo
     await callback_query.message.answer(msg_txt, reply_markup=keyboard)
 
 
-@router.callback_query(F.data.startswith(SUBS_DELETE_ALL_DONE))
+@router.callback_query(F.data.startswith(callback_prefixes.SUBS_DELETE_ALL_DONE))
 async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     """
     Получение сообщением информации о своих подписках для их удаления
@@ -561,7 +516,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = SUBS_DELETE_ALL_DONE
+    user_msg = callback_prefixes.SUBS_DELETE_ALL_DONE
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -608,7 +563,7 @@ async def subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(SUBS_MENU))
+@router.callback_query(F.data.startswith(callback_prefixes.SUBS_MENU))
 async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> None:
     """
     Получение меню для взаимодействия с подписками
@@ -616,7 +571,7 @@ async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> No
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = SUBS_MENU
+    user_msg = callback_prefixes.SUBS_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -624,7 +579,7 @@ async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> No
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(Command(SUBS_MENU))
+@router.message(Command(callback_prefixes.SUBS_MENU))
 async def subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками
@@ -649,7 +604,7 @@ async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_
     :param callback_data: Содержит информацию о текущей странице, id удаляемой подписки (0 - не удаляем)
     """
     chat_id = callback_query.message.chat.id
-    user_msg = USER_TG_SUBS
+    user_msg = callback_prefixes.USER_TG_SUBS
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -714,7 +669,9 @@ async def update_sub_on_tg_channel(callback_query: types.CallbackQuery, callback
         # delete sub on tg channel
         delete_user_telegram_subscription(user_id, telegram_id)
 
-    await show_tg_channel_more_info(callback_query, telegram_id, need_add, callback_data.back, TG_SUB_ACTION)
+    await show_tg_channel_more_info(
+        callback_query, telegram_id, need_add, callback_data.back, callback_prefixes.TG_SUB_ACTION
+    )
 
 
 @router.callback_query(TGChannelMoreInfo.filter())
@@ -726,7 +683,11 @@ async def get_tg_channel_more_info(callback_query: types.CallbackQuery, callback
     :param callback_data: Хранит атрибут с telegram_id
     """
     await show_tg_channel_more_info(
-        callback_query, callback_data.telegram_id, callback_data.is_subscribed, callback_data.back, TG_CHANNEL_INFO
+        callback_query,
+        callback_data.telegram_id,
+        callback_data.is_subscribed,
+        callback_data.back,
+        callback_prefixes.TG_CHANNEL_INFO,
     )
 
 
@@ -739,7 +700,7 @@ async def get_industry_tg_channels(callback_query: types.CallbackQuery, callback
     :param callback_data: Хранит атрибут с industry_id
     """
     chat_id = callback_query.message.chat.id
-    user_msg = TG_SUBS_DELETE_ALL_DONE
+    user_msg = callback_prefixes.INDUSTRY_TG_CHANNELS
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -766,7 +727,7 @@ async def get_industry_tg_channels(callback_query: types.CallbackQuery, callback
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(F.data.startswith(TG_SUBS_INDUSTRIES_MENU))
+@router.callback_query(F.data.startswith(callback_prefixes.TG_SUBS_INDUSTRIES_MENU))
 async def get_tg_subs_industries_menu(callback_query: types.CallbackQuery) -> None:
     """
     Отображает список отраслей, которые связаны с какими-либо telegram каналами
@@ -774,7 +735,7 @@ async def get_tg_subs_industries_menu(callback_query: types.CallbackQuery) -> No
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = TG_SUBS_INDUSTRIES_MENU
+    user_msg = callback_prefixes.TG_SUBS_INDUSTRIES_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -785,7 +746,7 @@ async def get_tg_subs_industries_menu(callback_query: types.CallbackQuery) -> No
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(F.data.startswith(TG_SUBS_DELETE_ALL_DONE))
+@router.callback_query(F.data.startswith(callback_prefixes.TG_SUBS_DELETE_ALL_DONE))
 async def delete_all_tg_subs_done(callback_query: types.CallbackQuery) -> None:
     """
     Удаляет подписки пользователя на тг каналы
@@ -794,7 +755,7 @@ async def delete_all_tg_subs_done(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = TG_SUBS_DELETE_ALL_DONE
+    user_msg = callback_prefixes.TG_SUBS_DELETE_ALL_DONE
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -807,7 +768,7 @@ async def delete_all_tg_subs_done(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(F.data.startswith(TG_SUBS_DELETE_ALL))
+@router.callback_query(F.data.startswith(callback_prefixes.TG_SUBS_DELETE_ALL))
 async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
     """
     Подтвреждение действия
@@ -815,7 +776,7 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = TG_SUBS_DELETE_ALL
+    user_msg = callback_prefixes.TG_SUBS_DELETE_ALL
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = callback_query.from_user.id
@@ -833,6 +794,18 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+@router.callback_query(F.data.startswith(callback_prefixes.TG_END_WRITE_SUBS))
+async def tg_end_write_subs(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    """
+    Завершает работу с меню подписок на тг каналы
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Состояние конечного автомата
+    """
+    await state.clear()
+    await callback_query.message.edit_text(text='Формирование подписок завершено')
+
+
 async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     keyboard = kb_maker.get_tg_subscriptions_menu_kb()
     msg_text = (
@@ -842,7 +815,7 @@ async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> No
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(BACK_TO_TG_MENU))
+@router.callback_query(F.data.startswith(callback_prefixes.BACK_TO_TG_MENU))
 async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     """
     Фозвращает пользователя в меню (меняет сообщение, с которым связан колбэк)
@@ -850,7 +823,7 @@ async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = BACK_TO_TG_MENU
+    user_msg = callback_prefixes.BACK_TO_TG_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await tg_subs_menu(callback_query)

@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.bot.constants import DELETE_CROSS, PREV_PAGE, NEXT_PAGE, STOP, UNSELECTED, SELECTED
 from constants.bot.subscriptions import BACK_TO_TG_MENU, TG_SUBS_DELETE_ALL_DONE, TG_SUBS_INDUSTRIES_MENU, \
-    TG_SUBS_DELETE_ALL, SUBS_MENU, SUBS_DELETE_ALL_DONE
+    TG_SUBS_DELETE_ALL, SUBS_MENU, SUBS_DELETE_ALL_DONE, TG_END_WRITE_SUBS
 from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, IndustryTGChannels, TGSubAction
 from utils.bot.base import wrap_callback_data, unwrap_callback_data
 
@@ -34,6 +34,7 @@ def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     keyboard.row(types.InlineKeyboardButton(text='Просмотреть подписки', callback_data=UserTGSubs(page=0).pack()))
     keyboard.row(types.InlineKeyboardButton(text='Изменить подписки', callback_data=TG_SUBS_INDUSTRIES_MENU))
     keyboard.row(types.InlineKeyboardButton(text='Удалить все подписки', callback_data=TG_SUBS_DELETE_ALL))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=TG_END_WRITE_SUBS))
     return keyboard.as_markup()
 
 
@@ -72,6 +73,7 @@ def get_tg_subs_watch_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> 
         keyboard.add(types.InlineKeyboardButton(text=NEXT_PAGE, callback_data=UserTGSubs(page=page + 1).pack()))
     else:
         keyboard.add(types.InlineKeyboardButton(text=STOP, callback_data='stop'))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=TG_END_WRITE_SUBS))
     return keyboard.as_markup()
 
 
@@ -116,6 +118,7 @@ def get_tg_subs_industries_menu_kb(industry_df: pd.DataFrame) -> InlineKeyboardM
         )
         keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
     keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_TG_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=TG_END_WRITE_SUBS))
     return keyboard.as_markup()
 
 
@@ -147,6 +150,7 @@ def get_industry_tg_channels_kb(industry_id: int, tg_channel_df: pd.DataFrame) -
         keyboard.row(types.InlineKeyboardButton(text=mark, callback_data=add_del_call.pack()))
         keyboard.add(types.InlineKeyboardButton(text=item['name'].capitalize(), callback_data=more_info_call.pack()))
     keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=TG_SUBS_INDUSTRIES_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=TG_END_WRITE_SUBS))
     return keyboard.as_markup()
 
 
@@ -201,4 +205,5 @@ def get_subscriptions_kb() -> InlineKeyboardMarkup:
     keyboard.row(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
     keyboard.row(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
     keyboard.row(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
     return keyboard.as_markup()
