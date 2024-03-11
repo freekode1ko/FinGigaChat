@@ -275,8 +275,13 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
 
                     try:
                         await message.answer(
-                            articles_f5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
+                            articles_f5,
+                            parse_mode='HTML',
+                            protect_content=False,
+                            disable_web_page_preview=True,
+                            reply_markup=keyboard,
                         )
+                    #
                     # except MessageIsTooLong:  # FIXME 3.3.0
                     #     articles = articles_f5.split('\n\n')
                     #     for article in articles:
@@ -284,6 +289,17 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
                     #             await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
                     #         else:
                     #             logger.error(f'MessageIsTooLong ERROR: {article}')
+                    except Exception as e:
+                        logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
+
+                    try:
+                        if subject == 'client':
+                            name, navi_link = ap_obj.get_client_name_and_navi_link(subject_id)
+                            if navi_link is not None:
+                                await message.answer(
+                                    f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
+                                    parse_mode='HTML',
+                                )
                     except Exception as e:
                         logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
 

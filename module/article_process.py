@@ -812,6 +812,18 @@ class ArticleProcess:
 
         return industry_article_df, client_commodity_article_df
 
+    def get_client_name_and_navi_link(self, client_id: int) -> (str, str):
+        """
+        Получить по ID из таблицы client имя и ссылку
+        :param client_id: ID
+        return: имя и ссылку (name, navi_link )
+        """
+        with self.engine.connect() as conn:
+            if (result := conn.execute(text(f'SELECT name, navi_link FROM client WHERE id={client_id}')).fetchone()) is None:
+                return None, None  # FIXME: return Exception
+            else:
+                return result
+
 
 class ArticleProcessAdmin:
     def __init__(self):

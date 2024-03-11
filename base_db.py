@@ -491,6 +491,11 @@ query_new_alternative_com_electro = (
     "'электроэнергия')"
 )
 
+query_add_navi_link_to_client_table = (
+    'ALTER TABLE client '
+    'ADD navi_link text;'
+)
+
 
 def update_client_alternative(engine):
     df_db = pd.read_csv(CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, index_col=False, sep='#')
@@ -746,8 +751,11 @@ if __name__ == '__main__':
     # # update research_source table
     # update_research_source_table(main_engine)
 
-    # create message_type table and message table
-    update_database(main_engine, query_message_type_table)
-    update_database(main_engine, query_message_table)
-    # update message_type table
-    update_message_type_table(main_engine)
+    # # create message_type table and message table
+    # update_database(main_engine, query_message_type_table)
+    # update_database(main_engine, query_message_table)
+    # # update message_type table
+    # update_message_type_table(main_engine)
+
+    # add navi_link column to client table
+    update_database(main_engine, query_add_navi_link_to_client_table)
