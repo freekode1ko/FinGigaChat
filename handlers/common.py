@@ -4,7 +4,6 @@ import re
 
 import pandas as pd
 from psycopg2.errors import UniqueViolation
-from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
@@ -18,6 +17,7 @@ from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
 from module.mail_parse import SmtpSend
 from utils.bot.base import user_in_whitelist
+from utils.db_api.whitelist import update_user_email
 
 # from utils.data_crypto import AESCrypther
 
@@ -201,11 +201,3 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
     else:
         await message.answer('Введен некорректный регистрационный код', protect_content=False)
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
-
-
-def update_user_email(user_id: int, user_email: str):
-    """Обновление почты существующего пользователя"""
-    query = text('UPDATE whitelist SET user_email=:user_email WHERE user_id=:user_id')
-    with engine.connect() as conn:
-        conn.execute(query.bindparams(user_email=user_email, user_id=user_id))
-        conn.commit()
