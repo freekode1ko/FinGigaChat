@@ -13,19 +13,31 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import text
 
 import config
+import database
 from bot_logger import logger, user_logger
 from constants.bot import subscriptions as callback_prefixes
 from constants.bot.constants import handbook_prefix, DELETE_CROSS, UNSELECTED, SELECTED
 from database import engine
-from keyboards.subscriptions.callbacks import UserTGSubs, TGChannelMoreInfo, IndustryTGChannels, TGSubAction
+from keyboards.subscriptions.callbacks import (
+    UserTGSubs,
+    TGChannelMoreInfo,
+    IndustryTGChannels,
+    TGSubAction,
+    AddAllSubsByDomain,
+)
 from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
 from module.article_process import ArticleProcess
 from utils.bot.base import user_in_whitelist, get_page_data_and_info, bot_send_msg, send_or_edit
 from utils.db_api.industry import get_industries_with_tg_channels, get_industry_name
-from utils.db_api.subscriptions import get_user_tg_subscriptions_df, delete_user_telegram_subscription, \
-    delete_all_user_telegram_subscriptions, get_industry_tg_channels_df, get_telegram_channel_info, \
-    add_user_telegram_subscription
+from utils.db_api.subscriptions import (
+    get_user_tg_subscriptions_df,
+    delete_user_telegram_subscription,
+    delete_all_user_telegram_subscriptions,
+    get_industry_tg_channels_df,
+    get_telegram_channel_info,
+    add_user_telegram_subscription,
+)
 
 emoji = copy.deepcopy(config.dict_of_emoji)
 
@@ -89,6 +101,48 @@ async def write_new_subscriptions_callback(callback_query: types.CallbackQuery, 
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
+@router.callback_query(AddAllSubsByDomain.filter())
+async def add_all_subs(callback_query: types.CallbackQuery, callback_data: AddAllSubsByDomain) -> None:
+    """
+    Подписывает пользователя на все подписки из области
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Содержит информацию о выбранной области
+    """
+    table_name = callback_data.domain
+
+    user_subscriptions = await get_list_of_user_subscriptions(callback_query.from_user.id)
+    user_subscriptions_uniq = set(user_subscriptions)
+    if not await is_subscription_limit_reached(callback_query.message, user_subscriptions_uniq):
+        sub_element = pd.read_sql_query(f'SELECT name FROM {table_name}', con=engine)
+        elements_to_add = list(set(i[0] for i in sub_element.values.tolist()) - user_subscriptions_uniq)
+        subs_count = len(user_subscriptions)
+
+        if elements_to_add:
+            num_of_add_subscriptions = config.USER_SUBSCRIPTIONS_LIMIT - subs_count
+            new_subs = elements_to_add[:num_of_add_subscriptions]
+            user_subscriptions.extend(new_subs)
+            user_subscriptions.sort()
+            new_user_subscription_str = ', '.join(user_subscriptions).replace("'", "''")
+            new_subs = ', '.join(new_subs).title()
+
+            with engine.connect() as conn:
+                sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {callback_query.from_user.id}"
+                conn.execute(text(sql_text))
+                conn.commit()
+
+            # Здесь "отрасли" это костыль
+            msg_text = (
+                f'{new_subs} - добавлены к вашим подпискам\n'
+                f'Можете подписаться еще на дополнительные отрасли '
+                f'или выбрать другой раздел'
+            )
+        else:
+            msg_text = 'Вы уже подписаны на все отрасли\nВыберите другой раздел'
+
+        await callback_query.message.answer(msg_text)
+
+
 @router.callback_query(F.data.startswith('addsub'))
 async def append_new_subscription(callback_query: types.CallbackQuery = None):
     element_id, table_name = callback_query.data.split(':')[2], callback_query.data.split(':')[1]
@@ -123,8 +177,10 @@ async def append_new_subscription(callback_query: types.CallbackQuery = None):
             )
 
 
-async def pagination(pages, search, cur_page: int = 0) -> types.InlineKeyboardMarkup:
+async def pagination(pages, search, cur_page: int = 0, first_button: types.InlineKeyboardButton = None) -> types.InlineKeyboardMarkup:
     buttons = []
+    if first_button is not None:
+        buttons.append([first_button])
     for element in pages[cur_page].values.tolist():
         buttons.append([types.InlineKeyboardButton(text=f'{element[1].capitalize()}', callback_data=f'addsub:{search}:{element[0]}')])
     bottom_buttons = []
@@ -156,9 +212,21 @@ async def scroller(query: types.CallbackQuery = None):
     cur_page = int(input_params[2])
     search = input_params[3]
     table_ru_names = {
-        'client': 'Клиенты',
-        'commodity': 'Сырьевые товары',
-        'industry': 'Отрасли',
+        'client': {
+            'domain': 'Клиенты',
+            'first_button': None,
+        },
+        'commodity': {
+            'domain': 'Сырьевые товары',
+            'first_button': None,
+        },
+        'industry': {
+            'domain': 'Отрасли',
+            'first_button': types.InlineKeyboardButton(
+                text='Подписаться на все',
+                callback_data=AddAllSubsByDomain(domain='industry').pack(),
+            ),
+        },
     }
 
     try:
@@ -172,9 +240,11 @@ async def scroller(query: types.CallbackQuery = None):
     for index in range(num_chunks):
         chunks.append(table[index * page_elements_cnt: (index + 1) * page_elements_cnt])
 
-    domain = table_ru_names.get(search, 'Ошибка')
+    search_data = table_ru_names.get(search, {})
+    domain = search_data.get('domain', 'Ошибка')
+    first_button = search_data.get('first_button')
     cur_page += 1 if direction == 'forward' else -1
-    keyboard = await pagination(chunks, search, cur_page)
+    keyboard = await pagination(chunks, search, cur_page, first_button)
     await query.message.edit_text(text=f'{domain}\nСтраница {cur_page+1} из {len(chunks)}', reply_markup=keyboard)
 
 
