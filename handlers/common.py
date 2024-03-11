@@ -184,7 +184,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
 
         except IntegrityError as e:
             if isinstance(e.orig, UniqueViolation):
-                update_user_mail(user_id, user_email)
+                update_user_email(user_id, user_email)
                 await message.answer(welcome_msg)
                 user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : пользователь обновил почту')
             else:
@@ -203,7 +203,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
 
 
-def update_user_mail(user_id: int, user_email: str):
+def update_user_email(user_id: int, user_email: str):
     """Обновление почты существующего пользователя"""
     query = text('UPDATE whitelist SET user_email=:user_email WHERE user_id=:user_id')
     with engine.connect() as conn:
