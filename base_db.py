@@ -50,8 +50,7 @@ def main(engine):
         'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
         '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),'
         'name text NOT NULL,'
-        'CONSTRAINT client_pkey PRIMARY KEY (id),'
-        'navi_link text,'
+        'CONSTRAINT client_pkey PRIMARY KEY (id)'
         ')'
         'TABLESPACE pg_default;'
     )
@@ -492,6 +491,11 @@ query_new_alternative_com_electro = (
     "'электроэнергия')"
 )
 
+query_add_navi_link_to_client_table = (
+    'ALTER TABLE client '
+    'ADD navi_link text;'
+)
+
 
 def update_client_alternative(engine):
     df_db = pd.read_csv(CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE, index_col=False, sep='#')
@@ -752,3 +756,6 @@ if __name__ == '__main__':
     update_database(main_engine, query_message_table)
     # update message_type table
     update_message_type_table(main_engine)
+
+    # add navi_link column to client table
+    update_database(main_engine, query_add_navi_link_to_client_table)
