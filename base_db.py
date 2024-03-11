@@ -751,11 +751,11 @@ if __name__ == '__main__':
     # # update research_source table
     # update_research_source_table(main_engine)
 
-    # create message_type table and message table
-    update_database(main_engine, query_message_type_table)
-    update_database(main_engine, query_message_table)
-    # update message_type table
-    update_message_type_table(main_engine)
+    # # create message_type table and message table
+    # update_database(main_engine, query_message_type_table)
+    # update_database(main_engine, query_message_table)
+    # # update message_type table
+    # update_message_type_table(main_engine)
 
     # add navi_link column to client table
     update_database(main_engine, query_add_navi_link_to_client_table)

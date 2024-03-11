@@ -819,7 +819,7 @@ class ArticleProcess:
         return: имя и ссылку (name, navi_link )
         """
         with self.engine.connect() as conn:
-            if (result := conn.execute(text(f'SELECT name, navi_link FROM client WHERE id={str(client_id)}')).fetchone()) is None:
+            if (result := conn.execute(text(f'SELECT name, navi_link FROM client WHERE id={client_id}')).fetchone()) is None:
                 return None, None  # FIXME: return Exception
             else:
                 return result

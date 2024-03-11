@@ -295,13 +295,13 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
                     try:
                         if subject == 'client':
                             name, navi_link = ap_obj.get_client_name_and_navi_link(subject_id)
-                            if name is not None and navi_link is not None:
+                            if navi_link is not None:
                                 await message.answer(
                                     f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
                                     parse_mode='HTML',
                                 )
                     except Exception as e:
-                        logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')  # TODO: согласовать логи
+                        logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
 
                 user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
                 return_ans = True
