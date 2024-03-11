@@ -3,6 +3,9 @@ import random
 import re
 
 import pandas as pd
+from psycopg2.errors import UniqueViolation
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -159,26 +162,50 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
     #         user_reg_code = user_msg
     user_reg_code = user_msg
     if str(user_reg_info['user_reg_code']) == str(user_reg_code):
+
         user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
+        user_email = user_reg_info['user_email']
         user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None, user_reg_info['user_email']]],
-            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'],
-        )
+            [[user_id, user_username, full_name, 'user', 'active', None, user_email]],
+            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'])
+
+        welcome_msg = f'Добро пожаловать, {full_name}!'
+        exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.\n\n{exc}'
         try:
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-            await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
+            await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await help_handler(message, state)
-            await state.clear()
+
+        except IntegrityError as e:
+            if isinstance(e.orig, UniqueViolation):
+                update_user_mail(user_id, user_email)
+                await message.answer(welcome_msg)
+                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : пользователь обновил почту')
+            else:
+                await message.answer(exc_msg.format(exc=e))
+                user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+
         except Exception as e:
-            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже.\n\n{e}', protect_content=False)
+            await message.answer(exc_msg.format(exc=e))
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+
+        finally:
             await state.clear()
+
     else:
         await message.answer('Введен некорректный регистрационный код', protect_content=False)
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
+
+
+def update_user_mail(user_id: int, user_email: str):
+    """Обновление почты существующего пользователя"""
+    query = text('UPDATE whitelist SET user_email=:user_email WHERE user_id=:user_id')
+    with engine.connect() as conn:
+        conn.execute(query.bindparams(user_email=user_email, user_id=user_id))
+        conn.commit()

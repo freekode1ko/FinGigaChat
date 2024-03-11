@@ -82,7 +82,8 @@ async def user_in_whitelist(user: str) -> bool:
     user_json = json.loads(user)
     user_id = user_json['id']
     whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
-    if len(whitelist.loc[whitelist['user_id'] == user_id]) >= 1:
+    user_df = whitelist.loc[whitelist['user_id'] == user_id]
+    if not user_df.empty and not pd.isna(user_df['user_email'].iloc[0]):
         return True
     return False
 
