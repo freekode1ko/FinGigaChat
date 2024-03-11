@@ -356,14 +356,17 @@ class ResearchesGetter:
             exchange_month_uan = None
         try:
             exchange_month_soft = authed_user.get_reviews(
-                url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный дайджест по мягким валютам'
+                url_part=economy,
+                tab='Все',
+                title='Экономика - Sberbank CIB',
+                name_of_review='Ежемесячный обзор по мягким валютам'
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
             authed_user = ue.ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
-                'name_of_review="Ежемесячный дайджест по мягким валютам" произошла ошибка: %s',
+                'name_of_review="Ежемесячный обзор по мягким валютам" произошла ошибка: %s',
                 e,
             )
             exchange_month_soft = None
