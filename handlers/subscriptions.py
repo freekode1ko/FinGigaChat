@@ -13,7 +13,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import text
 
 import config
-import database
 from bot_logger import logger, user_logger
 from constants.bot import subscriptions as callback_prefixes
 from constants.bot.constants import handbook_prefix, DELETE_CROSS, UNSELECTED, SELECTED
@@ -51,7 +50,7 @@ class SubscriptionsStates(StatesGroup):
 
 
 @router.callback_query(F.data.startswith('addnewsubscriptions'))
-async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext):
+async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
     keyboard.row(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
@@ -60,11 +59,6 @@ async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext
     await state.clear()
 
     await callback_query.message.edit_text('Как вы хотите заполнить подписки?', reply_markup=keyboard.as_markup())
-
-
-@router.callback_query(F.data.startswith('end_subs'))
-async def cancel_add_new_subs(callback_query: types.CallbackQuery):
-    await callback_query.message.answer('Формирование подписок завершено')
 
 
 @router.callback_query(F.data.startswith('writesubs'))
@@ -144,7 +138,7 @@ async def add_all_subs(callback_query: types.CallbackQuery, callback_data: AddAl
 
 
 @router.callback_query(F.data.startswith('addsub'))
-async def append_new_subscription(callback_query: types.CallbackQuery = None):
+async def append_new_subscription(callback_query: types.CallbackQuery = None) -> None:
     element_id, table_name = callback_query.data.split(':')[2], callback_query.data.split(':')[1]
     user_subscriptions = await get_list_of_user_subscriptions(callback_query.from_user.id)
     user_subscriptions_uniq = set(user_subscriptions)
@@ -206,7 +200,7 @@ async def pagination(pages, search, cur_page: int = 0, first_button: types.Inlin
 
 
 @router.callback_query(F.data.startswith('page'))
-async def scroller(query: types.CallbackQuery = None):
+async def scroller(query: types.CallbackQuery = None) -> None:
     input_params = query.data.split(':')
     direction = input_params[1]
     cur_page = int(input_params[2])
@@ -249,7 +243,7 @@ async def scroller(query: types.CallbackQuery = None):
 
 
 @router.callback_query(F.data.startswith('selectsubs'))
-async def select_subs_from_menu(callback_query: types.CallbackQuery = None):
+async def select_subs_from_menu(callback_query: types.CallbackQuery = None) -> None:
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='page:empty:1:client'))
     keyboard.row(types.InlineKeyboardButton(text='Сырьевые товары', callback_data='page:empty:1:commodity'))
@@ -325,7 +319,7 @@ async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
     return subscriptions[0].split(', ') if subscriptions[0] else []
 
 
-async def is_subscription_limit_reached(message: types.Message, user_subscriptions_set):
+async def is_subscription_limit_reached(message: types.Message, user_subscriptions_set) -> bool:
     # проверяем, что у пользователя уже достигнут предел по кол-ву подписок
     if len(user_subscriptions_set) >= config.USER_SUBSCRIPTIONS_LIMIT:
         user_id = message.from_user.id
