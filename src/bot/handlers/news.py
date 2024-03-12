@@ -1,7 +1,5 @@
 import asyncio
-# import logging
 
-import pandas as pd
 from aiogram import F, Router, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -11,24 +9,21 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
-from configs import config
+import config
 from log.bot_logger import logger, user_logger
 from constants.aliases import (
     bonds_aliases,
     eco_aliases,
     exchange_aliases,
     metal_aliases,
-    view_aliases, help_aliases, gigachat_aliases,
+    view_aliases, help_aliases, gigachat_aliases, rag_aliases
 )
 from constants.constants import PATH_TO_COMMODITY_GRAPH
-from handlers import common, quotes, gigachat
+from handlers import common, quotes, gigachat, rag
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
-
-# logger = logging.getLogger(__name__)
-from utils.newsletter import subscriptions_newsletter
-from db import research_source
+from utils.db_api import research_source
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -137,14 +132,6 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         return False
 
 
-@router.message(Command('dailynews'))
-async def dailynews(message: types.Message) -> None:
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
-    user_df = pd.DataFrame([[message.from_user.id, full_name, '']], columns=['user_id', 'username', 'subscriptions'])
-    await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
-
-
 @router.message(Command('newsletter'))
 async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
@@ -204,6 +191,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
     buttons = [
         [types.KeyboardButton(text=cancel_command)],
         [types.KeyboardButton(text='Спросить у GigaChat')],
+        [types.KeyboardButton(text='Спросить у Базы Знаний')],
     ]
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
@@ -288,8 +276,13 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
 
                     try:
                         await message.answer(
-                            articles_f5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
+                            articles_f5,
+                            parse_mode='HTML',
+                            protect_content=False,
+                            disable_web_page_preview=True,
+                            reply_markup=keyboard,
                         )
+                    #
                     # except MessageIsTooLong:  # FIXME 3.3.0
                     #     articles = articles_f5.split('\n\n')
                     #     for article in articles:
@@ -297,6 +290,17 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
                     #             await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
                     #         else:
                     #             logger.error(f'MessageIsTooLong ERROR: {article}')
+                    except Exception as e:
+                        logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
+
+                    try:
+                        if subject == 'client':
+                            name, navi_link = ap_obj.get_client_name_and_navi_link(subject_id)
+                            if navi_link is not None:
+                                await message.answer(
+                                    f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
+                                    parse_mode='HTML',
+                                )
                     except Exception as e:
                         logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
 
@@ -312,6 +316,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             aliases_dict = {
                 **{alias: (common.help_handler, {}) for alias in help_aliases},
                 **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in gigachat_aliases},
+                **{alias: (rag.set_rag_mode, {'state': state}) for alias in rag_aliases},
                 **{alias: (quotes.bonds_info, {}) for alias in bonds_aliases},
                 **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
                 **{alias: (quotes.metal_info, {}) for alias in metal_aliases},
@@ -323,8 +328,11 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             if function_to_call:
                 await function_to_call(message, **kwargs)
             else:
+                await state.set_state(gigachat.GigaChatState.gigachat_query)
+                await state.update_data(gigachat_query=message.text)
+                await state.set_state(rag.RagState.rag_query)
+                await state.update_data(rag_query=message.text)
                 await send_nearest_subjects(message)
-                # await ask_giga_chat(message, prompt)
 
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)

@@ -1,6 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod
-from typing import Any, Tuple, Union
+from typing import Callable, Any, Tuple, Union
 
 import pandas as pd
 import requests as req
@@ -68,7 +68,11 @@ class QuotesGetter(ABC):
         """Обновляет время сбора данных с источников sources_ids"""
         group_name = self.get_group_name()
         with database.engine.connect() as conn:
-            query = text('UPDATE quote_source SET last_update_datetime=CURRENT_TIMESTAMP WHERE id = ANY(:sources_ids)')
+            query = text(
+                'UPDATE quote_source '
+                'SET previous_update_datetime=last_update_datetime, last_update_datetime=CURRENT_TIMESTAMP '
+                'WHERE id = ANY(:sources_ids)'
+            )
             conn.execute(query.bindparams(sources_ids=list(sources_ids)))
             conn.commit()
         self.logger.info(f'Обновлено время сборки котировок ({group_name})')

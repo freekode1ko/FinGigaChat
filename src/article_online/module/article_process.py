@@ -12,8 +12,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from configs.config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
-from log.logger_base import Logger
+from config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
+from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
     deduplicate,
@@ -299,24 +299,23 @@ class ArticleProcess:
         self._logger.info(f'Количество одинаковых новостей в выгрузках по клиентам и товарам - {len(df_client_commodity)}')
         self._logger.info(f'Количество новостей после объединения выгрузок - {len(df_article)}')
 
-    def save_tables(self) -> None:
+    def save_tables(self) -> list:
         """
-        Save article, get ids for original df from db,
-        And call make_save method for relation table.
+        Сохраняет новости, получает id сохраненных новостей из бд,
+        вызывает методы по сохранению таблиц отношений
+        return: список ссылок сохраненных новостей
         """
-        # TODO: оставляет 8 дублирующих новостей
-        # filter dubl news if they in DB and in new df
+
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         if not links_value:
-            return
+            return []
 
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
             self._logger.warning(
-                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - ' f'{len(self.df_article)}'
-            )
+                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
@@ -341,6 +340,8 @@ class ArticleProcess:
         self._make_save_relation_article_table('client')
         self._make_save_relation_article_table('commodity')
 
+        return self.df_article['link'].values.tolist()
+
     def _make_save_relation_article_table(self, name: str) -> None:
         """
         Make relation table and save it to database.
@@ -361,8 +362,11 @@ class ArticleProcess:
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         self._logger.info(f'В таблицу relation_{name}_article добавлено {len(df_relation_subject_article)} строк')
 
-    def save_tg_tables(self) -> None:
-        """Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами"""
+    def save_tg_tables(self) -> list:
+        """
+        Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами
+        return: список ссылок сохраненных новостей
+        """
         subject = 'telegram'
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         # make article table and save it in database
@@ -384,6 +388,8 @@ class ArticleProcess:
         df_article_subject[f'{subject}_score'] = 0
 
         df_article_subject.to_sql(f'relation_{subject}_article', con=self.engine, if_exists='append', index=False)
+
+        return article['link'].values.tolist()
 
     def find_subject_id(self, message: str, subject: str):
         """
@@ -811,6 +817,111 @@ class ArticleProcess:
         client_commodity_article_df[['date', 'text_sum']] = ''
 
         return industry_article_df, client_commodity_article_df
+
+    def get_client_name_and_navi_link(self, client_id: int) -> (str, str):
+        """
+        Получить по ID из таблицы client имя и ссылку
+        :param client_id: ID
+        return: имя и ссылку (name, navi_link )
+        """
+        with self.engine.connect() as conn:
+            if (result := conn.execute(text(f'SELECT name, navi_link FROM client WHERE id={client_id}')).fetchone()) is None:
+                return None, None  # FIXME: return Exception
+            else:
+                return result
+
+
+class ArticleProcessAdmin:
+    def __init__(self):
+        self.engine = create_engine(psql_engine, poolclass=NullPool)
+
+    def get_article_id_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                article_id = conn.execute(text(f"SELECT id FROM article WHERE link='{link}'")).fetchone()[0]
+            return article_id
+        except (TypeError, ProgrammingError):
+            return
+
+    def get_article_text_by_link(self, link: str):
+        try:
+            with self.engine.connect() as conn:
+                article = conn.execute(text(f"SELECT text, text_sum FROM article WHERE link='{link}'")).fetchone()
+                full_text, text_sum = article[0], article[1]
+            return full_text, text_sum
+        except (TypeError, ProgrammingError):
+            return '', ''
+
+    def get_article_by_link(self, link: str):
+        dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
+        dict_keys_client = ('Клиент', 'Балл по клиенту')
+        dict_keys_commodity = ('Товар', 'Балл по товару')
+
+        query_article = f"SELECT title, link, date, text_sum FROM article WHERE link='{link}'"
+
+        query_client = (
+            f"SELECT STRING_AGG(name, '; '), r_cli.client_score "
+            f'FROM client '
+            f'JOIN relation_client_article r_cli ON r_cli.client_id = client.id '
+            f'JOIN article ON article.id = r_cli.article_id '
+            f"WHERE link = '{link}' "
+            f'GROUP BY r_cli.client_score'
+        )
+
+        query_commodity = (
+            f"SELECT  STRING_AGG(name, '; '), r_com.commodity_score "
+            f'FROM commodity '
+            f'JOIN relation_commodity_article r_com ON r_com.commodity_id = commodity.id '
+            f'JOIN article ON article.id = r_com.article_id '
+            f"WHERE link = '{link}' "
+            f'GROUP BY r_com.commodity_score'
+        )
+
+        try:
+            with self.engine.connect() as conn:
+                article_data = conn.execute(text(query_article)).fetchone()
+                article_client = conn.execute(text(query_client)).fetchone()
+                article_commodity = conn.execute(text(query_commodity)).fetchone()
+
+                article_data_dict = {key: val for key, val in zip(dict_keys_article, article_data)}
+
+                if article_client:
+                    article_client_dict = {key: val for key, val in zip(dict_keys_client, article_client)}
+                else:
+                    article_client_dict = dict.fromkeys(dict_keys_client, '-')
+
+                if article_commodity:
+                    article_commodity_dict = {key: val for key, val in zip(dict_keys_commodity, article_commodity)}
+                else:
+                    article_commodity_dict = dict.fromkeys(dict_keys_commodity, '-')
+
+            summary = article_data_dict.pop('Саммари')
+            article_data_dict.update(article_client_dict)
+            article_data_dict.update(article_commodity_dict)
+            article_data_dict.update({'Саммари': summary})
+            data = article_data_dict.copy()
+
+            return data
+        # except (TypeError, ProgrammingError):
+        except Exception as e:
+            return e
+
+    def change_score_article_by_id(self, article_id: int):
+        try:
+            with self.engine.connect() as conn:
+                query = 'update relation_{subject}_article set {subject}_score=0 where article_id={id}'
+                conn.execute(text(query.format(subject='client', id=article_id)))
+                conn.execute(text(query.format(subject='commodity', id=article_id)))
+                conn.commit()
+                return True
+        except (TypeError, ProgrammingError):
+            return False
+
+    def insert_new_gpt_summary(self, new_text_summary, link):
+        """Insert new gpt summary into database"""
+        with self.engine.connect() as conn:
+            conn.execute(text(f"UPDATE article SET text_sum=('{new_text_summary}') where link='{link}'"))
+            conn.commit()
 
 
 class FormatText:

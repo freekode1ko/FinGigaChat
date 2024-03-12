@@ -338,25 +338,39 @@ async def metal_info(message: types.Message) -> None:
             columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'})
         )
 
+        query = (
+            'SELECT subname, unit, price, m_delta, y_delta ' 
+            'FROM public.commodity_pricing '
+            "WHERE subname in ('Нефть Urals', 'Нефть Brent') "
+            'ORDER BY subname;'
+        )
+        commodity_pricing_df = pd.read_sql_query(query, con=engine).rename(
+            columns={'subname': 'Сырье', 'unit': 'Ед. изм.', 'price': 'Цена', 'm_delta': 'Δ Месяц', 'y_delta': 'Δ Год'}
+        )
+        commodity_pricing_df.insert(3, 'Δ Неделя', '')
+
         order = {
-            'Медь': ['Медь', '$/т', '0'],
-            'Aluminum USD/T': ['Алюминий', '$/т', '1'],
-            'Nickel USD/T': ['Никель', '$/т', '2'],
-            'Lead USD/T': ['Cвинец', '$/т', '3'],
-            'Zinc USD/T': ['Цинк', '$/т', '4'],
-            'Gold USD/t,oz': ['Золото', '$/унц', '5'],
-            'Silver USD/t,oz': ['Cеребро', '$/унц', '6'],
-            'Palladium USD/t,oz': ['Палладий', '$/унц', '7'],
-            'Platinum USD/t,oz': ['Платина', '$/унц', '8'],
-            'Lithium CNY/T': ['Литий', 'CNH/т', '9'],
-            'Cobalt USD/T': ['Кобальт', '$/т', '10'],
-            'Iron Ore 62% fe USD/T': ['ЖРС (Китай)', '$/т', '11'],
-            'Эн. уголь': ['Эн. уголь\n(Au)', '$/т', '12'],
-            'кокс. уголь': ['Кокс. уголь\n(Au)', '$/т', '13'],
+            'Нефть Urals': ['Нефть Urals', '$/бар', '0'],
+            'Нефть Brent': ['Нефть Brent', '$/бар', '1'],
+            'Медь': ['Медь', '$/т', '2'],
+            'Aluminum USD/T': ['Алюминий', '$/т', '3'],
+            'Nickel USD/T': ['Никель', '$/т', '4'],
+            'Lead USD/T': ['Cвинец', '$/т', '5'],
+            'Zinc USD/T': ['Цинк', '$/т', '6'],
+            'Gold USD/t,oz': ['Золото', '$/унц', '7'],
+            'Silver USD/t,oz': ['Cеребро', '$/унц', '8'],
+            'Palladium USD/t,oz': ['Палладий', '$/унц', '9'],
+            'Platinum USD/t,oz': ['Платина', '$/унц', '10'],
+            'Lithium CNY/T': ['Литий', 'CNH/т', '11'],
+            'Cobalt USD/T': ['Кобальт', '$/т', '12'],
+            'Iron Ore 62% fe USD/T': ['ЖРС (Китай)', '$/т', '13'],
+            'Эн. уголь': ['Эн. уголь\n(Au)', '$/т', '14'],
+            'кокс. уголь': ['Кокс. уголь\n(Au)', '$/т', '15'],
         }
 
-        metal['ind'] = None
         metal.insert(1, 'Ед. изм.', None)
+        metal = pd.concat([commodity_pricing_df, metal], ignore_index=True)
+        metal['ind'] = None
         for num, commodity in enumerate(metal['Сырье'].values):
             if commodity in order:
                 metal.Сырье[metal.Сырье == commodity] = '<>'.join(order[commodity])

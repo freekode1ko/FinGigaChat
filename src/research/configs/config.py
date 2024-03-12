@@ -64,8 +64,18 @@ api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 
 RESEARCH_GETTING_TIMES_LIST = [
-    '08:00', '10:00', '12:00', '14:00', '16:00',
-    '17:00', '17:10', '17:20', '17:30', '17:40', '17:50', '18:00',
+    '08:00',
+    '10:00',
+    '12:00',
+    '14:00',
+    '16:00',
+    '17:00',
+    '17:10',
+    '17:20',
+    '17:30',
+    '17:40',
+    '17:50',
+    '18:00',
 ]
 
 QUOTES_PROCESSING_PROC_NUM = 2
@@ -79,7 +89,7 @@ TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.
 QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
 RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
 
-BASE_GIGAPARSER_URL = 'http://gigaparsernews.ru:5000/{}'
+BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
 NEWS_LIMIT = 5
 USER_SUBSCRIPTIONS_LIMIT = 70
 PAGE_ELEMENTS_COUNT = 10
@@ -89,9 +99,12 @@ BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
 USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
 NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
-POST_TO_GIGAPARSER_TIMEOUT = 60 * 10
-POST_TO_GIGAPARSER_ATTEMPTS = 3
-POST_TO_GIGAPARSER_SLEEP_AFTER_ERROR = 10
+
+
+POST_TO_GIGAPARSER_TIMEOUT = 1200
+POST_TO_SERVICE_TIMEOUT = 90
+POST_TO_SERVICE_ATTEMPTS = 3
+POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
@@ -121,9 +134,8 @@ summarization_prompt = (
 )
 
 help_text = (
-    'Всем привет! Рады приветствовать Вас в AI-помощнике банкира!\n\n'
-    'Для того, чтобы начать пользоваться ботом нужно ввести специальную команду для идентификации. '
-    'Вы ее можете уточнить у Максима Королькова. \n\nБот позволяет оперативно получить информацию о ситуации на рынке, '
+    'Рады приветствовать Вас в AI-помощнике банкира!\n\n'
+    'Бот позволяет оперативно получить информацию о ситуации на рынке, '
     'в отрасли, у клиента в сжатом виде.\n\nНа данный момент в AI-помощнике доступен следующий функционал и контент:\n'
     '—> новости по отраслям, клиентам, бенефициарам, ЛПР, commodities из более 200 источников '
     'включая ключевые отраслевые телеграмм каналы (есть возможность настроить ежедневную рассылку);\n'
@@ -151,13 +163,13 @@ help_text = (
     'Закрепите бота в своей ленте, чтобы не пропустить самый полезный контент и новости! '
     'Для этого сделайте долгое нажатие на бота в своей ленте новостей и в выпадающем списке нажмите «закрепить».\n\n'
     'Бот постоянно совершенствуется и дообучается, поэтому присылайте, пожалуйста, '
-    'обратную связь по контенту, функционалу и новым идеям Максиму Королькову @korolkov_m и Александру Юдину.'
+    'обратную связь по контенту, функционалу и новым идеям команде проекта.'
 )
 
 table_link = 'https://metals-wire.com/data'
 
 charts_links = {
-    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/' '?to=date_date&countBack=1825',
+    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
     'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
 }
 

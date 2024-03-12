@@ -11,16 +11,16 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from configs.config import psql_engine, summarization_prompt
+from config import psql_engine, summarization_prompt
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
-from log.logger_base import Logger
+from module.logger_base import Logger
 
 import datetime as dt
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_binary_best2.pkl'
-CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'data/model/multiclass_classification_best.pkl'
-COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_relevance_model_0.5_threshold_upd.pkl'
+CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
@@ -128,13 +128,16 @@ def get_alternative_names_pattern_client(alt_names):
         key = clear_alt_names[0]
 
         clear_alt_names = add_endings(clear_alt_names)
-        clear_alt_names_upper = add_endings([el.upper() for el in clear_alt_names])
+        clear_alt_names_upper = add_endings(
+            [el.upper() for el in clear_alt_names])
 
         names_pattern_base = '( |\. |, |\) )|'.join(clear_alt_names)
         names_pattern_base += '( |\. |, |\) )'
         names_patter_upper = '( |\. |, |\) )|'.join(clear_alt_names_upper)
         names_patter_upper += '( |\. |, |\) )'
-        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+', '\+')
+        alter_names_dict[
+            key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+',
+                                                                          '\+')
 
     return alter_names_dict
 
@@ -144,17 +147,22 @@ morph = pymorphy2.MorphAnalyzer()
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
 commodity_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
 alter_client_names_dict = get_alternative_names_pattern_client(client_names)
-alter_commodity_names_dict = get_alternative_names_pattern_commodity(commodity_names)
+alter_commodity_names_dict = get_alternative_names_pattern_commodity(
+    commodity_names)
 
-client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
-commodity_rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
+client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict(
+    'records')
+commodity_rating_system_dict = pd.read_excel(
+    COMMODITY_RATING_FILE_PATH).to_dict('records')
 for group in commodity_rating_system_dict:
-    group['key words'] = ','.join([f' {word.strip().lower()}' for word in group['key words'].split(',')])
+    group['key words'] = ','.join(
+        [f' {word.strip().lower()}' for word in group['key words'].split(',')])
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
     if 'газ' in names:
-        if search('магазин|газета|парниковый|углекислый| сектор газ ', clean_text):
+        if search('магазин|газета|парниковый|углекислый| сектор газ ',
+                  clean_text):
             names_list = names.split(';')
             names_list.remove('газ')
             names = ';'.join(names_list)
@@ -183,28 +191,34 @@ def get_names_pattern(names: str, type_of_article: str):
     :return: pattern which included alternative names
     """
     # Load alternative names data
-    df_alternative_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format(type_of_article), index_col=False)
-    df_alternative_names = df_alternative_names.applymap(lambda x: x.lower().strip() if isinstance(x, str) else None)
+    df_alternative_names = pd.read_excel(
+        ALTERNATIVE_NAME_FILE.format(type_of_article), index_col=False)
+    df_alternative_names = df_alternative_names.applymap(
+        lambda x: x.lower().strip() if isinstance(x, str) else None)
     first_column = df_alternative_names.columns[0]
 
     # Filter alternative names based on input names
     names_list = names.split(';')
-    names_alternative_list = df_alternative_names[df_alternative_names[first_column].isin(names_list)].values.tolist()
+    names_alternative_list = df_alternative_names[
+        df_alternative_names[first_column].isin(names_list)].values.tolist()
 
     # Create a list of names
-    list_of_all_names = [name for client_list in names_alternative_list for name in client_list if pd.notnull(name)]
+    list_of_all_names = [name for client_list in names_alternative_list for name
+                         in client_list if pd.notnull(name)]
 
     # Generate names pattern
     if type_of_article == 'commodity':
         # TODO: костыль: нужна основа или альтернативные названия более полные
-        names_pattern = '|'.join([name[:-1] for name in list_of_all_names if len(name) > 3])
+        names_pattern = '|'.join(
+            [name[:-1] for name in list_of_all_names if len(name) > 3])
     else:
         names_pattern = '|'.join(list_of_all_names)
 
     return names_pattern
 
 
-def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_article: str = 'client') -> str:
+def find_stock(title: str, names: str, clean_text: str, labels: str,
+               type_of_article: str = 'client') -> str:
     """
     Processing news about stock
     :param title: title of article
@@ -277,7 +291,8 @@ def find_names(article_text, alt_names_dict, rule_flag: bool = False):
     if rule_flag:
         max_count = max(names_dict.values(), default=None)
         if max_count and max_count != 1:
-            return ';'.join([key for key, val in names_dict.items() if val == max_count]), impact_json
+            return ';'.join([key for key, val in names_dict.items() if
+                             val == max_count]), impact_json
         return '', impact_json
     return ';'.join(names_dict.keys()), impact_json
 
@@ -291,7 +306,8 @@ def find_names_online(article_title, article_text, alt_names_dict):
     :return: str. String with found names separated with ; symbol.
     """
     article_text = ' {} '.format(article_text.replace('"', ''))
-    article_title = ' {} '.format(article_title.replace('"', '')) if isinstance(article_title, str) else ''
+    article_title = ' {} '.format(article_title.replace('"', '')) if isinstance(
+        article_title, str) else ''
     names_dict = {}
     title_name_list = []
     names_text = ''
@@ -313,7 +329,8 @@ def find_names_online(article_title, article_text, alt_names_dict):
     impact_json = json.dumps(names_dict, ensure_ascii=False)
     max_count = max(names_dict.values(), default=None)
     if max_count and max_count != 1:
-        names_text = ';'.join([key for key, val in names_dict.items() if val == max_count])
+        names_text = ';'.join(
+            [key for key, val in names_dict.items() if val == max_count])
 
     names = union_name(names_title, names_text)
     return names, impact_json
@@ -339,10 +356,13 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
                 'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
                 "where {type_of_article}.name = '{subject_name}'"
             )
-            count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
+            count = conn.execute(text(
+                query_count.format(type_of_article=type_of_article,
+                                   subject_name=subject_name))).fetchone()
             counts_dict[subject_name] = count
     min_count = min(counts_dict.values())
-    threshold = threshold - minus_threshold if min_count[0] <= min_count_article_val else threshold
+    threshold = threshold - minus_threshold if min_count[
+                                                   0] <= min_count_article_val else threshold
     return threshold
 
 
@@ -363,7 +383,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
     return labels
 
 
-def rate_client(df, rating_dict, threshold: float = 0.65) -> pd.DataFrame:
+def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
     :param rating_dict: dict with rating
@@ -388,7 +408,9 @@ def rate_client(df, rating_dict, threshold: float = 0.65) -> pd.DataFrame:
 
     # using relevance label condition
     df['client_labels'] = df.apply(
-        lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'], row['client_labels'], rating_dict), axis=1
+        lambda row: search_keywords(row['relevance'], row['client'],
+                                    row['cleaned_data'], row['client_labels'],
+                                    rating_dict), axis=1
     )
 
     # delete relevance column
@@ -396,7 +418,8 @@ def rate_client(df, rating_dict, threshold: float = 0.65) -> pd.DataFrame:
 
     # processing stck news
     df['client_labels'] = df.apply(
-        lambda row: find_stock(row['title'], row['client'], row['cleaned_data'], row['client_labels']), axis=1
+        lambda row: find_stock(row['title'], row['client'], row['cleaned_data'],
+                               row['client_labels']), axis=1
     )
 
     return df
@@ -420,17 +443,22 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
     engine = create_engine(psql_engine, poolclass=NullPool)
     for index, pair in enumerate(probs):
         commodity_names = df['commodity'].iloc[index].split(';')
-        local_threshold = down_threshold(engine, 'commodity', commodity_names, threshold)
+        local_threshold = down_threshold(engine, 'commodity', commodity_names,
+                                         threshold)
         res.append(1 if (pair[1]) > local_threshold else 0)
     df['relevance'] = res
 
     df['commodity_labels'] = df.apply(
-        lambda row: search_keywords(row['relevance'], row['commodity'], row['cleaned_data'], '0', rating_dict), axis=1
+        lambda row: search_keywords(row['relevance'], row['commodity'],
+                                    row['cleaned_data'], '0', rating_dict),
+        axis=1
     )
     df.drop(columns=['relevance'], inplace=True)
 
     df['commodity_labels'] = df.apply(
-        lambda row: find_stock(row['title'], row['commodity'], row['cleaned_data'], row['commodity_labels'], 'commodity'), axis=1
+        lambda row: find_stock(row['title'], row['commodity'],
+                               row['cleaned_data'], row['commodity_labels'],
+                               'commodity'), axis=1
     )
     return df
 
@@ -449,24 +477,19 @@ def union_name(p_row: str, r_row: str) -> str:
     return ';'.join(common_set)
 
 
-def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str, text: str) -> str:
+def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat,
+                          content: str) -> str:
     """
     Создание краткой версии новостного текста с помощью GigaChat
     :param logger: экземпляр класса логер для логирования процесса
     :param giga_chat: экземпляр класса GigaChat
-    :param token: токен авторизации в GigaChat
-    :param text: текст новости
+    :param content: текст новости
     :return: суммаризированный текст
     """
 
     try:
-        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
-        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
-    except ConnectionError:
-        giga_chat = GigaChat()
-        token = giga_chat.get_user_token()
-        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
-        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
+        giga_answer = giga_chat.get_giga_answer(text=content,
+                                                prompt=summarization_prompt)
     except Exception as e:
         logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
@@ -490,12 +513,14 @@ def change_bad_summary(logger: Logger.logger, row: pd.Series) -> str:
     #     return row['title']
     else:
         print(f'GigaChat не сгенерировал саммари для новости  {row["link"]}')
-        logger.error(f'GigaChat не сгенерировал саммари для новости {row["link"]}')
+        logger.error(
+            f'GigaChat не сгенерировал саммари для новости {row["link"]}')
         first_sentence = row['text'][: row['text'].find('.') + 1]
         return first_sentence
 
 
-def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) -> pd.DataFrame:
+def model_func(logger: Logger.logger, df: pd.DataFrame,
+               type_of_article: str) -> pd.DataFrame:
     """
     Нахождение имен объектов в тексте новости и назначение баллов значимости новости
     :param logger: экземпляр класса логер для логирования процесса
@@ -510,10 +535,14 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
     logger.debug(f'Нахождение {type_of_article} в тексте новости')
 
     if type_of_article == 'client':
-        df[['found_client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict)))
+        df[['found_client', 'client_impact']] = df['text'].apply(
+            lambda x: pd.Series(find_names(x, alter_client_names_dict)))
 
-        df[type_of_article] = df.apply(lambda row: union_name(row['client'], row['found_client']), axis=1)
-        df[type_of_article] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
+        df[type_of_article] = df.apply(
+            lambda row: union_name(row['client'], row['found_client']), axis=1)
+        df[type_of_article] = df.apply(
+            lambda row: check_gazprom(row['client'], row['client_impact'],
+                                      row['text']), axis=1)
 
         logger.debug('Сортировка новостей о клиентах')
         df = rate_client(df, client_rating_system_dict)
@@ -523,17 +552,21 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
             lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True))
         )
 
-        df['found_commodity'] = df.apply(lambda row: find_bad_gas(row['found_commodity'], row['cleaned_data']), axis=1)
+        df['found_commodity'] = df.apply(
+            lambda row: find_bad_gas(row['found_commodity'],
+                                     row['cleaned_data']), axis=1)
         df[type_of_article] = df['found_commodity']
 
         logger.debug('Сортировка новостей о товарах')
         df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
+        lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
-    df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
+    df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'],
+            inplace=True)
 
     return df
 
@@ -552,15 +585,22 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     # find subject name in text
     logger.debug('Нахождение клиентов в тексте новости')
     df[['client', 'client_impact']] = df.apply(
-        lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)), axis=1
+        lambda row: pd.Series(find_names_online(row['title'], row['text'],
+                                                alter_client_names_dict)),
+        axis=1
     )
-    df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
+    df['client'] = df.apply(
+        lambda row: check_gazprom(row['client'], row['client_impact'],
+                                  row['text']), axis=1)
 
     logger.debug('Нахождение товаров в тексте новости')
     df[['commodity', 'commodity_impact']] = df.apply(
-        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1
+        lambda row: pd.Series(
+            find_names_online(row['title'], row['cleaned_data'],
+                              alter_commodity_names_dict)), axis=1
     )
-    df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
+    df['commodity'] = df.apply(
+        lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
 
     # make rating for article
     logger.debug('Сортировка новостей о клиентах')
@@ -569,8 +609,10 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df['client_score'] = df['client_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
-    df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['client_score'] = df['client_labels'].map(
+        lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['commodity_score'] = df['commodity_labels'].map(
+        lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
     df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
@@ -578,17 +620,21 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
+def add_text_sum_column(logger: Logger.logger,
+                        df: pd.DataFrame) -> pd.DataFrame:
     """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
-    giga_chat = GigaChat()
-    token = giga_chat.get_user_token()
-    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(logger, giga_chat, token, text))
-    df['text_sum'] = df.apply(lambda row: change_bad_summary(logger, row), axis=1)
+    giga_chat = GigaChat(logger)
+    df['text_sum'] = df['text'].apply(
+        lambda text_: summarization_by_giga(logger, giga_chat, text_))
+    df['text_sum'] = df.apply(lambda row: change_bad_summary(logger, row),
+                              axis=1)
     return df
 
 
-def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(logger: Logger.logger, df: pd.DataFrame,
+                df_previous: pd.DataFrame,
+                threshold: float = 0.35) -> pd.DataFrame:
     """
     Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
     :param logger: экземпляр класса логер для логирования процесса
@@ -606,23 +652,30 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
-    df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
-    df['count_commodity'] = df['commodity'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
+    df['count_client'] = df['client'].map(
+        lambda x: len(list(x.split(sep=';'))) if (
+                    isinstance(x, str) and x) else 0)
+    df['count_commodity'] = df['commodity'].map(
+        lambda x: len(list(x.split(sep=';'))) if (
+                    isinstance(x, str) and x) else 0)
     df = df.sort_values(
-        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'], ascending=[False, False, False, False]
+        by=['count_client', 'count_commodity', 'client_score',
+            'commodity_score'], ascending=[False, False, False, False]
     ).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
     # объединяем столбцы старого и нового датафрейма
-    df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
-    df_concat_date = pd.concat([df_previous['date'], df['date']], ignore_index=True)
-    df_concat_client = pd.concat([df_previous['client'], df['client']], ignore_index=True).fillna(';')
-    df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']], ignore_index=True).fillna(';')
-    
+    df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']],
+                          ignore_index=True)
+    df_concat_client = pd.concat([df_previous['client'], df['client']],
+                                 ignore_index=True).fillna(';')
+    df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']],
+                                    ignore_index=True).fillna(';')
+
     # устанавливаем порог определения старой новости: если она лежит в БД более 2 дней
     MAX_TIME_LIM = 60 * 60 * 24 * 2
     dt_now = dt.datetime.now()
-    
+
     # векторизируем новости в датафрейме
     vectorizer = TfidfVectorizer()
     X_tf_idf = vectorizer.fit_transform(df_concat)
@@ -637,15 +690,16 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     for actual_pos in range(start, end):
 
         flag_unique = True  # флаг уникальности новости
-        flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
 
         # от начала старых новостей до конца новых новостей
         for previous_pos in range(actual_pos):
-
+            current_threshold = threshold
+            flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
             # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
-            time_passed = (dt_now - df_concat_date[previous_pos]).total_seconds()
-            current_threshold = threshold + 0.2 if (previous_pos < start and time_passed > MAX_TIME_LIM) else threshold
-
+            if previous_pos < start:
+                time_passed = (dt_now - df_previous['date'][
+                    previous_pos]).total_seconds()
+                current_threshold = threshold + 0.2 if time_passed > MAX_TIME_LIM else threshold
             actual_client = df_concat_client[actual_pos].split(';')
             actual_commodity = df_concat_commodity[actual_pos].split(';')
             previous_client = df_concat_client[previous_pos].split(';')
@@ -654,20 +708,25 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
             # для каждого клиента в списке найденных клиентов
             for client in actual_client:
                 # если клиент есть в старой новости, то говорим, что новости имеют одинаковых клиентов
-                if client in previous_client and len(actual_client) >= 1 and len(previous_client) >= 1:
+                if client in previous_client and len(
+                        actual_client) >= 1 and len(
+                        previous_client) >= 1 and len(str(client)) > 0:
                     flag_found_same = True
 
             # для каждого товара в списке найденных товаров
             for commodity in actual_commodity:
                 # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
-                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1:
+                if commodity in previous_commodity and len(
+                        actual_commodity) >= 1 and len(
+                        previous_commodity) >= 1 and len(str(commodity)) > 0:
                     flag_found_same = True
 
             # меняем границу, если новости имеют одинаковых клиентов
-            current_threshold = current_threshold -0.07 if flag_found_same else current_threshold + 0.2
+            current_threshold = current_threshold - 0.07 if flag_found_same else current_threshold + 0.2
 
             # если разница между векторами рассматриваемых новостей больше границы, то новость неуникальна
-            if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:
+            if X_tf_idf[actual_pos, :].dot(
+                    X_tf_idf[previous_pos, :].T) > current_threshold:
                 flag_unique = False
                 break
 
@@ -679,7 +738,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
         df = df[df['unique']]
         df.drop(columns=['unique'], inplace=True)
 
-    logger.info(f'Количество новостей из базы данных за последние 14 дней - {len(df_previous)}')
+    logger.info(
+        f'Количество новостей из базы данных за последние 14 дней - {len(df_previous)}')
     logger.info(f'Количество новостей после удаления дублей - {len(df)}')
 
     return df
@@ -695,7 +755,7 @@ def summarization_by_chatgpt(full_text: str):
         while len(full_text + summarization_prompt) > batch_size:
             point_index = full_text[:batch_size].rfind('.')
             text_batches.append(full_text[: point_index + 1])
-            full_text = full_text[point_index + 1 :]
+            full_text = full_text[point_index + 1:]
     else:
         text_batches = [full_text]
     for batch in text_batches:

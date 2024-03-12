@@ -34,6 +34,8 @@ DEBUG: bool = env.str('DEBUG', default='false')
 SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
+BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
+
 mail_imap_server = 'imap.mail.ru'
 mail_username = 'ai-helper@mail.ru'
 mail_password = 'ExamKejCpmcpr8kM5emw'

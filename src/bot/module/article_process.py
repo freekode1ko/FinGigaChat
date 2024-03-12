@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from configs.config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
+from config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
 from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
@@ -299,24 +299,23 @@ class ArticleProcess:
         self._logger.info(f'Количество одинаковых новостей в выгрузках по клиентам и товарам - {len(df_client_commodity)}')
         self._logger.info(f'Количество новостей после объединения выгрузок - {len(df_article)}')
 
-    def save_tables(self) -> None:
+    def save_tables(self) -> list:
         """
-        Save article, get ids for original df from db,
-        And call make_save method for relation table.
+        Сохраняет новости, получает id сохраненных новостей из бд,
+        вызывает методы по сохранению таблиц отношений
+        return: список ссылок сохраненных новостей
         """
-        # TODO: оставляет 8 дублирующих новостей
-        # filter dubl news if they in DB and in new df
+
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         if not links_value:
-            return
+            return []
 
         query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
         links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
         if not links_of_old_article.empty:
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
             self._logger.warning(
-                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - ' f'{len(self.df_article)}'
-            )
+                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
@@ -341,6 +340,8 @@ class ArticleProcess:
         self._make_save_relation_article_table('client')
         self._make_save_relation_article_table('commodity')
 
+        return self.df_article['link'].values.tolist()
+
     def _make_save_relation_article_table(self, name: str) -> None:
         """
         Make relation table and save it to database.
@@ -361,8 +362,11 @@ class ArticleProcess:
         df_relation_subject_article.to_sql(f'relation_{name}_article', con=self.engine, if_exists='append', index=False)
         self._logger.info(f'В таблицу relation_{name}_article добавлено {len(df_relation_subject_article)} строк')
 
-    def save_tg_tables(self) -> None:
-        """Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами"""
+    def save_tg_tables(self) -> list:
+        """
+        Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами
+        return: список ссылок сохраненных новостей
+        """
         subject = 'telegram'
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         # make article table and save it in database
@@ -384,6 +388,8 @@ class ArticleProcess:
         df_article_subject[f'{subject}_score'] = 0
 
         df_article_subject.to_sql(f'relation_{subject}_article', con=self.engine, if_exists='append', index=False)
+
+        return article['link'].values.tolist()
 
     def find_subject_id(self, message: str, subject: str):
         """
@@ -811,6 +817,18 @@ class ArticleProcess:
         client_commodity_article_df[['date', 'text_sum']] = ''
 
         return industry_article_df, client_commodity_article_df
+
+    def get_client_name_and_navi_link(self, client_id: int) -> (str, str):
+        """
+        Получить по ID из таблицы client имя и ссылку
+        :param client_id: ID
+        return: имя и ссылку (name, navi_link )
+        """
+        with self.engine.connect() as conn:
+            if (result := conn.execute(text(f'SELECT name, navi_link FROM client WHERE id={client_id}')).fetchone()) is None:
+                return None, None  # FIXME: return Exception
+            else:
+                return result
 
 
 class ArticleProcessAdmin:

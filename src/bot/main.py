@@ -14,7 +14,7 @@ from configs import config, newsletter_config
 from log.bot_logger import logger
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
-from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry
+from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag
 from utils.base import (
     next_weekday_time, wait_until,
 )
