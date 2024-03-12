@@ -164,8 +164,7 @@ if __name__ == '__main__':
     sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
     warnings.filterwarnings('ignore')
     # инициализируем логгер
-    log_name = Path(__file__).stem
-    logger = selector_logger(log_name)
+    logger = selector_logger(config.log_file)
     try:
         # запускаем периодическое получение/обработку новостей
         ap_obj_online = ArticleProcess(logger)

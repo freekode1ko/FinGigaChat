@@ -1,6 +1,6 @@
 import pandas as pd
 
-import database
+from db import database
 
 
 class MessageType:

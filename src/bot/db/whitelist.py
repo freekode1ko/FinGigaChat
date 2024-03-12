@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from database import engine
+from db.database import engine
 
 
 def update_user_email(user_id: int, user_email: str):

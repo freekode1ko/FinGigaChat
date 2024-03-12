@@ -6,7 +6,7 @@ import pandas as pd
 from sqlalchemy import text
 
 from configs import config
-import database
+from db import database
 from db.message_type import message_types
 
 

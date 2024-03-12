@@ -548,7 +548,7 @@ def main():
 
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
-    logger = selector_logger(Path(__file__).stem, config.LOG_LEVEL_INFO)
+    logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
     res_get_times_len = len(config.RESEARCH_GETTING_TIMES_LIST)
 
     # сборка происходит каждый день в
