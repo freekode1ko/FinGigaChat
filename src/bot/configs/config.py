@@ -59,6 +59,7 @@ api_key_gpt = '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'
 NEWS_LIMIT = 5
 PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
+POST_TO_SERVICE_TIMEOUT = 90
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
@@ -71,6 +72,9 @@ mail_imap_server = 'imap.mail.ru'
 mail_smpt_server = 'smtp.mail.ru'
 mail_smpt_port = 465
 mail_register_subject = 'Регистрация в AI-помощнике'
+
+
+BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
 
 reg_mail_text = (
     'Добрый день!\n\nВы получили данное письмо, потому что указали данный адрес в AI-помощнике Банкира.\n\n'

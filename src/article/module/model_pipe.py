@@ -6,15 +6,14 @@ from typing import Dict
 
 import pandas as pd
 import pymorphy2
-from requests.exceptions import ConnectionError
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from config import psql_engine, summarization_prompt
+from configs.config import psql_engine, summarization_prompt
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
-from module.logger_base import Logger
+from log.logger_base import Logger
 
 import datetime as dt
 

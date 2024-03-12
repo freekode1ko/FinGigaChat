@@ -5,9 +5,9 @@ from typing import List
 import pandas as pd
 from sqlalchemy import text
 
-import config
+from configs import config
 import database
-from utils.db_api.message_type import message_types
+from db.message_type import message_types
 
 
 __table_name__ = 'message'

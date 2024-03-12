@@ -1,5 +1,5 @@
 from configs import config
-from module.logger_base import get_db_logger, get_handler, selector_logger
+from log.logger_base import get_db_logger, get_handler, selector_logger
 
 # инициализируем обработчик и логгер
 print('Инициализация логера')

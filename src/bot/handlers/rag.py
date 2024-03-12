@@ -10,7 +10,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from log.bot_logger import logger, user_logger
 from constants.constants import giga_rag_footer
 from utils.base import user_in_whitelist
-import config
+from configs import config
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())

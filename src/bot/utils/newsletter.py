@@ -6,15 +6,15 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.utils.media_group import MediaGroupBuilder
 
-import config
+from configs import config
 import module.data_transformer as dt
-from bot_logger import logger, user_logger
-from database import engine
+from log.bot_logger import logger, user_logger
+from db.database import engine
 from module.article_process import ArticleProcess
-from utils.bot.base import bot_send_msg, translate_subscriptions_to_object_id
-from utils.bot.industry import get_tg_channel_news_msg, group_news_by_tg_channels
-from utils.db_api import research_source, message
-from utils.db_api.industry import get_industry_tg_news
+from utils.base import bot_send_msg, translate_subscriptions_to_object_id
+from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
+from db import research_source, message
+from db.industry import get_industry_tg_news
 
 
 async def tg_newsletter(

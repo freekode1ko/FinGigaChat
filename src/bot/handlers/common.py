@@ -17,9 +17,7 @@ from constants.constants import CANCEL_CALLBACK
 from db.database import engine
 from module.mail_parse import SmtpSend
 from utils.base import user_in_whitelist
-from utils.db_api.whitelist import update_user_email
-
-# from utils.data_crypto import AESCrypther
+from db.whitelist import update_user_email
 
 
 # States
@@ -30,7 +28,6 @@ class Form(StatesGroup):
     continue_user_reg = State()
 
 
-# logger = logging.getLogger(__name__)
 router = Router()
 
 

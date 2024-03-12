@@ -16,7 +16,7 @@ from docker import errors as docker_errors
 from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
 
-import config
+from configs import config
 from module.logger_base import Logger
 
 

@@ -1,5 +1,4 @@
 import json
-# import logging
 from typing import Union, List
 
 import pandas as pd
@@ -27,8 +26,8 @@ from utils.base import (
     user_in_whitelist,
 )
 from utils.newsletter import subscriptions_newsletter
-from utils.db_api.message import get_messages_by_type, delete_messages, add_all
-from utils.db_api.message_type import message_types
+from db.message import get_messages_by_type, delete_messages, add_all
+from db.message_type import message_types
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
 

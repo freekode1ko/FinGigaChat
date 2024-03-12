@@ -10,10 +10,10 @@ import pandas as pd
 from aiogram import Bot, types
 
 import module.data_transformer as dt
-from config import path_to_source, PAGE_ELEMENTS_COUNT
-from constants.bot.constants import research_footer
-from database import engine
-from module.logger_base import Logger
+from configs.config import path_to_source, PAGE_ELEMENTS_COUNT
+from constants.constants import research_footer
+from db.database import engine
+from log.logger_base import Logger
 
 
 async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> List[types.Message]:

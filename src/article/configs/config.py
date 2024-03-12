@@ -12,7 +12,7 @@ env.read_env()
 _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
 
-PROJECT_DIR = pathlib.Path(__file__).parent  # noqa
+PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.str('DEBUG', default='false')
 
@@ -26,10 +26,6 @@ def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'u
         encoding: Кодировка файла
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
-
-# config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
-PROJECT_DIR = pathlib.Path(__file__).parent  # noqa
-DEBUG: bool = env.str('DEBUG', default='false')
 
 SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)

@@ -88,6 +88,7 @@ async def start_bot():
         gigachat.router,
         referencebook.router,
         industry.router,
+        rag.router,
         news.router,
     )
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен

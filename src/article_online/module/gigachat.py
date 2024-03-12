@@ -5,7 +5,7 @@ import warnings
 
 import requests as req
 
-from config import giga_oauth_url, giga_chat_url, giga_scope, giga_model, giga_credentials
+from configs.config import giga_oauth_url, giga_chat_url, giga_scope, giga_model, giga_credentials
 
 warnings.filterwarnings('ignore')
 

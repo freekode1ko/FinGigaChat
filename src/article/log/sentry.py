@@ -4,7 +4,7 @@ import sentry_sdk
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
-import config
+from configs import config
 
 logger = logging.getLogger(__name__)
 

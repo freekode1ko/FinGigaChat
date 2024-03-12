@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-import config as config
-from config import mail_imap_server, mail_password, mail_username
+from configs import config
+from configs.config import mail_imap_server, mail_password, mail_username
 from module.article_process import ArticleProcess
 from log.logger_base import selector_logger
 from module.mail_parse import ImapParse

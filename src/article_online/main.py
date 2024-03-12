@@ -177,8 +177,9 @@ if __name__ == '__main__':
             print(start_msg)
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
-            post_ids(gotten_ids)  # отправка giga parsers полученных айди
-            post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
+            if not config.DEBUG:
+                post_ids(gotten_ids)  # отправка giga parsers полученных айди
+                post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
             work_time = time.time() - start_time

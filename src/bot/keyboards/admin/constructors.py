@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
 from constants.constants import CANCEL_CALLBACK
 from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
-from utils.db_api.message_type import message_types
+from db.message_type import message_types
 
 
 def get_message_types_kb() -> InlineKeyboardMarkup:

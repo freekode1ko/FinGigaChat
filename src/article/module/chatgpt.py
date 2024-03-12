@@ -1,6 +1,6 @@
 import openai
 
-from config import api_key_gpt
+from configs.config import api_key_gpt
 
 # TODO: установить openai==0.28.1
 # TODO: создать токен

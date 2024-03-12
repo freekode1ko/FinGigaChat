@@ -12,8 +12,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
-from module.logger_base import Logger
+from configs.config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
+from log.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
     deduplicate,

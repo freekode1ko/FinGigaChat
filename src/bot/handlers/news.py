@@ -9,7 +9,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
-import config
+from configs import config
 from log.bot_logger import logger, user_logger
 from constants.aliases import (
     bonds_aliases,
@@ -23,7 +23,7 @@ from handlers import common, quotes, gigachat, rag
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
-from utils.db_api import research_source
+from db import research_source
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
