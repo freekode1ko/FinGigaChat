@@ -1,6 +1,6 @@
 version: "3"
 
-#    backend:
+
 services:
     database:
         image: 'postgres:latest'
@@ -17,6 +17,7 @@ services:
             - .env
         restart: always
 
+
     article:
         build:
             context: ./src/article
@@ -29,7 +30,10 @@ services:
             - database
         volumes:
             - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always
+
 
     article_online:
         build:
@@ -43,6 +47,8 @@ services:
             - database
         volumes:
             - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always
 
 
@@ -58,7 +64,10 @@ services:
             - database
         volumes:
             - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always
+
 
     quotes:
         build:
@@ -72,8 +81,11 @@ services:
             - database
         volumes:
             - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
             - /var/run/docker.sock:/var/run/docker.sock
         restart: always
+
 
     research:
         build:
@@ -87,7 +99,10 @@ services:
             - database
         volumes:
             - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always
+
 
     users_statistics:
         build:
@@ -101,8 +116,6 @@ services:
             - database
         volumes:
             - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always
-
-
-volumes:
-    logs_volume:

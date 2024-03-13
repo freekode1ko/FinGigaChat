@@ -53,7 +53,7 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
-path_to_source = './data/sources'
+path_to_source = './sources'
 api_key_gpt = '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'
 
 NEWS_LIMIT = 5

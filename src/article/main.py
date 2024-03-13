@@ -12,8 +12,8 @@ from log.logger_base import selector_logger
 from module.mail_parse import ImapParse
 from log import sentry
 
-CLIENT_FOLDER_DIR = 'data/articles/client'
-COMMODITY_FOLDER_DIR = 'data/articles/commodity'
+CLIENT_FOLDER_DIR = 'temporary/articles/client'
+COMMODITY_FOLDER_DIR = 'temporary/articles/commodity'
 HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 
