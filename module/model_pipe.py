@@ -18,7 +18,7 @@ from module.logger_base import Logger
 
 import datetime as dt
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_relevance_model_0.5_threshold_upd.pkl'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_binary_best2.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
@@ -343,8 +343,7 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
                 'JOIN article ON r.article_id = article.id '
                 f"where {type_of_article}.name = '{subject_name}' AND '{dt_now}' - article.date < '30 day'"
             )
-            count = conn.execute(
-                text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
+            count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
             counts_dict[subject_name] = count
     min_count = min(counts_dict.values())
     threshold = threshold - minus_threshold if min_count[0] <= min_count_article_val else threshold
@@ -399,8 +398,7 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
 
     # using relevance label condition
     df['client_labels'] = df.apply(
-        lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'], row['client_labels'],
-                                    rating_dict), axis=1
+        lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'], row['client_labels'], rating_dict), axis=1
     )
 
     # delete relevance column
@@ -462,24 +460,17 @@ def union_name(p_row: str, r_row: str) -> str:
     return ';'.join(common_set)
 
 
-def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str, text: str) -> str:
+def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, content: str) -> str:
     """
     Создание краткой версии новостного текста с помощью GigaChat
     :param logger: экземпляр класса логер для логирования процесса
     :param giga_chat: экземпляр класса GigaChat
-    :param token: токен авторизации в GigaChat
-    :param text: текст новости
+    :param content: текст новости
     :return: суммаризированный текст
     """
 
     try:
-        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
-        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
-    except ConnectionError:
-        giga_chat = GigaChat()
-        token = giga_chat.get_user_token()
-        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
-        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
+        giga_answer = giga_chat.get_giga_answer(text=content, prompt=summarization_prompt)
     except Exception as e:
         logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
@@ -597,9 +588,8 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
-    giga_chat = GigaChat()
-    token = giga_chat.get_user_token()
-    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(logger, giga_chat, token, text))
+    giga_chat = GigaChat(logger)
+    df['text_sum'] = df['text'].apply(lambda text_: summarization_by_giga(logger, giga_chat, text_))
     df['text_sum'] = df.apply(lambda row: change_bad_summary(logger, row), axis=1)
     return df
 
@@ -634,7 +624,6 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
 
     # объединяем столбцы старого и нового датафрейма
     df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
-    df_concat_date = pd.concat([df_previous['date'], df['date']], ignore_index=True)
     df_concat_client = pd.concat([df_previous['client'], df['client']], ignore_index=True).fillna(';')
     df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']], ignore_index=True).fillna(';')
 
@@ -656,15 +645,15 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     for actual_pos in range(start, end):
 
         flag_unique = True  # флаг уникальности новости
-        flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
 
         # от начала старых новостей до конца новых новостей
         for previous_pos in range(actual_pos):
-
+            current_threshold = threshold
+            flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
             # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
-            time_passed = (dt_now - df_concat_date[previous_pos]).total_seconds()
-            current_threshold = threshold + 0.2 if (previous_pos < start and time_passed > MAX_TIME_LIM) else threshold
-
+            if previous_pos < start:
+                time_passed = (dt_now - df_previous['date'][previous_pos]).total_seconds()
+                current_threshold = threshold + 0.2 if time_passed > MAX_TIME_LIM else threshold
             actual_client = df_concat_client[actual_pos].split(';')
             actual_commodity = df_concat_commodity[actual_pos].split(';')
             previous_client = df_concat_client[previous_pos].split(';')
@@ -673,13 +662,15 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
             # для каждого клиента в списке найденных клиентов
             for client in actual_client:
                 # если клиент есть в старой новости, то говорим, что новости имеют одинаковых клиентов
-                if client in previous_client and len(actual_client) >= 1 and len(previous_client) >= 1:
+                if client in previous_client and len(actual_client) >= 1 and len(previous_client) >= 1 and len(
+                        str(client)) > 0:
                     flag_found_same = True
 
             # для каждого товара в списке найденных товаров
             for commodity in actual_commodity:
                 # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
-                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1:
+                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(
+                        previous_commodity) >= 1 and len(str(commodity)) > 0:
                     flag_found_same = True
 
             # меняем границу, если новости имеют одинаковых клиентов
