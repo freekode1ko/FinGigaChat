@@ -328,8 +328,11 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     :param threshold: float value, limit of relevance
     :return: new little threshold
     """
-    # TODO: искать кол-во новостей за квартал
+    # Ищем новости за месяц
+    dt_now = dt.datetime.now()
     minus_threshold = 0.2
+    if type_of_article == 'client':
+        minus_threshold = 0.1
     min_count_article_val = 7
     counts_dict = {}
     with engine.connect() as conn:
@@ -337,9 +340,11 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
             query_count = (
                 'SELECT COUNT(article_id) FROM relation_{type_of_article}_article r '
                 'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
-                "where {type_of_article}.name = '{subject_name}'"
+                'JOIN article ON r.article_id = article.id '
+                f"where {type_of_article}.name = '{subject_name}' AND '{dt_now}' - article.date < '30 day'"
             )
-            count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
+            count = conn.execute(
+                text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
             counts_dict[subject_name] = count
     min_count = min(counts_dict.values())
     threshold = threshold - minus_threshold if min_count[0] <= min_count_article_val else threshold
@@ -381,14 +386,21 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
 
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
-    df['relevance'] = [1 if (pair[1]) > threshold else 0 for pair in probs]
+    res = []
+    engine = create_engine(psql_engine, poolclass=NullPool)
+    for index, pair in enumerate(probs):
+        client_names = df['client'].iloc[index].split(';')
+        local_threshold = down_threshold(engine, 'client', client_names, threshold)
+        res.append(1 if (pair[1]) > local_threshold else 0)
+    df['relevance'] = res
 
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
 
     # using relevance label condition
     df['client_labels'] = df.apply(
-        lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'], row['client_labels'], rating_dict), axis=1
+        lambda row: search_keywords(row['relevance'], row['client'], row['cleaned_data'], row['client_labels'],
+                                    rating_dict), axis=1
     )
 
     # delete relevance column
@@ -430,7 +442,8 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
     df.drop(columns=['relevance'], inplace=True)
 
     df['commodity_labels'] = df.apply(
-        lambda row: find_stock(row['title'], row['commodity'], row['cleaned_data'], row['commodity_labels'], 'commodity'), axis=1
+        lambda row: find_stock(row['title'], row['commodity'], row['cleaned_data'], row['commodity_labels'],
+                               'commodity'), axis=1
     )
     return df
 
@@ -449,17 +462,24 @@ def union_name(p_row: str, r_row: str) -> str:
     return ';'.join(common_set)
 
 
-def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, content: str) -> str:
+def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, token: str, text: str) -> str:
     """
     Создание краткой версии новостного текста с помощью GigaChat
     :param logger: экземпляр класса логер для логирования процесса
     :param giga_chat: экземпляр класса GigaChat
-    :param content: текст новости
+    :param token: токен авторизации в GigaChat
+    :param text: текст новости
     :return: суммаризированный текст
     """
 
     try:
-        giga_answer = giga_chat.get_giga_answer(text=content, prompt=summarization_prompt)
+        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
+        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
+    except ConnectionError:
+        giga_chat = GigaChat()
+        token = giga_chat.get_user_token()
+        giga_json_answer = giga_chat.ask_giga_chat(token=token, text=text, prompt=summarization_prompt)
+        giga_answer = giga_json_answer.json()['choices'][0]['message']['content']
     except Exception as e:
         logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
@@ -503,10 +523,12 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
     logger.debug(f'Нахождение {type_of_article} в тексте новости')
 
     if type_of_article == 'client':
-        df[['found_client', 'client_impact']] = df['text'].apply(lambda x: pd.Series(find_names(x, alter_client_names_dict)))
+        df[['found_client', 'client_impact']] = df['text'].apply(
+            lambda x: pd.Series(find_names(x, alter_client_names_dict)))
 
         df[type_of_article] = df.apply(lambda row: union_name(row['client'], row['found_client']), axis=1)
-        df[type_of_article] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
+        df[type_of_article] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']),
+                                       axis=1)
 
         logger.debug('Сортировка новостей о клиентах')
         df = rate_client(df, client_rating_system_dict)
@@ -523,7 +545,8 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
         df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
+        lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
     df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'], inplace=True)
@@ -574,13 +597,15 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
-    giga_chat = GigaChat(logger)
-    df['text_sum'] = df['text'].apply(lambda text_: summarization_by_giga(logger, giga_chat, text_))
+    giga_chat = GigaChat()
+    token = giga_chat.get_user_token()
+    df['text_sum'] = df['text'].apply(lambda text: summarization_by_giga(logger, giga_chat, token, text))
     df['text_sum'] = df.apply(lambda row: change_bad_summary(logger, row), axis=1)
     return df
 
 
-def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFrame,
+                threshold: float = 0.35) -> pd.DataFrame:
     """
     Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
     :param logger: экземпляр класса логер для логирования процесса
@@ -599,21 +624,24 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
     df['count_client'] = df['client'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
-    df['count_commodity'] = df['commodity'].map(lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
+    df['count_commodity'] = df['commodity'].map(
+        lambda x: len(list(x.split(sep=';'))) if (isinstance(x, str) and x) else 0)
     df = df.sort_values(
-        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'], ascending=[False, False, False, False]
+        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'],
+        ascending=[False, False, False, False]
     ).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
     # объединяем столбцы старого и нового датафрейма
     df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
+    df_concat_date = pd.concat([df_previous['date'], df['date']], ignore_index=True)
     df_concat_client = pd.concat([df_previous['client'], df['client']], ignore_index=True).fillna(';')
     df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']], ignore_index=True).fillna(';')
-    
+
     # устанавливаем порог определения старой новости: если она лежит в БД более 2 дней
     MAX_TIME_LIM = 60 * 60 * 24 * 2
     dt_now = dt.datetime.now()
-    
+
     # векторизируем новости в датафрейме
     vectorizer = TfidfVectorizer()
     X_tf_idf = vectorizer.fit_transform(df_concat)
@@ -628,15 +656,15 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     for actual_pos in range(start, end):
 
         flag_unique = True  # флаг уникальности новости
+        flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
 
         # от начала старых новостей до конца новых новостей
         for previous_pos in range(actual_pos):
-            current_threshold = threshold
-            flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
+
             # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
-            if previous_pos < start:
-                time_passed = (dt_now - df_previous['date'][previous_pos]).total_seconds()
-                current_threshold = threshold + 0.2 if time_passed > MAX_TIME_LIM else threshold
+            time_passed = (dt_now - df_concat_date[previous_pos]).total_seconds()
+            current_threshold = threshold + 0.2 if (previous_pos < start and time_passed > MAX_TIME_LIM) else threshold
+
             actual_client = df_concat_client[actual_pos].split(';')
             actual_commodity = df_concat_commodity[actual_pos].split(';')
             previous_client = df_concat_client[previous_pos].split(';')
@@ -645,17 +673,17 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
             # для каждого клиента в списке найденных клиентов
             for client in actual_client:
                 # если клиент есть в старой новости, то говорим, что новости имеют одинаковых клиентов
-                if client in previous_client and len(actual_client) >= 1 and len(previous_client) >= 1 and len(str(client)) > 0:
+                if client in previous_client and len(actual_client) >= 1 and len(previous_client) >= 1:
                     flag_found_same = True
 
             # для каждого товара в списке найденных товаров
             for commodity in actual_commodity:
                 # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
-                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1 and len(str(commodity)) > 0:
+                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1:
                     flag_found_same = True
 
             # меняем границу, если новости имеют одинаковых клиентов
-            current_threshold = current_threshold -0.07 if flag_found_same else current_threshold + 0.2
+            current_threshold = current_threshold - 0.07 if flag_found_same else current_threshold + 0.2
 
             # если разница между векторами рассматриваемых новостей больше границы, то новость неуникальна
             if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:
@@ -686,7 +714,7 @@ def summarization_by_chatgpt(full_text: str):
         while len(full_text + summarization_prompt) > batch_size:
             point_index = full_text[:batch_size].rfind('.')
             text_batches.append(full_text[: point_index + 1])
-            full_text = full_text[point_index + 1 :]
+            full_text = full_text[point_index + 1:]
     else:
         text_batches = [full_text]
     for batch in text_batches:
