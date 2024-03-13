@@ -1,4 +1,5 @@
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Integer, JSON, String, Table, Text, text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -158,14 +159,15 @@ t_metals = Table(
 )
 
 
-class QuoteGroup(Base):
-    __tablename__ = 'quote_group'
-    __table_args__ = {'comment': 'Справочник выделенных среди котировок подгрупп'}
+class SourceGroup(Base):
+    __tablename__ = 'source_group'
+    __table_args__ = {'comment': 'Справочник выделенных подгрупп среди источников'}
 
     id = Column(Integer, primary_key=True,)
     name = Column(String(64), nullable=False)
+    name_latin = Column(ARRAY(Text), nullable=False)
 
-    quote_source = relationship('QuoteSource', back_populates='quote_group')
+    parser_source = relationship('ParserSource', back_populates='source_group')
 
 
 t_report_bon_day = Table(
@@ -231,18 +233,6 @@ t_report_met_day = Table(
     Column('1', Text),
     Column('2', Text)
 )
-
-
-class ResearchSource(Base):
-    __tablename__ = 'research_source'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String(64), nullable=False)
-    description = Column(String(255), nullable=False)
-    source = Column(Text, nullable=False)
-    response_format = Column(Text)
-    last_update_datetime = Column(DateTime)
-    previous_update_datetime = Column(DateTime,)
 
 
 t_user_log = Table(
@@ -334,20 +324,20 @@ class Message(Base):
     user = relationship('Whitelist', back_populates='message')
 
 
-class QuoteSource(Base):
-    __tablename__ = 'quote_source'
-    __table_args__ = {'comment': 'Справочник источников котировок'}
+class ParserSource(Base):
+    __tablename__ = 'parser_source'
+    __table_args__ = {'comment': 'Справочник источников'}
 
     id = Column(Integer, primary_key=True)
-    alias = Column(String(64), nullable=False)
-    block = Column(String(255), nullable=False)
-    source = Column(Text, nullable=False)
-    quote_group_id = Column(ForeignKey('quote_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    name = Column(String(255), nullable=False)
+    alt_names = Column(ARRAY(Text), nullable=False)
     response_format = Column(Text)
+    source = Column(Text, nullable=False)
+    source_group_id = Column(ForeignKey('source_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     last_update_datetime = Column(DateTime)
-    previous_update_datetime = Column(DateTime(True))
+    previous_update_datetime = Column(DateTime)
 
-    quote_group = relationship('QuoteGroup', back_populates='quote_source')
+    source_group = relationship('SourceGroup', back_populates='parser_source')
 
 
 class TelegramChannel(Base):

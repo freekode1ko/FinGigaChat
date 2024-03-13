@@ -198,6 +198,7 @@ def upgrade() -> None:
     sa.Column('full_name', sa.Text(), nullable=True),
     sa.Column('user_type', sa.Text(), nullable=True),
     sa.Column('user_status', sa.Text(), nullable=True),
+    sa.Column('user_email', sa.Text(), nullable=True),
     sa.Column('subscriptions', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('user_id')
     )
