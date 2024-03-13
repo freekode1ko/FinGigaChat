@@ -18,7 +18,7 @@ from module.logger_base import Logger
 
 import datetime as dt
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_binary_best2.pkl'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_relevance_model_0.5_threshold_upd.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
