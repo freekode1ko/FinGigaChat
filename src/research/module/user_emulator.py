@@ -21,7 +21,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from configs import config
 from module import data_transformer as Transformer
 from module import weekly_pulse_parse
-from module.logger_base import Logger
+from log.logger_base import Logger
 from db import research_source
 from utils.selenium_utils import get_driver
 

@@ -3,7 +3,7 @@ import random
 import requests as req
 
 from configs.config import user_agents
-from module.logger_base import Logger
+from log.logger_base import Logger
 
 
 class Dictlist(dict):

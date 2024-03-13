@@ -17,11 +17,11 @@ from configs import config
 import module.crawler as crawler
 import module.data_transformer as dt
 import module.user_emulator as ue
-from module.logger_base import selector_logger, Logger
+from log.logger_base import selector_logger, Logger
 from db.database import engine
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
-from utils import sentry
+from log import sentry
 from utils.selenium_utils import get_driver
 
 

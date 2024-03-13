@@ -6,8 +6,8 @@ import warnings
 import click
 
 from configs import config
-from module.logger_base import selector_logger, Logger
-from utils import sentry
+from log.logger_base import selector_logger, Logger
+from log import sentry
 from utils.cli_utils import get_period
 from utils.quotes import get_groups
 

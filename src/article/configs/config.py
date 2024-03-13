@@ -18,6 +18,7 @@ DEBUG: bool = env.str('DEBUG', default='false')
 
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 
+
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
     Считывает константу из json-файла
