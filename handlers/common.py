@@ -43,7 +43,8 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
     :param state:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    check_mail = True if message.text == '/start' else False
+    if await user_in_whitelist(message.from_user.model_dump_json(), check_mail):
         help_text = config.help_text
         to_pin = await message.answer(help_text, protect_content=False)
         msg_id = to_pin.message_id
@@ -105,15 +106,10 @@ async def user_registration(message: types.Message, state: FSMContext):
     По слову "отмена" в чате - отменить регистрацию
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if not await user_in_whitelist(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
-        await state.set_state(Form.new_user_reg)
-        new_user_start = config.new_user_start
-        await message.answer(new_user_start, protect_content=False)
-        # await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
-    else:
-        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
+    await state.set_state(Form.new_user_reg)
+    new_user_start = config.new_user_start
+    await message.answer(new_user_start, protect_content=False)
 
 
 @router.message(Form.new_user_reg)
@@ -141,7 +137,11 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         await state.update_data(user_email=user_msg.strip(), user_reg_code=user_reg_code_1)
         await message.answer('Для завершения регистрации, введите код, отправленный вам на почту', protect_content=False)
     else:
-        await message.answer('Указана не корпоративная почта', protect_content=False)
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text='отмена')]], resize_keyboard=True,
+            input_field_placeholder='Введите корпоративную почту', one_time_keyboard=True
+        )
+        await message.answer('Указана не корпоративная почта', protect_content=False, reply_markup=keyboard)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
