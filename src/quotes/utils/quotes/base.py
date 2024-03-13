@@ -38,9 +38,10 @@ class QuotesGetter(ABC):
         all_tables = []
         group_name = self.get_group_name()
         query = (
-            f'SELECT alias, id, block, source '
-            f'FROM parser_source '
-            f"WHERE source_group_id in (SELECT id FROM source_group WHERE name='{group_name}')"
+            f'SELECT sg.name, p.id, p.response_format, p.source '
+            f'FROM parser_source p '
+            f'JOIN source_group sg ON p.source_group_id = sg.id '
+            f"WHERE sg.name='{group_name}'"
         )
         df_urls = pd.read_sql(query, con=database.engine)
         urls = df_urls.values.tolist()
