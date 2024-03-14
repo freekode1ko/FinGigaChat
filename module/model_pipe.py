@@ -12,6 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 from config import psql_engine, summarization_prompt
+from database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from module.logger_base import Logger
@@ -329,10 +330,7 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     :return: new little threshold
     """
     # Ищем новости за месяц
-    dt_now = dt.datetime.now()
-    minus_threshold = 0.2
-    if type_of_article == 'client':
-        minus_threshold = 0.1
+    minus_threshold = 0.1 if type_of_article == 'client' else 0.2
     min_count_article_val = 7
     counts_dict = {}
     with engine.connect() as conn:
@@ -341,7 +339,7 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
                 'SELECT COUNT(article_id) FROM relation_{type_of_article}_article r '
                 'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
                 'JOIN article ON r.article_id = article.id '
-                f"where {type_of_article}.name = '{subject_name}' AND '{dt_now}' - article.date < '30 day'"
+                f"where {type_of_article}.name = '{subject_name}' AND CURRENT_DATE - article.date < '30 day'"
             )
             count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
             counts_dict[subject_name] = count
@@ -385,13 +383,7 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
 
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
-    res = []
-    engine = create_engine(psql_engine, poolclass=NullPool)
-    for index, pair in enumerate(probs):
-        client_names = df['client'].iloc[index].split(';')
-        local_threshold = down_threshold(engine, 'client', client_names, threshold)
-        res.append(1 if (pair[1]) > local_threshold else 0)
-    df['relevance'] = res
+    df['relevance'] = [int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold)) for index, pair in enumerate(probs)]
 
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
