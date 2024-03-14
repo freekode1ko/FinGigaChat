@@ -41,7 +41,7 @@ class QuotesGetter(ABC):
             f'SELECT sg.name, p.id, p.response_format, p.source '
             f'FROM parser_source p '
             f'JOIN source_group sg ON p.source_group_id = sg.id '
-            f"WHERE sg.name='{group_name}'"
+            f"WHERE sg.name_latin='{group_name}'"
         )
         df_urls = pd.read_sql(query, con=database.engine)
         urls = df_urls.values.tolist()

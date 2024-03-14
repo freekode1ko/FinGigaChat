@@ -165,7 +165,7 @@ class SourceGroup(Base):
 
     id = Column(Integer, primary_key=True,)
     name = Column(String(64), nullable=False)
-    name_latin = Column(ARRAY(Text), nullable=False)
+    name_latin = Column(String(64), nullable=False)
 
     parser_source = relationship('ParserSource', back_populates='source_group')
 
