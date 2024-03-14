@@ -40,7 +40,7 @@ groups = [
     {
         'id': 8,
         'name': 'Полианалист',
-        'name_latin': 'Polyanalist',
+        'name_latin': 'Polyanalyst',
     },
 ]
 

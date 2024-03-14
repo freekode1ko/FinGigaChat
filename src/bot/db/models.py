@@ -256,6 +256,7 @@ class Whitelist(Base):
     full_name = Column(Text)
     user_type = Column(Text)
     user_status = Column(Text)
+    user_email = Column(Text)
     subscriptions = Column(Text)
 
     message = relationship('Message', back_populates='user')
