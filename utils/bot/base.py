@@ -72,19 +72,21 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     return msg
 
 
-async def user_in_whitelist(user: str) -> bool:
+async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     """
     Проверка, пользователя на наличие в списках на доступ
 
     :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
+    :param check_email: Флаг, нужно ли проверять наличие почты пользователя в бд
     return Булево значение на наличие пользователя в списке
     """
     user_json = json.loads(user)
     user_id = user_json['id']
     whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
     user_df = whitelist.loc[whitelist['user_id'] == user_id]
-    if not user_df.empty and not pd.isna(user_df['user_email'].iloc[0]):
-        return True
+
+    if not user_df.empty:
+        return not (check_email and pd.isna(user_df['user_email'].iloc[0]))
     return False
 
 
