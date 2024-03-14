@@ -38,9 +38,10 @@ class QuotesGetter(ABC):
         all_tables = []
         group_name = self.get_group_name()
         query = (
-            f'SELECT alias, id, block, source '
-            f'FROM quote_source '
-            f"WHERE quote_group_id in (SELECT id FROM quote_group WHERE name='{group_name}')"
+            f'SELECT sg.name, p.id, p.response_format, p.source '
+            f'FROM parser_source p '
+            f'JOIN source_group sg ON p.source_group_id = sg.id '
+            f"WHERE sg.name_latin='{group_name}'"
         )
         df_urls = pd.read_sql(query, con=database.engine)
         urls = df_urls.values.tolist()
@@ -69,7 +70,7 @@ class QuotesGetter(ABC):
         group_name = self.get_group_name()
         with database.engine.connect() as conn:
             query = text(
-                'UPDATE quote_source '
+                'UPDATE parser_source '
                 'SET previous_update_datetime=last_update_datetime, last_update_datetime=CURRENT_TIMESTAMP '
                 'WHERE id = ANY(:sources_ids)'
             )

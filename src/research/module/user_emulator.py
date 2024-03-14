@@ -22,7 +22,7 @@ from configs import config
 from module import data_transformer as Transformer
 from module import weekly_pulse_parse
 from log.logger_base import Logger
-from db import research_source
+from db import parser_source
 from utils.selenium_utils import get_driver
 
 
@@ -533,7 +533,8 @@ class ResearchParser:
         Get Research Weekly Pulse review pdf
         """
         self._logger.info('Сборка Weekly Pulse')
-        base_url = '{}{}'.format(config.research_base_url, 'group/guest/money')
+
+        base_url = parser_source.get_source(source_name='Weekly Pulse')
         self.driver.get(base_url)
         self._logger.info('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
         WebDriverWait(self.driver, 30).until(
@@ -629,7 +630,7 @@ class ResearchParser:
 
                 img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
 
-        research_source.update_get_datetime(source_name='Weekly Pulse', source_link=base_url)
+        parser_source.update_get_datetime(source_name='Weekly Pulse')
         self._logger.info('Weekly review готов')
         print('Weekly review готов')
 

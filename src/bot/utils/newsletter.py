@@ -13,7 +13,7 @@ from db.database import engine
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
-from db import research_source, message
+from db import parser_source, message
 from db.industry import get_industry_tg_news
 
 
@@ -153,10 +153,9 @@ async def weekly_pulse_newsletter(
         **kwargs,
 ) -> None:
     newsletter_type = kwargs.get('newsletter_type', '')
-    base_url = f'{config.research_base_url}group/guest/money'
     source_name = 'Weekly Pulse'
     # проверяем, что данные обновились с последней рассылки
-    last_update_time = research_source.get_source_last_update_datetime(source_name=source_name, source_link=base_url)
+    last_update_time = parser_source.get_source_last_update_datetime(source_name=source_name)
     now = datetime.datetime.now()
 
     # получаем текст рассылки
@@ -175,7 +174,7 @@ async def weekly_pulse_newsletter(
         # check if weekly pulse was updated
         warn_msg = 'Данные по Weekly Pulse не были обновлены, рассылка приостановлена'
         logger.warning(warn_msg)
-        last_update_time = research_source.get_source_last_update_datetime(source_name=source_name, source_link=base_url)
+        last_update_time = parser_source.get_source_last_update_datetime(source_name=source_name)
         now = datetime.datetime.now()
         await asyncio.sleep(config.CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME)
 

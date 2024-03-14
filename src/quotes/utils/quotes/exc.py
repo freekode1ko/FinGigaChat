@@ -28,41 +28,15 @@ class ExcGetter(QuotesGetter):
         pages = ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd', 'usd-cnh', 'usdollar']
         return table_row[0] == 'Курсы валют' and page in pages
 
-    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session):
-        exchange_kot = []
-        if exchange_page in ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd']:
-            if exchange_page == 'usd-rub':
-                euro_standard, page_html = self.parser_obj.get_html(table_exchange[3], session)
-                tables = pd.read_html(page_html)
-                for table in tables:
-                    try:
-                        exchange_table = table[table.Exchange.str.startswith('Real-time Currencies')]
-                        if not exchange_table.empty:
-                            row = ['usd-rub', exchange_table['Last'].values[0]]
-                            exchange_kot.append(row)
-                            self.logger.info('Таблица exchange_kot (usd-rub) собрана')
-                            break
-                    except IndexError:
-                        self.logger.warning('Не та таблица попала на обработку')
-                    except Exception as ex:
-                        self.logger.error(f'Ошибка при обработке таблицы: {ex}')
-            elif {'Exchange', 'Last', 'Time'}.issubset(table_exchange[4].columns):
-                row = [
-                    exchange_page,
-                    table_exchange[4].loc[table_exchange[4].Exchange.str.startswith('Real-time Currencies')]['Last'].values.tolist()[0],
-                ]
-                exchange_kot.append(row)
-                self.logger.info('Таблица exchange_kot (Exchange) собрана')
-
-        elif exchange_page in ['usd-cnh', 'usdollar']:
-            euro_standard, page_html = self.parser_obj.get_html(table_exchange[3], session)
-            tree = html.fromstring(page_html)
-            data = tree.xpath('//*[@id="__next"]/div[2]/div//text()')
-            price = self.find_number(data)
-            row = [exchange_page, price]
-            exchange_kot.append(row)
-            self.logger.info('Таблица exchange_kot (usd-cnh) собрана')
-        return exchange_kot
+    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session) -> List[List[str, float]]:
+        # такой вариант берет число на самом верху страницы, но норм ли?
+        # сразу решает проблему актуальности, так как это самые актуальные данные
+        # решают проблему юаня
+        euro_standard, page_html = self.parser_obj.get_html(table_exchange[3], session)
+        tree = html.fromstring(page_html)
+        data = tree.xpath('//*[@data-test="instrument-price-last"]//text()')
+        price = self.find_number(data)
+        return [[exchange_page, price]]
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
         preprocessed_ids = set()

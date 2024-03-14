@@ -23,7 +23,7 @@ from handlers import common, quotes, gigachat, rag
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
-from db import research_source
+from db import parser_source
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -169,8 +169,7 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     else:
         return
 
-    base_url = f'{config.research_base_url}group/guest/money'
-    weekly_pulse_date_str = research_source.get_source_last_update_datetime(source_name='Weekly Pulse', source_link=base_url).strftime(config.BASE_DATE_FORMAT)
+    weekly_pulse_date_str = parser_source.get_source_last_update_datetime(source_name='Weekly Pulse').strftime(config.BASE_DATE_FORMAT)
     weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
 
     media = MediaGroupBuilder(caption=weekly_pulse_date_str)

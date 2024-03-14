@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from db import parser_source
 from configs import config
 from configs.config import mail_imap_server, mail_password, mail_username
 from module.article_process import ArticleProcess
@@ -80,6 +81,8 @@ def daily_func():
             commodity_flag, commodity_filepath = model_func('commodity', COMMODITY_FOLDER_DIR)
 
         if client_flag and commodity_flag:
+            # update getting datetime
+            parser_source.update_get_datetime(source_name='Полианалист')
             break
         else:
             logger.info('Ожидание 20 минут')
