@@ -551,6 +551,10 @@ def main():
     logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
     res_get_times_len = len(config.RESEARCH_GETTING_TIMES_LIST)
 
+    if config.DEBUG:
+        next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(0 + 1) % res_get_times_len]
+        run_researches_getter(next_collect_time, logger)
+
     # сборка происходит каждый день в
     for index, collect_time in enumerate(config.RESEARCH_GETTING_TIMES_LIST):
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(index + 1) % res_get_times_len]

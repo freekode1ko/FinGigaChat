@@ -104,7 +104,7 @@ def get_driver(logger: Logger.logger = None, connect_attempt_number: int = 1) ->
     try:
         # Сначала перезапускаем контейнер, потому что после ошибки при взаимодействии с selenium контейнер чаще падает,
         # чем остается в состоянии up
-        restart_container(logger)
+        # restart_container(logger)  TODO: починить лишнее создание сессий селениума
         # даем время на перезапуск
         time.sleep(5)
         firefox_options = webdriver.FirefoxOptions()
