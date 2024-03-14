@@ -12,6 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
 from config import psql_engine, summarization_prompt
+from database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from module.logger_base import Logger
@@ -328,8 +329,8 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     :param threshold: float value, limit of relevance
     :return: new little threshold
     """
-    # TODO: искать кол-во новостей за квартал
-    minus_threshold = 0.2
+    # Ищем новости за месяц
+    minus_threshold = 0.1 if type_of_article == 'client' else 0.2
     min_count_article_val = 7
     counts_dict = {}
     with engine.connect() as conn:
@@ -337,7 +338,8 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
             query_count = (
                 'SELECT COUNT(article_id) FROM relation_{type_of_article}_article r '
                 'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
-                "where {type_of_article}.name = '{subject_name}'"
+                'JOIN article ON r.article_id = article.id '
+                f"where {type_of_article}.name = '{subject_name}' AND CURRENT_DATE - article.date < '30 day'"
             )
             count = conn.execute(text(query_count.format(type_of_article=type_of_article, subject_name=subject_name))).fetchone()
             counts_dict[subject_name] = count
@@ -381,7 +383,7 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
 
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
-    df['relevance'] = [1 if (pair[1]) > threshold else 0 for pair in probs]
+    df['relevance'] = [int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold)) for index, pair in enumerate(probs)]
 
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
