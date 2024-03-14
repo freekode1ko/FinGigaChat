@@ -148,6 +148,16 @@ async def economy_info(message: types.Message) -> None:
         )
         # сообщение с текущими ставками
         stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
+
+        stat_order = {
+            'Текущая ключевая ставка Банка России': 0,
+            'Текущая ставка RUONIA': 1,
+            'LPR Китай': 2,
+        }
+
+        stat['order'] = stat['0'].apply(lambda x: stat_order.get(x, np.inf))
+        stat = stat.set_index('order', drop=True).sort_index().reset_index(drop=True)
+
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
