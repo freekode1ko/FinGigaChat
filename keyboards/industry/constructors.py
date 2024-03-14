@@ -3,9 +3,9 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants.bot.constants import SELECTED, UNSELECTED
-from constants.bot.industry import ALL_TG_CHANNELS_CALLBACK_TEXT, MY_TG_CHANNELS_CALLBACK_TEXT, BACK_TO_MENU
-from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
+from constants.bot import constants
+from constants.bot import industry as callback_prefixes
+from keyboards.industry import callbacks
 
 
 def get_industry_kb(industry_df: pd.DataFrame) -> InlineKeyboardMarkup:
@@ -18,7 +18,7 @@ def get_industry_kb(industry_df: pd.DataFrame) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
 
     for index, industry in industry_df.iterrows():
-        callback_meta = SelectNewsPeriod(
+        callback_meta = callbacks.SelectNewsPeriod(
             industry_id=industry['id'],
             my_subscriptions=True,
         )
@@ -42,16 +42,18 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
             5) назад
     """
     keyboard = InlineKeyboardBuilder()
-    by_my_subs = SelectNewsPeriod(
+    by_my_subs = callbacks.SelectNewsPeriod(
         industry_id=industry_id,
         my_subscriptions=True,
     )
-    by_all_subs = SelectNewsPeriod(
+    by_all_subs = callbacks.SelectNewsPeriod(
         industry_id=industry_id,
         my_subscriptions=False,
     )
-    get_by_my_subs_text = f'{MY_TG_CHANNELS_CALLBACK_TEXT}{SELECTED if my_subscriptions else UNSELECTED}'
-    get_by_all_subs_text = f'{ALL_TG_CHANNELS_CALLBACK_TEXT}{SELECTED if not my_subscriptions else UNSELECTED}'
+    is_by_my_subs = constants.SELECTED if my_subscriptions else constants.UNSELECTED
+    is_by_all_subs = constants.SELECTED if not my_subscriptions else constants.UNSELECTED
+    get_by_my_subs_text = f'{callback_prefixes.MY_TG_CHANNELS_CALLBACK_TEXT}{is_by_my_subs}'
+    get_by_all_subs_text = f'{callback_prefixes.ALL_TG_CHANNELS_CALLBACK_TEXT}{is_by_all_subs}'
     keyboard.add(types.InlineKeyboardButton(text=get_by_my_subs_text, callback_data=by_my_subs.pack()))
     keyboard.add(types.InlineKeyboardButton(text=get_by_all_subs_text, callback_data=by_all_subs.pack()))
 
@@ -75,13 +77,13 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
     ]
 
     for period in periods_list:
-        by_days = GetNewsDaysCount(
+        by_days = callbacks.GetNewsDaysCount(
             industry_id=industry_id,
             my_subscriptions=my_subscriptions,
             days_count=period['days'],
         )
 
         keyboard.row(types.InlineKeyboardButton(text=period['text'], callback_data=by_days.pack()))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_MENU))
 
     return keyboard.as_markup()
