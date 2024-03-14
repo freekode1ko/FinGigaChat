@@ -40,7 +40,7 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
     :param state:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    check_mail = True if message.text == '/start' else False
+    check_mail = user_msg == '/start'
     if await user_in_whitelist(message.from_user.model_dump_json(), check_mail):
         help_text = config.help_text
         to_pin = await message.answer(help_text, protect_content=False)
