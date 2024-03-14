@@ -1,6 +1,7 @@
 from aiogram.filters.callback_data import CallbackData
 
-from constants.bot.subscriptions import USER_TG_SUBS, TG_CHANNEL_INFO, INDUSTRY_TG_CHANNELS, TG_SUB_ACTION
+from constants.bot.subscriptions import USER_TG_SUBS, TG_CHANNEL_INFO, INDUSTRY_TG_CHANNELS, TG_SUB_ACTION, \
+    ADD_ALL_SUBS_BY_DOMAIN
 
 
 class IndustryTGChannels(CallbackData, prefix=INDUSTRY_TG_CHANNELS):
@@ -24,6 +25,10 @@ class TGSubAction(CallbackData, prefix=TG_SUB_ACTION):
     telegram_id: int
     back: str
     need_add: bool
+
+
+class AddAllSubsByDomain(CallbackData, prefix=ADD_ALL_SUBS_BY_DOMAIN):
+    domain: str
 
 
 
