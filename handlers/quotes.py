@@ -287,15 +287,26 @@ async def exchange_info(message: types.Message) -> None:
         exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
 
-        transformer = dt.Transformer()
+        exc_order = {
+            'USD/RUB': 0,
+            'EUR/RUB': 1,
+            'CNH/RUB': 2,
+            'Индекс DXY': 3,
+            'EUR/USD': 4,
+            'USD/CNH': 5,
+        }
+
         for num, currency in enumerate(exc['Валюта'].values):
             if currency.lower() == 'usdollar':
                 exc['Валюта'].values[num] = 'Индекс DXY'
             else:
                 cur = currency.upper().split('-')
                 exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
+        exc['order'] = exc['Валюта'].apply(lambda x: exc_order.get(x, np.inf))
+        exc.set_index('order', drop=True, inplace=True)
         exc = exc.sort_index().reset_index(drop=True)
 
+        transformer = dt.Transformer()
         transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2, title='Текущие курсы валют')
         day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
         month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
