@@ -135,7 +135,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         await message.answer('Для завершения регистрации, введите код, отправленный вам на почту', protect_content=False)
     else:
         keyboard = types.ReplyKeyboardMarkup(
-            keyboard=[[types.KeyboardButton(text='отмена')]], resize_keyboard=True,
+            keyboard=[[types.KeyboardButton(text='отмена')], ], resize_keyboard=True,
             input_field_placeholder='Введите корпоративную почту', one_time_keyboard=True
         )
         await message.answer('Указана не корпоративная почта', protect_content=False, reply_markup=keyboard)

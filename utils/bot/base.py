@@ -86,9 +86,7 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     user_df = whitelist.loc[whitelist['user_id'] == user_id]
 
     if not user_df.empty:
-        if check_email and pd.isna(user_df['user_email'].iloc[0]):
-            return False
-        return True
+        return not (check_email and pd.isna(user_df['user_email'].iloc[0]))
     return False
 
 
