@@ -30,7 +30,7 @@ class ExcGetter(QuotesGetter):
         pages = ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd', 'usd-cnh', 'usdollar']
         return table_row[0] == 'Курсы валют' and page in pages
 
-    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session) -> List[List[str, float]]:
+    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session) -> List[list]:
         # такой вариант берет число на самом верху страницы, но норм ли?
         # сразу решает проблему актуальности, так как это самые актуальные данные
         # решают проблему юаня
