@@ -94,7 +94,7 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-async def user_registration(message: types.Message, state: FSMContext):
+async def user_registration(message: types.Message, state: FSMContext) -> None:
     """
     Регистрация нового пользователя.
     Если почта \\w+@sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
@@ -113,7 +113,7 @@ async def user_registration(message: types.Message, state: FSMContext):
 
 
 @router.message(Form.new_user_reg)
-async def ask_user_mail(message: types.Message, state: FSMContext):
+async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
@@ -146,7 +146,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
 
 
 @router.message(Form.continue_user_reg)
-async def validate_user_reg_code(message: types.Message, state: FSMContext):
+async def validate_user_reg_code(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
     user_reg_info = await state.get_data()
     # try:
