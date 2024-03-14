@@ -28,9 +28,7 @@ class ExcGetter(QuotesGetter):
         pages = ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd', 'usd-cnh', 'usdollar']
         return table_row[0] == 'Курсы валют' and page in pages
 
-    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session):
-        exchange_kot = []
-
+    def exchange_block(self, table_exchange: list, exchange_page: str, session: req.sessions.Session) -> List[List[str, float]]:
         # такой вариант берет число на самом верху страницы, но норм ли?
         # сразу решает проблему актуальности, так как это самые актуальные данные
         # решают проблему юаня
@@ -38,10 +36,7 @@ class ExcGetter(QuotesGetter):
         tree = html.fromstring(page_html)
         data = tree.xpath('//*[@data-test="instrument-price-last"]//text()')
         price = self.find_number(data)
-        row = [exchange_page, price]
-        exchange_kot.append(row)
-
-        return exchange_kot
+        return [[exchange_page, price]]
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
         preprocessed_ids = set()
