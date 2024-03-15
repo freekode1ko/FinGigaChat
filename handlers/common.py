@@ -3,6 +3,8 @@ import random
 import re
 
 import pandas as pd
+from psycopg2.errors import UniqueViolation
+from sqlalchemy.exc import IntegrityError
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -15,6 +17,7 @@ from constants.bot.constants import CANCEL_CALLBACK
 from database import engine
 from module.mail_parse import SmtpSend
 from utils.bot.base import user_in_whitelist
+from utils.db_api.whitelist import update_user_email
 
 # from utils.data_crypto import AESCrypther
 
@@ -40,7 +43,8 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
     :param state:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    check_mail = user_msg == '/start'
+    if await user_in_whitelist(message.from_user.model_dump_json(), check_mail):
         help_text = config.help_text
         to_pin = await message.answer(help_text, protect_content=False)
         msg_id = to_pin.message_id
@@ -90,7 +94,7 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-async def user_registration(message: types.Message, state: FSMContext):
+async def user_registration(message: types.Message, state: FSMContext) -> None:
     """
     Регистрация нового пользователя.
     Если почта \\w+@sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
@@ -102,19 +106,14 @@ async def user_registration(message: types.Message, state: FSMContext):
     По слову "отмена" в чате - отменить регистрацию
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if not await user_in_whitelist(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
-        await state.set_state(Form.new_user_reg)
-        new_user_start = config.new_user_start
-        await message.answer(new_user_start, protect_content=False)
-        # await message.answer('Введите корпоративную почту, на нее будет отправлен код для завершения регистрации')
-    else:
-        await message.answer(f'{full_name}, Вы уже наш пользователь!', protect_content=False)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : уже добавлен')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
+    await state.set_state(Form.new_user_reg)
+    new_user_start = config.new_user_start
+    await message.answer(new_user_start, protect_content=False)
 
 
 @router.message(Form.new_user_reg)
-async def ask_user_mail(message: types.Message, state: FSMContext):
+async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
@@ -138,12 +137,16 @@ async def ask_user_mail(message: types.Message, state: FSMContext):
         await state.update_data(user_email=user_msg.strip(), user_reg_code=user_reg_code_1)
         await message.answer('Для завершения регистрации, введите код, отправленный вам на почту', protect_content=False)
     else:
-        await message.answer('Указана не корпоративная почта', protect_content=False)
+        keyboard = types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text='отмена')], ], resize_keyboard=True,
+            input_field_placeholder='Введите корпоративную почту', one_time_keyboard=True
+        )
+        await message.answer('Указана не корпоративная почта', protect_content=False, reply_markup=keyboard)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(Form.continue_user_reg)
-async def validate_user_reg_code(message: types.Message, state: FSMContext):
+async def validate_user_reg_code(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
     user_reg_info = await state.get_data()
     # try:
@@ -159,26 +162,42 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext):
     #         user_reg_code = user_msg
     user_reg_code = user_msg
     if str(user_reg_info['user_reg_code']) == str(user_reg_code):
+
         user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
+        user_email = user_reg_info['user_email']
         user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None, user_reg_info['user_email']]],
-            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'],
-        )
+            [[user_id, user_username, full_name, 'user', 'active', None, user_email]],
+            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'])
+
+        welcome_msg = f'Добро пожаловать, {full_name}!'
+        exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.\n\n{exc}'
         try:
             user.to_sql('whitelist', if_exists='append', index=False, con=engine)
-            await message.answer(f'Добро пожаловать, {full_name}!', protect_content=False)
+            await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await help_handler(message, state)
-            await state.clear()
+
+        except IntegrityError as e:
+            if isinstance(e.orig, UniqueViolation):
+                update_user_email(user_id, user_email)
+                await message.answer(welcome_msg)
+                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : пользователь обновил почту')
+            else:
+                await message.answer(exc_msg.format(exc=e))
+                user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+
         except Exception as e:
-            await message.answer(f'Во время авторизации произошла ошибка, попробуйте позже.\n\n{e}', protect_content=False)
+            await message.answer(exc_msg.format(exc=e))
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
+
+        finally:
             await state.clear()
+
     else:
         await message.answer('Введен некорректный регистрационный код', protect_content=False)
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')

@@ -2,9 +2,9 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants.bot.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
-from constants.bot.constants import CANCEL_CALLBACK
-from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
+from constants.bot import constants
+from constants.bot import admin as callback_prefixes
+from keyboards.admin import callbacks
 from utils.db_api.message_type import message_types
 
 
@@ -21,12 +21,12 @@ def get_message_types_kb() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
 
     for _, message_type in message_types.types.iterrows():
-        call_data = ApproveDeleteMessageByType(
+        call_data = callbacks.ApproveDeleteMessageByType(
             message_type_id=message_type['id'],
         )
 
         keyboard.row(types.InlineKeyboardButton(text=message_type['description'], callback_data=call_data.pack()))
-    keyboard.row(types.InlineKeyboardButton(text='Отмена', callback_data=CANCEL_CALLBACK))
+    keyboard.row(types.InlineKeyboardButton(text='Отмена', callback_data=constants.CANCEL_CALLBACK))
 
     return keyboard.as_markup()
 
@@ -41,11 +41,17 @@ def get_approve_delete_messages_by_type_kb(message_type_id: int) -> InlineKeyboa
             2) назад
     """
     keyboard = InlineKeyboardBuilder()
-    call_data = DeleteMessageByType(
+    call_data = callbacks.DeleteMessageByType(
         message_type_id=message_type_id,
     )
     keyboard.row(types.InlineKeyboardButton(text='Да', callback_data=call_data.pack()))
-    keyboard.add(types.InlineKeyboardButton(text='Нет', callback_data=BACK_TO_DELETE_NEWSLETTER_MSG_MENU))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=BACK_TO_DELETE_NEWSLETTER_MSG_MENU))
+    keyboard.add(types.InlineKeyboardButton(
+        text='Нет',
+        callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Назад',
+        callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
+    ))
 
     return keyboard.as_markup()
