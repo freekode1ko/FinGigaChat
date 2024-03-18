@@ -34,11 +34,11 @@ class ParserStatusFormatter:
         res = []
         for i, row in data.iterrows():
             d = row.to_dict()
-            if d['last_update_datetime'] is None:
+            if not d['last_update_datetime']:
                 del d['last_update_datetime']
             else:
                 d['last_update_datetime'] = cls._convert_datetime_to_utc_tz(d['last_update_datetime'])
-            if d['previous_update_datetime'] is None:
+            if not d['previous_update_datetime']:
                 del d['previous_update_datetime']
             else:
                 d['previous_update_datetime'] = cls._convert_datetime_to_utc_tz(d['previous_update_datetime'])
