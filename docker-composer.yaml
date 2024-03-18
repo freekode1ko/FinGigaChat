@@ -141,8 +141,7 @@ services:
 
     parser_monitoring:
         build:
-            context: ./src/    parser_monitoring
-            dockerfile: Dockerfile
+            context: ./src/parser_monitoring
         container_name: parser_monitoring_container
         env_file:
             - .env
