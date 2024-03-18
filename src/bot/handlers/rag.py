@@ -1,24 +1,34 @@
-import urllib.parse
-import requests
+import copy
 
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from log.bot_logger import logger, user_logger
-from constants.constants import giga_rag_footer
+from log.bot_logger import user_logger
 from utils.base import user_in_whitelist
-from configs import config
+from utils.rag_router import RAGRouter
+from configs.config import dict_of_emoji
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())
+
+emoji = copy.deepcopy(dict_of_emoji)
 
 
 class RagState(StatesGroup):
     rag_mode = State()
     rag_query = State()
+
+
+def generate_keyboard():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text=emoji['like'], callback_data='like'))
+    keyboard.add(types.InlineKeyboardButton(text=emoji['dislike'], callback_data='dislike'))
+
+    return keyboard.as_markup()
 
 
 @router.message(Command('knowledgebase'))
@@ -73,31 +83,26 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     await message.bot.send_chat_action(message.chat.id, 'typing')
-    response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
-    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
+    query = first_user_query if first_user_query else user_msg
+    rag_obj = RAGRouter(chat_id, full_name, query)
+    response = rag_obj.get_response_from_rag()
+
+    emoji_keyboard = generate_keyboard()
+    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True, reply_markup=emoji_keyboard)
 
 
-def route_query(chat_id: int, full_name: str, user_msg: str):
-    """
-    Будущая маршрутизация рага(ов)
-    Будет изменяться
-    """
+@router.callback_query(F.data.endswith('like'))
+async def callback_keyboard(callback_query: types.CallbackQuery):
 
-    try:
-        query = urllib.parse.quote(user_msg)
-        query_part = f'queries?query={query}'
-        rag_response = requests.get(
-            url=config.BASE_QABANKER_URL.format(query_part),
-            timeout=config.POST_TO_SERVICE_TIMEOUT)
-        if rag_response.status_code == 200:
-            rag_answer = rag_response.text
-            response = f'{rag_answer}\n\n{giga_rag_footer}'
-            user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : На запрос ВОС ответила: "{rag_answer}"')
-        else:
-            response = 'Извините, я пока не могу ответить на ваш запрос'
-    except Exception as e:
-        logger.critical(f'ERROR : ВОС не сформировал ответ по причине: {e}"')
-        user_logger.critical(f'*{chat_id}* {full_name} - "{user_msg}" : ВОС не сформировал ответ по причине: {e}"')
-        response = 'Извините, я пока не могу ответить на ваш запрос'
+    mark = callback_query.data
+    bot_msg = callback_query.message.text
 
-    return response
+    if mark == 'like':
+        txt = 'Я рад, что вам понравилось!'
+    else:
+        txt = 'Я буду стараться лучше...'
+
+    # обновление кнопки на одну не работающую
+    button = [types.InlineKeyboardButton(text=txt, callback_data='none')]
+    keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=[button, ])
+    await callback_query.message.edit_text(text=bot_msg, reply_markup=keyboard)
