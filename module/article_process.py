@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.pool import NullPool
 
-from config import NEWS_LIMIT, dict_of_emoji, psql_engine, BASE_DATE_FORMAT
+from config import BASE_DATE_FORMAT, NEWS_LIMIT, dict_of_emoji, psql_engine
 from module.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
@@ -177,8 +177,8 @@ class ArticleProcess:
         # save only tg news
         df_tg_news = (
             df.assign(telegram_link=df['link'].str.rsplit('/', n=1).str[0])
-              .merge(tg_channels_df, left_on='telegram_link', right_on='link', suffixes=('', '_y'))
-              .drop(['telegram_link', 'link_y'], axis=1)
+            .merge(tg_channels_df, left_on='telegram_link', right_on='link', suffixes=('', '_y'))
+            .drop(['telegram_link', 'link_y'], axis=1)
         )
 
         # rename column 'id' from tg_channels_df to 'telegram_id'
@@ -315,7 +315,8 @@ class ArticleProcess:
         if not links_of_old_article.empty:
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
             self._logger.warning(
-                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
+                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}'
+            )
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
@@ -681,7 +682,9 @@ class ArticleProcess:
                 # subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
                 price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com['price'] else None
                 m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
-                y_delta = None  # f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                y_delta = (
+                    None  # f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
+                )
                 cons = None  # f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com['cons'] else None
                 # join rows
                 row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))

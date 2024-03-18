@@ -1,16 +1,16 @@
 import urllib.parse
-import requests
 
+import requests
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
+import config
 from bot_logger import logger, user_logger
 from constants.bot.constants import giga_rag_footer
 from utils.bot.base import user_in_whitelist
-import config
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())
@@ -48,8 +48,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
         first_user_query = data.get('rag_query', None)
 
         if first_user_query:
-            await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
-                                 reply_markup=keyboard)
+            await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}', reply_markup=keyboard)
             await ask_qa_system(message, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
@@ -74,7 +73,7 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
 
     await message.bot.send_chat_action(message.chat.id, 'typing')
     response = route_query(chat_id, full_name, first_user_query if first_user_query else user_msg)
-    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
+    await message.answer(response, parse_mode='HTML', disable_web_page_preview=True)
 
 
 def route_query(chat_id: int, full_name: str, user_msg: str) -> str:
@@ -86,9 +85,7 @@ def route_query(chat_id: int, full_name: str, user_msg: str) -> str:
     try:
         query = urllib.parse.quote(user_msg)
         query_part = f'queries?query={query}'
-        rag_response = requests.get(
-            url=config.BASE_QABANKER_URL.format(query_part),
-            timeout=config.POST_TO_SERVICE_TIMEOUT)
+        rag_response = requests.get(url=config.BASE_QABANKER_URL.format(query_part), timeout=config.POST_TO_SERVICE_TIMEOUT)
         if rag_response.status_code == 200:
             rag_answer = rag_response.text
             response = f'{rag_answer}\n\n{giga_rag_footer}'
@@ -101,4 +98,3 @@ def route_query(chat_id: int, full_name: str, user_msg: str) -> str:
         response = 'Извините, я пока не могу ответить на ваш запрос'
 
     return response
-

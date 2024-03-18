@@ -2,15 +2,15 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from math import ceil
-from typing import List, Union, Tuple, Optional
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 from aiogram import Bot, types
 
 import module.data_transformer as dt
-from config import path_to_source, PAGE_ELEMENTS_COUNT
+from config import PAGE_ELEMENTS_COUNT, path_to_source
 from constants.bot.constants import research_footer
 from database import engine
 from module.logger_base import Logger
@@ -65,7 +65,9 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
             msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
-            msg = await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_document(
+                document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True
+            )
     else:
         msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
@@ -154,7 +156,9 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
             text_group.append(text[batch : batch + batch_size])
         for summ_part in text_group:
             await message.answer(
-                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer, date), parse_mode='HTML', protect_content=True
+                '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer, date),
+                parse_mode='HTML',
+                protect_content=True,
             )
     else:
         await message.answer(
@@ -343,9 +347,9 @@ async def __create_fin_table(message: types.Message, client_name: str, client_fi
 
 
 def get_page_data_and_info(
-        all_data_df: pd.DataFrame,
-        page: int,
-        page_elements: int = PAGE_ELEMENTS_COUNT,
+    all_data_df: pd.DataFrame,
+    page: int,
+    page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> Tuple[pd.DataFrame, str, int]:
     """
     1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
@@ -361,7 +365,7 @@ def get_page_data_and_info(
     from_ = page * page_elements
     to_ = (page + 1) * page_elements
     to_ = to_ if to_ < elements_cnt else elements_cnt
-    data_df = all_data_df[from_: to_]
+    data_df = all_data_df[from_:to_]
 
     from_ = (from_ + 1) if from_ < elements_cnt else elements_cnt
     info = f'{from_}-{to_} из {elements_cnt}'
@@ -413,8 +417,9 @@ async def wait_until(to_dt: datetime) -> None:
 
 
 async def send_or_edit(
-        message: Union[types.CallbackQuery, types.Message],
-        msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
+    message: Union[types.CallbackQuery, types.Message],
+    msg_text: str,
+    keyboard: Optional[types.InlineKeyboardMarkup] = None,
 ) -> None:
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
     if isinstance(message, types.Message):

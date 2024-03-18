@@ -15,11 +15,14 @@ from constants.bot.aliases import (
     bonds_aliases,
     eco_aliases,
     exchange_aliases,
+    gigachat_aliases,
+    help_aliases,
     metal_aliases,
-    view_aliases, help_aliases, gigachat_aliases, rag_aliases
+    rag_aliases,
+    view_aliases,
 )
 from constants.bot.constants import PATH_TO_COMMODITY_GRAPH
-from handlers import common, quotes, gigachat, rag
+from handlers import common, gigachat, quotes, rag
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils.bot.base import __create_fin_table, bot_send_msg, user_in_whitelist
@@ -170,7 +173,9 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
         return
 
     base_url = f'{config.research_base_url}group/guest/money'
-    weekly_pulse_date_str = research_source.get_source_last_update_datetime(source_name='Weekly Pulse', source_link=base_url).strftime(config.BASE_DATE_FORMAT)
+    weekly_pulse_date_str = research_source.get_source_last_update_datetime(source_name='Weekly Pulse', source_link=base_url).strftime(
+        config.BASE_DATE_FORMAT
+    )
     weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
 
     media = MediaGroupBuilder(caption=weekly_pulse_date_str)

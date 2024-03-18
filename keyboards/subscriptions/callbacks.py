@@ -28,7 +28,3 @@ class TGSubAction(CallbackData, prefix=callback_prefixes.TG_SUB_ACTION):
 
 class AddAllSubsByDomain(CallbackData, prefix=callback_prefixes.ADD_ALL_SUBS_BY_DOMAIN):
     domain: str
-
-
-
-

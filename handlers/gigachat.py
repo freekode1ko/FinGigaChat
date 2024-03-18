@@ -1,4 +1,3 @@
-
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -47,8 +46,7 @@ async def set_gigachat_mode(message: types.Message, state: FSMContext) -> None:
         first_user_query = data.get('gigachat_query', None)
 
         if first_user_query:
-            await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
-                                 reply_markup=keyboard)
+            await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}', reply_markup=keyboard)
             await ask_giga_chat(message, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
@@ -82,4 +80,4 @@ async def ask_giga_chat(message: types.Message, first_user_query: str = '') -> N
         user_logger.critical(f'*{chat_id}* {full_name} - "{user_msg}" : GigaChat не сформировал ответ по причине: {e}"')
         response = 'Извините, я пока не могу ответить на ваш запрос'
 
-    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
+    await message.answer(response, parse_mode='HTML', disable_web_page_preview=True)

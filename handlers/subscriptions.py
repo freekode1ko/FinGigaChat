@@ -15,27 +15,32 @@ from sqlalchemy import text
 import config
 from bot_logger import logger, user_logger
 from constants.bot import subscriptions as callback_prefixes
-from constants.bot.constants import handbook_prefix, DELETE_CROSS, UNSELECTED, SELECTED
+from constants.bot.constants import DELETE_CROSS, SELECTED, UNSELECTED, handbook_prefix
 from database import engine
-from keyboards.subscriptions.callbacks import (
-    UserTGSubs,
-    TGChannelMoreInfo,
-    IndustryTGChannels,
-    TGSubAction,
-    AddAllSubsByDomain,
-)
 from keyboards.subscriptions import constructors as kb_maker
+from keyboards.subscriptions.callbacks import (
+    AddAllSubsByDomain,
+    IndustryTGChannels,
+    TGChannelMoreInfo,
+    TGSubAction,
+    UserTGSubs,
+)
 from keyboards.subscriptions.constructors import get_tg_info_kb
 from module.article_process import ArticleProcess
-from utils.bot.base import user_in_whitelist, get_page_data_and_info, bot_send_msg, send_or_edit
+from utils.bot.base import (
+    bot_send_msg,
+    get_page_data_and_info,
+    send_or_edit,
+    user_in_whitelist,
+)
 from utils.db_api.industry import get_industries_with_tg_channels, get_industry_name
 from utils.db_api.subscriptions import (
-    get_user_tg_subscriptions_df,
-    delete_user_telegram_subscription,
+    add_user_telegram_subscription,
     delete_all_user_telegram_subscriptions,
+    delete_user_telegram_subscription,
     get_industry_tg_channels_df,
     get_telegram_channel_info,
-    add_user_telegram_subscription,
+    get_user_tg_subscriptions_df,
 )
 
 emoji = copy.deepcopy(config.dict_of_emoji)
@@ -121,7 +126,9 @@ async def add_all_subs(callback_query: types.CallbackQuery, callback_data: AddAl
             new_subs = ', '.join(new_subs).title()
 
             with engine.connect() as conn:
-                sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {callback_query.from_user.id}"
+                sql_text = (
+                    f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {callback_query.from_user.id}"
+                )
                 conn.execute(text(sql_text))
                 conn.commit()
 
@@ -153,7 +160,9 @@ async def append_new_subscription(callback_query: types.CallbackQuery = None) ->
         new_user_subscription_str = ', '.join(new_user_subscription).replace("'", "''")
 
         with engine.connect() as conn:
-            sql_text = f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {callback_query.from_user.id}"
+            sql_text = (
+                f"UPDATE whitelist set subscriptions = '{new_user_subscription_str}' WHERE user_id = {callback_query.from_user.id}"
+            )
             conn.execute(text(sql_text))
             conn.commit()
 
@@ -232,7 +241,7 @@ async def scroller(query: types.CallbackQuery = None) -> None:
     chunks = []
     num_chunks = math.ceil(len(table) / page_elements_cnt)
     for index in range(num_chunks):
-        chunks.append(table[index * page_elements_cnt: (index + 1) * page_elements_cnt])
+        chunks.append(table[index * page_elements_cnt : (index + 1) * page_elements_cnt])
 
     search_data = table_ru_names.get(search, {})
     domain = search_data.get('domain', 'Ошибка')
@@ -693,7 +702,7 @@ async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_
 
 
 async def show_tg_channel_more_info(
-        callback_query: types.CallbackQuery, telegram_id: int, is_subscribed: bool, back: str, user_msg: str
+    callback_query: types.CallbackQuery, telegram_id: int, is_subscribed: bool, back: str, user_msg: str
 ) -> None:
     """"""
     chat_id = callback_query.message.chat.id
@@ -733,9 +742,7 @@ async def update_sub_on_tg_channel(callback_query: types.CallbackQuery, callback
         # delete sub on tg channel
         delete_user_telegram_subscription(user_id, telegram_id)
 
-    await show_tg_channel_more_info(
-        callback_query, telegram_id, need_add, callback_data.back, callback_prefixes.TG_SUB_ACTION
-    )
+    await show_tg_channel_more_info(callback_query, telegram_id, need_add, callback_data.back, callback_prefixes.TG_SUB_ACTION)
 
 
 @router.callback_query(TGChannelMoreInfo.filter())

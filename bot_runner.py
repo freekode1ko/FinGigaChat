@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import time
 import warnings
-from typing import Callable, Any
+from typing import Any, Callable
 
 import pandas as pd
 from aiogram import Bot, Dispatcher
@@ -10,14 +10,22 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
 import config
-from configs import newsletter_config
 from bot_logger import logger
+from configs import newsletter_config
 from constants.bot.commands import PUBLIC_COMMANDS
 from database import engine
-from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag
-from utils.bot.base import (
-    next_weekday_time, wait_until,
+from handlers import (
+    admin,
+    common,
+    gigachat,
+    industry,
+    news,
+    quotes,
+    rag,
+    referencebook,
+    subscriptions,
 )
+from utils.bot.base import next_weekday_time, wait_until
 from utils.sentry import init_sentry
 
 storage = MemoryStorage()
@@ -26,12 +34,12 @@ dp = Dispatcher(storage=storage)
 
 
 async def passive_newsletter(
-        newsletter_weekday: int,
-        newsletter_hour: int,
-        newsletter_minute: int,
-        newsletter_executor: Callable,
-        newsletter_info: str,
-        **kwargs: Any,
+    newsletter_weekday: int,
+    newsletter_hour: int,
+    newsletter_minute: int,
+    newsletter_executor: Callable,
+    newsletter_info: str,
+    **kwargs: Any,
 ) -> None:
     """
     Рассылка производится в newsletter_weekday день недели, в newsletter_hour:newsletter_minute
@@ -110,16 +118,18 @@ async def main():
 
         for param in passive_newsletter_params['params']:
             send_time = param['send_time']
-            send_time_dt = datetime.datetime.strptime(send_time, "%H:%M")
+            send_time_dt = datetime.datetime.strptime(send_time, '%H:%M')
 
-            loop.create_task(passive_newsletter(
-                newsletter_weekday=param['weekday'],
-                newsletter_hour=send_time_dt.hour,
-                newsletter_minute=send_time_dt.minute,
-                newsletter_executor=executor,
-                newsletter_info=newsletter_info,
-                **param['kwargs'],
-            ))
+            loop.create_task(
+                passive_newsletter(
+                    newsletter_weekday=param['weekday'],
+                    newsletter_hour=send_time_dt.hour,
+                    newsletter_minute=send_time_dt.minute,
+                    newsletter_executor=executor,
+                    newsletter_info=newsletter_info,
+                    **param['kwargs'],
+                )
+            )
 
     await start_bot()
 
@@ -128,4 +138,4 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("bot was terminated")
+        print('bot was terminated')

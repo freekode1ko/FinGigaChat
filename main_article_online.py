@@ -132,7 +132,7 @@ def post_ids(ids):
             config.POST_TO_SERVICE_ATTEMPTS,
             url=BASE_GIGAPARSER_URL.format('success_request'),
             json=ids,
-            timeout=config.POST_TO_GIGAPARSER_TIMEOUT
+            timeout=config.POST_TO_GIGAPARSER_TIMEOUT,
         )
     except Exception as e:
         print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
@@ -142,15 +142,15 @@ def post_ids(ids):
 def post_new_links(subject_links: list, tg_links: list):
     logger.debug('Отправка ссылок сохраненных новостей на сервер')
     links_dict = {
-            "subject_links": subject_links,  # ссылки на новости по клиентам и коммодам
-            "tg_links": tg_links  # ссылки на новости из тг каналов
-                }
+        'subject_links': subject_links,  # ссылки на новости по клиентам и коммодам
+        'tg_links': tg_links,  # ссылки на новости из тг каналов
+    }
     try:
         response = try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
             url=config.BASE_QABANKER_URL.format('articles'),
             json=links_dict,
-            timeout=config.POST_TO_SERVICE_TIMEOUT
+            timeout=config.POST_TO_SERVICE_TIMEOUT,
         )
 
         msg = response.json()['message']

@@ -3,13 +3,13 @@ import random
 import re
 
 import pandas as pd
-from psycopg2.errors import UniqueViolation
-from sqlalchemy.exc import IntegrityError
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from psycopg2.errors import UniqueViolation
+from sqlalchemy.exc import IntegrityError
 
 import config
 from bot_logger import user_logger
@@ -138,8 +138,10 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
         await message.answer('Для завершения регистрации, введите код, отправленный вам на почту', protect_content=False)
     else:
         keyboard = types.ReplyKeyboardMarkup(
-            keyboard=[[types.KeyboardButton(text='отмена')], ], resize_keyboard=True,
-            input_field_placeholder='Введите корпоративную почту', one_time_keyboard=True
+            keyboard=[[types.KeyboardButton(text='отмена')]],
+            resize_keyboard=True,
+            input_field_placeholder='Введите корпоративную почту',
+            one_time_keyboard=True,
         )
         await message.answer('Указана не корпоративная почта', protect_content=False, reply_markup=keyboard)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
@@ -172,7 +174,8 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         user_email = user_reg_info['user_email']
         user = pd.DataFrame(
             [[user_id, user_username, full_name, 'user', 'active', None, user_email]],
-            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'])
+            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'],
+        )
 
         welcome_msg = f'Добро пожаловать, {full_name}!'
         exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.\n\n{exc}'

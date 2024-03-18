@@ -1,4 +1,3 @@
-
 # ------------TELEGRAM SUBSCRIPTIONS -----------------
 USER_TG_SUBS = 'tg_subs'
 BACK_TO_TG_MENU = 'back_to_tg_subs_menu'

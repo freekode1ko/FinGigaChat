@@ -2,8 +2,8 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants.bot import constants
 from constants.bot import admin as callback_prefixes
+from constants.bot import constants
 from keyboards.admin import callbacks
 from utils.db_api.message_type import message_types
 
@@ -45,13 +45,17 @@ def get_approve_delete_messages_by_type_kb(message_type_id: int) -> InlineKeyboa
         message_type_id=message_type_id,
     )
     keyboard.row(types.InlineKeyboardButton(text='Да', callback_data=call_data.pack()))
-    keyboard.add(types.InlineKeyboardButton(
-        text='Нет',
-        callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
-        callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
-    ))
+    keyboard.add(
+        types.InlineKeyboardButton(
+            text='Нет',
+            callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
+        )
+    )
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text='Назад',
+            callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
+        )
+    )
 
     return keyboard.as_markup()

@@ -491,10 +491,7 @@ query_new_alternative_com_electro = (
     "'электроэнергия')"
 )
 
-query_add_navi_link_to_client_table = (
-    'ALTER TABLE client '
-    'ADD navi_link text;'
-)
+query_add_navi_link_to_client_table = 'ALTER TABLE client ADD navi_link text;'
 
 
 def update_client_alternative(engine):

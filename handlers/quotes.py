@@ -360,7 +360,7 @@ async def metal_info(message: types.Message) -> None:
         )
 
         query = (
-            'SELECT subname, unit, price, m_delta, y_delta ' 
+            'SELECT subname, unit, price, m_delta, y_delta '
             'FROM public.commodity_pricing '
             "WHERE subname in ('Нефть Urals', 'Нефть Brent') "
             'ORDER BY subname;'

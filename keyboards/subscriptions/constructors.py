@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants.bot import constants
 from constants.bot import subscriptions as callback_prefixes
 from keyboards.subscriptions import callbacks
-from utils.bot.base import wrap_callback_data, unwrap_callback_data
+from utils.bot.base import unwrap_callback_data, wrap_callback_data
 
 
 def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: str) -> InlineKeyboardMarkup:
@@ -30,18 +30,24 @@ def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     [ Удалить все подписки ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(
-        text='Просмотреть подписки',
-        callback_data=callbacks.UserTGSubs(page=0).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Изменить подписки',
-        callback_data=callback_prefixes.TG_SUBS_INDUSTRIES_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Удалить все подписки',
-        callback_data=callback_prefixes.TG_SUBS_DELETE_ALL,
-    ))
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text='Просмотреть подписки',
+            callback_data=callbacks.UserTGSubs(page=0).pack(),
+        )
+    )
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text='Изменить подписки',
+            callback_data=callback_prefixes.TG_SUBS_INDUSTRIES_MENU,
+        )
+    )
+    keyboard.row(
+        types.InlineKeyboardButton(
+            text='Удалить все подписки',
+            callback_data=callback_prefixes.TG_SUBS_DELETE_ALL,
+        )
+    )
     keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.TG_END_WRITE_SUBS))
     return keyboard.as_markup()
 
@@ -71,20 +77,24 @@ def get_tg_subs_watch_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> 
         keyboard.add(types.InlineKeyboardButton(text=constants.DELETE_CROSS, callback_data=delete_call))
 
     if page != 0:
-        keyboard.row(types.InlineKeyboardButton(
-            text=constants.PREV_PAGE,
-            callback_data=callbacks.UserTGSubs(page=page - 1).pack(),
-        ))
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=constants.PREV_PAGE,
+                callback_data=callbacks.UserTGSubs(page=page - 1).pack(),
+            )
+        )
     else:
         keyboard.row(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))
 
     keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_TG_MENU))
 
     if page < max_pages - 1:
-        keyboard.add(types.InlineKeyboardButton(
-            text=constants.NEXT_PAGE,
-            callback_data=callbacks.UserTGSubs(page=page + 1).pack(),
-        ))
+        keyboard.add(
+            types.InlineKeyboardButton(
+                text=constants.NEXT_PAGE,
+                callback_data=callbacks.UserTGSubs(page=page + 1).pack(),
+            )
+        )
     else:
         keyboard.add(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))
     keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.TG_END_WRITE_SUBS))
@@ -105,11 +115,7 @@ def get_tg_info_kb(telegram_id: int, is_subscribed: bool, back: str) -> InlineKe
 
     add_del_text = 'Подписаться' if not is_subscribed else 'Удалить из подписок'
 
-    action_call = callbacks.TGSubAction(
-        telegram_id=telegram_id,
-        need_add=not is_subscribed,
-        back=back
-    ).pack()
+    action_call = callbacks.TGSubAction(telegram_id=telegram_id, need_add=not is_subscribed, back=back).pack()
     keyboard.row(types.InlineKeyboardButton(text=add_del_text, callback_data=action_call))
     keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=unwrap_callback_data(back)))
     return keyboard.as_markup()
@@ -152,9 +158,7 @@ def get_industry_tg_channels_kb(industry_id: int, tg_channel_df: pd.DataFrame) -
 
     for index, item in tg_channel_df.iterrows():
         add_del_call = callbacks.IndustryTGChannels(
-            industry_id=industry_id,
-            telegram_id=item['id'],
-            need_add=not item['is_subscribed']
+            industry_id=industry_id, telegram_id=item['id'], need_add=not item['is_subscribed']
         )
         more_info_call = callbacks.TGChannelMoreInfo(
             telegram_id=item['id'],
