@@ -121,6 +121,7 @@ services:
             - ./sources:/code/sources/
         restart: always
 
+
     selenium_firefox:
         image: selenium/standalone-firefox:latest
         container_name: selenium_container
@@ -135,4 +136,20 @@ services:
             - NODE_MAX_SESSION=10
             - SE_NODE_MAX_SESSIONS=10
             - JAVA_OPTS=-XX:ActiveProcessorCount=10
+        restart: always
+
+
+    parser_monitoring:
+        build:
+            context: ./src/parser_monitoring
+        container_name: parser_monitoring_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always
