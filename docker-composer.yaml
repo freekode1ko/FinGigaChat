@@ -59,7 +59,7 @@ services:
         container_name: bot_container
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
         depends_on:
             - database
         volumes:

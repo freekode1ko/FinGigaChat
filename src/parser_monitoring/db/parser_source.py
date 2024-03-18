@@ -17,4 +17,4 @@ def get_parser_data() -> pd.DataFrame:
         f'JOIN source_group sg ON p.source_group_id = sg.id '
     )
     df_parsers = pd.read_sql(query, con=database.engine)
-    return df_parsers
+    return df_parsers.replace({pd.NaT: None})

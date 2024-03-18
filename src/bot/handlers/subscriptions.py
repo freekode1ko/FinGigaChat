@@ -14,9 +14,9 @@ from sqlalchemy import text
 
 from configs import config
 from log.bot_logger import logger, user_logger
-from constants.bot import subscriptions as callback_prefixes
+from constants import subscriptions as callback_prefixes
 from constants.constants import handbook_prefix, DELETE_CROSS, UNSELECTED, SELECTED
-from database import engine
+from db.database import engine
 from keyboards.subscriptions.callbacks import (
     UserTGSubs,
     TGChannelMoreInfo,
@@ -28,8 +28,8 @@ from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
 from module.article_process import ArticleProcess
 from utils.base import user_in_whitelist, get_page_data_and_info, bot_send_msg, send_or_edit
-from utils.industry import get_industries_with_tg_channels, get_industry_name
-from utils.subscriptions import (
+from db.industry import get_industries_with_tg_channels, get_industry_name
+from db.subscriptions import (
     get_user_tg_subscriptions_df,
     delete_user_telegram_subscription,
     delete_all_user_telegram_subscriptions,
