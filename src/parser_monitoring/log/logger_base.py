@@ -63,7 +63,7 @@ class DBHandler(Handler):
             conn.commit()
 
 
-def selector_logger(module_logger: str, level: int = log_lvl):
+def selector_logger(module_logger: str, level: int = log_lvl) -> logging.Logger:
     """
     Селектор для логера
 

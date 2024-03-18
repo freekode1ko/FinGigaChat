@@ -10,13 +10,9 @@ class Statuses(str, Enum):
     unspecified = 'Информация отсутствует'
 
 
-class ParserStatusBase(BaseModel):
+class ParserStatusSend(BaseModel):
     param_value: str = Field(description="Наимпнование парсера (хост или иное)")
     status: Optional[Statuses] = Field(default=Statuses.unspecified, description="Статус парсера от команды GigaParser")
     parser_type: str = Field(description="Тип котировки")
     last_update_datetime: Optional[NaiveDatetime] = Field(default=None, description="Время последнего обновления (в UTC)")
     previous_update_datetime: Optional[NaiveDatetime] = Field(default=None, description="Время предыдущего обновления (в UTC)")
-
-
-class ParserStatusSend(ParserStatusBase):
-    pass
