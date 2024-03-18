@@ -1,11 +1,9 @@
-import datetime
-from typing import Tuple, List
+from typing import List, Tuple
 
 import pandas as pd
 import requests as req
 from lxml import html
 
-import database
 from utils.quotes.base import QuotesGetter
 
 

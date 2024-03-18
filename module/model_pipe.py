@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 import pickle
 import re
@@ -6,7 +7,6 @@ from typing import Dict
 
 import pandas as pd
 import pymorphy2
-from requests.exceptions import ConnectionError
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
@@ -16,8 +16,6 @@ from database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from module.logger_base import Logger
-
-import datetime as dt
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'model/client_relevance_model_0.5_threshold_upd.pkl'
 CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'model/multiclass_classification_best.pkl'
@@ -383,7 +381,10 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
 
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
-    df['relevance'] = [int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold)) for index, pair in enumerate(probs)]
+    df['relevance'] = [
+        int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
+        for index, pair in enumerate(probs)
+    ]
 
     # predict label from multiclass classification
     df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
@@ -593,8 +594,7 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df.query('not client_score.isnull() and client_score != -1 or '
-                  'not commodity_score.isnull() and commodity_score != -1')
+    df = df.query('not client_score.isnull() and client_score != -1 or ' 'not commodity_score.isnull() and commodity_score != -1')
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
@@ -611,11 +611,11 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     df_concat = pd.concat([df_previous['cleaned_data'], df['cleaned_data']], ignore_index=True)
     df_concat_client = pd.concat([df_previous['client'], df['client']], ignore_index=True).fillna(';')
     df_concat_commodity = pd.concat([df_previous['commodity'], df['commodity']], ignore_index=True).fillna(';')
-    
+
     # устанавливаем порог определения старой новости: если она лежит в БД более 2 дней
     MAX_TIME_LIM = 60 * 60 * 24 * 2
     dt_now = dt.datetime.now()
-    
+
     # векторизируем новости в датафрейме
     vectorizer = TfidfVectorizer()
     X_tf_idf = vectorizer.fit_transform(df_concat)
@@ -653,11 +653,16 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
             # для каждого товара в списке найденных товаров
             for commodity in actual_commodity:
                 # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
-                if commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1 and len(str(commodity)) > 0:
+                if (
+                    commodity in previous_commodity
+                    and len(actual_commodity) >= 1
+                    and len(previous_commodity) >= 1
+                    and len(str(commodity)) > 0
+                ):
                     flag_found_same = True
 
             # меняем границу, если новости имеют одинаковых клиентов
-            current_threshold = current_threshold -0.07 if flag_found_same else current_threshold + 0.2
+            current_threshold = current_threshold - 0.07 if flag_found_same else current_threshold + 0.2
 
             # если разница между векторами рассматриваемых новостей больше границы, то новость неуникальна
             if X_tf_idf[actual_pos, :].dot(X_tf_idf[previous_pos, :].T) > current_threshold:

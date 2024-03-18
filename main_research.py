@@ -4,7 +4,7 @@ import re
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -17,8 +17,8 @@ import config
 import module.crawler as crawler
 import module.data_transformer as dt
 import module.user_emulator as ue
-from module.logger_base import selector_logger, Logger
 from database import engine
+from module.logger_base import Logger, selector_logger
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
 from utils import sentry
@@ -356,10 +356,7 @@ class ResearchesGetter:
             exchange_month_uan = None
         try:
             exchange_month_soft = authed_user.get_reviews(
-                url_part=economy,
-                tab='Все',
-                title='Экономика - Sberbank CIB',
-                name_of_review='Ежемесячный обзор по мягким валютам'
+                url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по мягким валютам'
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
@@ -454,14 +451,14 @@ class ResearchesGetter:
             clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
             self.logger.info('Таблица financial_indicators записана')
         else:
-            self.logger.warning(f'Таблица financial_indicators не обновлена')
+            self.logger.warning('Таблица financial_indicators не обновлена')
 
     def save_key_eco_table(self, key_eco_table):
         if key_eco_table is not None:
             key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
             self.logger.info('Таблица key_eco записана')
         else:
-            self.logger.warning(f'Таблица key_eco не обновлена')
+            self.logger.warning('Таблица key_eco не обновлена')
 
     def save_date_of_last_build(self):
         cur_time = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
@@ -477,7 +474,7 @@ def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datet
     :param next_research_getting_time: строка формата %H:%M
     """
     now = datetime.datetime.now()
-    next_collect_dt = datetime.datetime.strptime(next_research_getting_time, "%H:%M")
+    next_collect_dt = datetime.datetime.strptime(next_research_getting_time, '%H:%M')
     next_collect_dt = datetime.datetime(now.year, now.month, now.day, next_collect_dt.hour, next_collect_dt.minute)
 
     if next_collect_dt < now:
