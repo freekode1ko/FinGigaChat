@@ -1,8 +1,155 @@
-version: '24.0.2'
+version: "3"
+
 
 services:
-  fingigachat:
-    build: ./
-    volumes:
-      - /var/log/fingigachat_log:/var/log
+    database:
+        image: 'postgres:latest'
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=password
+            - POSTGRES_DB=postgres
+        volumes:
+            - ./db_files/db-data/:/var/lib/postgresql/data/
+            - ./db_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+        env_file:
+            - .env
+        restart: always
 
+
+    article:
+        build:
+            context: ./src/article
+            dockerfile: Dockerfile
+        container_name: article_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    article_online:
+        build:
+            context: ./src/article_online
+            dockerfile: Dockerfile
+        container_name: article_online_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    bot:
+        build:
+            context: ./src/bot
+            dockerfile: Dockerfile
+        container_name: bot_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    quotes:
+        build:
+            context: ./src/quotes
+            dockerfile: Dockerfile
+        container_name: quotes_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: always
+
+
+    research:
+        build:
+            context: ./src/research
+            dockerfile: Dockerfile
+        container_name: research_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+            - selenium_firefox
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    users_statistics:
+        build:
+            context: ./src/users_statistics
+            dockerfile: Dockerfile
+        container_name: users_statistics_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    selenium_firefox:
+        image: selenium/standalone-firefox:latest
+        container_name: selenium_container
+        shm_size: 2gb
+        ports:
+            - "4444:4444"
+            - "7900:7900"
+        environment:
+            - HUB_HOST=hub
+            - HUB_PORT=4444
+            - NODE_MAX_INSTANCES=10
+            - NODE_MAX_SESSION=10
+            - SE_NODE_MAX_SESSIONS=10
+            - JAVA_OPTS=-XX:ActiveProcessorCount=10
+        restart: always
+
+
+    parser_monitoring:
+        build:
+            context: ./src/parser_monitoring
+        container_name: parser_monitoring_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
