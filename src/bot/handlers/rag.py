@@ -77,7 +77,7 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
     await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True)
 
 
-def route_query(chat_id: int, full_name: str, user_msg: str):
+def route_query(chat_id: int, full_name: str, user_msg: str) -> None:
     """
     Будущая маршрутизация рага(ов)
     Будет изменяться
