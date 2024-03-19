@@ -94,12 +94,12 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
 
     # сохраним в бд действия пользователя с RAG-системой
     add_rag_activity(
-        chat_id,
-        msg.message_id,
-        msg.date,
-        query,
-        response,
-        rag_obj.retriever_type)
+        chat_id=chat_id,
+        bot_msg_id=msg.message_id,
+        date=msg.date,
+        query=query,
+        response=response,
+        retriever_type=rag_obj.retriever_type)
 
 
 @router.callback_query(F.data.endswith('like'))
