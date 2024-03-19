@@ -2,10 +2,11 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
 from alembic import context
 
+from db.models import *
 from db.models import Base
+from configs.config import psql_engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -17,6 +18,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+
+config.set_main_option("sqlalchemy.url", psql_engine)
 
 
 def run_migrations_offline() -> None:
