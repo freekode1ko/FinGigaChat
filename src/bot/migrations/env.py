@@ -6,10 +6,15 @@ from sqlalchemy import pool
 from alembic import context
 
 from db.models import Base
+from configs import config as app_cfg
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+section = config.config_ini_section
+config.set_section_option(section, 'PSQL_ENGINE', app_cfg.psql_engine)
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
