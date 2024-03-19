@@ -11,6 +11,8 @@ from log.bot_logger import user_logger
 from utils.base import user_in_whitelist
 from utils.rag_router import RAGRouter
 from configs.config import dict_of_emoji
+from db.rag_user_feedback import add_rag_activity, update_user_reaction
+
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())
@@ -88,7 +90,16 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
     response = rag_obj.get_response_from_rag()
 
     emoji_keyboard = generate_keyboard()
-    await message.answer(response,  parse_mode='HTML', disable_web_page_preview=True, reply_markup=emoji_keyboard)
+    msg = await message.answer(response, parse_mode='HTML', disable_web_page_preview=True, reply_markup=emoji_keyboard)
+
+    # сохраним в бд действия пользователя с RAG-системой
+    add_rag_activity(
+        chat_id,
+        msg.message_id,
+        msg.date,
+        query,
+        response,
+        rag_obj.retriever_type)
 
 
 @router.callback_query(F.data.endswith('like'))
@@ -99,10 +110,20 @@ async def callback_keyboard(callback_query: types.CallbackQuery):
 
     if mark == 'like':
         txt = 'Я рад, что вам понравилось!'
+        reaction = True
     else:
         txt = 'Я буду стараться лучше...'
+        reaction = False
 
     # обновление кнопки на одну не работающую
     button = [types.InlineKeyboardButton(text=txt, callback_data='none')]
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=[button, ])
-    await callback_query.message.edit_text(text=bot_msg, reply_markup=keyboard)
+    await callback_query.message.edit_text(text=bot_msg, reply_markup=keyboard,
+                                           disable_web_page_preview=True, parse_mode='HTML')
+
+    # добавим в бд обратную связь от пользователя
+    update_user_reaction(
+        callback_query.message.chat.id,
+        callback_query.message.message_id,
+        reaction
+    )
