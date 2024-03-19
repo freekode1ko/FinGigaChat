@@ -37,9 +37,9 @@ def send_parser_statuses(logger: Logger.logger) -> None:
     # send data to monitoring
     for i in range(config.POST_TO_SERVICE_ATTEMPTS):
         try:
-            msg = 'Отправка данных на сервис мониторинг'
-            logger.info(msg)
-            print(msg)
+            msg = 'Отправка данных на сервис мониторинг: %s'
+            logger.info(msg, formatted_data)
+            print(msg % formatted_data)
             response = SendToMonitoring.send(formatted_data, timeout=config.POST_TO_SERVICE_TIMEOUT)
             msg = 'Данные отправлены: ответ %s'
             logger.info(msg, response)
