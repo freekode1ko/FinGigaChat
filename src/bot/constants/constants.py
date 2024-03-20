@@ -17,3 +17,8 @@ PREV_PAGE = '⬅'
 STOP = '⛔'
 
 CANCEL_CALLBACK = 'cancel'
+
+# константы для RAG
+default_rag_answer = 'В базе знаний нет ответа на этот вопрос, обратитесь к команде проекта.'
+like_feedback = 'Я рад, что вам понравилось!'
+dislike_feedback = 'Я буду стараться лучше...'

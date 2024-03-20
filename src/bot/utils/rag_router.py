@@ -1,4 +1,3 @@
-from enum import Enum
 import json
 import re
 import urllib.parse
@@ -6,18 +5,12 @@ import urllib.parse
 import requests
 
 from configs import config
-from constants.constants import giga_rag_footer
+from constants.constants import giga_rag_footer, default_rag_answer
+from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 
 giga = GigaChat(logger)
-
-
-class RetrieverType(Enum):
-    """Типы ретриверов"""
-    other = 0  # простое обращение к гигачат
-    state_support = 1  # ретривер по господдержке
-    qa_banker = 2  # ретривер по новостям и финансовым показателям
 
 
 class RAGRouter:
@@ -71,16 +64,22 @@ class RAGRouter:
             query_part = f'queries?query={query}'
             rag_response = requests.get(
                 url=config.BASE_QABANKER_URL.format(query_part),
-                timeout=config.POST_TO_SERVICE_TIMEOUT)
+                timeout=config.POST_TO_SERVICE_TIMEOUT
+            )
+
             if rag_response.status_code == 200:
                 rag_answer = rag_response.text
-                response = f'{rag_answer}\n\n{giga_rag_footer}'
-                user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : На запрос ВОС ответила: "{rag_answer}"')
+                response = f'{rag_answer}\n\n{giga_rag_footer}' if rag_answer != default_rag_answer else rag_answer
+
+                user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
+                                 (self.chat_id, self.full_name, self.query, rag_answer))
             else:
                 response = 'Извините, я пока не могу ответить на ваш запрос'
+
         except Exception as e:
-            logger.critical(f'ERROR : ВОС не сформировал ответ по причине: {e}"')
-            user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : ВОС не сформировал ответ по причине: {e}"')
+            logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
+            user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
+                                 (self.chat_id, self.full_name, self.query, e))
             response = 'Извините, я пока не могу ответить на ваш запрос'
 
         return response

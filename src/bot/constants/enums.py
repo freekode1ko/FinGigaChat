@@ -22,3 +22,12 @@ class Environment(str, Enum):
             return cls(param.lower())
         except ValueError:
             return cls.UNKNOWN
+
+
+class RetrieverType(Enum):
+    """
+    Типы ретриверов в боте
+    """
+    other = 0  # простое обращение к гигачат
+    state_support = 1  # ретривер по господдержке
+    qa_banker = 2  # ретривер по новостям и финансовым показателям

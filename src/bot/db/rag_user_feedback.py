@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy import text
 
 from db.database import engine
-from utils.rag_router import RetrieverType
+from constants.enums import RetrieverType
 
 
 def add_rag_activity(chat_id: int,

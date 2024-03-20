@@ -11,6 +11,7 @@ from log.bot_logger import user_logger
 from utils.base import user_in_whitelist
 from utils.rag_router import RAGRouter
 from configs.config import dict_of_emoji
+from constants.constants import like_feedback, dislike_feedback
 from db.rag_user_feedback import add_rag_activity, update_user_reaction
 
 
@@ -103,22 +104,21 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
 
 
 @router.callback_query(F.data.endswith('like'))
-async def callback_keyboard(callback_query: types.CallbackQuery):
+async def callback_keyboard(callback_query: types.CallbackQuery) -> None:
+    """
+    Обновляет клавиатуру после получения ОС от пользователя
+    И вызывает метод по записи ОС в бд
+    """
 
-    mark = callback_query.data
-    bot_msg = callback_query.message.text
-
-    if mark == 'like':
-        txt = 'Я рад, что вам понравилось!'
-        reaction = True
+    if callback_query.data == 'like':
+        txt, reaction = like_feedback, True
     else:
-        txt = 'Я буду стараться лучше...'
-        reaction = False
+        txt, reaction = dislike_feedback, False
 
     # обновление кнопки на одну не работающую
     button = [types.InlineKeyboardButton(text=txt, callback_data='none')]
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=[button, ])
-    await callback_query.message.edit_text(text=bot_msg, reply_markup=keyboard,
+    await callback_query.message.edit_text(text=callback_query.message.text, reply_markup=keyboard,
                                            disable_web_page_preview=True, parse_mode='HTML')
 
     # добавим в бд обратную связь от пользователя
