@@ -407,25 +407,29 @@ class ArticleProcess:
                 subject_ids.append(subject_id)
         return subject_ids
 
-    def get_subjects_names(self, subjects: List[str]) -> List[str]:
+    def get_subjects_data(self, entities: List[str]) -> Dict:
         """
-        Получение всех альтернативных имен по списку из industry, client, commodity
+        Получение словаря с данными о сущностях
+        :param entities: список сущностей из бд (industry/client/commodity)
+        return: dict(любое из альтернативных имен сущности: [сущность, айди сущности])
         """
-        subjects_names = []
+        subjects_data = dict()
 
-        for subject in subjects:
-            df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
+        for entity in entities:
+            df_alternative = pd.read_sql(f'SELECT {entity}_id, other_names FROM {entity}_alternative', con=self.engine)
             df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
-            for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
-                subjects_names.extend(names)
-        return subjects_names
+            df_alternative.insert(0, 'entity', entity)
+            df_alternative = df_alternative.explode('other_names').drop_duplicates(subset='other_names')
+            subjects_data.update(df_alternative.set_index('other_names').T.to_dict('list'))
+
+        return subjects_data
 
     def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> List[str]:
         """
         Поиск ближайших похожих имен субъектов
         """
         subject_name = subject_name.lower().strip().replace('"', '')
-        subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+        subjects_names = list(self.get_subjects_data(['industry', 'client', 'commodity']).keys())
 
         if not subjects_names:
             return []
@@ -436,22 +440,22 @@ class ArticleProcess:
 
         return names
 
-    def find_nearest_to_subjects_list(self, subjects_names: List[str]) -> List[str]:
+    def find_nearest_to_subjects_list(self, subjects_names: List[str]) -> Dict:
         """
         Поиск ближайших похожих имен субъектов
+        :param subjects_names: список имен, для которых нужно найти ближайшие
+        return: список словарей с данными по ближайшим именам [dict(ближайшее имя: [сущность, айди сущности])]
         """
-        db_subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+        subjects_data = self.get_subjects_data(['industry', 'client', 'commodity'])
+        if not subjects_data:
+            return dict()
 
-        if not subjects_names:
-            return []
-
-        near_subjects = []
-
+        near_subjects_names = []
         for subject_name in subjects_names:
             subject_name = subject_name.lower().strip().replace('"', '')
-            near_subjects.append(process.extractOne(subject_name, db_subjects_names)[0])
+            near_subjects_names.append(process.extractOne(subject_name, subjects_data.keys())[0])
 
-        return near_subjects
+        return {near_name: subjects_data[near_name] for near_name in near_subjects_names}
 
     def _get_articles(self, subject_id: int, subject: str, limit_all: int = NEWS_LIMIT, offset_all: int = 0):
         """
