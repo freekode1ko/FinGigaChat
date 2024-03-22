@@ -2,7 +2,6 @@ import copy
 import datetime as dt
 import json
 import os
-from typing import Dict, List, Union
 from urllib.parse import unquote, urlparse
 
 import numpy as np
@@ -407,7 +406,7 @@ class ArticleProcess:
                 subject_ids.append(subject_id)
         return subject_ids
 
-    def get_subjects_data(self, entities: List[str]) -> Dict:
+    def get_subjects_data(self, entities: list[str]) -> dict[str, list[str, int]]:
         """
         Получение словаря с данными о сущностях
         :param entities: список сущностей из бд (industry/client/commodity)
@@ -424,7 +423,7 @@ class ArticleProcess:
 
         return subjects_data
 
-    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> List[str]:
+    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
         """
@@ -440,7 +439,7 @@ class ArticleProcess:
 
         return names
 
-    def find_nearest_to_subjects_list(self, subjects_names: List[str]) -> Dict:
+    def find_nearest_to_subjects_list(self, subjects_names: list[str]) -> dict[str, list]:
         """
         Поиск ближайших похожих имен субъектов
         :param subjects_names: список имен, для которых нужно найти ближайшие
@@ -508,7 +507,7 @@ class ArticleProcess:
 
             return name, article_data
 
-    def _get_sorted_subject(self) -> (Dict, Dict):
+    def _get_sorted_subject(self) -> (dict, dict):
         """Создание словарей для сортировки по топ клиентам/товарам
         в зависимости от кол-ва новостей за период времени"""
         period = '3 months'
@@ -531,7 +530,7 @@ class ArticleProcess:
         return client_sorted_dict, commodity_sorted_dict
 
     @staticmethod
-    def _sort_by_top_subject(sorted_subject_name: Dict, articles) -> List:
+    def _sort_by_top_subject(sorted_subject_name: dict, articles) -> list:
         """
         Возвращает отсортированный по топ объектам список со статьями
         :param sorted_subject_name: словарь {имя объекта: отсортированный индекс}
@@ -548,7 +547,7 @@ class ArticleProcess:
         article_sorted = [a[0] for a in article_sorted]  # список из ключей, т.е. только из данных по новостям
         return article_sorted
 
-    def _get_industry_articles(self, industry_id) -> List:
+    def _get_industry_articles(self, industry_id) -> list:
         """Получение отсортированных новостей по клиентам и товарам для выдачи новостей по отрасли"""
         query = (
             'SELECT * FROM '
@@ -772,7 +771,7 @@ class ArticleProcess:
             con=self.engine,
         )
 
-    def get_industry_client_com_dict(self) -> List[Dict]:
+    def get_industry_client_com_dict(self) -> list[dict]:
         """
         Составление словарей для новостных объектов и их альтернативных названий
         return: список со словарями клиентов, товаров и отраслей dict(id=List[other_names])
@@ -933,7 +932,12 @@ class FormatText:
 
     MARKER = copy.deepcopy(dict_of_emoji)['marker']  # '&#128204;'
 
-    def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '', title: str = '', text_sum: str = ''):
+    def __init__(self,
+                 subject: str = '',
+                 date: dt.datetime | str = '',
+                 link: str = '',
+                 title: str = '',
+                 text_sum: str = ''):
         self.__subject = subject  # имя клиента/товара
         self.__title = title
         self.__date = date
