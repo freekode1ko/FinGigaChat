@@ -1,7 +1,6 @@
 import copy
 import json
 import math
-from typing import List, Union, Dict
 
 import pandas as pd
 from aiogram import F, Router, types
@@ -307,7 +306,7 @@ async def whatinthisindustry(callback_query: types.CallbackQuery) -> None:
     )
 
 
-async def get_list_of_user_subscriptions(user_id: int) -> List[str]:
+async def get_list_of_user_subscriptions(user_id: int) -> list[str]:
     """
     Возвращает список подписок пользователя
 
@@ -391,8 +390,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
         reply_msg += f'\n\nВозможно, вы имели в виду:'
 
         for name in near_to_list_of_unknown:
-            value: List = near_to_list_of_unknown[name]
-            keyboard.row(types.InlineKeyboardButton(text=name, callback_data=f'addsub:{value[0]}:{value[1]}'))
+            values = near_to_list_of_unknown[name]
+            keyboard.row(types.InlineKeyboardButton(text=name, callback_data=f'addsub:{values[0]}:{values[1]}'))
 
         if not subscriptions:
             keyboard.row(continue_button)
@@ -620,7 +619,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
     """Формирует меню подписок"""
     keyboard = kb_maker.get_subscriptions_kb()
     msg_text = 'Меню управления подписками\n'
@@ -870,7 +869,7 @@ async def tg_end_write_subs(callback_query: types.CallbackQuery, state: FSMConte
     await callback_query.message.edit_text(text='Формирование подписок завершено')
 
 
-async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+async def tg_subs_menu(message: types.CallbackQuery | types.Message) -> None:
     keyboard = kb_maker.get_tg_subscriptions_menu_kb()
     msg_text = (
         'Меню управления подписками на telegram каналы\n\n'
