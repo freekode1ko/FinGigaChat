@@ -23,7 +23,7 @@ from module import data_transformer as Transformer
 from module import weekly_pulse_parse
 from log.logger_base import Logger
 from db import parser_source
-from utils.selenium_utils import get_driver
+# from utils.selenium_utils import get_driver
 
 
 class ResearchError(Exception):
@@ -718,3 +718,103 @@ class MetalsWireParser:
                 df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
         self._logger.info('Табличные данные для MetalsWire собраны и обработаны')
         return df
+
+class ResearchAPIParser:
+    """
+    Class for parse pages from API CIB Research
+    """
+
+    def __init__(self, logger: Logger.logger):
+        home_page = 'https://research.sberbank-cib.com'
+        login = config.research_cred[0]
+        password = config.research_cred[1]
+
+        self._logger = logger
+        self.home_page = home_page
+        self.auth = (login, password)
+        self.cookies = {
+            "JSESSIONID": config.CIB_JSESSIONID,
+            "LOGIN": config.CIB_LOGIN,
+            "PASSWORD": config.CIB_PASSWORD,
+        }
+
+    def parse_news_by_id(self, news_ids) -> list[dict[str, str]] | None:
+        ret_news = []
+
+        news_url = 'https://research.sberbank-cib.com/group/guest/publication'
+        for news_id in news_ids:
+            req = requests.get(
+                url=news_url,
+                params={"publicationId": news_id},
+                cookies=self.cookies,
+                verify=False,
+            )
+            news_html = BeautifulSoup(req.content, 'html.parser')
+
+            date = news_html.find('span', class_="date").text  # "< span class ="date" > 21 мар, '24 < / span >"
+            header = news_html.find('h1', class_="popupTitle").text  # h1 class="popupTitle
+            news_text = news_html.find('div', class_="summaryContent").text  # div class ="summaryContent"
+            ret_news.append(
+                {
+                    'date': date,
+                    'header': header,
+                    'news_text': news_text,
+                    'news_file': None,
+                }
+            )
+
+        return ret_news
+
+    def parse_client_params(self):
+        pass
+
+    def get_news_ids_from_page(self, params) -> list[str]:
+        req = requests.post(
+            url=params['url'],
+            params=params['params'],
+            cookies=self.cookies,
+            verify=False,
+        )
+        if req.status_code != 200:
+            raise Exception
+        news_in_html = BeautifulSoup(req.content, 'html.parser')
+        news_ids = []
+        for news in news_in_html.find_all("tr"):
+            if element_with_id := news.find("div", class_="hidden publication-id"):
+                news_ids.append(element_with_id.text)
+
+        return news_ids
+
+    def parse_pages(self):
+        pages = {
+            "Экономика/Россия": {
+                'url': 'https://research.sberbank-cib.com/group/guest/econ',
+                'params': {
+                    'p_p_id': "cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco",
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco_countryIsoCode': 'RUS',
+                },
+            },
+            'FX & Ставки': {
+                'url': 'https://research.sberbank-cib.com/group/guest/money',
+                'params': {
+                    'p_p_id': 'cibfxmmpublicationportlet_WAR_cibpublicationsportlet_INSTANCE_ezos',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                }
+            },
+
+        }
+
+        all_news = []
+        for page in pages.values():
+            news_ids = self.get_news_ids_from_page(page)
+            all_news.append(self.parse_news_by_id(news_ids)) # FIXME
+        pass

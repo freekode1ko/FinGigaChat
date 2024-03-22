@@ -62,6 +62,9 @@ data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
+CIB_JSESSIONID = 'KNOkw58ONJREjDuyk0uHd5SP5bNMXDlEP3iMa0zF.pvlsa-respo0001'
+CIB_LOGIN = '616e6e656b7261736f76407362657262616e6b2e7275'
+CIB_PASSWORD = '336e52672b5048666739497856336549336d6c5069513d3d'
 
 RESEARCH_GETTING_TIMES_LIST = [
     '08:00',
