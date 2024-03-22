@@ -59,7 +59,6 @@ api_key_gpt = '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'
 NEWS_LIMIT = 5
 PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
-POST_TO_SERVICE_TIMEOUT = 90
 USER_SUBSCRIPTIONS_LIMIT = 70
 DELETE_TG_MESSAGES_TIMEOUT = 5
 
@@ -75,8 +74,10 @@ mail_smpt_server = 'smtp.mail.ru'
 mail_smpt_port = 465
 mail_register_subject = 'Регистрация в AI-помощнике'
 
-
+# url к rag-сервисам
 BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
+QUERY_STATE_SUPPORT_URL = 'http://89.223.65.160:8031/api/v1/question'
+POST_TO_SERVICE_TIMEOUT = 90
 
 reg_mail_text = (
     'Добрый день!\n\nВы получили данное письмо, потому что указали данный адрес в AI-помощнике Банкира.\n\n'
