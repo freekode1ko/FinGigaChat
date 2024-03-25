@@ -1,4 +1,8 @@
-FROM python:3.10
+FROM ubuntu:22.04
+
+RUN apt-get update
+RUN apt-get install poppler-utils python3-dev libpq-dev -y
+RUN apt-get install python3 python3-pip -y
 
 COPY . /code
 WORKDIR /code

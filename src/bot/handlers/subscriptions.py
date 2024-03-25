@@ -25,7 +25,7 @@ from keyboards.subscriptions.callbacks import (
 )
 from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
-from module.article_process import ArticleProcess
+from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import user_in_whitelist, get_page_data_and_info, bot_send_msg, send_or_edit
 from db.industry import get_industries_with_tg_channels, get_industry_name
 from db.subscriptions import (
