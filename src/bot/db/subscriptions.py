@@ -103,3 +103,33 @@ def get_industry_tg_channels_df(industry_id: int, user_id: int) -> pd.DataFrame:
     return data_df
 
 
+def get_user_research_subscriptions_df():
+    pass
+
+
+def get_research_info():
+    pass
+
+
+def add_user_research_subscription():
+    pass
+
+
+def delete_user_research_subscription():
+    pass
+
+
+def get_domain_name():
+    pass
+
+
+def get_research_types_by_domain_df():
+    pass
+
+
+def get_research_domains_df():
+    pass
+
+
+def delete_all_user_research_subscriptions():
+    pass

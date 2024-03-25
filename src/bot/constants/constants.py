@@ -9,6 +9,7 @@ research_footer = 'Источник: Sber Analytical Research. Распрост�
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
 SELECTED = '✅'
+PARTIAL_SELECTED = '✳️'
 UNSELECTED = '🟩'
 DELETE_CROSS = '❌'
 NEXT_PAGE = '➡'
