@@ -26,7 +26,7 @@ from keyboards.subscriptions.callbacks import (
 )
 from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.constructors import get_tg_info_kb
-from module.article_process import ArticleProcess
+from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import user_in_whitelist, get_page_data_and_info, bot_send_msg, send_or_edit
 from db.industry import get_industries_with_tg_channels, get_industry_name
 from db.subscriptions import (
@@ -385,8 +385,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
 
     if len(subscriptions) < len(user_request):
         list_of_unknown = list(set(user_request) - set(subscriptions))
-        ap_obj = ArticleProcess(logger=logger)
-        near_to_list_of_unknown = '\n'.join(ap_obj.find_nearest_to_subjects_list(list_of_unknown))
+        fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+        near_to_list_of_unknown = '\n'.join(fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown))
         user_logger.info(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: {list_of_unknown}')
         reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
         reply_msg += f'\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}'
