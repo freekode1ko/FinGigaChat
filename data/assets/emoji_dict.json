@@ -2,5 +2,7 @@
   "marker": "📌",
   "forward": "➡",
   "backward": "⬅",
-  "block": "⛔"
+  "block": "⛔",
+  "like": "👍",
+  "dislike": "👎"
 }
