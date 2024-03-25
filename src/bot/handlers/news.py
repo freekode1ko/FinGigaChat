@@ -22,6 +22,7 @@ from constants.constants import PATH_TO_COMMODITY_GRAPH
 from handlers import common, quotes, gigachat, rag
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
+from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
 from db import parser_source
 
@@ -183,8 +184,8 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
 async def send_nearest_subjects(message: types.Message) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    ap_obj = ArticleProcess(logger=logger)
-    nearest_subjects = ap_obj.find_nearest_to_subject(user_msg)
+    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    nearest_subjects = fuzzy_searcher.find_nearest_to_subject(user_msg)
 
     cancel_command = 'отмена'
     buttons = [

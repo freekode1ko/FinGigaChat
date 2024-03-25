@@ -21,7 +21,7 @@ class SendToMonitoring:
             config.monitoring_api_url.format(config.update_parser_statuses_url),
             headers={
                 'access_token': config.api_key,
-                'source-system': "MySystem",
+                'source-system': config.source_system,
                 'request-uuid': str(uuid4()),
                 'event-timestamp': str(int(time.time())),
                 'Content-type': 'application/json',

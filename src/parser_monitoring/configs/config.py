@@ -15,7 +15,7 @@ ENV: Environment = Environment.from_str(_env_value)
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
-DEBUG: bool = env.str('DEBUG', default='false')
+DEBUG: bool = env.bool('DEBUG', default=False)
 
 
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
@@ -32,7 +32,7 @@ api_key: str = env.str('MONITORING_API_KEY', default='')
 monitoring_api_url: str = str(env.str('MONITORING_API_URL', default='')) + '/{}'
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 
-source_system = 'windows'
+source_system = f'AI-helper ({_env_value})'
 
 log_file = 'parser_monitoring'
 LOG_LEVEL_DEBUG = 10

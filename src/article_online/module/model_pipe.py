@@ -351,15 +351,13 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     counts_dict = {}
     with engine.connect() as conn:
         for subject_name in names:
-            query_count = (
-                'SELECT COUNT(article_id) FROM relation_{type_of_article}_article r '
-                'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
-                'JOIN article ON r.article_id = article.id '
-                f"where {type_of_article}.name = '{subject_name}' AND CURRENT_DATE - article.date < '30 day'"
+            query_count = text(
+                f'SELECT COUNT(article_id) FROM relation_{type_of_article}_article r '
+                f'JOIN {type_of_article} ON r.{type_of_article}_id={type_of_article}.id '
+                f'JOIN article ON r.article_id = article.id '
+                f"where {type_of_article}.name=:subject_name AND CURRENT_DATE - article.date < '30 day'"
             )
-            count = conn.execute(text(
-                query_count.format(type_of_article=type_of_article,
-                                   subject_name=subject_name))).fetchone()
+            count = conn.execute(query_count.bindparams(subject_name=subject_name)).fetchone()
             counts_dict[subject_name] = count
     min_count = min(counts_dict.values())
     threshold = threshold - minus_threshold if min_count[
