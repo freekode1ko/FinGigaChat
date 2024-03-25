@@ -387,7 +387,23 @@ class ArticleProcess:
         df_article_subject.rename(columns={'id': 'article_id'}, inplace=True)
         df_article_subject[f'{subject}_score'] = 0
 
-        df_article_subject.to_sql(f'relation_{subject}_article', con=self.engine, if_exists='append', index=False)
+        tmp_table = f'temporary_relation_{subject}_article'
+        df_article_subject.to_sql(tmp_table, con=self.engine, if_exists='append', index=False)
+
+        with self.engine.begin() as conn:
+            sql = text(
+                f'INSERT INTO relation_{subject}_article ({subject}_id, article_id, {subject}_score) '
+                f'SELECT t.{subject}_id, t.article_id, t.{subject}_score '
+                f'FROM {tmp_table} t '
+                f'   WHERE NOT EXISTS '
+                f'      (SELECT 1 FROM relation_{subject}_article f '
+                f'       WHERE t.{subject}_id = f.{subject}_id '
+                f'       AND t.article_id = f.article_id)'
+            )
+            delete_tmp_table_sql = text(f'DROP TABLE IF EXISTS {tmp_table}')
+
+            conn.execute(sql)
+            conn.execute(delete_tmp_table_sql)
 
         return article['link'].values.tolist()
 

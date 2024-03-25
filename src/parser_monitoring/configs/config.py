@@ -32,7 +32,7 @@ api_key: str = env.str('MONITORING_API_KEY', default='')
 monitoring_api_url: str = str(env.str('MONITORING_API_URL', default='')) + '/{}'
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 
-source_system = 'windows'
+source_system = f'AI-helper ({_env_value})'
 
 log_file = 'parser_monitoring'
 LOG_LEVEL_DEBUG = 10
