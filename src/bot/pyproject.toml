@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "bot"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+aiogram = "^3.4.1"
+aiohttp = "^3.9.3"
+alembic = "^1.13.1"
+environs = "^10.3.0"
+fuzzywuzzy = "^0.18.0"
+matplotlib = "^3.8.3"
+openai = "^1.13.3"
+openpyxl = "^3.1.2"
+pandas = "^2.2.1"
+psycopg2 = "^2.9.9"
+pymorphy2 = "^0.9.1"
+pymupdf = "^1.23.26"
+pysocks = "^1.7.1"
+python-levenshtein = "^0.25.0"
+requests = "^2.31.0"
+scikit-learn = "^1.4.1.post1"
+sentry-sdk = "^1.40.6"
+sqlalchemy = "^2.0.28"
+xgboost = "^2.0.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
