@@ -134,7 +134,11 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
 
         await state.clear()
         await state.set_state(Form.continue_user_reg)
-        await state.update_data(user_email=user_msg.strip(), reg_code=reg_code, attempt=0)
+        await state.update_data(
+            user_email=user_msg.strip(),
+            reg_code=reg_code,
+            attempts_left=MAX_REGISTRATION_CODE_ATTEMPTS
+        )
         await message.answer('Для завершения регистрации, введите код, отправленный вам на почту.')
     else:
         keyboard = types.ReplyKeyboardMarkup(
@@ -152,13 +156,6 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
     reg_info = await state.get_data()
     reg_code: str = reg_info['reg_code']
-    attempt: int = reg_info['attempt'] + 1
-
-    if attempt >= MAX_REGISTRATION_CODE_ATTEMPTS:
-        await state.clear()
-        await message.answer('Вы истратили все попытки. Попробуйте позже.', protect_content=False)
-        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : подозрительная регистрация')
-        return
 
     if reg_code == user_msg:
         user_raw = json.loads(message.from_user.model_dump_json())
@@ -198,8 +195,14 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
             await state.clear()
 
     else:
-        await state.update_data(attempt=attempt)
-        attempts_left = MAX_REGISTRATION_CODE_ATTEMPTS - attempt
+        attempts_left = reg_info['attempts_left'] - 1
+        if not attempts_left:
+            await state.clear()
+            await message.answer('Вы истратили все попытки. Попробуйте позже.')
+            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : подозрительная регистрация')
+            return
+
+        await state.update_data(attempts_left=attempts_left)
         await message.answer(f'Вы ввели некорректный регистрационный код. Осталось {attempts_left} попытки.')
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : пользователь ввел некорректный код, '
                             f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
