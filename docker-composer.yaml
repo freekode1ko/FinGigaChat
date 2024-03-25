@@ -4,15 +4,17 @@ version: "3"
 services:
     database:
         image: 'postgres:latest'
-        ports:
-            - "5432:5432"
+        command: -p 5433
+        expose:
+            - 5433
+        container_name: fingigachatdb
         environment:
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=password
-            - POSTGRES_DB=postgres
+            - POSTGRES_DB=fingigachat
         volumes:
             - ./db_files/db-data/:/var/lib/postgresql/data/
-            - ./db_files/init.sql:/docker-entrypoint-initdb.d/init.sql
+              #    - ./db_files/backup.sql:/docker-entrypoint-initdb.d/init.sql
         env_file:
             - .env
         restart: always
@@ -28,6 +30,7 @@ services:
         command: [ "poetry", "run", "python", "main.py" ]
         depends_on:
             - database
+            - bot
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -45,6 +48,7 @@ services:
         command: [ "poetry", "run", "python", "main.py" ]
         depends_on:
             - database
+            - bot
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -59,7 +63,7 @@ services:
         container_name: bot_container
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
         depends_on:
             - database
         volumes:
@@ -79,6 +83,7 @@ services:
         command: [ "poetry", "run", "python", "main.py" ]
         depends_on:
             - database
+            - bot
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -97,6 +102,7 @@ services:
         command: [ "poetry", "run", "python", "main.py" ]
         depends_on:
             - database
+            - bot
             - selenium_firefox
         volumes:
             - ./logs:/code/logs
@@ -115,11 +121,13 @@ services:
         command: [ "poetry", "run", "python", "main.py" ]
         depends_on:
             - database
+            - bot
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
             - ./sources:/code/sources/
         restart: always
+
 
     selenium_firefox:
         image: selenium/standalone-firefox:latest
@@ -135,4 +143,21 @@ services:
             - NODE_MAX_SESSION=10
             - SE_NODE_MAX_SESSIONS=10
             - JAVA_OPTS=-XX:ActiveProcessorCount=10
+        restart: always
+
+
+    parser_monitoring:
+        build:
+            context: ./src/parser_monitoring
+        container_name: parser_monitoring_container
+        env_file:
+            - .env
+        command: [ "poetry", "run", "python", "main.py" ]
+        depends_on:
+            - database
+            - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
         restart: always

@@ -10,4 +10,6 @@ TG_SUBS_DELETE_ALL = 'tg_subs_delete_all'
 TG_SUBS_DELETE_ALL_DONE = 'tg_subs_delete_all_done'
 SUBS_DELETE_ALL_DONE = 'subs_delete_all_done'
 TG_SUB_ACTION = 'tg_sub_action'
+TG_END_WRITE_SUBS = 'tg_end_write_subs'
+ADD_ALL_SUBS_BY_DOMAIN = 'add_all_subs_by_domain'
 # ----------------------------------------------------
