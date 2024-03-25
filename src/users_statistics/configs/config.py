@@ -11,7 +11,7 @@ _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
 
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
-DEBUG: bool = env.str('DEBUG', default='false')
+DEBUG: bool = env.bool('DEBUG', default=False)
 
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 
