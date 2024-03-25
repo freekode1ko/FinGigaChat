@@ -384,8 +384,8 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
         list_of_unknown = list(set(user_request) - set(subscriptions))
         user_logger.info(f'*{user_id}* Пользователь запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
 
-        ap_obj = ArticleProcess(logger=logger)
-        near_to_list_of_unknown = ap_obj.find_nearest_to_subjects_list(list_of_unknown)
+        fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+        near_to_list_of_unknown = fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown)
         reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
         reply_msg += f'\n\nВозможно, вы имели в виду:'
 
