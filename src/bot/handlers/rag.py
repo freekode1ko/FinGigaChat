@@ -5,13 +5,13 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
 
 from log.bot_logger import user_logger
 from utils.base import user_in_whitelist
 from utils.rag_router import RAGRouter
 from configs.config import dict_of_emoji
-from constants.constants import like_feedback, dislike_feedback
+from constants.constants import LIKE_FEEDBACK, DISLIKE_FEEDBACK
 from db.rag_user_feedback import add_rag_activity, update_user_reaction
 
 
@@ -26,11 +26,14 @@ class RagState(StatesGroup):
     rag_query = State()
 
 
-def generate_keyboard():
+def generate_keyboard() -> InlineKeyboardMarkup:
+    """ 
+    Формирует Inline клавиатуру вида:
+    [ 👍 ][ 👎 ]
+    """
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text=emoji['like'], callback_data='like'))
     keyboard.add(types.InlineKeyboardButton(text=emoji['dislike'], callback_data='dislike'))
-
     return keyboard.as_markup()
 
 
@@ -111,9 +114,9 @@ async def callback_keyboard(callback_query: types.CallbackQuery) -> None:
     """
 
     if callback_query.data == 'like':
-        txt, reaction = like_feedback, True
+        txt, reaction = LIKE_FEEDBACK, True
     else:
-        txt, reaction = dislike_feedback, False
+        txt, reaction = DISLIKE_FEEDBACK, False
 
     # обновление кнопки на одну не работающую
     button = [types.InlineKeyboardButton(text=txt, callback_data='none')]

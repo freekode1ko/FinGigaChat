@@ -5,7 +5,7 @@ import urllib.parse
 import requests
 
 from configs import config
-from constants.constants import giga_rag_footer, default_rag_answer, error_rag_answer
+from constants.constants import GIGA_RAG_FOOTER, DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER
 from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
@@ -23,7 +23,7 @@ class RAGRouter:
         self.query = query
         self.retriever_type = self.get_rag_type()
 
-    def get_rag_type(self):
+    def get_rag_type(self) -> RetrieverType:
         """По пользовательскому запросу определяет класс рага, который нужно вызвать"""
 
         rag_class = RetrieverType.other  # по умолчанию
@@ -52,12 +52,9 @@ class RAGRouter:
         """Вызов ретривера относительно типа ретривера"""
         if self.retriever_type == RetrieverType.state_support:
             return self.rag_state_support()
-
         elif self.retriever_type == RetrieverType.qa_banker:
             return self.rag_qa_banker()
-
-        else:
-            return giga.get_giga_answer(self.query)
+        return giga.get_giga_answer(self.query)
 
     def rag_qa_banker(self) -> str:
         """
@@ -100,7 +97,7 @@ class RAGRouter:
             rag_response.raise_for_status()
             rag_answer = rag_response.text if request_method == self.GET_METHOD else rag_response.json()['body']
 
-            response = f'{rag_answer}\n\n{giga_rag_footer}' if rag_answer != default_rag_answer else rag_answer
+            response = f'{rag_answer}\n\n{GIGA_RAG_FOOTER}' if rag_answer != DEFAULT_RAG_ANSWER else rag_answer
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
                              (self.chat_id, self.full_name, self.query, rag_answer))
 
@@ -108,6 +105,6 @@ class RAGRouter:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
                                  (self.chat_id, self.full_name, self.query, e))
-            response = error_rag_answer
+            response = ERROR_RAG_ANSWER
 
         return response

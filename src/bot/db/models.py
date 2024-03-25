@@ -1,6 +1,19 @@
 import datetime
 
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Integer, JSON, String, Table, Text, text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Identity,
+    Integer,
+    JSON,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -441,6 +454,6 @@ class RAGUserFeedback(Base):
     bot_msg_id = Column(BigInteger, primary_key=True)
     retriever_type = Column(String(16), nullable=False)
     reaction = Column(Boolean)
-    date = Column(DateTime, default=datetime.datetime.utcnow)
+    date = Column(DateTime, default=datetime.datetime.now)
     query = Column(Text, nullable=False)
     response = Column(Text)
