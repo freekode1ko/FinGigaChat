@@ -17,3 +17,5 @@ PREV_PAGE = '⬅'
 STOP = '⛔'
 
 CANCEL_CALLBACK = 'cancel'
+
+MAX_REGISTRATION_CODE_ATTEMPTS = 5  # макс кол-во попыток ввода кода пользователем при регистрации
