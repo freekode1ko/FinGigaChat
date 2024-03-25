@@ -199,7 +199,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         if not attempts_left:
             await state.clear()
             await message.answer('Вы истратили все попытки. Попробуйте позже.')
-            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : подозрительная регистрация')
+            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : неуспешная регистрация')
             return
 
         await state.update_data(attempts_left=attempts_left)
