@@ -116,13 +116,14 @@ async def user_registration(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Form.new_user_reg)
 async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip().lower()
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    if (re.search(r'\w+@sberbank.ru', user_msg)) or (re.search(r'\w+@sber.ru', user_msg)):
+    if re.search(r'\w+@sber(bank)?.ru', user_msg):
         # проверка на существования пользователя с введенной почтой
         if not is_new_user_email(user_msg):
             await state.clear()
-            await message.answer('Пользователь с такой почтой уже существует! Нажмите /start, чтобы попробовать еще раз.')
+            await message.answer('Пользователь с такой почтой уже существует! '
+                                 'Нажмите /start, чтобы попробовать еще раз.')
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : при регистрации использовалась чужая почта')
             return
 
@@ -131,7 +132,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
         SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
         SS.send_msg(
             config.mail_username,
-            user_msg.strip(),
+            user_msg,
             config.mail_register_subject,
             config.reg_mail_text.format(reg_code),
         )
@@ -140,7 +141,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
         await state.clear()
         await state.set_state(Form.continue_user_reg)
         await state.update_data(
-            user_email=user_msg.strip(),
+            user_email=user_msg,
             reg_code=reg_code,
             attempts_left=MAX_REGISTRATION_CODE_ATTEMPTS
         )
