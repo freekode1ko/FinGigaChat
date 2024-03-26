@@ -13,7 +13,12 @@ from aiogram.fsm.context import FSMContext
 
 from configs import config
 from log.bot_logger import user_logger
-from constants.constants import CANCEL_CALLBACK, MAX_REGISTRATION_CODE_ATTEMPTS
+from constants.constants import (
+    CANCEL_CALLBACK,
+    MAX_REGISTRATION_CODE_ATTEMPTS,
+    REGISTRATION_CODE_MIN,
+    REGISTRATION_CODE_MAX,
+)
 from db.database import engine
 from module.mail_parse import SmtpSend
 from utils.base import user_in_whitelist
@@ -121,7 +126,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : при регистрации использовалась чужая почта')
             return
 
-        reg_code = str(chat_id + random.randint(1, 1000))[-4:]  # Генерация уникального кода
+        reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
         SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
         SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
         SS.send_msg(
@@ -198,7 +203,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         attempts_left = reg_info['attempts_left'] - 1
         if not attempts_left:
             await state.clear()
-            await message.answer('Вы истратили все попытки. Попробуйте позже.')
+            await message.answer('Вы истратили все попытки. Попробуйте заново, используя команду /start.')
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : неуспешная регистрация')
             return
 
