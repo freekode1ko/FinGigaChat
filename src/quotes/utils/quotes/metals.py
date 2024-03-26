@@ -73,7 +73,11 @@ class MetalsGetter(QuotesGetter):
         elif page_metals == 'commodities':
             if 'Metals' in table_metals[4].columns:
                 temp = table_metals[4].loc[
-                    table_metals[4]['Metals'].isin(['Gold USD/t,oz', 'Silver USD/t,oz', 'Platinum USD/t,oz', 'Lithium CNY/T'])
+                    table_metals[4]['Metals'].isin([
+                        'Gold USD/t,oz',
+                        'Silver USD/t,oz',
+                        'Platinum USD/t,oz',
+                    ])
                 ]
                 metals_kot.append(temp)
                 self.logger.info('Таблица metals_kot (Metals) собрана')
@@ -89,6 +93,7 @@ class MetalsGetter(QuotesGetter):
                             'Palladium USD/t,oz',
                             'Cobalt USD/T',
                             'Iron Ore 62% fe USD/T',
+                            'Tin USD/T',
                         ]
                     )
                 ]
@@ -96,7 +101,13 @@ class MetalsGetter(QuotesGetter):
                 self.logger.info('Таблица metals_kot (Industrial) собрана')
 
             elif 'Energy' in table_metals[4].columns:
-                temp = table_metals[4].loc[table_metals[4]['Energy'].isin(['Coal USD/T'])]
+                temp = table_metals[4].loc[table_metals[4]['Energy'].isin([
+                    'Crude Oil USD/Bbl',
+                    'Urals Oil USD/Bbl',
+                    'Brent USD/Bbl',
+                    'Coal USD/T',
+                    'Uranium USD/Lbs',
+                ])]
                 metals_kot.append(temp.rename(columns={'Energy': 'Metals'}))
                 self.logger.info('Таблица metals_kot (Energy) собрана')
 
