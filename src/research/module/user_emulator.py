@@ -1,4 +1,5 @@
 import copy
+import datetime
 import json
 import os
 import random
@@ -6,8 +7,11 @@ import re
 import time
 from typing import List
 
+import aiohttp
+from aiohttp.web_exceptions import HTTPNoContent
 import pandas as pd
 import requests
+import asyncio
 import selenium
 import selenium.webdriver as wb
 from bs4 import BeautifulSoup
@@ -23,7 +27,8 @@ from module import data_transformer as Transformer
 from module import weekly_pulse_parse
 from log.logger_base import Logger
 from db import parser_source
-# from utils.selenium_utils import get_driver
+
+from utils.selenium_utils import get_driver
 
 
 class ResearchError(Exception):
@@ -212,7 +217,7 @@ class ResearchParser:
         return date, text
 
     def get_reviews(
-        self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1, type_of_review: str = ''
+            self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1, type_of_review: str = ''
     ) -> List[tuple]:
         """
         Get data of reviews from CIB Research
@@ -248,7 +253,7 @@ class ResearchParser:
         self._logger.info(f'Собираем содержимое для всех отчетов. Всего в обработке {reviews_elements_size} отчетов')
         for review_num, review_element in enumerate(reviews_elements):
             title = review_element.text
-            self._logger.info(f'Отчет {title} в обработке. {review_num+1} из {reviews_elements_size}')
+            self._logger.info(f'Отчет {title} в обработке. {review_num + 1} из {reviews_elements_size}')
             date, text = self.get_date_and_text_of_review(review_element, type_of_review)
             reviews_data.append((title, text, date))
 
@@ -344,7 +349,7 @@ class ResearchParser:
         df['id'] = range(1, df.shape[0] + 1)
         df['alias'] = aliases_series
         idx_name = list(df.columns).index('name')
-        cols = df.columns[idx_name - 4 : idx_name + 1]
+        cols = df.columns[idx_name - 4: idx_name + 1]
         df_new = df[cols]
         numeric_cols = []
         for col in df_new.columns:
@@ -473,7 +478,7 @@ class ResearchParser:
         reviews_size = len(reviews_rows)
         self._logger.info(f'Обработка отчетов по индустриям ({reviews_size})')
         for review_num, review in enumerate(reviews_rows):
-            self._logger.info(f'Начало обработки отчет по индустриям № {review_num+1} из {reviews_size}')
+            self._logger.info(f'Начало обработки отчет по индустриям № {review_num + 1} из {reviews_size}')
             link = review.find_element(By.XPATH, './a[1]')
             self.driver.execute_script('arguments[0].scrollIntoView();', link)
             filename = review.get_attribute('title').replace(' ', '_')
@@ -559,7 +564,8 @@ class ResearchParser:
                 self._logger.info('Загрузка следующих публикаций')
                 more.click()
                 self._logger.info('Ожидание доступности дополнительных отчетов для открытия')
-                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
+                WebDriverWait(self.driver, 30).until(
+                    EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
                 weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
         except Exception as e:
@@ -719,6 +725,7 @@ class MetalsWireParser:
         self._logger.info('Табличные данные для MetalsWire собраны и обработаны')
         return df
 
+
 class ResearchAPIParser:
     """
     Class for parse pages from API CIB Research
@@ -729,6 +736,23 @@ class ResearchAPIParser:
         login = config.research_cred[0]
         password = config.research_cred[1]
 
+        self.REPEAT_TRES = 5
+        self.content_len = 10000  # FIXME
+        self.month_dict = {
+            'янв': 1,
+            'фев': 2,
+            'мар': 3,
+            'апр': 4,
+            'мая': 5,
+            'июн': 6,
+            'июл': 7,
+            'авг': 8,
+            'сен': 9,
+            'окт': 10,
+            'ноя': 11,
+            'дек': 12,
+        }
+
         self._logger = logger
         self.home_page = home_page
         self.auth = (login, password)
@@ -737,56 +761,14 @@ class ResearchAPIParser:
             "LOGIN": config.CIB_LOGIN,
             "PASSWORD": config.CIB_PASSWORD,
         }
+        self.parse_pages()
 
-    def parse_news_by_id(self, news_ids) -> list[dict[str, str]] | None:
-        ret_news = []
+    async def get_pages_to_parse_from_db(self) -> list[dict[str, str]]:
+        """
+        Метод возвращает список источников, из которых необходимо взять новости
+        """
 
-        news_url = 'https://research.sberbank-cib.com/group/guest/publication'
-        for news_id in news_ids:
-            req = requests.get(
-                url=news_url,
-                params={"publicationId": news_id},
-                cookies=self.cookies,
-                verify=False,
-            )
-            news_html = BeautifulSoup(req.content, 'html.parser')
-
-            date = news_html.find('span', class_="date").text  # "< span class ="date" > 21 мар, '24 < / span >"
-            header = news_html.find('h1', class_="popupTitle").text  # h1 class="popupTitle
-            news_text = news_html.find('div', class_="summaryContent").text  # div class ="summaryContent"
-            ret_news.append(
-                {
-                    'date': date,
-                    'header': header,
-                    'news_text': news_text,
-                    'news_file': None,
-                }
-            )
-
-        return ret_news
-
-    def parse_client_params(self):
-        pass
-
-    def get_news_ids_from_page(self, params) -> list[str]:
-        req = requests.post(
-            url=params['url'],
-            params=params['params'],
-            cookies=self.cookies,
-            verify=False,
-        )
-        if req.status_code != 200:
-            raise Exception
-        news_in_html = BeautifulSoup(req.content, 'html.parser')
-        news_ids = []
-        for news in news_in_html.find_all("tr"):
-            if element_with_id := news.find("div", class_="hidden publication-id"):
-                news_ids.append(element_with_id.text)
-
-        return news_ids
-
-    def parse_pages(self):
-        pages = {
+        pages = {  # FIXME
             "Экономика/Россия": {
                 'url': 'https://research.sberbank-cib.com/group/guest/econ',
                 'params': {
@@ -798,6 +780,8 @@ class ResearchAPIParser:
                     'p_p_cacheability': 'cacheLevelPage',
                     '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco_countryIsoCode': 'RUS',
                 },
+                'starts_with': None,
+                'no_starts_with': None,
             },
             'FX & Ставки': {
                 'url': 'https://research.sberbank-cib.com/group/guest/money',
@@ -808,13 +792,303 @@ class ResearchAPIParser:
                     'p_p_mode': 'view',
                     'p_p_resource_id': 'getPublications',
                     'p_p_cacheability': 'cacheLevelPage',
-                }
+                },
+                'starts_with': [
+                    r'^Валютный рынок и процентные ставки',
+                    r'^Прогноз итогов заседания ЦБ',
+                    r'^Ежемесячный обзор по мягким валютам',
+                    r'^Ежемесячный обзор по юаню',
+                    r'^Обзор итогов заседания ЦБ',
+                ],
+                'no_starts_with': None,
+            },
+            'Сырьевые товары': {
+                'url': 'https://research.sberbank-cib.com/group/guest/comm',
+                'params': {
+                    'p_p_id': 'cibflexiblepublicationportlet_WAR_cibpublicationsportlet',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                },
+                'starts_with': [
+                    r'^Сырьевые рынки',
+                ],
+                'no_starts_with': None,
+            },
+            'Долговые бумаги': {
+                'url': 'https://research.sberbank-cib.com/group/guest/fi',
+                'params': {
+                    'p_p_id': 'cibfipublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_cayy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                },
+                'starts_with': [
+                    r'^Долговые рынки сегодня',
+                    r'^Итоги аукционов ОФЗ',
+                    r'^Обзор выплат по',
+                ],
+                'no_starts_with': None,
+            },
+            'Акции/Нефть и газ': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '1',
+                },
+                'starts_with': [
+                    r'^Нефть и газ',
+                ],
+                'no_starts_with': None,
+            },
+            'Акции/Металлургия': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '2',
+                },
+                'starts_with': None,
+                'no_starts_with': [
+                    r'^CIS Market',
+                ],
+            },
+            'Акции/Химическая промышленность': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '3',
+                },
+                'starts_with': None,
+                'no_starts_with': [
+                    r'^CIS Market',
+                ],
+            },
+            'Акции/Финансовый сектор': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '4',
+                },
+                'starts_with': None,
+                'no_starts_with': [
+                    r'^CIS Market',
+                ],
+            },
+            'Акции/Электроэнергетика': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '5',
+                },
+                'starts_with': None,
+                'no_starts_with': [
+                    r'^CIS Market',
+                ],
+            },
+            'Акции/Потребительский сектор': {  # FIXME Индекс Иванова
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '5',
+                },
+                'starts_with': [
+                    r'^Потребительский индекс Иванова',
+                ],
+                'no_starts_with': None,
+            },
+            'Акции/Недвижимость': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '7',
+                },
+                'starts_with': None,
+                'no_starts_with': [
+                    r'^CIS Market',
+                ],
+            },
+            'Акции/Транспорт': {
+                'url': 'https://research.sberbank-cib.com/group/guest/equities',
+                'params': {
+                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '10',
+                },
+                'starts_with': None,
+                'no_starts_with': [
+                    r'^CIS Market',
+                ],
             },
 
         }
 
-        all_news = []
-        for page in pages.values():
-            news_ids = self.get_news_ids_from_page(page)
-            all_news.append(self.parse_news_by_id(news_ids)) # FIXME
+        return pages
+
+    def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
+        """
+        Метод приводящий из "04 мар. 24" в нормальный вид
+        :param cib_date: строка с датой из новости CIB
+        return дата в питоновском формате
+        """
+
+        year = int('20' + cib_date[-2:])
+        month = self.month_dict[cib_date[3:6]]
+        day = int(cib_date[:2])
+        return datetime.date(year=year, month=month, day=day)
+
+    def is_suitable_news(
+            self,
+            header,
+            starts_with: list[str] | None = None,
+    ) -> bool:
+        """
+        Метод для определения подходит ли новость для парсинга на основе регулярок из разделов
+        :param header: Заголовок новости
+        :param starts_with: Список регулярных выражений для проверки новости
+        return Булевое значение говорящее о том что новость подошла или нет
+        """
+        if starts_with:
+            return any([re.search(x, header) for x in starts_with])
+        return True
+
+    async def save_news_to_db(self, news) -> None:
+        """
+        Метод для сохранения новости в базу данных
+        """
         pass
+
+    async def parse_news_by_id(
+            self,
+            news_id: int,
+            session,
+            starts_with: list[str] | None = None,
+            no_starts_with: list[str] | None = None
+    ) -> None:
+        """
+        Метод для выгрузки новости по айди из разделов
+        """
+        news_url = 'https://research.sberbank-cib.com/group/guest/publication'
+
+        async with session.get(
+                url=news_url,
+                params={"publicationId": news_id},
+                cookies=self.cookies,
+                verify_ssl=False,
+        ) as req:
+            news_html = BeautifulSoup(await req.text(), 'html.parser')
+
+        header = str(news_html.find('h1',
+                                    class_="popupTitle").text).strip()  # h1 class="popupTitle
+        if self.is_suitable_news(header, starts_with, no_starts_with):
+            date = self.cib_date_to_normal_date(str(news_html.find('span',
+                                                                   class_="date").text).strip())  # "< span class ="date" > 21 мар, '24 < / span >"
+            news_text = str(news_html.find('div',
+                                           class_="summaryContent").text).strip()  # div class ="summaryContent"
+            async with session.get(
+                    url=news_html.find('a', class_="file", href=True)['href'].strip(),
+                    cookies=self.cookies,
+                    verify_ssl=False,
+            ) as req:
+                if req.status == 200:
+                    with open(f'./{news_id}.pdf', "wb") as f:
+                        while True:
+                            chunk = await req.content.readany()
+                            if not chunk:
+                                break
+                            f.write(chunk)
+
+            await self.save_news_to_db({
+                'date': date,
+                'header': header,
+                'news_text': news_text,
+                'news_file': news_id,
+            })
+
+    async def get_news_ids_from_page(self, params, session):
+        """
+        Метод для получений айди новостей из разделов
+        """
+        for i in range(self.REPEAT_TRES):
+            try:
+                req = await session.post(
+                    url=params['url'],
+                    params=params['params'],
+                    cookies=self.cookies,
+                    verify_ssl=False,  # verify_ssl
+                )
+            except Exception as e:
+                continue
+            content = await req.text()
+            if req.status == 200 and len(content) > self.content_len:
+                break
+        else:
+            raise HTTPNoContent
+
+        loop = asyncio.get_event_loop()
+        for news in BeautifulSoup(content, 'html.parser').find_all("tr"):
+            if element_with_id := news.find("div",
+                                            class_="hidden publication-id").text:
+                await loop.create_task(
+                    self.parse_news_by_id(element_with_id, session),
+                )
+
+    async def parse_pages(self):
+        """
+        Основной метод, который запускает весь парсинг новостей
+        """
+        pages_list = await self.get_pages_to_parse_from_db()
+
+        loop = asyncio.get_event_loop()
+        async with aiohttp.ClientSession() as session:
+            for page in pages_list.values():
+
+                try:
+                    await loop.create_task(
+                        self.get_news_ids_from_page(page, session),
+                    )
+                except HTTPNoContent as e:
+                    url = page['url']
+                    print(f' запрос не прошел {url}')
