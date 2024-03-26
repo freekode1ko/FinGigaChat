@@ -19,10 +19,10 @@ ADD_ALL_SUBS_BY_DOMAIN = 'add_all_subs_by_domain'
 GET_RESEARCH_SUBS_MENU = 'research_subscriptions'
 BACK_TO_CIB_RESEARCH_MENU = 'back_to_cib_subs_menu'
 
-CIB_RESEARCH_DOMAINS_MENU = 'cib_domains_menu'
-CIB_RESEARCH_DOMAIN_TYPES_MENU = 'cib_domain_types_menu'
+CIB_RESEARCH_GROUPS_MENU = 'cib_groups_menu'
+CIB_RESEARCH_GROUP_SECTIONS_MENU = 'cib_group_sections_menu'
+CIB_RESEARCH_SECTION_RESEARCHES_MENU = 'cib_section_researches_menu'
 
-UPDATE_CIB_RESEARCH_DOMAIN_SUB = 'update_research_domain_sub'
 UPDATE_CIB_RESEARCH_SUB = 'update_research_sub'
 
 USER_CIB_RESEARCH_SUBS = 'cibSubs'

@@ -18,15 +18,18 @@ router.message.middleware(ChatActionMiddleware())  # on every message for admin 
 
 
 @router.callback_query(callbacks.GetUserCIBResearchSubs.filter())
-async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_data: callbacks.GetUserCIBResearchSubs) -> None:
+async def get_my_research_subscriptions(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetUserCIBResearchSubs,
+) -> None:
     """
-    Изменяет сообщение, отображая информацию о подписках на тг каналы пользователя
+    Изменяет сообщение, отображая информацию о подписках на отчеты CIB Research пользователя
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Содержит информацию о текущей странице, id удаляемой подписки (0 - не удаляем)
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callbacks.GetUserCIBResearchSubs.__prefix__
+    user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -50,22 +53,22 @@ async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def show_tg_channel_more_info(
-        callback_query: types.CallbackQuery, cib_type_id: int, is_subscribed: bool, back: str, user_msg: str
+async def show_cib_research_type_more_info(
+        callback_query: types.CallbackQuery, research_id: int, is_subscribed: bool, back: str, user_msg: str
 ) -> None:
     """Формирует сообщение с доп инфо по отчету"""
     chat_id = callback_query.message.chat.id
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    research_info = subscriptions_db_api.get_research_info(cib_type_id)
+    research_info = subscriptions_db_api.get_research_type_info(research_id)
 
     msg_text = (
         f'Раздел: <b>{research_info["domain_name"]}</b>\n'
         f'Название отчета: <b>{research_info["name"]}</b>\n'
         f'Ссылка: {research_info["description"]}\n'
     )
-    keyboard = kb_maker.get_research_type_info_kb(cib_type_id, is_subscribed, back)
+    keyboard = kb_maker.get_research_type_info_kb(research_id, is_subscribed, back)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -82,23 +85,24 @@ async def update_sub_on_research(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Хранит атрибут с telegram_id
     """
-    cib_type_id = callback_data.cib_type_id
+    research_id = callback_data.research_id
     need_add = callback_data.need_add
     user_id = callback_query.from_user.id
+    user_msg = callback_data.model_dump_json()
 
     if need_add:
         # add sub
-        subscriptions_db_api.add_user_research_subscription(user_id, cib_type_id)
+        subscriptions_db_api.add_user_research_subscription(user_id, research_id)
     else:
         # delete sub on tg channel
-        subscriptions_db_api.delete_user_research_subscription(user_id, cib_type_id)
+        subscriptions_db_api.delete_user_research_subscription(user_id, research_id)
 
-    await show_tg_channel_more_info(
+    await show_cib_research_type_more_info(
         callback_query,
-        cib_type_id,
+        research_id,
         need_add,
         callback_data.back,
-        callbacks.CIBResearchSubAction.__prefix__,
+        user_msg,
     )
 
 
@@ -113,86 +117,121 @@ async def get_research_more_info(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Хранит атрибут с telegram_id
     """
-    await show_tg_channel_more_info(
+    user_msg = callback_data.model_dump_json()
+    await show_cib_research_type_more_info(
         callback_query,
         callback_data.cib_type_id,
         callback_data.is_subscribed,
         callback_data.back,
-        callbacks.GetCIBResearchTypeMoreInfo.__prefix__,
+        user_msg,
     )
 
 
-async def make_domain_research_types_menu(callback_query: types.CallbackQuery, domain_id: int, user_id: int) -> None:
-    """Формирует сообщен с подборкой отчетов по разделу"""
-    domain_name = subscriptions_db_api.get_domain_name(domain_id)
-    research_types_df = subscriptions_db_api.get_research_types_by_domain_df(domain_id, user_id)
-    msg_text = (
-        f'Подборка отчетов по разделу "{domain_name}"\n\n'
-        f'Для добавления/удаления подписки на отчет нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
-        f'Для получения более детальной информации об отчете - нажмите на него'
-    )
-    keyboard = kb_maker.get_research_types_by_domain_kb(domain_id, research_types_df)
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
-
-
-@router.callback_query(callbacks.GetCIBDomainResearchTypes.filter())
-async def get_domain_research_types_menu(
+@router.callback_query(callbacks.GetCIBSectionResearches.filter())
+async def get_cib_section_research_types_menu(
         callback_query: types.CallbackQuery,
-        callback_data: callbacks.GetCIBDomainResearchTypes,
+        callback_data: callbacks.GetCIBSectionResearches,
 ) -> None:
     """
-    Предоставляет подборку отчетов по разделу
+    Предоставляет подборку отчетов по разделу CIB Research
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Хранит атрибут с domain_id
+    :param callback_data: Хранит атрибут с group_id
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callbacks.GetCIBDomainResearchTypes.__prefix__
+    user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     user_id = callback_query.from_user.id
-    domain_id = callback_data.domain_id
+    group_id = callback_data.group_id
+    section_id = callback_data.section_id
 
-    cib_type_id = callback_data.cib_type_id
+    research_id = callback_data.research_id
     need_add = callback_data.need_add
 
-    if cib_type_id:
+    if research_id:
         if need_add:
             # add sub
-            subscriptions_db_api.add_user_research_subscription(user_id, cib_type_id)
+            subscriptions_db_api.add_user_research_subscription(user_id, research_id)
         else:
-            # delete sub on tg channel
-            subscriptions_db_api.delete_user_research_subscription(user_id, cib_type_id)
+            # delete sub on research CIB
+            subscriptions_db_api.delete_user_research_subscription(user_id, research_id)
 
-    await make_domain_research_types_menu(callback_query, domain_id, user_id)
+    section_info = subscriptions_db_api.get_cib_section_info(section_id)
+    research_type_df = subscriptions_db_api.get_cib_research_types_by_section_df(section_id, user_id)
+    msg_text = (
+        f'Подборка разделов по группе "{section_info["name"]}"\n\n'
+        f'Для добавления/удаления подписки на отчет нажмите на {UNSELECTED}/{SELECTED} соответственно'
+    )
+
+    keyboard = kb_maker.get_research_types_by_section_menu_kb(group_id, section_id, research_type_df)
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(callbacks.UpdateSubOnCIBDomain.filter())
-async def update_sub_on_domain(callback_query: types.CallbackQuery, callback_data: callbacks.UpdateSubOnCIBDomain) -> None:
-    """
-    Подписка на раздел или на все разделы
-    Отрисовка страницы с разделами или страницы с отчетами для раздела
-    """
-    pass
+async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, group_id: int, user_id: int) -> None:
+    """Формирует сообщен с подборкой отчетов по разделу"""
+    group_info = subscriptions_db_api.get_cib_group_info(group_id)
+    section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
+    msg_text = f'Подборка разделов по группе "{group_info["name"]}"\n\n'
+
+    if not group_info['dropdown_flag']:
+        msg_text += f'Для добавления/удаления подписки на раздел нажмите на {UNSELECTED}/{SELECTED} соответственно'
+
+    keyboard = kb_maker.get_research_sections_by_group_menu_kb(group_info, section_df)
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
 
 
-@router.callback_query(callbacks.GetCIBDomains.filter())
-async def get_research_domains_menu(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(callbacks.GetCIBGroupSections.filter())
+async def get_cib_group_sections_menu(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetCIBGroupSections,
+) -> None:
     """
-    Отображает список разделов
+    Предоставляет подборку разделов по группе CIB Research
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Хранит атрибут с group_id
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    user_id = callback_query.from_user.id
+    group_id = callback_data.group_id
+
+    section_id = callback_data.section_id
+    need_add = callback_data.need_add
+
+    if section_id:
+        if need_add:
+            # add sub
+            subscriptions_db_api.add_user_cib_section_subscription(user_id, section_id)
+        else:
+            # delete sub on tg channel
+            subscriptions_db_api.delete_user_cib_section_subscription(user_id, section_id)
+
+    await make_cib_group_sections_menu(callback_query, group_id, user_id)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callbacks.GetCIBGroups.filter())
+async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
+    """
+    Отображает список групп, выделенных среди разделов CIB Research
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callbacks.GetCIBDomains.__prefix__
+    user_msg = callbacks.GetCIBGroups.__prefix__
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    domain_df = subscriptions_db_api.get_research_domains_df()
-    msg_text = 'Список разделов'
-    keyboard = kb_maker.get_research_domains_menu_kb(domain_df)
+    group_df = subscriptions_db_api.get_research_groups_df()  # id, name
+    msg_text = 'Изменить подписки'
+    keyboard = kb_maker.get_research_groups_menu_kb(group_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 

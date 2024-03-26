@@ -14,38 +14,41 @@ class GetUserCIBResearchSubs(CallbackData, prefix=callback_prefixes.USER_CIB_RES
 
 class GetCIBResearchTypeMoreInfo(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_INFO):
     """Доп. инфо по отчету, на который можно подписаться"""
-    cib_type_id: int
+    research_id: int
     is_subscribed: bool = False
     back: str
 
 
-class GetCIBDomains(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_DOMAINS_MENU):
-    """Меню разделов"""
+class GetCIBGroups(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_GROUPS_MENU):
+    """Меню групп"""
     pass
 
 
-class UpdateSubOnCIBDomain(CallbackData, prefix=callback_prefixes.UPDATE_CIB_RESEARCH_DOMAIN_SUB):
+class GetCIBSectionResearches(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_SECTION_RESEARCHES_MENU):
     """
-    Подписка/отписка на весь раздел domain_id, если domain_id != 0, иначе подписка на все разделы
-    Отрисовка страницы меню с разделами, если is_domain_page, иначе отрисовка меню подписок на отчеты для раздела domain_id (domain_id != 0)
+    Меню отчетов для раздела section_id
+    Подписка/отписка на отчет research_id, если research_id != 0
     """
-    domain_id: int = 0
-    is_domain_page: bool = True
+    group_id: int
+    section_id: int
+    research_id: int = 0
+    need_add: int = 0
 
 
-class GetCIBDomainResearchTypes(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_DOMAIN_TYPES_MENU):
+class GetCIBGroupSections(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_GROUP_SECTIONS_MENU):
     """
-    Меню отчетов для раздела domain_id
-    Если
+    Меню разделов для группы group_id
+    Если у группы dropdown_flag установлен в False, то пользователь может подписаться на раздел
+    Если section_id != 0, то подписка(need_add) или отписка(!need_add)
     """
-    domain_id: int
-    cib_type_id: int = 0
+    group_id: int
+    section_id: int = 0
     need_add: int = 0
 
 
 class CIBResearchSubAction(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_SUB_ACTION):
     """Подписка/отписка на отчет на странице с доп. инфо"""
-    cib_type_id: int
+    research_id: int
     back: str
     need_add: bool
 

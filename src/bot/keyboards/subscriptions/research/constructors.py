@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
@@ -25,7 +27,7 @@ def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Изменить подписки',
-        callback_data=callbacks.GetCIBDomains().pack(),
+        callback_data=callbacks.GetCIBGroups().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Удалить все подписки',
@@ -52,7 +54,7 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
 
     for index, sub in page_data.iterrows():
         more_info_call = callbacks.GetCIBResearchTypeMoreInfo(
-            cib_research_id=sub['id'],
+            research_id=sub['id'],
             is_subscribed=True,
             back=wrap_callback_data(callbacks.GetUserCIBResearchSubs(page=page).pack()),
         ).pack()
@@ -98,7 +100,7 @@ def get_research_type_info_kb(cib_research_type_id: int, is_subscribed: bool, ba
     add_del_text = 'Подписаться' if not is_subscribed else 'Удалить из подписок'
 
     action_call = callbacks.CIBResearchSubAction(
-        cib_type_id=cib_research_type_id,
+        research_id=cib_research_type_id,
         need_add=not is_subscribed,
         back=back
     ).pack()
@@ -107,46 +109,32 @@ def get_research_type_info_kb(cib_research_type_id: int, is_subscribed: bool, ba
     return keyboard.as_markup()
 
 
-def get_research_domains_menu_kb(domain_df: pd.DataFrame) -> InlineKeyboardMarkup:
+def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [][ Раздел 1 ]
+    [ Группа 1 ]
     ...
-    [][ Раздел n ]
-    [    назад   ]
+    [ Группа n ]
+    [  назад  ]
 
-    :param domain_df: DataFrame[id, name, sub_state] инфа о разделах CIB Research,
-     sub_state = -1 (не подписан ни на один отчет), 0 (подписан на часть отчетов), 1 (подписан на все отчеты)
+    :param group_df: DataFrame[id, name] инфа о группах CIB Research
     """
     keyboard = InlineKeyboardBuilder()
 
-    for index, item in domain_df.iterrows():
-        update_sub_on_domain_callback = callbacks.UpdateSubOnCIBDomain(
-            domain_id=item['id'],
-            is_domain_page=True,
-        )
-        get_domain_researchs_callback = callbacks.GetCIBDomainResearchTypes(
-            domain_id=item['id'],
+    for index, item in group_df.iterrows():
+        get_group_sections_callback = callbacks.GetCIBGroupSections(
+            group_id=item['id'],
         )
 
-        match item['sub_state']:
-            case 0:
-                mark = constants.PARTIAL_SELECTED
-            case 1:
-                mark = constants.SELECTED
-            case _:
-                mark = constants.UNSELECTED
-
-        keyboard.row(types.InlineKeyboardButton(text=mark, callback_data=update_sub_on_domain_callback.pack()))
-        keyboard.add(types.InlineKeyboardButton(
+        keyboard.row(types.InlineKeyboardButton(
             text=item['name'].capitalize(),
-            callback_data=get_domain_researchs_callback.pack()),
+            callback_data=get_group_sections_callback.pack()),
         )
 
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписаться на все',
-        callback_data=callbacks.UpdateSubOnCIBDomain().pack()
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Подписаться на все',
+    #     callback_data=callbacks.UpdateSubOnCIBSection().pack()
+    # ))
     keyboard.row(types.InlineKeyboardButton(
         text='Назад',
         callback_data=callback_prefixes.BACK_TO_CIB_RESEARCH_MENU
@@ -158,40 +146,93 @@ def get_research_domains_menu_kb(domain_df: pd.DataFrame) -> InlineKeyboardMarku
     return keyboard.as_markup()
 
 
-def get_research_types_by_domain_kb(domain_id: int, cib_research_types_df: pd.DataFrame) -> InlineKeyboardMarkup:
+def get_research_sections_by_group_menu_kb(
+        group_info: dict[str, Any],
+        section_df: pd.DataFrame,
+) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [][ канал 1 ]
+    [ Раздел 1 ]
     ...
-    [][ канал n ]
-    [   назад   ]
+    [ Раздел n ]
+    [  назад  ]
 
-    :param domain_id: id раздела CIB Research
-    :param cib_research_types_df: DataFrame[id, name, is_signed] инфа о подборке подписок
+    :param group_info: dict[id, name, dropdown_flag] инфа о группе CIB Research
+    :param section_df: DataFrame[id, name, is_subscribed] инфа о разделах CIB Research
     """
     keyboard = InlineKeyboardBuilder()
 
-    for index, item in cib_research_types_df.iterrows():
-        add_del_call = callbacks.GetCIBDomainResearchTypes(
-            domain_id=domain_id,
-            cib_type_id=item['id'],
-            need_add=not item['is_subscribed']
+    for index, item in section_df.iterrows():
+        if group_info['dropdown_flag']:
+            button_txt = item['name'].capitalize()
+            section_callback = callbacks.GetCIBSectionResearches(
+                group_id=group_info['id'],
+                section_id=item['id'],
+            )
+        else:
+            mark = constants.SELECTED if item['is_subscribed'] else constants.UNSELECTED
+            button_txt = f'{mark} {item["name"].capitalize()}'
+            section_callback = callbacks.GetCIBGroupSections(
+                group_id=group_info['id'],
+                section_id=item['id'],
+                need_add=int(not item['is_subscribed']),
+            )
+
+        keyboard.row(types.InlineKeyboardButton(
+            text=button_txt,
+            callback_data=section_callback.pack()),
         )
-        more_info_call = callbacks.GetCIBResearchTypeMoreInfo(
-            cib_type_id=item['id'],
-            is_subscribed=item['is_subscribed'],
-            back=wrap_callback_data(callbacks.GetCIBDomainResearchTypes(domain_id=domain_id).pack()),
+
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Подписаться на все',
+    #     callback_data=callbacks.UpdateSubOnCIBSection().pack()
+    # ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Назад',
+        callback_data=callbacks.GetCIBGroups().pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Завершить',
+        callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS,
+    ))
+    return keyboard.as_markup()
+
+
+def get_research_types_by_section_menu_kb(
+        group_id: int,
+        section_id: int,
+        research_types_df: pd.DataFrame,
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [][ отчет 1 ]
+    ...
+    [][ отчет n ]
+    [   назад   ]
+
+    :param group_id: id группы CIB Research
+    :param section_id: id раздела CIB Research
+    :param research_types_df: DataFrame[id, name, is_signed] инфа о подборке подписок
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    for index, item in research_types_df.iterrows():
+        add_del_call = callbacks.GetCIBSectionResearches(
+            group_id=group_id,
+            section_id=section_id,
+            research_id=item['id'],
+            need_add=int(not item['is_subscribed']),
         )
         mark = constants.SELECTED if item['is_subscribed'] else constants.UNSELECTED
-        keyboard.row(types.InlineKeyboardButton(text=mark, callback_data=add_del_call.pack()))
-        keyboard.add(types.InlineKeyboardButton(text=item['name'].capitalize(), callback_data=more_info_call.pack()))
+        button_txt = f'{mark} {item["name"].capitalize()}'
+        keyboard.row(types.InlineKeyboardButton(text=button_txt, callback_data=add_del_call.pack()))
 
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписаться на все',
-        callback_data=callbacks.UpdateSubOnCIBDomain(domain_id=domain_id, is_domain_page=False).pack(),
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Подписаться на все',
+    #     callback_data=callbacks.UpdateSubOnCIBSection(domain_id=domain_id, is_domain_page=False).pack(),
+    # ))
     keyboard.row(types.InlineKeyboardButton(text='Назад',
-                                            callback_data=callbacks.GetCIBDomains().pack()))
+                                            callback_data=callbacks.GetCIBGroupSections(group_id=group_id).pack()))
     keyboard.row(types.InlineKeyboardButton(text='Завершить',
                                             callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS))
     return keyboard.as_markup()
