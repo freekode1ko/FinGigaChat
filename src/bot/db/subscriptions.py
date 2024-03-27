@@ -161,7 +161,7 @@ def add_user_research_subscription(user_id: int, research_type_id: int) -> None:
     :param research_type_id: research_type.id
     """
     query = text(
-        'INSERT INTO user_telegram_subscription(user_id, research_type_id) '
+        'INSERT INTO user_research_subscription(user_id, research_type_id) '
         'VALUES (:user_id, :research_type_id)'
     )
 
@@ -198,7 +198,7 @@ def add_user_cib_section_subscription(user_id: int, research_section_id: int) ->
     :param research_section_id: research_section.id
     """
     query = text(
-        'INSERT INTO user_telegram_subscription(user_id, research_type_id) '
+        'INSERT INTO user_research_subscription(user_id, research_type_id) '
         'SELECT :user_id, rt.id FROM research_type rt WHERE research_section_id=:research_section_id'
     )
 
@@ -276,7 +276,28 @@ def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
     :param user_id: whitelist.id пользователя
     return: DataFrame[id, name, is_subscribed]
     """
-    return pd.DataFrame(columns=['id', 'name', 'is_subscribed'])
+
+    query = text(
+        'WITH section_subscriptions AS ('
+        '   SELECT count(rt.id) as types_cnt, research_section_id,'
+        '        sum(CASE WHEN urg.user_id IS NULL THEN 0 ELSE 1 END) as sub_cnt '
+        '   FROM research_type rt '
+        '   LEFT JOIN user_research_subscription urg ON rt.id=urg.research_type_id and urg.user_id=:user_id '
+        '   WHERE urg.user_id=:user_id OR urg.user_id IS NULL '
+        '   GROUP BY research_section_id'
+        ')'
+        'SELECT rs.id, rs.name, (CASE WHEN types_cnt = sub_cnt THEN true ELSE false END) as is_subscribed '
+        'FROM research_section rs '
+        'JOIN section_subscriptions ss ON rs.id=ss.research_section_id '
+        'WHERE research_group_id=:group_id '
+        'ORDER BY rs.name'
+    )
+
+    with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
+        data = conn.execute(query.bindparams(group_id=group_id, user_id=user_id)).all()
+        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
+
+    return data_df
 
 
 def get_cib_section_info(section_id: int) -> dict[str, Any]:
@@ -284,10 +305,10 @@ def get_cib_section_info(section_id: int) -> dict[str, Any]:
     Возвращает информацию по разделу CIB Research
 
     :param section_id: research_section.id
-    return: dict(id, name, description, research_group_id)
+    return: dict(id, name, research_group_id)
     """
     query = text(
-        'SELECT id, name, description, research_group_id '
+        'SELECT id, name, research_group_id '
         'FROM research_section '
         'WHERE id=:section_id'
     )
@@ -297,15 +318,31 @@ def get_cib_section_info(section_id: int) -> dict[str, Any]:
         data = {
             'id': data[0],
             'name': data[1],
-            'description': data[2],
-            'research_group_id': data[3],
+            'research_group_id': data[2],
         }
 
     return data
 
 
 def get_cib_research_types_by_section_df(section_id: int, user_id: int) -> pd.DataFrame:
-    pass
+    """
+    Возвращает набор отчетов по разделу section_id
+    Если пользователь подписан на отчет, то is_subscribed=True
+    return: DataFrame[id, name, is_subscribed]
+    """
+    query = text(
+        'SELECT rt.id, rt.name, (CASE WHEN urg.user_id IS NULL THEN false ELSE true END) as is_subscribed '
+        'FROM research_type rt '
+        'LEFT JOIN user_research_subscription urg ON rt.id=urg.research_type_id and urg.user_id=:user_id '
+        'WHERE research_section_id=:section_id AND (urg.user_id=:user_id OR urg.user_id IS NULL)'
+        'ORDER BY rt.name'
+    )
+
+    with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
+        data = conn.execute(query.bindparams(section_id=section_id, user_id=user_id)).all()
+        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
+
+    return data_df
 
 
 def delete_all_user_research_subscriptions(user_id: int) -> None:

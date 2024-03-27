@@ -64,9 +64,8 @@ async def show_cib_research_type_more_info(
     research_info = subscriptions_db_api.get_research_type_info(research_id)
 
     msg_text = (
-        f'Раздел: <b>{research_info["domain_name"]}</b>\n'
         f'Название отчета: <b>{research_info["name"]}</b>\n'
-        f'Ссылка: {research_info["description"]}\n'
+        f'Описание: {research_info["description"]}\n'
     )
     keyboard = kb_maker.get_research_type_info_kb(research_id, is_subscribed, back)
 
@@ -120,7 +119,7 @@ async def get_research_more_info(
     user_msg = callback_data.model_dump_json()
     await show_cib_research_type_more_info(
         callback_query,
-        callback_data.cib_type_id,
+        callback_data.research_id,
         callback_data.is_subscribed,
         callback_data.back,
         user_msg,

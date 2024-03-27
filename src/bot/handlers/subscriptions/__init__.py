@@ -9,5 +9,5 @@ from handlers.subscriptions import (
 routers: list[Router] = [
     news_subscriptions_menu.router,
     telegram_subscriptions_menu.router,
-    # cib_research_subscriptions_menu.router,
+    research_subscriptions_menu.router,
 ]
