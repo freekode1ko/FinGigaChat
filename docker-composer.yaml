@@ -4,19 +4,21 @@ version: "3"
 services:
     database:
         image: 'postgres:latest'
-        command: -p 5433
+        env_file:
+            - .env
+        command: -p ${DB_PORT}
         expose:
-            - 5433
+            - ${DB_PORT}
         container_name: fingigachatdb
         environment:
+            - TZ=Europe/Moscow
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=password
             - POSTGRES_DB=fingigachat
         volumes:
             - ./db_files/db-data/:/var/lib/postgresql/data/
               #    - ./db_files/backup.sql:/docker-entrypoint-initdb.d/init.sql
-        env_file:
-            - .env
+
         restart: always
 
 
@@ -25,9 +27,11 @@ services:
             context: ./src/article
             dockerfile: Dockerfile
         container_name: article_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: poetry run python main.py
         depends_on:
             - database
             - bot
@@ -43,9 +47,11 @@ services:
             context: ./src/article_online
             dockerfile: Dockerfile
         container_name: article_online_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: poetry run python main.py
         depends_on:
             - database
             - bot
@@ -61,6 +67,8 @@ services:
             context: ./src/bot
             dockerfile: Dockerfile
         container_name: bot_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
         command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
@@ -78,9 +86,11 @@ services:
             context: ./src/quotes
             dockerfile: Dockerfile
         container_name: quotes_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: poetry run python main.py
         depends_on:
             - database
             - bot
@@ -97,9 +107,11 @@ services:
             context: ./src/research
             dockerfile: Dockerfile
         container_name: research_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: poetry run python main.py
         depends_on:
             - database
             - bot
@@ -116,9 +128,11 @@ services:
             context: ./src/users_statistics
             dockerfile: Dockerfile
         container_name: users_statistics_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: poetry run python main.py
         depends_on:
             - database
             - bot
@@ -150,9 +164,11 @@ services:
         build:
             context: ./src/parser_monitoring
         container_name: parser_monitoring_container
+        environment:
+            - TZ=Europe/Moscow
         env_file:
             - .env
-        command: [ "poetry", "run", "python", "main.py" ]
+        command: poetry run python main.py
         depends_on:
             - database
             - bot

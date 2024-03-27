@@ -1,4 +1,20 @@
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Integer, JSON, String, Table, Text, text
+import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Identity,
+    Integer,
+    JSON,
+    String,
+    Table,
+    Text,
+    Date,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -337,6 +353,7 @@ class ParserSource(Base):
     source_group_id = Column(ForeignKey('source_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     last_update_datetime = Column(DateTime)
     previous_update_datetime = Column(DateTime)
+    params = Column(JSON)
 
     source_group = relationship('SourceGroup', back_populates='parser_source')
 
@@ -429,3 +446,67 @@ t_user_telegram_subscription = Table(
     Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
     Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
+
+
+class RAGUserFeedback(Base):
+    __tablename__ = 'rag_user_feedback'
+    __table_args__ = {'comment': 'Обратная связь от пользователей по работе с RAG-системой'}
+
+    chat_id = Column(BigInteger, primary_key=True)
+    bot_msg_id = Column(BigInteger, primary_key=True)
+    retriever_type = Column(String(16), nullable=False)
+    reaction = Column(Boolean)
+    date = Column(DateTime, default=datetime.datetime.now)
+    query = Column(Text, nullable=False)
+    response = Column(Text)
+
+
+class ResearchGroup(Base):
+    __tablename__ = 'research_group'
+    __table_args__ = {'comment': 'Список групп, выделенных среди разделов CIB Research'}
+
+    id = Column(BigInteger, primary_key=True)
+    name = Column(String(64), nullable=False)
+    dropdown_flag = Column(Boolean, server_default='true')
+
+
+class ResearchSection(Base):
+    __tablename__ = 'research_section'
+    __table_args__ = {'comment': 'Список разделов CIB Research'}
+
+    id = Column(BigInteger, primary_key=True)
+    name = Column(String(64), nullable=False)
+    research_group_id = Column(ForeignKey('research_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+
+class ResearchType(Base):
+    __tablename__ = 'research_type'
+    __table_args__ = {'comment': 'Список типов отчетов CIB Research, на которые пользователь может подписаться'}
+
+    id = Column(BigInteger, primary_key=True)
+    name = Column(String(64), nullable=False)
+    description = Column(Text, nullable=True, server_default='')
+    research_section_id = Column(ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+
+class Research(Base):
+    __tablename__ = 'research'
+    __table_args__ = {'comment': 'Список спаршенных отчетов CIB Research'}
+
+    id = Column(BigInteger, primary_key=True)
+    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    filepath = Column(Text, nullable=True, server_default='')
+    header = Column(Text, nullable=False)
+    text = Column(Text, nullable=False)
+    parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    publication_date = Column(Date, default=datetime.date.today, nullable=False)
+    news_id = Column(BigInteger, nullable=False)
+
+
+class UserResearchSubscriptions(Base):
+    __tablename__ = 'user_research_subscription'
+    __table_args__ = {'comment': 'Список спаршенных отчетов CIB Research'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)

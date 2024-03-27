@@ -54,6 +54,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Подписки на telegram каналы',
     },
     {
+        'command': 'research_subscriptions',
+        'description': 'Подписки на аналитические отчеты',
+    },
+    {
         'command': 'delete_article',
         'description': 'Удалить новость',
     },

@@ -84,7 +84,7 @@ async def start_bot():
         common.router,
         admin.router,
         quotes.router,
-        subscriptions.router,
+        *subscriptions.routers,
         gigachat.router,
         referencebook.router,
         industry.router,

@@ -15,7 +15,7 @@ ENV: Environment = Environment.from_str(_env_value)
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
-DEBUG: bool = env.str('DEBUG', default='false')
+DEBUG: bool = env.bool('DEBUG', default=False)
 
 
 
