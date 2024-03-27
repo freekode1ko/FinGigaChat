@@ -1,4 +1,19 @@
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Identity, Integer, JSON, String, Table, Text, text
+import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Identity,
+    Integer,
+    JSON,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -429,3 +444,16 @@ t_user_telegram_subscription = Table(
     Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
     Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
+
+
+class RAGUserFeedback(Base):
+    __tablename__ = 'rag_user_feedback'
+    __table_args__ = {'comment': 'Обратная связь от пользователей по работе с RAG-системой'}
+
+    chat_id = Column(BigInteger, primary_key=True)
+    bot_msg_id = Column(BigInteger, primary_key=True)
+    retriever_type = Column(String(16), nullable=False)
+    reaction = Column(Boolean)
+    date = Column(DateTime, default=datetime.datetime.now)
+    query = Column(Text, nullable=False)
+    response = Column(Text)
