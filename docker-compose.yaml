@@ -7,18 +7,17 @@ services:
         env_file:
             - .env
         command: -p ${DB_PORT}
-        expose:
-            - ${DB_PORT}
+        ports:
+            - ${DB_PORT}:${DB_PORT}
         container_name: fingigachatdb
         environment:
             - TZ=Europe/Moscow
-            - POSTGRES_USER=postgres
-            - POSTGRES_PASSWORD=password
-            - POSTGRES_DB=fingigachat
+            - POSTGRES_USER=${DB_USER}
+            - POSTGRES_PASSWORD=${DB_PASS}
+            - POSTGRES_DB=${DB_NAME}
         volumes:
             - ./db_files/db-data/:/var/lib/postgresql/data/
               #    - ./db_files/backup.sql:/docker-entrypoint-initdb.d/init.sql
-
         restart: always
 
 
