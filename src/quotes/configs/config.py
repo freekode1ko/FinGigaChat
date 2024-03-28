@@ -59,5 +59,7 @@ charts_links = {
 }
 
 dict_of_commodities: dict = read_asset_from_json('commodities_dict.json')
+tradingeconomics_commodities: dict = read_asset_from_json('tradingeconomics_commodities.json')
+
 
 COLLECT_PERIOD = '15m'

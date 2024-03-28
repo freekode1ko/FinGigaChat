@@ -1,4 +1,5 @@
 import datetime
+import re
 
 import pandas as pd
 import requests as req
@@ -7,12 +8,15 @@ from sqlalchemy import text
 
 from db import database
 from utils.quotes.base import QuotesGetter
+from configs import config
 
 
 class MetalsGetter(QuotesGetter):
     NAME = 'metals'
 
-    LBS_IN_T = 2204.62
+    LBS_IN_T = 2204.62  # фунты в тонны
+    # словарь с информацией о таблицах и коммодах, которые собрались с tradingeconomics
+    TRADING_DATA_TABLE: dict[str, dict] = config.tradingeconomics_commodities['tables']
 
     big_table_columns: list[str] = ['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date']
     middle_table_columns: list[str] = ['Metals', 'Price', 'Weekly', 'Date']
@@ -41,7 +45,10 @@ class MetalsGetter(QuotesGetter):
         pages = ['LMCADS03:COM', 'U7*0', 'commodities', 'coal-(api2)-cif-ara-futures-historical-data']
         return table_row[0] == 'Металлы' and page in pages
 
-    def metal_block(self, table_metals: list, page_metals: str, session: req.sessions.Session) -> tuple[list, list, list]:
+    def metal_block(self,
+                    table_metals: list,
+                    page_metals: str,
+                    session: req.sessions.Session) -> tuple[list, list, list]:
         """
         Собирает из таблиц показатели по коммодам.
 
@@ -61,49 +68,18 @@ class MetalsGetter(QuotesGetter):
                 jap_coal_pattern = f'U7(M|N){y}'
                 jap_coal = table_metals[4][table_metals[4].Symbol.str.contains(jap_coal_pattern)]
                 U7.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
-                self.logger.info('Таблица U7N24 собрана')
+                self.logger.info('Таблица U7 собрана')
 
         elif page_metals == 'commodities':
-            if 'Metals' in table_metals[4].columns:
-                temp = table_metals[4].loc[
-                    table_metals[4]['Metals'].isin([
-                        'Gold USD/t,oz',
-                        'Silver USD/t,oz',
-                        'Platinum USD/t,oz',
-                        'Copper USD/Lbs',
-                    ])
-                ]
-                metals.append(temp)
-                self.logger.info('Таблица metals (Metals) собрана')
-
-            elif 'Industrial' in table_metals[4].columns:
-                temp = table_metals[4].loc[
-                    table_metals[4]['Industrial'].isin(
-                        [
-                            'Aluminum USD/T',
-                            'Nickel USD/T',
-                            'Lead USD/T',
-                            'Zinc USD/T',
-                            'Palladium USD/t,oz',
-                            'Cobalt USD/T',
-                            'Iron Ore 62% fe USD/T',
-                            'Tin USD/T',
-                        ]
-                    )
-                ]
-                metals.append(temp.rename(columns={'Industrial': 'Metals'}))
-                self.logger.info('Таблица metals (Industrial) собрана')
-
-            elif 'Energy' in table_metals[4].columns:
-                temp = table_metals[4].loc[table_metals[4]['Energy'].isin([
-                    'Crude Oil USD/Bbl',
-                    'Urals Oil USD/Bbl',
-                    'Brent USD/Bbl',
-                    'Coal USD/T',
-                    'Uranium USD/Lbs',
-                ])]
-                metals.append(temp.rename(columns={'Energy': 'Metals'}))
-                self.logger.info('Таблица metals (Energy) собрана')
+            for table_name, commodities_data in self.TRADING_DATA_TABLE.items():
+                if table_name in table_metals[4].columns:
+                    temp = table_metals[4].loc[
+                        table_metals[4][table_name].isin(
+                            [commodity_data['name'] for commodity_data in commodities_data]
+                        )
+                    ]
+                    metals.append(temp.rename(columns={table_name: 'Metals'}))
+                    self.logger.info('Таблица metals (%s) собрана' % table_name)
 
         elif page_metals == 'lng-japan-korea-marker-platts-futures':
             metal_name = 'LNG Japan/Korea'
@@ -169,8 +145,17 @@ class MetalsGetter(QuotesGetter):
         big_table = pd.concat([big_table, metals_from_html_df, U7_df], ignore_index=True)
         big_table = big_table.drop_duplicates(subset='Metals', ignore_index=True)
 
-        # преобразование фунтов в тонны
-        index = big_table[big_table['Metals'] == 'Copper USD/Lbs'].index[0]
-        big_table.loc[index, 'Price'] *= self.LBS_IN_T
-
+        self.from_lbs_to_ton(big_table)
         return big_table, preprocessed_ids
+
+    def from_lbs_to_ton(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Преобразует цену на комоды из фунтов в тонны"""
+        commodities_in_lbs = [commodity['name']
+                              for com_list in self.TRADING_DATA_TABLE.values()
+                              for commodity in com_list
+                              if re.search('Lbs', commodity['unit'])]
+        indexes = df[df['Metals'].isin(commodities_in_lbs)].index
+        for index in indexes:
+            df.loc[index, 'Price'] *= self.LBS_IN_T
+            df.loc[index, 'Day'] *= self.LBS_IN_T
+        return df
