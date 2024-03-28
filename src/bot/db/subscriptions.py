@@ -405,4 +405,35 @@ def get_users_by_research_types_df(research_type_ids: list[int]) -> pd.DataFrame
         data_df = pd.DataFrame(data, columns=columns)
 
     return data_df
+
+
+def get_research_sections_by_research_types_df(research_type_ids: list[int]) -> dict[int, dict[str, Any]]:
+    """
+    return: dict[
+        research_type_id: {
+            research_section_id: int,
+            name: str,
+            research_group_id: int,
+            research_type_id: int,
+        }
+    ]
+    """
+    with database.engine.connect() as conn:
+        columns = [
+            'research_section_id',
+            'name',
+            'research_group_id',
+            'research_type_id',
+        ]
+        query = text(
+            'SELECT rs.id, rs.name, rs.research_group_id, rt.id '
+            'FROM research_type rt '
+            'JOIN research_section rs ON rs.id=rt.research_section_id '
+            'WHERE rt.id=ANY(:research_type_ids) '
+        )
+        data = conn.execute(query.bindparams(research_type_ids=research_type_ids)).all()
+        data_df = pd.DataFrame(data, columns=columns)
+        result = data_df.set_index(data_df['research_type_id']).T.to_dict()
+
+    return result
 # ------------------ RESEARCH SUBSCRIPTIONS METHODS END --------------------

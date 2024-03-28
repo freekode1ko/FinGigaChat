@@ -219,6 +219,8 @@ async def send_new_researches_to_users(bot: Bot) -> None:
 
     # Получаем список пользователей, которым требуется разослать отчеты
     user_df = subscriptions.get_users_by_research_types_df(research_type_ids)
+    #
+    research_section_dict = subscriptions.get_research_sections_by_research_types_df(research_type_ids)
 
     # Сохранение отправленных сообщений
     saved_messages = []
@@ -230,8 +232,9 @@ async def send_new_researches_to_users(bot: Bot) -> None:
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         for _, research in research_df[research_df['research_type_id'].isin(user_row['research_types'])].iterrows():
+            research_section_name = research_section_dict[research['research_type_id']]['name']
             # отправка отчета пользователю
-            formatted_msg_txt = formatter.ResearchFormatter.format(research)
+            formatted_msg_txt = formatter.ResearchFormatter.format(research_section_name, research)
             msg_txt_lst = text_splitter.SentenceSplitter.split_text_by_chunks(
                 formatted_msg_txt, chunk_size=constants.TELEGRAM_MESSAGE_MAX_LEN
             )

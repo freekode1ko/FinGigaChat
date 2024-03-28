@@ -6,18 +6,21 @@ from configs import config
 class ResearchFormatter:
 
     @classmethod
-    def format(cls, research_row: dict[str, Any]) -> str:
+    def format(cls, research_section_name: str, research_row: dict[str, Any]) -> str:
         """
         Формирует сообщение на основе данных, хранящихся в базе, по собранному отчету
 
-        :param research_row: dict[header, text, publication_date]
+        :param research_section_name: Название раздела отчета
+        :param research_row: dict[header, text, publication_date, news_id]
         return: Текст сообщения
         """
         # Список сообщений (длина списка > 1, если текст сообщения слишком длинный)
         formatted_text = (
+            f'{research_section_name}\n'
             f'<b>{research_row["header"].capitalize()}:</b>\n\n'
             f'{research_row["text"]}\n'
-            f'<i>Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}</i>'
+            f'<i>Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}</i>\n'
+            f'Источник: Sber CIB Research, подробнее на портале:\n<i>{config.RESEARCH_SOURCE_URL}/{research_row["news_id"]}</i>\n'
         )
 
         return formatted_text

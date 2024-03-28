@@ -13,9 +13,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from db import models
-from db.database import engine
-from migrations.data import research_subscriptions
-
+from migrations.data.cib_research_subs import research_subscriptions
 
 # revision identifiers, used by Alembic.
 revision: str = '8fb2aa98995d'
