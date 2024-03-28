@@ -13,7 +13,13 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from db import models
-from migrations.data.cib_research_subs import research_subscriptions
+from migrations.data.cib_research_subs import (
+    parser_sources,
+    research_groups,
+    research_sections,
+    research_types,
+    source_groups,
+)
 
 # revision identifiers, used by Alembic.
 revision: str = '8fb2aa98995d'
@@ -25,14 +31,14 @@ depends_on: Union[str, Sequence[str], None] = None
 def add_new_source_groups(session: Session) -> None:
     new_groups = []
 
-    for data in research_subscriptions.new_source_group:
+    for data in source_groups.source_groups:
         new_groups.append(models.SourceGroup(**data))
 
     session.add_all(new_groups)
 
 
 def delete_new_source_groups(session: Session) -> None:
-    delete_ids = [i['id'] for i in research_subscriptions.new_source_group]
+    delete_ids = [i['id'] for i in source_groups.source_groups]
     stmt = delete(models.SourceGroup).where(models.SourceGroup.id.in_(delete_ids))
     session.execute(stmt)
 
@@ -40,14 +46,14 @@ def delete_new_source_groups(session: Session) -> None:
 def add_new_sources(session: Session) -> None:
     new_data = []
 
-    for data in research_subscriptions.research_types_sources:
+    for data in parser_sources.parser_sources:
         new_data.append(models.ParserSource(**data))
 
     session.add_all(new_data)
 
 
 def delete_new_sources(session: Session) -> None:
-    delete_ids = [i['id'] for i in research_subscriptions.research_types_sources]
+    delete_ids = [i['id'] for i in parser_sources.parser_sources]
     stmt = delete(models.ParserSource).where(models.ParserSource.id.in_(delete_ids))
     session.execute(stmt)
 
@@ -121,9 +127,9 @@ def upgrade() -> None:
     add_new_source_groups(session)
     add_new_sources(session)
     session.commit()
-    op.bulk_insert(research_group_table, research_subscriptions.groups)
-    op.bulk_insert(research_section_table, research_subscriptions.sections)
-    op.bulk_insert(research_type_table, research_subscriptions.research_types)
+    op.bulk_insert(research_group_table, research_groups.research_groups)
+    op.bulk_insert(research_section_table, research_sections.research_sections)
+    op.bulk_insert(research_type_table, research_types.research_types)
 
 
 def downgrade() -> None:
