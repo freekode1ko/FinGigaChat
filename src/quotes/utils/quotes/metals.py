@@ -1,9 +1,7 @@
 import datetime
-from typing import Tuple, List
 
 import pandas as pd
 import requests as req
-from dateutil.relativedelta import relativedelta
 from lxml import html
 from sqlalchemy import text
 
@@ -14,11 +12,13 @@ from utils.quotes.base import QuotesGetter
 class MetalsGetter(QuotesGetter):
     NAME = 'metals'
 
-    big_table_columns: List[str] = ['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date']
-    metals_coal_kot_table_columns: List[str] = ['Metals', 'Price', 'Weekly', 'Date']
-    U7N23_columns: List[str] = ['Metals', 'Price']
-    metals_bloom_columns: List[str] = ['Metals', 'Price', 'Day']
+    LBS_IN_T = 2204.62
 
+    big_table_columns: list[str] = ['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date']
+    middle_table_columns: list[str] = ['Metals', 'Price', 'Weekly', 'Date']
+    small_table_columns: list[str] = ['Metals', 'Price']
+
+    # TODO: ненужно? + удалить из parser_source
     @staticmethod
     def get_extra_data() -> list:
         """По этим данным не удалется получить таблицы стандартным способом"""
@@ -41,33 +41,26 @@ class MetalsGetter(QuotesGetter):
         pages = ['LMCADS03:COM', 'U7*0', 'commodities', 'coal-(api2)-cif-ara-futures-historical-data']
         return table_row[0] == 'Металлы' and page in pages
 
-    def metal_block(self, table_metals: list, page_metals: str, session: req.sessions.Session):
-        U7N23 = []
-        metals_kot = []
-        metals_coal_kot = []
-        metals_bloom = pd.DataFrame(columns=self.metals_bloom_columns)
+    def metal_block(self, table_metals: list, page_metals: str, session: req.sessions.Session) -> tuple[list, list, list]:
+        """
+        Собирает из таблиц показатели по коммодам.
 
-        if page_metals == 'LMCADS03:COM':
-            euro_standard, page_html = self.parser_obj.get_html(table_metals[3], session)
-            tree = html.fromstring(page_html)
-            object_xpath = '//*[@id="__next"]/div/div[2]/div[6]/div/main/div/div[1]/div[4]/div'
-            price = tree.xpath('{}/div[1]/text()'.format(object_xpath))
-            price_diff = tree.xpath('{}/div[2]/span/span/text()'.format(object_xpath))
-            temp_df = pd.DataFrame(columns=self.metals_bloom_columns)
-            try:
-                row = ['Медь', price[0], price_diff[0]]
-                temp_df = pd.DataFrame([row], columns=self.metals_bloom_columns)
-            except Exception as ex:
-                self.logger.error(f'Ошибка ({ex}) получения таблицы с медью!')
-            metals_bloom = pd.concat([metals_bloom, temp_df], ignore_index=True)
-            self.logger.info('Таблица metals_bloom собрана')
+        :param table_metals: [имя группы (Металлы), айди из parser_source, response_format из parser_source,
+                            url, таблица со страницы html]
+        :param page_metals: название страницы
+        :param session: сессия
+        return: списки с показателями по коммодам
+        """
+        U7 = []
+        metals = []
+        metals_from_html = []
 
-        elif page_metals == 'U7*0':
+        if page_metals == 'U7*0':
             if {'Last', 'Change'}.issubset(table_metals[4].columns):
                 y = datetime.date.today().strftime('%y')
                 jap_coal_pattern = f'U7(M|N){y}'
                 jap_coal = table_metals[4][table_metals[4].Symbol.str.contains(jap_coal_pattern)]
-                U7N23.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
+                U7.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
                 self.logger.info('Таблица U7N24 собрана')
 
         elif page_metals == 'commodities':
@@ -77,10 +70,11 @@ class MetalsGetter(QuotesGetter):
                         'Gold USD/t,oz',
                         'Silver USD/t,oz',
                         'Platinum USD/t,oz',
+                        'Copper USD/Lbs',
                     ])
                 ]
-                metals_kot.append(temp)
-                self.logger.info('Таблица metals_kot (Metals) собрана')
+                metals.append(temp)
+                self.logger.info('Таблица metals (Metals) собрана')
 
             elif 'Industrial' in table_metals[4].columns:
                 temp = table_metals[4].loc[
@@ -97,8 +91,8 @@ class MetalsGetter(QuotesGetter):
                         ]
                     )
                 ]
-                metals_kot.append(temp.rename(columns={'Industrial': 'Metals'}))
-                self.logger.info('Таблица metals_kot (Industrial) собрана')
+                metals.append(temp.rename(columns={'Industrial': 'Metals'}))
+                self.logger.info('Таблица metals (Industrial) собрана')
 
             elif 'Energy' in table_metals[4].columns:
                 temp = table_metals[4].loc[table_metals[4]['Energy'].isin([
@@ -108,56 +102,47 @@ class MetalsGetter(QuotesGetter):
                     'Coal USD/T',
                     'Uranium USD/Lbs',
                 ])]
-                metals_kot.append(temp.rename(columns={'Energy': 'Metals'}))
-                self.logger.info('Таблица metals_kot (Energy) собрана')
+                metals.append(temp.rename(columns={'Energy': 'Metals'}))
+                self.logger.info('Таблица metals (Energy) собрана')
 
-        elif page_metals == 'coal-(api2)-cif-ara-futures-historical-data':
-            if 'Price' in table_metals[4].columns:
-                table_metals[4]['Date'] = table_metals[4]['Date'].astype('datetime64[ns]')
-                # day_day = table_metals[4]['Date'][0] - relativedelta(days=1)
-                week_day = table_metals[4]['Date'][0] - relativedelta(weeks=1)
-                month_day = table_metals[4]['Date'][0] - relativedelta(months=1)
-                year_day = table_metals[4]['Date'][0] - relativedelta(years=1)
+        elif page_metals == 'lng-japan-korea-marker-platts-futures':
+            metal_name = 'LNG Japan/Korea'
+            url = table_metals[3]
+            xpath_price = '//*[@data-test="instrument-price-last"]//text()'
+            xpath_date = '//*[@data-test="trading-time-label"]//text()'
+            lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date)
+            metals_from_html.append(lng)
 
-                # day_table = table_metals[4].loc[table_metals[4]['Date'] == str(day_day).split()[0]]
-                week_table = table_metals[4].loc[table_metals[4]['Date'] == str(week_day).split()[0]]
-                month_table = table_metals[4].loc[table_metals[4]['Date'] == str(month_day).split()[0]]
-                year_table = table_metals[4].loc[table_metals[4]['Date'] == str(year_day).split()[0]]
-                temp_table = pd.concat([table_metals[4].head(1), week_table, month_table, year_table], ignore_index=True)
+        return metals_from_html, metals, U7
 
-                temp_table['Metals'] = 'Эн. уголь'
-                temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
-                temp_table['%'] = temp_table.groupby('Metals')['Price'].pct_change()
-                try:
-                    metals_coal_kot.append(
-                        [
-                            temp_table['Metals'][0],
-                            temp_table['Price'][0],
-                            *temp_table['%'].tolist()[1:],
-                            str(temp_table['Date'][0]).split()[0],
-                        ]
-                    )
-                    self.logger.info('Таблица metals_coal_kot собрана')
-                except ValueError:
-                    metals_coal_kot.append(
-                        [
-                            temp_table['Metals'][0],
-                            temp_table['Price'][0],
-                            *temp_table['%'].tolist()[0:],
-                            str(temp_table['Date'][0]).split()[0],
-                        ]
-                    )
-                    self.logger.warning('Сдвиг в таблице с котировками (metals_coal_kot)')
+    def get_data_from_page(self,
+                           session: req.sessions.Session,
+                           metal_name: str,
+                           url: str,
+                           xpath_price: str,
+                           xpath_date: str
+                           ):
+        """
+        Получение цены и даты металла с html страницы.
 
-        return metals_coal_kot, metals_kot, metals_bloom, U7N23
+        :param metal_name: название коммода
+        :param url: ссылка на страницу с данными о коммоде
+        :param session: сессия
+        :param xpath_price: xpath путь до цены коммода
+        :param xpath_date: xpath путь до даты(времени) обновления цены
+        """
+        useless, page_html = self.parser_obj.get_html(url, session)
+        tree = html.fromstring(page_html)
+        data_price = tree.xpath(xpath_price)
+        price = self.find_number(data_price)
+        data_date = tree.xpath(xpath_date)
+        date = [date for date in data_date if date.strip()][0]
+        return [metal_name, price, None, date]
 
-    def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
+    def preprocess(self, tables: list, session: req.sessions.Session) -> tuple[pd.DataFrame, set]:
         preprocessed_ids = set()
         group_name = self.get_group_name()
-        U7N23 = []
-        metals_kot = []
-        metals_coal_kot = []
-        metals_bloom = pd.DataFrame(columns=self.metals_bloom_columns)
+        U7_full, metals_full, metals_from_html_full = [], [], []
 
         size_tables = len(tables)
         self.logger.info(f'Обработка собранных таблиц ({group_name}) ({size_tables}).')
@@ -168,20 +153,24 @@ class MetalsGetter(QuotesGetter):
 
             # METALS BLOCK
             try:
-                metal_coal_ls, metal_cat_ls, metal_bloom_df, U7_ls = self.metal_block(tables_row, source_page, session)
-                U7N23 += U7_ls
-                metals_coal_kot += metal_coal_ls
-                metals_kot += metal_cat_ls
-                metals_bloom = pd.concat([metals_bloom, metal_bloom_df])
+                metals_from_html, metals, U7 = self.metal_block(tables_row, source_page, session)
+                U7_full += U7
+                metals_from_html_full += metals_from_html
+                metals_full += metals
                 preprocessed_ids.add(tables_row[1])
             except Exception as e:
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
 
         big_table = pd.DataFrame(columns=self.big_table_columns)
-        metals_coal_kot_table = pd.DataFrame(metals_coal_kot, columns=self.metals_coal_kot_table_columns)
-        U7N23_df = pd.DataFrame(U7N23, columns=self.U7N23_columns)
-        for table in metals_kot:
+        metals_from_html_df = pd.DataFrame(metals_from_html_full, columns=self.middle_table_columns)
+        U7_df = pd.DataFrame(U7_full, columns=self.small_table_columns)
+        for table in metals_full:
             big_table = pd.concat([big_table, table], ignore_index=True)
-        big_table = pd.concat([big_table, metals_coal_kot_table, metals_bloom, U7N23_df], ignore_index=True)
+        big_table = pd.concat([big_table, metals_from_html_df, U7_df], ignore_index=True)
+        big_table = big_table.drop_duplicates(subset='Metals', ignore_index=True)
+
+        # преобразование фунтов в тонны
+        index = big_table[big_table['Metals'] == 'Copper USD/Lbs'].index[0]
+        big_table.loc[index, 'Price'] *= self.LBS_IN_T
 
         return big_table, preprocessed_ids

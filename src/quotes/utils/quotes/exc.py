@@ -13,16 +13,6 @@ class ExcGetter(QuotesGetter):
     fx_columns: List[str] = ['Валюта', 'Курс']
 
     @staticmethod
-    def find_number(data_list):
-        """Находит первое число в списке"""
-        for item in data_list[:20]:
-            try:
-                return float(item)
-            except ValueError:
-                pass
-        return None
-
-    @staticmethod
     def filter(table_row: list) -> bool:
         page = QuotesGetter.get_source_page_from_table_row(table_row)
         pages = ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd', 'usd-cnh', 'usdollar']
