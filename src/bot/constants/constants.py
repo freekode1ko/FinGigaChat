@@ -23,3 +23,7 @@ ERROR_RAG_ANSWER = 'Извините, я пока не могу ответить
 LIKE_FEEDBACK = 'Я рад, что вам понравилось!'
 DISLIKE_FEEDBACK = 'Я буду стараться лучше...'
 GIGA_RAG_FOOTER = 'Ответ сгенерирован Gigachat с помощью Базы Знаний. Информация требует дополнительной верификации'
+
+REGISTRATION_CODE_MIN = 100_000
+REGISTRATION_CODE_MAX = 999_999
+MAX_REGISTRATION_CODE_ATTEMPTS = 5  # макс кол-во попыток ввода кода пользователем при регистрации
