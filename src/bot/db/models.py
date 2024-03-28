@@ -457,3 +457,12 @@ class RAGUserFeedback(Base):
     date = Column(DateTime, default=datetime.datetime.now)
     query = Column(Text, nullable=False)
     response = Column(Text)
+
+
+t_relation_commodity_metals = Table(
+    'relation_commodity_metals', metadata,
+    Column('commodity_id', ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True),
+    Column('name_from_source', String(100), primary_key=True),
+    Column('unit', String(10)),
+    Column('sub_name', String(100), nullable=False)
+)
