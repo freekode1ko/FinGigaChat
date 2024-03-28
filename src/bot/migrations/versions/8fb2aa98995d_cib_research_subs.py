@@ -61,7 +61,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=64), nullable=False),
     sa.Column('dropdown_flag', sa.Boolean(), server_default='true', nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список групп, выделенных среди разделов CIB Research'
+    comment='Справочник групп, выделенных среди разделов CIB Research'
     )
 
     research_section_table = op.create_table('research_section',
@@ -70,7 +70,7 @@ def upgrade() -> None:
     sa.Column('research_group_id', sa.BigInteger(), nullable=False),
     sa.ForeignKeyConstraint(['research_group_id'], ['research_group.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список разделов CIB Research'
+    comment='Справочник разделов CIB Research'
     )
 
     research_type_table = op.create_table('research_type',
@@ -82,7 +82,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['research_section_id'], ['research_section.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['source_id'], ['parser_source.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список типов отчетов CIB Research, на которые пользователь может подписаться'
+    comment='Справочник типов отчетов CIB Research, на которые пользователь может подписаться'
     )
 
     op.create_table('research',
@@ -94,9 +94,16 @@ def upgrade() -> None:
     sa.Column('parse_datetime', sa.DateTime(), nullable=False),
     sa.Column('publication_date', sa.Date(), nullable=False),
     sa.Column('news_id', sa.BigInteger(), nullable=False),
+    sa.Column(
+        'is_new',
+        sa.Boolean(),
+        nullable=False,
+        server_default='true',
+        comment='Указывает, что новость еще не рассылалась пользователям',
+    ),
     sa.ForeignKeyConstraint(['research_type_id'], ['research_type.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список спаршенных отчетов CIB Research'
+    comment='Справочник спаршенных отчетов CIB Research'
     )
 
     op.create_table('user_research_subscription',
@@ -105,7 +112,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['research_type_id'], ['research_type.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['whitelist.user_id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('user_id', 'research_type_id'),
-    comment='Список спаршенных отчетов CIB Research'
+    comment='Справочник подписок пользователей на отчеты CIB Research'
     )
 
     op.add_column('parser_source', sa.Column('params', sa.JSON(), nullable=True))

@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import time
 from typing import List
 
 import pandas as pd
@@ -8,12 +9,14 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 from configs import config
 import module.data_transformer as dt
+from constants import constants
 from log.bot_logger import logger, user_logger
 from db.database import engine
+from module import formatter, text_splitter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
-from db import parser_source, message
+from db import parser_source, message, subscriptions
 from db.industry import get_industry_tg_news
 
 
@@ -202,3 +205,61 @@ async def weekly_pulse_newsletter(
             logger.error(f'ERROR *{user_id}* Пользователь не получил рассылку "{title}" : {e}')
 
     message.add_all(saved_messages)
+
+
+async def send_new_researches_to_users(bot: Bot) -> None:
+    now = datetime.datetime.now()
+    newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
+    logger.info(f'Начинается рассылка новостей в {newsletter_dt_str} по CIB Research')
+    start_tm = time.time()
+
+    # получаем список отчетов, которые надо разослать
+    research_df = subscriptions.get_new_researches()
+    research_type_ids = research_df['research_type_id'].drop_duplicates().values.tolist()
+
+    # Получаем список пользователей, которым требуется разослать отчеты
+    user_df = subscriptions.get_users_by_research_types_df(research_type_ids)
+
+    # Сохранение отправленных сообщений
+    saved_messages = []
+    newsletter_type = 'cib_research_newsletter'
+
+    for _, user_row in user_df.iterrows():
+        user_id = user_row["user_id"]
+        user_name = user_row["username"]
+        logger.info(f'Рассылка отчетов пользователю {user_id}')
+
+        for _, research in research_df[research_df['research_type_id'].isin(user_row['research_types'])].iterrows():
+            # отправка отчета пользователю
+            formatted_msg_txt = formatter.ResearchFormatter.format(research)
+            msg_txt_lst = text_splitter.SentenceSplitter.split_text_by_chunks(
+                formatted_msg_txt, chunk_size=constants.TELEGRAM_MESSAGE_MAX_LEN
+            )
+            index_of_last_message = len(msg_txt_lst) - 1
+            for i, msg_txt in enumerate(msg_txt_lst):
+                if research['filepath'] and i == index_of_last_message:
+                    file = types.FSInputFile(research['filepath'])
+                    msg = await bot.send_document(
+                        document=file,
+                        chat_id=user_id,
+                        caption=msg_txt,
+                        parse_mode='HTML',
+                        protect_content=True,
+                    )
+                else:
+                    msg = await bot.send_message(user_id, msg_txt, protect_content=True, parse_mode='HTML')
+                saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+
+            user_logger.debug(
+                f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}. '
+            )
+            await asyncio.sleep(1.1)
+
+    message.add_all(saved_messages)
+
+    work_time = time.time() - start_tm
+    users_cnt = len(user_df)
+    logger.info(
+        f'Рассылка в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
+        f'Переходим в ожидание следующей рассылки.'
+    )

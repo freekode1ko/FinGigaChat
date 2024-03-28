@@ -16,7 +16,7 @@ SUBS_DELETE_ALL_DONE = 'subs_delete_all_done'
 ADD_ALL_SUBS_BY_DOMAIN = 'add_all_subs_by_domain'
 # ----------------------------------------------------
 # ------------CIB RESEARCH SUBSCRIPTIONS -------------
-GET_RESEARCH_SUBS_MENU = 'research_subscriptions'
+GET_CIB_RESEARCH_SUBS_MENU = 'research_subscriptions'
 BACK_TO_CIB_RESEARCH_MENU = 'back_to_cib_subs_menu'
 
 CIB_RESEARCH_GROUPS_MENU = 'cib_groups_menu'
