@@ -25,3 +25,4 @@ DISLIKE_FEEDBACK = 'Я буду стараться лучше...'
 GIGA_RAG_FOOTER = 'Ответ сгенерирован Gigachat с помощью Базы Знаний. Информация требует дополнительной верификации'
 
 TELEGRAM_MESSAGE_MAX_LEN = 4096
+TELEGRAM_MESSAGE_CAPTION_MAX_LEN = 1024

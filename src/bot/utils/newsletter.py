@@ -232,30 +232,31 @@ async def send_new_researches_to_users(bot: Bot) -> None:
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         for _, research in research_df[research_df['research_type_id'].isin(user_row['research_types'])].iterrows():
+            user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
             research_section_name = research_section_dict[research['research_type_id']]['name']
             # отправка отчета пользователю
             formatted_msg_txt = formatter.ResearchFormatter.format(research_section_name, research)
             msg_txt_lst = text_splitter.SentenceSplitter.split_text_by_chunks(
                 formatted_msg_txt, chunk_size=constants.TELEGRAM_MESSAGE_MAX_LEN
             )
-            index_of_last_message = len(msg_txt_lst) - 1
+
             for i, msg_txt in enumerate(msg_txt_lst):
-                if research['filepath'] and i == index_of_last_message:
-                    file = types.FSInputFile(research['filepath'])
-                    msg = await bot.send_document(
-                        document=file,
-                        chat_id=user_id,
-                        caption=msg_txt,
-                        parse_mode='HTML',
-                        protect_content=True,
-                    )
-                else:
-                    msg = await bot.send_message(user_id, msg_txt, protect_content=True, parse_mode='HTML')
+                msg = await bot.send_message(user_id, msg_txt, protect_content=True, parse_mode='HTML')
                 saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
-            user_logger.debug(
-                f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}. '
-            )
+            if research['filepath']:
+                file = types.FSInputFile(research['filepath'])
+                msg_txt = f'Полная версия отчета: <b>{research["header"]}</b>'
+                msg = await bot.send_document(
+                    document=file,
+                    chat_id=user_id,
+                    caption=msg_txt,
+                    parse_mode='HTML',
+                    protect_content=True,
+                )
+                saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+
+            user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
             await asyncio.sleep(1.1)
 
     message.add_all(saved_messages)

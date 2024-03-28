@@ -20,7 +20,8 @@ class ResearchFormatter:
             f'<b>{research_row["header"].capitalize()}:</b>\n\n'
             f'{research_row["text"]}\n'
             f'<i>Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}</i>\n'
-            f'Источник: Sber CIB Research, подробнее на портале:\n<i>{config.RESEARCH_SOURCE_URL}/{research_row["news_id"]}</i>\n'
+            f'Источник: Sber CIB Research, подробнее на '
+            f'<a href="{config.RESEARCH_SOURCE_URL}/{research_row["news_id"]}" >портале</a>\n'
         )
 
         return formatted_text
