@@ -231,10 +231,10 @@ def delete_user_cib_section_subscription(user_id: int, research_section_id: int)
 def get_cib_group_info(group_id: int) -> dict[str, Any]:
     """
     Возвращает информацию по группе CIB Research
-    return: dict[id, name, dropdown_flag]
+    return: dict[id, name, ]
     """
     query = text(
-        'SELECT rg.id, rg.name, rg.dropdown_flag '
+        'SELECT rg.id, rg.name '
         'FROM research_group rg '
         'WHERE rg.id=:group_id'
     )
@@ -244,7 +244,6 @@ def get_cib_group_info(group_id: int) -> dict[str, Any]:
         data = {
             'id': data[0],
             'name': data[1],
-            'dropdown_flag': data[2],
         }
     return data
 
@@ -253,16 +252,16 @@ def get_research_groups_df() -> pd.DataFrame:
     """
     Возвращает список групп CIB Research
 
-    return: DataFrame[id, name, dropdown_flag]
+    return: DataFrame[id, name]
     """
     query = text(
-        'SELECT rg.id, rg.name, rg.dropdown_flag '
+        'SELECT rg.id, rg.name '
         'FROM research_group rg '
     )
 
     with database.engine.connect() as conn:
         data = conn.execute(query).all()
-        data_df = pd.DataFrame(data, columns=['id', 'name', 'dropdown_flag'])
+        data_df = pd.DataFrame(data, columns=['id', 'name'])
 
     return data_df
 
@@ -274,7 +273,7 @@ def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
 
     :param group_id: research_group.id группы CIB Research
     :param user_id: whitelist.id пользователя
-    return: DataFrame[id, name, is_subscribed]
+    return: DataFrame[id, name, dropdown_flag, is_subscribed]
     """
 
     query = text(
@@ -286,16 +285,17 @@ def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
         '   WHERE urg.user_id=:user_id OR urg.user_id IS NULL '
         '   GROUP BY research_section_id'
         ')'
-        'SELECT rs.id, rs.name, (CASE WHEN types_cnt = sub_cnt THEN true ELSE false END) as is_subscribed '
+        'SELECT rs.id, rs.name, rs.dropdown_flag, '
+        '   (CASE WHEN types_cnt = sub_cnt THEN true ELSE false END) as is_subscribed '
         'FROM research_section rs '
         'JOIN section_subscriptions ss ON rs.id=ss.research_section_id '
         'WHERE research_group_id=:group_id '
-        'ORDER BY rs.name'
+        'ORDER BY rs.dropdown_flag, rs.name'
     )
 
     with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
         data = conn.execute(query.bindparams(group_id=group_id, user_id=user_id)).all()
-        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
+        data_df = pd.DataFrame(data, columns=['id', 'name', 'dropdown_flag', 'is_subscribed'])
 
     return data_df
 

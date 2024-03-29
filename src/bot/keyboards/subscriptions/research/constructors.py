@@ -157,13 +157,13 @@ def get_research_sections_by_group_menu_kb(
     [ Раздел n ]
     [  назад  ]
 
-    :param group_info: dict[id, name, dropdown_flag] инфа о группе CIB Research
-    :param section_df: DataFrame[id, name, is_subscribed] инфа о разделах CIB Research
+    :param group_info: dict[id, name] инфа о группе CIB Research
+    :param section_df: DataFrame[id, name, dropdown_flag, is_subscribed] инфа о разделах CIB Research
     """
     keyboard = InlineKeyboardBuilder()
 
     for index, item in section_df.iterrows():
-        if group_info['dropdown_flag']:
+        if item['dropdown_flag']:
             button_txt = item['name'].capitalize()
             section_callback = callbacks.GetCIBSectionResearches(
                 group_id=group_info['id'],
