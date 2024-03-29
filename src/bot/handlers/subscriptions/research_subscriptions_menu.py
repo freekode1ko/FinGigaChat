@@ -175,7 +175,7 @@ async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, grou
     section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
     msg_text = f'Подборка разделов по группе "{group_info["name"]}"\n\n'
 
-    if not group_info['dropdown_flag']:
+    if not section_df[~section_df['dropdown_flag']].empty:
         msg_text += f'Для добавления/удаления подписки на раздел нажмите на {UNSELECTED}/{SELECTED} соответственно'
 
     keyboard = kb_maker.get_research_sections_by_group_menu_kb(group_info, section_df)

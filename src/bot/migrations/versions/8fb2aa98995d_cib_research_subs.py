@@ -63,7 +63,6 @@ def upgrade() -> None:
     research_group_table = op.create_table('research_group',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
-    sa.Column('dropdown_flag', sa.Boolean(), server_default='true', nullable=True),
     sa.PrimaryKeyConstraint('id'),
     comment='Справочник групп, выделенных среди разделов CIB Research'
     )
@@ -71,6 +70,7 @@ def upgrade() -> None:
     research_section_table = op.create_table('research_section',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('name', sa.String(length=64), nullable=False),
+    sa.Column('dropdown_flag', sa.Boolean(), server_default='true', nullable=True),
     sa.Column('research_group_id', sa.BigInteger(), nullable=False),
     sa.ForeignKeyConstraint(['research_group_id'], ['research_group.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),

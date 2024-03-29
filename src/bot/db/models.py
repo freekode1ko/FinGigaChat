@@ -467,7 +467,6 @@ class ResearchGroup(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
-    dropdown_flag = Column(Boolean, server_default='true')
 
 
 class ResearchSection(Base):
@@ -476,6 +475,7 @@ class ResearchSection(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
+    dropdown_flag = Column(Boolean, server_default='true')
     research_group_id = Column(ForeignKey('research_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
 
