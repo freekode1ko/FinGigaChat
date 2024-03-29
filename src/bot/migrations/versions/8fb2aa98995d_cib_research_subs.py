@@ -13,9 +13,13 @@ from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from db import models
-from db.database import engine
-from migrations.data import research_subscriptions
-
+from migrations.data.cib_research_subs import (
+    parser_sources,
+    research_groups,
+    research_sections,
+    research_types,
+    source_groups,
+)
 
 # revision identifiers, used by Alembic.
 revision: str = '8fb2aa98995d'
@@ -27,14 +31,14 @@ depends_on: Union[str, Sequence[str], None] = None
 def add_new_source_groups(session: Session) -> None:
     new_groups = []
 
-    for data in research_subscriptions.new_source_group:
+    for data in source_groups.source_groups:
         new_groups.append(models.SourceGroup(**data))
 
     session.add_all(new_groups)
 
 
 def delete_new_source_groups(session: Session) -> None:
-    delete_ids = [i['id'] for i in research_subscriptions.new_source_group]
+    delete_ids = [i['id'] for i in source_groups.source_groups]
     stmt = delete(models.SourceGroup).where(models.SourceGroup.id.in_(delete_ids))
     session.execute(stmt)
 
@@ -42,14 +46,14 @@ def delete_new_source_groups(session: Session) -> None:
 def add_new_sources(session: Session) -> None:
     new_data = []
 
-    for data in research_subscriptions.research_types_sources:
+    for data in parser_sources.parser_sources:
         new_data.append(models.ParserSource(**data))
 
     session.add_all(new_data)
 
 
 def delete_new_sources(session: Session) -> None:
-    delete_ids = [i['id'] for i in research_subscriptions.research_types_sources]
+    delete_ids = [i['id'] for i in parser_sources.parser_sources]
     stmt = delete(models.ParserSource).where(models.ParserSource.id.in_(delete_ids))
     session.execute(stmt)
 
@@ -61,7 +65,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=64), nullable=False),
     sa.Column('dropdown_flag', sa.Boolean(), server_default='true', nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список групп, выделенных среди разделов CIB Research'
+    comment='Справочник групп, выделенных среди разделов CIB Research'
     )
 
     research_section_table = op.create_table('research_section',
@@ -70,7 +74,7 @@ def upgrade() -> None:
     sa.Column('research_group_id', sa.BigInteger(), nullable=False),
     sa.ForeignKeyConstraint(['research_group_id'], ['research_group.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список разделов CIB Research'
+    comment='Справочник разделов CIB Research'
     )
 
     research_type_table = op.create_table('research_type',
@@ -82,7 +86,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['research_section_id'], ['research_section.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['source_id'], ['parser_source.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список типов отчетов CIB Research, на которые пользователь может подписаться'
+    comment='Справочник типов отчетов CIB Research, на которые пользователь может подписаться'
     )
 
     op.create_table('research',
@@ -93,10 +97,17 @@ def upgrade() -> None:
     sa.Column('text', sa.Text(), nullable=False),
     sa.Column('parse_datetime', sa.DateTime(), nullable=False),
     sa.Column('publication_date', sa.Date(), nullable=False),
-    sa.Column('news_id', sa.BigInteger(), nullable=False),
+    sa.Column('news_id', sa.String(length=64), nullable=False),
+    sa.Column(
+        'is_new',
+        sa.Boolean(),
+        nullable=False,
+        server_default='true',
+        comment='Указывает, что новость еще не рассылалась пользователям',
+    ),
     sa.ForeignKeyConstraint(['research_type_id'], ['research_type.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),
-    comment='Список спаршенных отчетов CIB Research'
+    comment='Справочник спаршенных отчетов CIB Research'
     )
 
     op.create_table('user_research_subscription',
@@ -105,7 +116,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['research_type_id'], ['research_type.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['whitelist.user_id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('user_id', 'research_type_id'),
-    comment='Список спаршенных отчетов CIB Research'
+    comment='Справочник подписок пользователей на отчеты CIB Research'
     )
 
     op.add_column('parser_source', sa.Column('params', sa.JSON(), nullable=True))
@@ -116,9 +127,9 @@ def upgrade() -> None:
     add_new_source_groups(session)
     add_new_sources(session)
     session.commit()
-    op.bulk_insert(research_group_table, research_subscriptions.groups)
-    op.bulk_insert(research_section_table, research_subscriptions.sections)
-    op.bulk_insert(research_type_table, research_subscriptions.research_types)
+    op.bulk_insert(research_group_table, research_groups.research_groups)
+    op.bulk_insert(research_section_table, research_sections.research_sections)
+    op.bulk_insert(research_type_table, research_types.research_types)
 
 
 def downgrade() -> None:

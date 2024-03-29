@@ -463,7 +463,7 @@ class RAGUserFeedback(Base):
 
 class ResearchGroup(Base):
     __tablename__ = 'research_group'
-    __table_args__ = {'comment': 'Список групп, выделенных среди разделов CIB Research'}
+    __table_args__ = {'comment': 'Справочник групп, выделенных среди разделов CIB Research'}
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
@@ -472,7 +472,7 @@ class ResearchGroup(Base):
 
 class ResearchSection(Base):
     __tablename__ = 'research_section'
-    __table_args__ = {'comment': 'Список разделов CIB Research'}
+    __table_args__ = {'comment': 'Справочник разделов CIB Research'}
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
@@ -481,7 +481,7 @@ class ResearchSection(Base):
 
 class ResearchType(Base):
     __tablename__ = 'research_type'
-    __table_args__ = {'comment': 'Список типов отчетов CIB Research, на которые пользователь может подписаться'}
+    __table_args__ = {'comment': 'Справочник типов отчетов CIB Research, на которые пользователь может подписаться'}
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
@@ -492,7 +492,7 @@ class ResearchType(Base):
 
 class Research(Base):
     __tablename__ = 'research'
-    __table_args__ = {'comment': 'Список спаршенных отчетов CIB Research'}
+    __table_args__ = {'comment': 'Справочник спаршенных отчетов CIB Research'}
 
     id = Column(BigInteger, primary_key=True)
     research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
@@ -502,11 +502,12 @@ class Research(Base):
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
     news_id = Column(BigInteger, nullable=False)
+    is_new = Column(Boolean, server_default='true', comment='Указывает, что новость еще не рассылалась пользователям')
 
 
 class UserResearchSubscriptions(Base):
     __tablename__ = 'user_research_subscription'
-    __table_args__ = {'comment': 'Список спаршенных отчетов CIB Research'}
+    __table_args__ = {'comment': 'Справочник подписок пользователей на отчеты CIB Research'}
 
     user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
     research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)

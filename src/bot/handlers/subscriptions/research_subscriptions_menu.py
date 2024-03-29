@@ -14,7 +14,7 @@ from db import subscriptions as subscriptions_db_api
 
 
 router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
 
 
 @router.callback_query(callbacks.GetUserCIBResearchSubs.filter())
@@ -93,7 +93,7 @@ async def update_sub_on_research(
         # add sub
         subscriptions_db_api.add_user_research_subscription(user_id, research_id)
     else:
-        # delete sub on tg channel
+        # delete sub
         subscriptions_db_api.delete_user_research_subscription(user_id, research_id)
 
     await show_cib_research_type_more_info(
@@ -170,7 +170,7 @@ async def get_cib_section_research_types_menu(
 
 
 async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, group_id: int, user_id: int) -> None:
-    """Формирует сообщен с подборкой отчетов по разделу"""
+    """Формирует сообщение с подборкой отчетов по разделу"""
     group_info = subscriptions_db_api.get_cib_group_info(group_id)
     section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
     msg_text = f'Подборка разделов по группе "{group_info["name"]}"\n\n'
@@ -209,7 +209,7 @@ async def get_cib_group_sections_menu(
             # add sub
             subscriptions_db_api.add_user_cib_section_subscription(user_id, section_id)
         else:
-            # delete sub on tg channel
+            # delete sub
             subscriptions_db_api.delete_user_cib_section_subscription(user_id, section_id)
 
     await make_cib_group_sections_menu(callback_query, group_id, user_id)
@@ -295,9 +295,7 @@ async def research_subs_menu_end(callback_query: types.CallbackQuery) -> None:
 
 async def cib_research_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     keyboard = kb_maker.get_research_subscriptions_main_menu_kb()
-    msg_text = (
-        'Подписки на аналитические отчеты'
-    )
+    msg_text = 'Подписки на аналитические отчеты'
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -316,7 +314,7 @@ async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(Command(callback_prefixes.GET_RESEARCH_SUBS_MENU))
+@router.message(Command(callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU))
 async def cib_research_subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками на cib_research

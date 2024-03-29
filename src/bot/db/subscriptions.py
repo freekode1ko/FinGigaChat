@@ -269,7 +269,7 @@ def get_research_groups_df() -> pd.DataFrame:
 
 def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
     """
-    Возвращает данные по разделах в группе group_id
+    Возвращает данные по разделам в группе group_id
     Если пользователь подписан на все отчеты в разделе, то у него ставится флаг is_subscribed=True
 
     :param group_id: research_group.id группы CIB Research
@@ -354,4 +354,86 @@ def delete_all_user_research_subscriptions(user_id: int) -> None:
     with database.engine.connect() as conn:
         conn.execute(query.bindparams(user_id=user_id))
         conn.commit()
+
+
+def get_new_researches() -> pd.DataFrame:
+    """
+    Вынимает новые отчеты из таблицы research
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    """
+    with database.engine.connect() as conn:
+        columns = [
+            'id',
+            'research_type_id',
+            'filepath',
+            'header',
+            'text',
+            'parse_datetime',
+            'publication_date',
+            'news_id',
+        ]
+        query = text(
+            'UPDATE research SET is_new=false '
+            'WHERE is_new=true '
+            'RETURNING id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id '
+        )
+        data = conn.execute(query).all()
+        conn.commit()
+        data_df = pd.DataFrame(data, columns=columns)
+
+    return data_df
+
+
+def get_users_by_research_types_df(research_type_ids: list[int]) -> pd.DataFrame:
+    """
+    return: DataFrame[user_id: int, username: str, research_types: list[int]]
+    """
+    with database.engine.connect() as conn:
+        columns = [
+            'user_id',
+            'username',
+            'research_types',
+        ]
+        query = text(
+            'SELECT u.user_id, u.username, ARRAY_AGG(urs.research_type_id) '
+            'FROM user_research_subscription urs '
+            'JOIN whitelist u ON u.user_id=urs.user_id '
+            'WHERE urs.research_type_id=ANY(:research_type_ids) '
+            'GROUP BY u.user_id '
+        )
+        data = conn.execute(query.bindparams(research_type_ids=research_type_ids)).all()
+        data_df = pd.DataFrame(data, columns=columns)
+
+    return data_df
+
+
+def get_research_sections_by_research_types_df(research_type_ids: list[int]) -> dict[int, dict[str, Any]]:
+    """
+    return: dict[
+        research_type_id: {
+            research_section_id: int,
+            name: str,
+            research_group_id: int,
+            research_type_id: int,
+        }
+    ]
+    """
+    with database.engine.connect() as conn:
+        columns = [
+            'research_section_id',
+            'name',
+            'research_group_id',
+            'research_type_id',
+        ]
+        query = text(
+            'SELECT rs.id, rs.name, rs.research_group_id, rt.id '
+            'FROM research_type rt '
+            'JOIN research_section rs ON rs.id=rt.research_section_id '
+            'WHERE rt.id=ANY(:research_type_ids) '
+        )
+        data = conn.execute(query.bindparams(research_type_ids=research_type_ids)).all()
+        data_df = pd.DataFrame(data, columns=columns)
+        result = data_df.set_index(data_df['research_type_id']).T.to_dict()
+
+    return result
 # ------------------ RESEARCH SUBSCRIPTIONS METHODS END --------------------
