@@ -160,7 +160,7 @@ async def get_cib_section_research_types_menu(
     section_info = subscriptions_db_api.get_cib_section_info(section_id)
     research_type_df = subscriptions_db_api.get_cib_research_types_by_section_df(section_id, user_id)
     msg_text = (
-        f'Подборка разделов по группе "{section_info["name"]}"\n\n'
+        f'Подборка отчетов по разделу "{section_info["name"]}"\n\n'
         f'Для добавления/удаления подписки на отчет нажмите на {UNSELECTED}/{SELECTED} соответственно'
     )
 
@@ -173,7 +173,7 @@ async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, grou
     """Формирует сообщение с подборкой отчетов по разделу"""
     group_info = subscriptions_db_api.get_cib_group_info(group_id)
     section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
-    msg_text = f'Подборка разделов по группе "{group_info["name"]}"\n\n'
+    msg_text = f'Выберите разделы, на которые вы хотите подписаться.\n\n'
 
     if not section_df[~section_df['dropdown_flag']].empty:
         msg_text += f'Для добавления/удаления подписки на раздел нажмите на {UNSELECTED}/{SELECTED} соответственно'
