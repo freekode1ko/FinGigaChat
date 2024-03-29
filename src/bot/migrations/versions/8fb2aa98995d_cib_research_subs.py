@@ -97,7 +97,7 @@ def upgrade() -> None:
     sa.Column('text', sa.Text(), nullable=False),
     sa.Column('parse_datetime', sa.DateTime(), nullable=False),
     sa.Column('publication_date', sa.Date(), nullable=False),
-    sa.Column('news_id', sa.BigInteger(), nullable=False),
+    sa.Column('news_id', sa.String(length=64), nullable=False),
     sa.Column(
         'is_new',
         sa.Boolean(),
