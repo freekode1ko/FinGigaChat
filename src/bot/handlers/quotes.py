@@ -8,10 +8,12 @@ import pandas as pd
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.utils.chat_action import ChatActionMiddleware
+from sqlalchemy import text
 
 from log.bot_logger import user_logger
 from configs.config import path_to_source
 from constants.constants import sample_of_img_title
+from constants.quotes import COMMODITY_TABLE_ELEMENTS, COMMODITY_MARKS
 from db.database import engine
 from module import data_transformer as dt
 from utils.base import (
@@ -352,81 +354,61 @@ async def metal_info(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
+
+        materials = []
+        query = text('select sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" from metals '
+                     'join relation_commodity_metals rcm on rcm.name_from_source=metals."Metals" '
+                     'where sub_name=:sub_name')
+        with engine.connect() as conn:
+            for element in COMMODITY_TABLE_ELEMENTS:
+                element_data = conn.execute(query.bindparams(sub_name=element)).fetchall()
+                if element_data:
+                    materials.append(*element_data)
+
+        number_columns = list(COMMODITY_MARKS.values())
+        materials_df = pd.DataFrame(materials, columns=['Сырье', 'Ед. изм.', *number_columns])
+        # materials_df = materials_df.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
+
+        materials_df[number_columns] = materials_df[number_columns].applymap(format_cell_in_commodity_df)
+        materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(
+            lambda x: x + '%' if x else x.replace('', '-')
+        )
+
         transformer = dt.Transformer()
-        metal = pd.read_sql_query('SELECT * FROM metals', con=engine)
-        metal = metal[['Metals', 'Price', 'Weekly', 'Monthly', 'YoY']]
-        metal = metal.rename(
-            columns=({'Metals': 'Сырье', 'Price': 'Цена', 'Weekly': 'Δ Неделя', 'Monthly': 'Δ Месяц', 'YoY': 'Δ Год'})
+        transformer.render_mpl_table(
+            materials_df,
+            'metal',
+            header_columns=0,
+            col_width=1.5,
+            title='Цены на ключевые сырьевые товары.'
         )
-
-        query = (
-            'SELECT subname, unit, price, m_delta, y_delta ' 
-            'FROM public.commodity_pricing '
-            "WHERE subname in ('Нефть Urals', 'Нефть Brent') "
-            'ORDER BY subname;'
-        )
-        commodity_pricing_df = pd.read_sql_query(query, con=engine).rename(
-            columns={'subname': 'Сырье', 'unit': 'Ед. изм.', 'price': 'Цена', 'm_delta': 'Δ Месяц', 'y_delta': 'Δ Год'}
-        )
-        commodity_pricing_df.insert(3, 'Δ Неделя', '')
-
-        order = {
-            'Нефть Urals': ['Нефть Urals', '$/бар', '0'],
-            'Нефть Brent': ['Нефть Brent', '$/бар', '1'],
-            'Медь': ['Медь', '$/т', '2'],
-            'Aluminum USD/T': ['Алюминий', '$/т', '3'],
-            'Nickel USD/T': ['Никель', '$/т', '4'],
-            'Lead USD/T': ['Cвинец', '$/т', '5'],
-            'Zinc USD/T': ['Цинк', '$/т', '6'],
-            'Gold USD/t,oz': ['Золото', '$/унц', '7'],
-            'Silver USD/t,oz': ['Cеребро', '$/унц', '8'],
-            'Palladium USD/t,oz': ['Палладий', '$/унц', '9'],
-            'Platinum USD/t,oz': ['Платина', '$/унц', '10'],
-            'Lithium CNY/T': ['Литий', 'CNH/т', '11'],
-            'Cobalt USD/T': ['Кобальт', '$/т', '12'],
-            'Iron Ore 62% fe USD/T': ['ЖРС (Китай)', '$/т', '13'],
-            'Эн. уголь': ['Эн. уголь\n(Au)', '$/т', '14'],
-            'кокс. уголь': ['Кокс. уголь\n(Au)', '$/т', '15'],
-        }
-
-        metal.insert(1, 'Ед. изм.', None)
-        metal = pd.concat([commodity_pricing_df, metal], ignore_index=True)
-        metal['ind'] = None
-        for num, commodity in enumerate(metal['Сырье'].values):
-            if commodity in order:
-                metal.Сырье[metal.Сырье == commodity] = '<>'.join(order[commodity])
-            else:
-                metal.drop(num, inplace=True)
-        metal[['Сырье', 'Ед. изм.', 'ind']] = metal['Сырье'].str.split('<>', expand=True)
-        metal.set_index('ind', drop=True, inplace=True)
-        metal.sort_index(inplace=True)
-        metal = metal.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
-        for key in metal.columns[2:]:
-            metal[key] = metal[key].apply(lambda x: str(x).replace(',', '.'))
-            metal[key] = metal[key].apply(lambda x: __replacer(x))
-            metal[key] = metal[key].apply(lambda x: str(x).replace('s', ''))
-            metal[key] = metal[key].apply(lambda x: str(x).replace('%', ''))
-            metal[key] = metal[key].apply(lambda x: str(x).replace('–', '-'))
-
-            metal[key] = metal[key].apply(lambda x: '{}'.format(np.nan) if str(x) == 'None' else '{}'.format(x))
-            metal[key] = metal[key].astype('float')
-            metal[key] = metal[key].round()
-            metal[key] = metal[key].apply(lambda x: '{:,.0f}'.format(x).replace(',', ' '))
-            metal[key] = metal[key].apply(lambda x: '{}%'.format(x) if x != 'nan' and key != 'Цена' else str(x).replace('nan', '-'))
-
-        metal.index = metal.index.astype('int')
-        metal.sort_index(inplace=True)
-        transformer.render_mpl_table(metal, 'metal', header_columns=0, col_width=1.5, title='Цены на ключевые сырьевые товары.')
 
         png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
-        day = pd.read_sql_query('SELECT * FROM "report_met_day"', con=engine).values.tolist()
+        day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
         photo = types.FSInputFile(png_path)
         title = 'Сырьевые товары'
         data_source = 'LME, Bloomberg, investing.com'
         await __sent_photo_and_msg(
-            message, photo, day, protect_content=False, title=sample_of_img_title.format(title, data_source, read_curdatetime())
+            message, photo, day, title=sample_of_img_title.format(title, data_source, read_curdatetime())
         )
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+def format_cell_in_commodity_df(value) -> str | None:
+    try:
+        result = str(value).replace(',', '.')
+        result = __replacer(result)
+        result = result.replace('s', '')
+        result = result.replace('%', '')
+        result = result.replace('–', '-')
+        result = '{0:,}'.format(round(float(result))).replace(',', ' ')
+        result = result.replace('-0.0', '0')
+        result = result.replace('0.0', '0')
+    except Exception as e:
+        print(e)
+        result = None
+
+    return result
