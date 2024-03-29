@@ -20,6 +20,7 @@ requests = "^2.31.0"
 scikit-learn = "^1.4.1.post1"
 sentry-sdk = "^1.40.6"
 sqlalchemy = "^2.0.28"
+xgboost = "^2.0.3"
 
 
 [build-system]

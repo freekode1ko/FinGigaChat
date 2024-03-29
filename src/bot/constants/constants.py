@@ -26,3 +26,8 @@ GIGA_RAG_FOOTER = 'Ответ сгенерирован Gigachat с помощь�
 
 TELEGRAM_MESSAGE_MAX_LEN = 4096
 TELEGRAM_MESSAGE_CAPTION_MAX_LEN = 1024
+
+REGISTRATION_CODE_MIN = 100_000
+REGISTRATION_CODE_MAX = 999_999
+MAX_REGISTRATION_CODE_ATTEMPTS = 5  # макс кол-во попыток ввода кода пользователем при регистрации
+
