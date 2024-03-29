@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import datetime
 import json
@@ -5,30 +6,29 @@ import os
 import random
 import re
 import time
-from typing import List
+from typing import List, Any, Dict
 
 import aiohttp
-from aiohttp.web_exceptions import HTTPNoContent
+import asyncpg
 import pandas as pd
 import requests
-import asyncio
 import selenium
 import selenium.webdriver as wb
+from PIL import Image
+from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
 from bs4 import BeautifulSoup
 from pdf2image import convert_from_path
-from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from utils.selenium_utils import get_driver
 
 from configs import config
+from db import parser_source
+from log.logger_base import Logger
 from module import data_transformer as Transformer
 from module import weekly_pulse_parse
-from log.logger_base import Logger
-from db import parser_source
-
-from utils.selenium_utils import get_driver
 
 
 class ResearchError(Exception):
@@ -217,7 +217,8 @@ class ResearchParser:
         return date, text
 
     def get_reviews(
-            self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1, type_of_review: str = ''
+            self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1,
+            type_of_review: str = ''
     ) -> List[tuple]:
         """
         Get data of reviews from CIB Research
@@ -448,7 +449,8 @@ class ResearchParser:
         cookies = driver.get_cookies()
         headers = {
             header['name']: header['value']
-            for header in driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming")
+            for header in
+            driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming")
             if header.get('name')
         }
         session = requests.Session()
@@ -483,7 +485,8 @@ class ResearchParser:
             self.driver.execute_script('arguments[0].scrollIntoView();', link)
             filename = review.get_attribute('title').replace(' ', '_')
             self._logger.info(f'Установлено название обрабатываемого отчета: {filename}')
-            date = review.find_element(By.XPATH, '..').find_element(By.XPATH, '..').find_element(By.CLASS_NAME, 'date').text
+            date = review.find_element(By.XPATH, '..').find_element(By.XPATH, '..').find_element(By.CLASS_NAME,
+                                                                                                 'date').text
             self._logger.info(f'Установлена дата ({date}) для {filename}')
             filename = f'{filename}__{date}.pdf'
             filename = '{}/{}'.format(pdf_dir, filename)
@@ -543,7 +546,8 @@ class ResearchParser:
         self.driver.get(base_url)
         self._logger.info('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
         WebDriverWait(self.driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and EC.invisibility_of_element_located((By.ID, 'all_loading'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and EC.invisibility_of_element_located(
+                (By.ID, 'all_loading'))
         )
         self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
         self._logger.info('Поиск Weekly Pulse отчета')
@@ -680,7 +684,8 @@ class InvestingAPIParser:
         self._logger.info('Обработка данных для стримингового графика с investing.com')
         url = f'{url}-streaming-chart'
         self.driver.get(url)
-        data = self.driver.find_element(By.CSS_SELECTOR, "div[data-test='instrument-price-last']").text.replace(',', '.')
+        data = self.driver.find_element(By.CSS_SELECTOR, "div[data-test='instrument-price-last']").text.replace(',',
+                                                                                                                '.')
 
         return data
 
@@ -731,7 +736,10 @@ class ResearchAPIParser:
     Class for parse pages from API CIB Research
     """
 
-    def __init__(self, logger: Logger.logger):
+    def __init__(self, logger: Logger.logger, postgres_conn: asyncpg.pool.Pool) -> None:
+        self.postgres_conn = postgres_conn
+        self._logger = logger
+
         home_page = 'https://research.sberbank-cib.com'
         login = config.research_cred[0]
         password = config.research_cred[1]
@@ -753,219 +761,49 @@ class ResearchAPIParser:
             'дек': 12,
         }
 
-        self._logger = logger
         self.home_page = home_page
         self.auth = (login, password)
         self.cookies = {
             "JSESSIONID": config.CIB_JSESSIONID,
             "LOGIN": config.CIB_LOGIN,
             "PASSWORD": config.CIB_PASSWORD,
+            "ID": config.CIB_ID,
+            "REMEMBER_ME": 'true',
+            # 'COMPANY_ID': 20098,
+            # 'GUEST_LANGUAGE_ID': 'ru_RU',
+            # 'COOKIE_SUPPORT': True,
+            # 'SCREEN_NAME': '334c68786770654a5435627959396f325430493564773d3d'
         }
-        self.parse_pages()
+        self.update_cookies()
 
-    async def get_pages_to_parse_from_db(self) -> list[dict[str, str]]:
+    def update_cookies(self):
+        with requests.get(
+                url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
+                cookies=self.cookies,
+                verify=False,
+        ) as req:
+            if req.status_code == 200 and 'JSESSIONID' in req.cookies:
+                self.cookies['JSESSIONID'] = req.cookies['JSESSIONID']
+
+    async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
         Метод возвращает список источников, из которых необходимо взять новости
         """
 
-        pages = {  # FIXME
-            "Экономика/Россия": {
-                'url': 'https://research.sberbank-cib.com/group/guest/econ',
-                'params': {
-                    'p_p_id': "cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco",
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco_countryIsoCode': 'RUS',
-                },
-                'starts_with': None,
-                'no_starts_with': None,
-            },
-            'FX & Ставки': {
-                'url': 'https://research.sberbank-cib.com/group/guest/money',
-                'params': {
-                    'p_p_id': 'cibfxmmpublicationportlet_WAR_cibpublicationsportlet_INSTANCE_ezos',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                },
-                'starts_with': [
-                    r'^Валютный рынок и процентные ставки',
-                    r'^Прогноз итогов заседания ЦБ',
-                    r'^Ежемесячный обзор по мягким валютам',
-                    r'^Ежемесячный обзор по юаню',
-                    r'^Обзор итогов заседания ЦБ',
-                ],
-                'no_starts_with': None,
-            },
-            'Сырьевые товары': {
-                'url': 'https://research.sberbank-cib.com/group/guest/comm',
-                'params': {
-                    'p_p_id': 'cibflexiblepublicationportlet_WAR_cibpublicationsportlet',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                },
-                'starts_with': [
-                    r'^Сырьевые рынки',
-                ],
-                'no_starts_with': None,
-            },
-            'Долговые бумаги': {
-                'url': 'https://research.sberbank-cib.com/group/guest/fi',
-                'params': {
-                    'p_p_id': 'cibfipublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_cayy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                },
-                'starts_with': [
-                    r'^Долговые рынки сегодня',
-                    r'^Итоги аукционов ОФЗ',
-                    r'^Обзор выплат по',
-                ],
-                'no_starts_with': None,
-            },
-            'Акции/Нефть и газ': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '1',
-                },
-                'starts_with': [
-                    r'^Нефть и газ',
-                ],
-                'no_starts_with': None,
-            },
-            'Акции/Металлургия': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '2',
-                },
-                'starts_with': None,
-                'no_starts_with': [
-                    r'^CIS Market',
-                ],
-            },
-            'Акции/Химическая промышленность': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '3',
-                },
-                'starts_with': None,
-                'no_starts_with': [
-                    r'^CIS Market',
-                ],
-            },
-            'Акции/Финансовый сектор': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '4',
-                },
-                'starts_with': None,
-                'no_starts_with': [
-                    r'^CIS Market',
-                ],
-            },
-            'Акции/Электроэнергетика': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '5',
-                },
-                'starts_with': None,
-                'no_starts_with': [
-                    r'^CIS Market',
-                ],
-            },
-            'Акции/Потребительский сектор': {  # FIXME Индекс Иванова
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '5',
-                },
-                'starts_with': [
-                    r'^Потребительский индекс Иванова',
-                ],
-                'no_starts_with': None,
-            },
-            'Акции/Недвижимость': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '7',
-                },
-                'starts_with': None,
-                'no_starts_with': [
-                    r'^CIS Market',
-                ],
-            },
-            'Акции/Транспорт': {
-                'url': 'https://research.sberbank-cib.com/group/guest/equities',
-                'params': {
-                    'p_p_id': 'cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy',
-                    'p_p_lifecycle': '2',
-                    'p_p_state': 'normal',
-                    'p_p_mode': 'view',
-                    'p_p_resource_id': 'getPublications',
-                    'p_p_cacheability': 'cacheLevelPage',
-                    '_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector': '10',
-                },
-                'starts_with': None,
-                'no_starts_with': [
-                    r'^CIS Market',
-                ],
-            },
-
-        }
-
-        return pages
+        async with self.postgres_conn.acquire() as connection:
+            all_sources = await connection.fetch(
+                'SELECT research_type.id, parser_source.source, parser_source.params, parser_source.alt_names FROM research_type INNER JOIN parser_source ON parser_source.id=research_type.source_id'
+            )
+            pages = [
+                {
+                    'research_type_id': source['id'],
+                    'url': source['source'],
+                    'params': source['params'] or {},
+                    'starts_with': source['alt_names']
+                }
+                for source in all_sources
+            ]
+            return pages
 
     def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
         """
@@ -994,18 +832,33 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
-    async def save_news_to_db(self, news) -> None:
+    async def save_news_to_db(self, news: dict) -> None:
         """
         Метод для сохранения новости в базу данных
+        :param news: Новость
         """
+        async with self.postgres_conn.acquire() as connection:
+            research_type_id = news['research_type_id']
+            filepath = news['filepath']
+            header = news['header']
+            text = news['text']
+            parse_datetime = news['parse_datetime']
+            publication_date = news['publication_date']
+            news_id = 123 # news['news_id']
+
+
+            await connection.execute(
+                (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                 f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{news_id}')")
+            )
         pass
 
     async def parse_news_by_id(
             self,
             news_id: int,
             session,
+            params,
             starts_with: list[str] | None = None,
-            no_starts_with: list[str] | None = None
     ) -> None:
         """
         Метод для выгрузки новости по айди из разделов
@@ -1022,29 +875,36 @@ class ResearchAPIParser:
 
         header = str(news_html.find('h1',
                                     class_="popupTitle").text).strip()  # h1 class="popupTitle
-        if self.is_suitable_news(header, starts_with, no_starts_with):
+        if self.is_suitable_news(header, starts_with):
             date = self.cib_date_to_normal_date(str(news_html.find('span',
                                                                    class_="date").text).strip())  # "< span class ="date" > 21 мар, '24 < / span >"
             news_text = str(news_html.find('div',
                                            class_="summaryContent").text).strip()  # div class ="summaryContent"
-            async with session.get(
-                    url=news_html.find('a', class_="file", href=True)['href'].strip(),
-                    cookies=self.cookies,
-                    verify_ssl=False,
-            ) as req:
-                if req.status == 200:
-                    with open(f'./{news_id}.pdf', "wb") as f:
-                        while True:
-                            chunk = await req.content.readany()
-                            if not chunk:
-                                break
-                            f.write(chunk)
+            if file_element_with_href := news_html.find('a', class_="file", href=True):
+                async with session.get(
+                        url=file_element_with_href['href'].strip(),
+                        cookies=self.cookies,
+                        verify_ssl=False,
+                ) as req:
+                    if req.status == 200:
+                        file_path = f'./sources/articles/{news_id}.pdf'
+                        with open(file_path, "wb") as f:
+                            while True:
+                                chunk = await req.content.readany()
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+            else:
+                file_path = None
 
             await self.save_news_to_db({
-                'date': date,
+                'research_type_id': params['research_type_id'],
+                'filepath': file_path,
                 'header': header,
-                'news_text': news_text,
-                'news_file': news_id,
+                'text': news_text,
+                'parse_datetime': datetime.datetime.utcnow(),
+                'publication_date': date,
+                'news_id': news_id,
             })
 
     async def get_news_ids_from_page(self, params, session):
@@ -1055,10 +915,13 @@ class ResearchAPIParser:
             try:
                 req = await session.post(
                     url=params['url'],
-                    params=params['params'],
+                    params=json.loads(params['params']),
                     cookies=self.cookies,
-                    verify_ssl=False,  # verify_ssl
+                    verify_ssl=False,
                 )
+            except HTTPUnauthorized as e:
+                self.update_cookies()
+                continue
             except Exception as e:
                 continue
             content = await req.text()
@@ -1068,11 +931,10 @@ class ResearchAPIParser:
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
-        for news in BeautifulSoup(content, 'html.parser').find_all("tr"):
-            if element_with_id := news.find("div",
-                                            class_="hidden publication-id").text:
+        for news in BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id"):
+            if element_with_id := news.text:
                 await loop.create_task(
-                    self.parse_news_by_id(element_with_id, session),
+                    self.parse_news_by_id(element_with_id, session, params),
                 )
 
     async def parse_pages(self):
@@ -1083,12 +945,12 @@ class ResearchAPIParser:
 
         loop = asyncio.get_event_loop()
         async with aiohttp.ClientSession() as session:
-            for page in pages_list.values():
-
+            for page in pages_list:
                 try:
                     await loop.create_task(
                         self.get_news_ids_from_page(page, session),
                     )
                 except HTTPNoContent as e:
+                    # FIXME
                     url = page['url']
                     print(f' запрос не прошел {url}')

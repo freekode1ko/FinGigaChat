@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import re
@@ -6,6 +7,7 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
+import asyncpg
 import numpy as np
 import pandas as pd
 import requests as req
@@ -23,7 +25,7 @@ from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
 from log import sentry
 from utils.selenium_utils import get_driver
-
+from module.user_emulator import ResearchAPIParser
 
 class ResearchesGetter:
     def __init__(self, logger):
@@ -485,6 +487,18 @@ def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datet
     return next_collect_dt
 
 
+async def run_parse_cib(loger):
+    postgres_pool = await asyncpg.create_pool(
+        user=config.DB_USER,
+        password=config.DB_PASS,
+        host=config.DB_HOST,
+        port=config.DB_PORT,
+        database=config.DB_NAME,
+        max_inactive_connection_lifetime=60,
+    )
+    await ResearchAPIParser(loger, postgres_pool).parse_pages()
+
+
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
     start_tm = time.time()
 
@@ -530,6 +544,11 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     logger.info('Запись даты и времени последней успешной сборки researches и графиков')
     runner.save_date_of_last_build()
 
+    # Запуск парсинга CIB через условный апиай
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run_parse_cib(loop))
+    loop.close()
+
     work_time = time.time() - start_tm
     end_dt = datetime.datetime.now().strftime(config.INVERT_DATETIME_FORMAT)
     next_collect_dt = get_next_collect_datetime(next_research_getting_time).strftime(config.INVERT_DATETIME_FORMAT)
@@ -563,9 +582,6 @@ def main():
 
     while True:
         schedule.run_pending()
-        # эту команду можно использовать, если хотим, чтобы сборка началась сразу при запуске файла,
-        # после первого прогона сборка вновь будет собираться по заданному времени
-        # schedule.run_all()
         time.sleep(config.STATS_COLLECTOR_SLEEP_TIME)
 
 

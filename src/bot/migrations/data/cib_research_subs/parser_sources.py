@@ -5,17 +5,17 @@ parser_sources = [
         "name": "Экономика",
         "alt_names": [],
         "response_format": "",
-        "source": "",
-        "params": "",
+        "source": "https://research.sberbank-cib.com/group/guest/econ",
+        "params": '{"p_p_id": "cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco", "p_p_lifecycle": "2", "p_p_state": "normal", "p_p_mode": "view", "p_p_resource_id": "getPublications", "p_p_cacheability": "cacheLevelPage", "_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco_countryIsoCode": "RUS"}',
         "source_group_id": 9
     },
     {
         "id": 20,
         "name": "Сырьевые товары",
-        "alt_names": [],
+        "alt_names": ['^Сырьевые рынки'],
         "response_format": "",
-        "source": "",
-        "params": "",
+        "source": "https://research.sberbank-cib.com/group/guest/comm",
+        "params": '{"p_p_id": "cibflexiblepublicationportlet_WAR_cibpublicationsportlet", "p_p_lifecycle": "2", "p_p_state": "normal", "p_p_mode": "view", "p_p_resource_id": "getPublications", "p_p_cacheability": "cacheLevelPage"}',
         "source_group_id": 9
     },
     {

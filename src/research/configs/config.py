@@ -37,6 +37,11 @@ SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
 api_token: str = env.str('BOT_API_TOKEN', default='')
+DB_USER: str = env.str('DB_USER', default='postgres')
+DB_PASS: str = env.str('DB_PASS', default='password')
+DB_HOST: str = env.str('DB_HOST', default='127.0.0.1')
+DB_PORT: str = env.str('DB_PORT', default='5432')
+DB_NAME: str = env.str('DB_NAME', default='postgres')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 
@@ -62,9 +67,10 @@ data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
-CIB_JSESSIONID = 'Vwy5akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'
+CIB_JSESSIONID = '1111akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'
 CIB_LOGIN = '616e6e656b7261736f76407362657262616e6b2e7275'
 CIB_PASSWORD = '336e52672b5048666739497856336549336d6c5069513d3d'
+CIB_ID = '6c4b30425771657531317076614c375744757a5078413d3d'
 
 RESEARCH_GETTING_TIMES_LIST = [
     '08:00',
