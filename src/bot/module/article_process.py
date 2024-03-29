@@ -9,6 +9,7 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
+from constants.quotes import COMMODITY_MARKS
 from configs.config import NEWS_LIMIT, dict_of_emoji, BASE_DATE_FORMAT
 from db.database import engine
 from log.logger_base import Logger
@@ -182,7 +183,7 @@ class ArticleProcess:
         :return: list(dict) data about commodity pricing
         """
 
-        query = text('select sub_name, unit, "Price", "Day", "Weekly", "Monthly", "YoY" from metals '
+        query = text('select sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" from metals '
                      'join relation_commodity_metals rcm on rcm.name_from_source=metals."Metals" '
                      'where commodity_id=:subject_id')
         with self.engine.connect() as conn:
@@ -272,15 +273,9 @@ class ArticleProcess:
         if not commodity_data:
             return '', []
 
-        first_words = {
-            'price': 'Spot',
-            'day': 'Δ день',
-            'week': 'Δ неделя',
-            'month': 'Δ месяц',
-            'year': 'Δ год'
-        }
         com_msg = ''
         img_name_list = []
+        first_words = COMMODITY_MARKS.copy()
 
         for com in commodity_data:
 
