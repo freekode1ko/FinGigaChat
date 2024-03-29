@@ -1,5 +1,6 @@
 import copy
 import datetime as dt
+import re
 from typing import Dict, List, Union
 from urllib.parse import urlparse
 
@@ -11,7 +12,6 @@ from sqlalchemy.exc import ProgrammingError
 from configs.config import NEWS_LIMIT, dict_of_emoji, BASE_DATE_FORMAT
 from db.database import engine
 from log.logger_base import Logger
-
 
 CONDITION_TOP = (
     "{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
@@ -76,7 +76,6 @@ class ArticleProcess:
         condition_top = CONDITION_TOP.format(condition_word='AND', table='article_')
 
         with self.engine.connect() as conn:
-
             query_article_top_data = query_temp.format(
                 subject=subject, subject_id=subject_id, count=count_top, condition=condition_top, offset=offset_top
             )
@@ -89,12 +88,14 @@ class ArticleProcess:
 
             condition_all = f'AND article_.link not in ({top_link})'
             query_article_all_data = query_temp.format(
-                subject=subject, subject_id=subject_id, count=count_all, condition=condition_all, offset=offset_all_updated
+                subject=subject, subject_id=subject_id, count=count_all, condition=condition_all,
+                offset=offset_all_updated
             )
 
             article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
             count_of_not_top_news = count_all - len(article_data_top)
-            article_data = article_data_top + article_data_all[:count_of_not_top_news] if not offset_all else article_data_all
+            article_data = article_data_top + article_data_all[
+                                              :count_of_not_top_news] if not offset_all else article_data_all
 
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
@@ -174,21 +175,20 @@ class ArticleProcess:
 
         return articles
 
-    def _get_commodity_pricing(self, subject_id):
+    def _get_commodity_pricing(self, subject_id: int) -> list[tuple]:
         """
         Get pricing about commodity from db.
         :param subject_id: id of commodity
         :return: list(dict) data about commodity pricing
         """
 
-        pricing_keys = ('subname', 'unit', 'price', 'm_delta', 'y_delta', 'cons')
-
+        query = text('select sub_name, unit, "Price", "Day", "Weekly", "Monthly", "YoY" from metals '
+                     'join relation_commodity_metals rcm on rcm.name_from_source=metals."Metals" '
+                     'where commodity_id=:subject_id')
         with self.engine.connect() as conn:
-            query_com_pricing = f'SELECT * FROM commodity_pricing WHERE commodity_id={subject_id}'
-            com_data = conn.execute(text(query_com_pricing)).fetchall()
-        all_commodity_data = [{key: value for key, value in zip(pricing_keys, com[2:])} for com in com_data]
+            com_data = conn.execute(query.bindparams(subject_id=subject_id)).fetchall()
 
-        return all_commodity_data
+        return com_data
 
     def get_client_fin_indicators(self, client_id, client_name):
         """
@@ -219,10 +219,12 @@ class ArticleProcess:
 
                 if len(selected_cols) < 5:
                     if full_nan_cols < 5:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[: int(remaining_cols) - 1]
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
+                                                 : int(remaining_cols) - 1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
                     else:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[: int(remaining_cols) + 1]
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
+                                                 : int(remaining_cols) + 1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
 
                 result = client_copy[selected_cols]
@@ -238,11 +240,87 @@ class ArticleProcess:
         return client_name, new_df
 
     @staticmethod
-    def _make_place_number(number):
-        return '{0:,}'.format(round(number, 1)).replace(',', ' ') if number else number
+    def _make_place_number(mark: str | int | float | None) -> str | None:
+        """
+        Преобразовывает финансовый показатель в текст с пробелом между тысячными разрядами чисел.
+
+        :param mark: показатель
+        return: преобразованную строку или None
+        """
+        if isinstance(mark, str):
+            number = re.search(r'\d+([.,]\d+)?', mark)
+            mark = float(
+                number.group(0).replace(',', '.')
+            ) if number else None
+
+        if not mark:
+            return
+
+        res = '{0:,}'.format(round(mark, 1)).replace(',', ' ')
+        return res
 
     @staticmethod
-    def make_format_msg(subject_name, articles, com_data):
+    def _make_format_commodity_pricing(commodity_data: list[tuple]) -> tuple[str, list]:
+        """
+        Создает текст с финансовыми показателями по коммодам
+        и создает список с именами картинок, на которых нарисована динамика цены коммода.
+
+        :param commodity_data: список с данными о коммоде
+        return: форматированный текст о показателях коммода и список с названиями картинок
+        """
+
+        if not commodity_data:
+            return '', []
+
+        first_words = {
+            'price': 'Spot',
+            'day': 'Δ день',
+            'week': 'Δ неделя',
+            'month': 'Δ месяц',
+            'year': 'Δ год'
+        }
+        com_msg = ''
+        img_name_list = []
+
+        for com in commodity_data:
+
+            sub_name, unit, price, day, week, month, year = com
+            fin_marks = {key: val for key, val in zip(first_words.keys(), [price, day, week, month, year])}
+
+            if not any(fin_marks):
+                continue
+
+            # get img_name
+            img_name_list.append(sub_name.replace(' ', '_').replace('/', '_'))
+
+            # make place between digit
+            for fin_name, fin_val in fin_marks.items():
+                fin_val_frmt = ArticleProcess._make_place_number(fin_val)
+                if not fin_val_frmt:
+                    continue
+
+                # create rows with commodity pricing
+                if fin_name != 'price':
+                    fin_marks[fin_name] = f'{first_words[fin_name]}: <i>{fin_val_frmt} % </i>'
+                else:
+                    fin_marks[fin_name] = f'{first_words[fin_name]}: <b>{fin_val_frmt} {unit}</b>'
+
+            row_list = list(
+                filter(
+                    None,
+                    [f'<b>{sub_name}</b>', *fin_marks.values()]
+                )
+            )
+            com_format = '\n'.join(row_list)
+            com_msg += f'\n\n{com_format}'
+
+        return com_msg, img_name_list
+
+    @staticmethod
+    def make_format_msg(subject_name: str,
+                        articles: list,
+                        com_data: list[tuple]
+                        ) -> tuple[str, str | bool, list]:
         """
         Make format to message.
         :param subject_name: name of client(commodity)
@@ -250,44 +328,21 @@ class ArticleProcess:
         :param com_data: data about commodity pricing
         :return: formatted text
         """
-        # TODO: 23 (year) автоматически обновлять ?
-        com_price_first_word = {'price': 'Spot', 'm_delta': 'Δ месяц', 'y_delta': 'Δ YTD', 'cons': "Cons-s'23"}
-        format_msg = f'<b>{subject_name.capitalize()}</b>'
-        com_msg = ''
+        frmt_msg = f'<b>{subject_name.capitalize()}</b>'
 
         if articles:
             for index, article_data in enumerate(articles):
-                format_text = FormatText(title=article_data[0], date=article_data[1], link=article_data[2], text_sum=article_data[3])
+                format_text = FormatText(title=article_data[0], date=article_data[1], link=article_data[2],
+                                         text_sum=article_data[3])
                 articles[index] = format_text.make_subject_text()
             all_articles = '\n\n'.join(articles)
-            format_msg += f'\n\n{all_articles}'
+            frmt_msg += f'\n\n{all_articles}'
         else:
-            format_msg = True
+            frmt_msg = True
 
-        img_name_list = []
-        if com_data:
-            for com in com_data:
-                # get img_name
-                img_name_list.append(com['subname'].replace(' ', '_').replace('/', '_'))
-                # make place between digit
-                com['price'] = ArticleProcess._make_place_number(com['price']) if not np.isnan(com['price']) else None
-                com['cons'] = ArticleProcess._make_place_number(com['cons']) if not np.isnan(com['cons']) else None
-                # create rows with commodity pricing
-                subname = f'<b>{com["subname"]}</b>'
-                # subname = f'<b>{com["subname"]}</b>' if len(com_data) > 1 else None
-                price = f'{com_price_first_word["price"]}: <b>{com["price"]} {com["unit"]}</b>' if com['price'] else None
-                m_delta = f'{com_price_first_word["m_delta"]}: <i>{com["m_delta"]} % </i>' if not np.isnan(com['m_delta']) else None
-                y_delta = None  # f'{com_price_first_word["y_delta"]}: <i>{com["y_delta"]} % </i>' if not np.isnan(com['y_delta']) else None
-                cons = None  # f'{com_price_first_word["cons"]}: <b>{com["cons"]} {com["unit"]}</b>' if com['cons'] else None
-                # join rows
-                row_list = list(filter(None, [subname, price, m_delta, y_delta, cons]))
-                com_format = '\n'.join(row_list)
-                com_msg += f'\n\n{com_format}'
+        com_msg, img_name_list = ArticleProcess._make_format_commodity_pricing(com_data)
 
-        if subject_name == 'газ':
-            com_msg = ''
-
-        return com_msg, format_msg, img_name_list
+        return com_msg, frmt_msg, img_name_list
 
     @staticmethod
     def make_format_industry_msg(articles):
@@ -318,7 +373,8 @@ class ArticleProcess:
         format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
         return format_msg
 
-    def process_user_alias(self, subject_id: int, subject: str = '', limit_all: int = NEWS_LIMIT + 1, offset_all: int = 0):
+    def process_user_alias(self, subject_id: int, subject: str = '', limit_all: int = NEWS_LIMIT + 1,
+                           offset_all: int = 0):
         """Process user alias and return reply for it"""
 
         com_data, reply_msg, img_name_list = None, '', []
@@ -421,7 +477,8 @@ class ArticleProcess:
         return: имя и ссылку (name, navi_link )
         """
         with self.engine.connect() as conn:
-            if (result := conn.execute(text(f'SELECT name, navi_link FROM client WHERE id={client_id}')).fetchone()) is None:
+            if (result := conn.execute(
+                    text(f'SELECT name, navi_link FROM client WHERE id={client_id}')).fetchone()) is None:
                 return None, None  # FIXME: return Exception
             else:
                 return result
@@ -525,7 +582,8 @@ class FormatText:
 
     MARKER = copy.deepcopy(dict_of_emoji)['marker']  # '&#128204;'
 
-    def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '', title: str = '', text_sum: str = ''):
+    def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '', title: str = '',
+                 text_sum: str = ''):
         self.__subject = subject  # имя клиента/товара
         self.__title = title
         self.__date = date
