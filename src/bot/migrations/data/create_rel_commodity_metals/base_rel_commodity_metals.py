@@ -110,7 +110,3 @@ relation_commodity_metals = [
         'sub_name': 'Олово',
     }
 ]
-
-# from migrations.data.make_rel_commodity_metals import base_rel_commodity_metals
-# def add_commodities_metals_data(relation_commodity_metals) -> None:
-#     op.bulk_insert(relation_commodity_metals, base_rel_commodity_metals.relation_commodity_metals)

@@ -1,8 +1,8 @@
-"""create relation_commodity_metals
+"""create_relation_commodity
 
-Revision ID: 0c80ddce4b81
-Revises: 2e8cea167b16
-Create Date: 2024-03-28 17:26:31.659520
+Revision ID: da0b40a4facd
+Revises: 4effee5d98ff
+Create Date: 2024-03-29 16:20:11.913828
 
 """
 from typing import Sequence, Union
@@ -10,11 +10,12 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from migrations.data.make_rel_commodity_metals import base_rel_commodity_metals
+from migrations.data.create_rel_commodity_metals import base_rel_commodity_metals
+
 
 # revision identifiers, used by Alembic.
-revision: str = '0c80ddce4b81'
-down_revision: Union[str, None] = '2e8cea167b16'
+revision: str = 'da0b40a4facd'
+down_revision: Union[str, None] = '4effee5d98ff'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
