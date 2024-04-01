@@ -754,7 +754,7 @@ class ResearchAPIParser:
                 )
         pass
 
-    async def parse_news_by_id(
+    async def parse_articles_by_id(
             self,
             article_id: int,
             session: ClientSession,
@@ -768,6 +768,8 @@ class ResearchAPIParser:
         :param params: словарь с параметрами страницы
         :param starts_with: реглярные выражения для проверки того подходит новость или нет
         """
+
+        self._logger.info('CIB: задача для получения отчета начата: %s', str(article_id))
 
         async with session.get(
                 url=config.ARTICLE_URL,
@@ -849,17 +851,21 @@ class ResearchAPIParser:
                 except Exception as e:
                     continue
             if status_code == 200 and len(content) > self.content_len:
-                self._logger.info('CIB: получен успешный ответ со страницы: %s', params['url'])
                 break
         else:
             self._logger.error('CIB: не получилось запросить отчеты со страницы: %s', params['url'])
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
-        for news in BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id"):
+        articles = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
+
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(articles)))
+
+        for news in articles:
             if element_with_id := news.text:
+                self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
                 await loop.create_task(
-                    self.parse_news_by_id(element_with_id, session, params),
+                    self.parse_articles_by_id(element_with_id, session, params),
                 )
 
     async def parse_pages(self) -> None:
