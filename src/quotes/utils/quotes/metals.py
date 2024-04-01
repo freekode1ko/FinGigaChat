@@ -63,11 +63,11 @@ class MetalsGetter(QuotesGetter):
         metals_from_html = []
 
         if page_metals == 'U7*0':
-            if {'Last', 'Change'}.issubset(table_metals[4].columns):
-                y = datetime.date.today().strftime('%y')
-                jap_coal_pattern = f'U7(M|N){y}'
-                jap_coal = table_metals[4][table_metals[4].Symbol.str.contains(jap_coal_pattern)]
-                U7.append(['кокс. уголь', jap_coal.values.tolist()[0][1]])
+            first_col = table_metals[4].columns[0]
+            df_last_price = table_metals[4][table_metals[4][first_col] == 'Last Price']
+            if not df_last_price.empty:
+                price = df_last_price.iloc[0, 1]
+                U7.append(['Coking Coal', price])
                 self.logger.info('Таблица U7 собрана')
 
         elif page_metals == 'commodities':

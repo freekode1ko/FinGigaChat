@@ -108,5 +108,11 @@ relation_commodity_metals = [
         'name_from_source': 'Tin USD/T',
         'unit': '$/т',
         'sub_name': 'Олово',
-    }
+    },
+    {
+        'commodity_id': 22,
+        'name_from_source': 'Coking Coal',
+        'unit': '$/т',
+        'sub_name': 'Кокс. уголь (Au)',
+    },
 ]
