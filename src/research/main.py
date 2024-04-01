@@ -4,28 +4,26 @@ import json
 import re
 import time
 import warnings
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import asyncpg
+import module.crawler as crawler
+import module.data_transformer as dt
 import numpy as np
 import pandas as pd
 import requests as req
 import schedule
-from selenium.webdriver.remote.webdriver import WebDriver
-from sqlalchemy.orm import sessionmaker
-
 from configs import config
-import module.crawler as crawler
-import module.data_transformer as dt
-import module.user_emulator as ue
-from log.logger_base import selector_logger, Logger
 from db.database import engine
+from log import sentry
+from log.logger_base import Logger, selector_logger
+from parsers.cib import ResearchAPIParser
+from selenium.webdriver.remote.webdriver import WebDriver
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
-from log import sentry
+from sqlalchemy.orm import sessionmaker
 from utils.selenium_utils import get_driver
-from module.user_emulator import ResearchAPIParser
+
 
 class ResearchesGetter:
     def __init__(self, logger):

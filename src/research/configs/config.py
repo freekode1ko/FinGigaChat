@@ -2,9 +2,8 @@ import json
 import pathlib
 from typing import Dict, List, Union
 
-from environs import Env
-
 from constants.enums import Environment
+from environs import Env
 
 env = Env()
 env.read_env()
@@ -213,3 +212,5 @@ SELENIUM_RUN_KWARGS = {
 
 # SELENIUM DRIVER PARAMS
 SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'
+
+# CIB API CONSTANTS

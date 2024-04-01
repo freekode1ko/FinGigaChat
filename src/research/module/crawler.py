@@ -1,7 +1,6 @@
 import random
 
 import requests as req
-
 from configs.config import user_agents
 from log.logger_base import Logger
 

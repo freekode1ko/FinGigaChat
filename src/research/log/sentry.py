@@ -1,10 +1,9 @@
 import logging
 
 import sentry_sdk
+from configs import config
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
-
-from configs import config
 
 logger = logging.getLogger(__name__)
 
