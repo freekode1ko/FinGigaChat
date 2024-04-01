@@ -776,7 +776,11 @@ class ResearchAPIParser:
         }
         self.update_cookies()
 
-    def update_cookies(self):
+    def update_cookies(self) -> None:
+        """
+        Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы
+        """
+
         with requests.get(
                 url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
                 cookies=self.cookies,
@@ -787,19 +791,23 @@ class ResearchAPIParser:
 
     async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
-        Метод возвращает список источников, из которых необходимо взять новости
+        Метод возвращает список источников, из которых необходимо взять отчеты
         """
 
         async with self.postgres_conn.acquire() as connection:
             all_sources = await connection.fetch(
-                'SELECT research_type.id, parser_source.source, parser_source.params, parser_source.alt_names FROM research_type INNER JOIN parser_source ON parser_source.id=research_type.source_id'
+                'SELECT research_type.id, parser_source.source, parser_source.params, '
+                'parser_source.alt_names, parser_source.before_link, parser_source.response_format '
+                'FROM research_type INNER JOIN parser_source ON parser_source.id=research_type.source_id'
             )
             pages = [
                 {
                     'research_type_id': source['id'],
                     'url': source['source'],
                     'params': source['params'] or {},
-                    'starts_with': source['alt_names']
+                    'starts_with': source['alt_names'],
+                    'before_link': source['before_link'],
+                    'request_method': source['response_format']
                 }
                 for source in all_sources
             ]
@@ -807,7 +815,7 @@ class ResearchAPIParser:
 
     def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
         """
-        Метод приводящий из "04 мар. 24" в нормальный вид
+        Метод приводящий из "04 мар. 24" в питоновский date
         :param cib_date: строка с датой из новости CIB
         return дата в питоновском формате
         """
@@ -817,13 +825,13 @@ class ResearchAPIParser:
         day = int(cib_date[:2])
         return datetime.date(year=year, month=month, day=day)
 
-    def is_suitable_news(
+    def is_suitable_article(
             self,
-            header,
+            header: str,
             starts_with: list[str] | None = None,
     ) -> bool:
         """
-        Метод для определения подходит ли новость для парсинга на основе регулярок из разделов
+        Метод для определения подходит ли отчет для парсинга на основе регулярок из разделов
         :param header: Заголовок новости
         :param starts_with: Список регулярных выражений для проверки новости
         return Булевое значение говорящее о том что новость подошла или нет
@@ -832,25 +840,27 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
-    async def save_news_to_db(self, news: dict) -> None:
+    async def save_article_to_db(self, news: dict) -> None:
         """
-        Метод для сохранения новости в базу данных
+        Метод для сохранения отчетов в базу данных
         :param news: Новость
         """
         async with self.postgres_conn.acquire() as connection:
-            research_type_id = news['research_type_id']
-            filepath = news['filepath']
-            header = news['header']
-            text = news['text']
-            parse_datetime = news['parse_datetime']
-            publication_date = news['publication_date']
-            news_id = 123 # news['news_id']
-
-
-            await connection.execute(
-                (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                 f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{news_id}')")
+            news_id = news['news_id']
+            count_news = await connection.fetchrow(
+                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{news_id}'"
             )
+            if count_news['count_news']:
+                research_type_id = news['research_type_id']
+                filepath = news['filepath']
+                header = news['header']
+                text = news['text']
+                parse_datetime = news['parse_datetime']
+                publication_date = news['publication_date']
+                await connection.execute(
+                    (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{news_id}')")
+                )
         pass
 
     async def parse_news_by_id(
@@ -875,7 +885,7 @@ class ResearchAPIParser:
 
         header = str(news_html.find('h1',
                                     class_="popupTitle").text).strip()  # h1 class="popupTitle
-        if self.is_suitable_news(header, starts_with):
+        if self.is_suitable_article(header, starts_with):
             date = self.cib_date_to_normal_date(str(news_html.find('span',
                                                                    class_="date").text).strip())  # "< span class ="date" > 21 мар, '24 < / span >"
             news_text = str(news_html.find('div',
@@ -897,7 +907,7 @@ class ResearchAPIParser:
             else:
                 file_path = None
 
-            await self.save_news_to_db({
+            await self.save_article_to_db({
                 'research_type_id': params['research_type_id'],
                 'filepath': file_path,
                 'header': header,
@@ -912,20 +922,31 @@ class ResearchAPIParser:
         Метод для получений айди новостей из разделов
         """
         for i in range(self.REPEAT_TRES):
-            try:
-                req = await session.post(
+            if params['before_link']:
+                # Если нужно запрашивать отчеты по порядку
+                requests.get(url=params['before_link'], cookies=self.cookies, verify=False)
+                req = requests.request(
+                    method=params['request_method'],
                     url=params['url'],
                     params=json.loads(params['params']),
                     cookies=self.cookies,
-                    verify_ssl=False,
+                    verify=False
                 )
-            except HTTPUnauthorized as e:
-                self.update_cookies()
-                continue
-            except Exception as e:
-                continue
-            content = await req.text()
-            if req.status == 200 and len(content) > self.content_len:
+                status_code = req.status_code
+                content = req.content
+            else:
+                try:
+                    req = await session.post(
+                        url=params['url'],
+                        params=json.loads(params['params']),
+                        cookies=self.cookies,
+                        verify_ssl=False,
+                    )
+                    content = await req.text()
+                    status_code = req.status
+                except Exception as e:
+                    continue
+            if status_code == 200 and len(content) > self.content_len:
                 break
         else:
             raise HTTPNoContent
