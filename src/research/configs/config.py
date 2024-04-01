@@ -214,3 +214,21 @@ SELENIUM_RUN_KWARGS = {
 SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'
 
 # CIB API CONSTANTS
+ARTICLE_URL = 'https://research.sberbank-cib.com/group/guest/publication'
+MONTH_NAMES_DICT = {
+    'янв': 1,
+    'фев': 2,
+    'мар': 3,
+    'апр': 4,
+    'мая': 5,
+    'июн': 6,
+    'июл': 7,
+    'авг': 8,
+    'сен': 9,
+    'окт': 10,
+    'ноя': 11,
+    'дек': 12,
+}
+REPEAT_TRIES = 5
+CONTENT_LENGTH__HTML_WITH_ARTICLE = 10000
+HOME_PAGE = 'https://research.sberbank-cib.com'

@@ -647,39 +647,22 @@ class ResearchAPIParser:
         self.postgres_conn = postgres_conn
         self._logger = logger
 
-        home_page = 'https://research.sberbank-cib.com'
         login = config.research_cred[0]
         password = config.research_cred[1]
-
-        self.REPEAT_TRES = 5
-        self.content_len = 10000  # FIXME
-        self.month_dict = {
-            'янв': 1,
-            'фев': 2,
-            'мар': 3,
-            'апр': 4,
-            'мая': 5,
-            'июн': 6,
-            'июл': 7,
-            'авг': 8,
-            'сен': 9,
-            'окт': 10,
-            'ноя': 11,
-            'дек': 12,
-        }
-
-        self.home_page = home_page
         self.auth = (login, password)
+
+        self.REPEAT_TRIES = config.REPEAT_TRIES
+        self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
+        self.month_dict = config.MONTH_NAMES_DICT
+
+        self.home_page = config.HOME_PAGE
+
         self.cookies = {
             "JSESSIONID": config.CIB_JSESSIONID,
             "LOGIN": config.CIB_LOGIN,
             "PASSWORD": config.CIB_PASSWORD,
             "ID": config.CIB_ID,
             "REMEMBER_ME": 'true',
-            # 'COMPANY_ID': 20098,
-            # 'GUEST_LANGUAGE_ID': 'ru_RU',
-            # 'COOKIE_SUPPORT': True,
-            # 'SCREEN_NAME': '334c68786770654a5435627959396f325430493564773d3d'
         }
         self.update_cookies()
 
@@ -699,6 +682,7 @@ class ResearchAPIParser:
     async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
         Метод возвращает список источников, из которых необходимо взять отчеты
+        return: возвращает список источников с доп параметрами
         """
 
         async with self.postgres_conn.acquire() as connection:
@@ -747,70 +731,76 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
-    async def save_article_to_db(self, news: dict) -> None:
+    async def save_article_to_db(self, article: dict) -> None:
         """
         Метод для сохранения отчетов в базу данных
-        :param news: Новость
+        :param article: Отчет
         """
         async with self.postgres_conn.acquire() as connection:
-            news_id = news['news_id']
+            article_id = article['article_id']
             count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{news_id}'"
+                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{article_id}'"
             )
             if count_news['count_news']:
-                research_type_id = news['research_type_id']
-                filepath = news['filepath']
-                header = news['header']
-                text = news['text']
-                parse_datetime = news['parse_datetime']
-                publication_date = news['publication_date']
+                research_type_id = article['research_type_id']
+                filepath = article['filepath']
+                header = article['header']
+                text = article['text']
+                parse_datetime = article['parse_datetime']
+                publication_date = article['publication_date']
                 await connection.execute(
                     (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{news_id}')")
+                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')")
                 )
         pass
 
     async def parse_news_by_id(
             self,
-            news_id: int,
-            session,
-            params,
+            article_id: int,
+            session: ClientSession,
+            params: dict[str, int | str | dict | None],
             starts_with: list[str] | None = None,
     ) -> None:
         """
         Метод для выгрузки новости по айди из разделов
+        :param article_id: айди отчета
+        :param session: сессия aiohttp
+        :param params: словарь с параметрами страницы
+        :param starts_with: реглярные выражения для проверки того подходит новость или нет
         """
-        news_url = 'https://research.sberbank-cib.com/group/guest/publication'
 
         async with session.get(
-                url=news_url,
-                params={"publicationId": news_id},
+                url=config.ARTICLE_URL,
+                params={'publicationId': article_id},
                 cookies=self.cookies,
                 verify_ssl=False,
         ) as req:
             news_html = BeautifulSoup(await req.text(), 'html.parser')
 
-        header = str(news_html.find('h1',
-                                    class_="popupTitle").text).strip()  # h1 class="popupTitle
+        header = str(news_html.find('h1', class_='popupTitle').text).strip()
         if self.is_suitable_article(header, starts_with):
+            self._logger.info('CIB: сохранение отчета: ', article_id)
+
             date = self.cib_date_to_normal_date(str(news_html.find('span',
-                                                                   class_="date").text).strip())  # "< span class ="date" > 21 мар, '24 < / span >"
+                                                                   class_="date").text).strip())
             news_text = str(news_html.find('div',
-                                           class_="summaryContent").text).strip()  # div class ="summaryContent"
-            if file_element_with_href := news_html.find('a', class_="file", href=True):
+                                           class_='summaryContent').text).strip()
+            if file_element_with_href := news_html.find('a', class_='file', href=True):
                 async with session.get(
                         url=file_element_with_href['href'].strip(),
                         cookies=self.cookies,
                         verify_ssl=False,
                 ) as req:
                     if req.status == 200:
-                        file_path = f'./sources/articles/{news_id}.pdf'
+
+                        file_path = f'./sources/articles/{article_id}.pdf'
                         with open(file_path, "wb") as f:
                             while True:
                                 chunk = await req.content.readany()
                                 if not chunk:
                                     break
                                 f.write(chunk)
+                self._logger.info('CIB: успешное сохранение файла: ', article_id)
             else:
                 file_path = None
 
@@ -821,16 +811,21 @@ class ResearchAPIParser:
                 'text': news_text,
                 'parse_datetime': datetime.datetime.utcnow(),
                 'publication_date': date,
-                'news_id': news_id,
+                'article_id': article_id,
             })
 
-    async def get_news_ids_from_page(self, params, session):
+    async def get_article_ids_from_page(
+            self,
+            params: dict[str, int | str | list | dict | None],
+            session: ClientSession) -> None:
         """
         Метод для получений айди новостей из разделов
+        :param params: Параметры для выгрузки отчетов
+        :param session: сессия aiohttp
         """
-        for i in range(self.REPEAT_TRES):
+        for i in range(self.REPEAT_TRIES):
             if params['before_link']:
-                # Если нужно запрашивать отчеты по порядку
+                # Тут нужно запрашивать отчеты по порядку
                 requests.get(url=params['before_link'], cookies=self.cookies, verify=False)
                 req = requests.request(
                     method=params['request_method'],
@@ -854,6 +849,7 @@ class ResearchAPIParser:
                 except Exception as e:
                     continue
             if status_code == 200 and len(content) > self.content_len:
+                self._logger.info(f'CIB: получен успешный ответ со страницы: ', params['url'])
                 break
         else:
             raise HTTPNoContent
@@ -865,9 +861,9 @@ class ResearchAPIParser:
                     self.parse_news_by_id(element_with_id, session, params),
                 )
 
-    async def parse_pages(self):
+    async def parse_pages(self) -> None:
         """
-        Основной метод, который запускает весь парсинг новостей
+        Основной метод, который запускает весь парсинг отчетов
         """
         pages_list = await self.get_pages_to_parse_from_db()
 
@@ -876,10 +872,9 @@ class ResearchAPIParser:
             for page in pages_list:
                 try:
                     await loop.create_task(
-                        self.get_news_ids_from_page(page, session),
+                        self.get_article_ids_from_page(page, session),
                     )
                 except HTTPNoContent as e:
-                    # FIXME
-                    url = page['url']
-                    print(f' запрос не прошел {url}')
-
+                    self._logger.error('Ошибка при соединении c CIB: %s', e)
+                except Exception as e:
+                    self._logger.error('Ошибка при работе с CIB: %s', e)

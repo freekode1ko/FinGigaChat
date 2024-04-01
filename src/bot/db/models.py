@@ -354,6 +354,7 @@ class ParserSource(Base):
     last_update_datetime = Column(DateTime)
     previous_update_datetime = Column(DateTime)
     params = Column(JSON)
+    before_link = Column(Text, nullable=True, default='')
 
     source_group = relationship('SourceGroup', back_populates='parser_source')
 

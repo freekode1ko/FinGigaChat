@@ -377,23 +377,5 @@ research_types = [
         "description": "Раздел Транспорт",
         "research_section_id": 12,
         "source_id": 81
-    },
-    {
-        "name": "Аэрофлот",
-        "description": "Раздел Транспорт",
-        "research_section_id": 12,
-        "source_id": 82
-    },
-    {
-        "name": "Глобалтранс",
-        "description": "Раздел Транспорт",
-        "research_section_id": 12,
-        "source_id": 83
-    },
-    {
-        "name": "Совкомфлот",
-        "description": "Раздел Транспорт",
-        "research_section_id": 12,
-        "source_id": 84
     }
 ]

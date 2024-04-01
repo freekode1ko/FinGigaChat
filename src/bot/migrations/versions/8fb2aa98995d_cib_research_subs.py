@@ -120,6 +120,7 @@ def upgrade() -> None:
     )
 
     op.add_column('parser_source', sa.Column('params', sa.JSON(), nullable=True))
+    op.add_column('parser_source', sa.Column('before_link', sa.Text(), nullable=True, server_default=''))
     # ### end Alembic commands ###
     bind = op.get_bind()
     session = Session(bind=bind)
