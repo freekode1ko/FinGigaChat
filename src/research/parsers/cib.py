@@ -779,7 +779,7 @@ class ResearchAPIParser:
 
         header = str(news_html.find('h1', class_='popupTitle').text).strip()
         if self.is_suitable_article(header, starts_with):
-            self._logger.info('CIB: сохранение отчета: ', article_id)
+            self._logger.info('CIB: сохранение отчета: %s', article_id)
 
             date = self.cib_date_to_normal_date(str(news_html.find('span',
                                                                    class_="date").text).strip())
@@ -800,7 +800,7 @@ class ResearchAPIParser:
                                 if not chunk:
                                     break
                                 f.write(chunk)
-                self._logger.info('CIB: успешное сохранение файла: ', article_id)
+                self._logger.info('CIB: успешное сохранение файла: %s', article_id)
             else:
                 file_path = None
 
@@ -849,10 +849,10 @@ class ResearchAPIParser:
                 except Exception as e:
                     continue
             if status_code == 200 and len(content) > self.content_len:
-                self._logger.info(f'CIB: получен успешный ответ со страницы: ', params['url'])
+                self._logger.info('CIB: получен успешный ответ со страницы: %s', params['url'])
                 break
         else:
-            self._logger.error(f'CIB: не получилось запросить отчеты со страницы: ', params['url'])
+            self._logger.error('CIB: не получилось запросить отчеты со страницы: %s', params['url'])
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()

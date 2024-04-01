@@ -485,7 +485,7 @@ def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datet
     return next_collect_dt
 
 
-async def run_parse_cib(loger):
+async def run_parse_cib(logger):
     postgres_pool = await asyncpg.create_pool(
         user=config.DB_USER,
         password=config.DB_PASS,
@@ -494,7 +494,7 @@ async def run_parse_cib(loger):
         database=config.DB_NAME,
         max_inactive_connection_lifetime=60,
     )
-    await ResearchAPIParser(loger, postgres_pool).parse_pages()
+    await ResearchAPIParser(logger, postgres_pool).parse_pages()
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
@@ -544,7 +544,7 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
 
     # Запуск парсинга CIB через условный апиай
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run_parse_cib(loop))
+    loop.run_until_complete(run_parse_cib(logger))
     loop.close()
 
     work_time = time.time() - start_tm
