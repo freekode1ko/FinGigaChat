@@ -852,6 +852,7 @@ class ResearchAPIParser:
                 self._logger.info(f'CIB: получен успешный ответ со страницы: ', params['url'])
                 break
         else:
+            self._logger.error(f'CIB: не получилось запросить отчеты со страницы: ', params['url'])
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
