@@ -83,6 +83,8 @@ STOCK_WORDS = [
     ' село ',
 ]
 
+TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
+
 
 def get_alternative_names_pattern_commodity(alt_names):
     """Создает регулярные выражения для коммодов"""
@@ -384,6 +386,13 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
     return labels
 
 
+def search_top_sources(link, score):
+    if link and isinstance(link, str):
+        if search(TOP_SOURCES, link):
+            return score + 5
+    return score
+
+
 def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
@@ -396,8 +405,6 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
         binary_model = pickle.load(f)
 
-
-
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
     df['relevance'] = [
@@ -408,6 +415,9 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
     df['client_labels'] = df.apply(lambda x:
                                    5 if max((json.loads(x['client_impact'])).values(), default=0) > 2 else 2, axis=1)
+
+    # search top sources in links
+    df['client_labels'] = df.apply(lambda x: search_top_sources(x['link'], x['client_labels']), axis=1)
 
     # using relevance label condition
     df['client_labels'] = df.apply(
