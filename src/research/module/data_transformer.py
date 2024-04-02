@@ -7,6 +7,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import six
+
 from configs import config
 from module import weekly_pulse_parse as wp_parse
 from utils.base import read_curdatetime

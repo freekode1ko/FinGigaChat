@@ -3,10 +3,11 @@ import time
 
 import pandas as pd
 from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+
 from configs import config
 from log.logger_base import Logger
 from module import data_transformer as Transformer
-from selenium.webdriver.common.by import By
 
 
 class InvestingAPIParser:

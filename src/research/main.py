@@ -7,21 +7,22 @@ import warnings
 from typing import Dict, List, Optional, Tuple
 
 import asyncpg
-import module.crawler as crawler
-import module.data_transformer as dt
 import numpy as np
 import pandas as pd
 import requests as req
 import schedule
+from selenium.webdriver.remote.webdriver import WebDriver
+from sqlalchemy.orm import sessionmaker
+
+import module.crawler as crawler
+import module.data_transformer as dt
 from configs import config
 from db.database import engine
 from log import sentry
 from log.logger_base import Logger, selector_logger
 from parsers.cib import ResearchAPIParser
-from selenium.webdriver.remote.webdriver import WebDriver
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
-from sqlalchemy.orm import sessionmaker
 from utils.selenium_utils import get_driver
 
 

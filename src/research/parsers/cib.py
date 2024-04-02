@@ -7,27 +7,26 @@ import random
 import re
 import time
 
-from aiohttp import ClientSession
-from asyncpg.pool import Pool as asyncpgPool
 import pandas as pd
 import requests
 import selenium
 import selenium.webdriver as wb
+from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
+from asyncpg.pool import Pool as asyncpgPool
 from bs4 import BeautifulSoup
-from sqlalchemy import text
-
-from configs import config
-from db import parser_source
-from log.logger_base import Logger
-from module import weekly_pulse_parse
-from parsers.exceptions import ResearchError
 from pdf2image import convert_from_path
 from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+from configs import config
+from db import parser_source
+from log.logger_base import Logger
+from module import weekly_pulse_parse
+from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
 
