@@ -254,7 +254,7 @@ class ArticleProcess:
                 number.group(0).replace(',', '.')
             ) if number else None
 
-        if not mark:
+        if mark is None:
             return
 
         res = '{0:,}'.format(round(mark, 1)).replace(',', ' ')
@@ -288,7 +288,6 @@ class ArticleProcess:
             # get img_name
             img_name_list.append(sub_name.replace(' ', '_').replace('/', '_'))
 
-            # make place between digit
             for fin_name, fin_val in fin_marks.items():
                 fin_val_frmt = ArticleProcess._make_place_number(fin_val)
                 if not fin_val_frmt:

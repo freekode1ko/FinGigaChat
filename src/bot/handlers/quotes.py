@@ -367,12 +367,9 @@ async def metal_info(message: types.Message) -> None:
 
         number_columns = list(COMMODITY_MARKS.values())
         materials_df = pd.DataFrame(materials, columns=['Сырье', 'Ед. изм.', *number_columns])
-        # materials_df = materials_df.replace(['', 'None', 'null'], [np.nan, np.nan, np.nan])
 
         materials_df[number_columns] = materials_df[number_columns].applymap(format_cell_in_commodity_df)
-        materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(
-            lambda x: x + '%' if x else x.replace('', '-')
-        )
+        materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(lambda x: x + '%' if x else '-')
 
         transformer = dt.Transformer()
         transformer.render_mpl_table(
@@ -398,6 +395,10 @@ async def metal_info(message: types.Message) -> None:
 
 
 def format_cell_in_commodity_df(value) -> str | None:
+    """Преобразование показателя в нужный формат"""
+    if not value:
+        return
+
     try:
         result = str(value).replace(',', '.')
         result = __replacer(result)

@@ -15,7 +15,7 @@ relation_commodity_metals = [
         'commodity_id': 21,
         'name_from_source': 'Coal USD/T',
         'unit': '$/т',
-        'sub_name': 'Энергетический уголь 6 000kcal',
+        'sub_name': 'Эн. уголь',
     },
     {
         'commodity_id': 18,
@@ -113,6 +113,6 @@ relation_commodity_metals = [
         'commodity_id': 22,
         'name_from_source': 'Coking Coal',
         'unit': '$/т',
-        'sub_name': 'Кокс. уголь (Au)',
+        'sub_name': 'Кокс. уголь',
     },
 ]
