@@ -16,7 +16,7 @@ parser_sources = [
             "_cibeconomicspublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_wxco_countryIsoCode": "RUS"
         },
         "source_group_id": 9,
-        "before_link": "https://research.sberbank-cib.com/group/guest/companies?companyId=656"
+        "before_link": "https://research.sberbank-cib.com/group/guest/econ?countryIsoCode=RUS"
     },
     {
         "id": 20,
@@ -233,7 +233,7 @@ parser_sources = [
         "alt_names": [
             "^Нефть и газ"
         ],
-        "response_format": "",
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -245,15 +245,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "1"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=1',
     },
     {
         "id": 32,
         "name": "Химическая промышленность",
-        "alt_names": [
-            "^(?!CIS Market)"
-        ],
-        "response_format": "",
+        "alt_names": ['^(?!CIS Market)'],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -265,15 +263,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "3"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=3',
     },
     {
         "id": 33,
         "name": "Финансовый сектор",
-        "alt_names": [
-            "^(?!CIS Market)"
-        ],
-        "response_format": "",
+        "alt_names": ['^(?!CIS Market)'],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -285,15 +281,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "4"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=4',
     },
     {
         "id": 34,
         "name": "Электроэнергетика",
-        "alt_names": [
-            "^(?!CIS Market)"
-        ],
-        "response_format": "",
+        "alt_names": ['^(?!CIS Market)'],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -305,15 +299,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "5"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=5',
     },
     {
         "id": 35,
         "name": "Потребительский сектор",
-        "alt_names": [
-            "^Потребительский индекс Иванова"
-        ],
-        "response_format": "",
+        "alt_names": [r'^Потребительский индекс Иванова',],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -325,15 +317,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "6"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=6',
     },
     {
         "id": 36,
         "name": "Недвижимость",
-        "alt_names": [
-            "^(?!CIS Market)"
-        ],
-        "response_format": "",
+        "alt_names": ['^(?!CIS Market)'],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -345,15 +335,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "7"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=7',
     },
     {
         "id": 37,
         "name": "Транспорт",
-        "alt_names": [
-            "^(?!CIS Market)"
-        ],
-        "response_format": "",
+        "alt_names":  ['^(?!CIS Market)'],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -365,15 +353,13 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "10"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": 'https://research.sberbank-cib.com/group/guest/equities?sector=10',
     },
     {
         "id": 38,
         "name": "Металлургия",
-        "alt_names": [
-            "^(?!CIS Market)"
-        ],
-        "response_format": "",
+        "alt_names": ['^(?!CIS Market)'],
+        "response_format": "get",
         "source": "https://research.sberbank-cib.com/group/guest/equities",
         "params": {
             "p_p_id": "cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy",
@@ -385,7 +371,7 @@ parser_sources = [
             "_cibequitypublicationsportlet_WAR_cibpublicationsportlet_INSTANCE_gnfy_sector": "2"
         },
         "source_group_id": 9,
-        "before_link": ""
+        "before_link": '',
     },
     {
         "id": 39,

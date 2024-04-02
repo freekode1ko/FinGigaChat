@@ -731,6 +731,13 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
+    async def article_exist_in_db(self, article_id: str) -> bool:
+        async with self.postgres_conn.acquire() as connection:
+            count_news = await connection.fetchrow(
+                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{article_id}'"
+            )
+            return bool(count_news['count_news'])
+
     async def save_article_to_db(self, article: dict) -> None:
         """
         Метод для сохранения отчетов в базу данных
@@ -738,35 +745,28 @@ class ResearchAPIParser:
         """
         async with self.postgres_conn.acquire() as connection:
             article_id = article['article_id']
-            count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{article_id}'"
+            research_type_id = article['research_type_id']
+            filepath = article['filepath']
+            header = article['header']
+            text = article['text']
+            parse_datetime = article['parse_datetime']
+            publication_date = article['publication_date']
+            await connection.execute(
+                (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                 f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')")
             )
-            if count_news['count_news']:
-                research_type_id = article['research_type_id']
-                filepath = article['filepath']
-                header = article['header']
-                text = article['text']
-                parse_datetime = article['parse_datetime']
-                publication_date = article['publication_date']
-                await connection.execute(
-                    (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')")
-                )
-        pass
 
     async def parse_articles_by_id(
             self,
             article_id: int,
             session: ClientSession,
-            params: dict[str, int | str | dict | None],
-            starts_with: list[str] | None = None,
+            params: dict[str, int | str | dict | None]
     ) -> None:
         """
         Метод для выгрузки новости по айди из разделов
         :param article_id: айди отчета
         :param session: сессия aiohttp
         :param params: словарь с параметрами страницы
-        :param starts_with: реглярные выражения для проверки того подходит новость или нет
         """
 
         self._logger.info('CIB: задача для получения отчета начата: %s', str(article_id))
@@ -780,7 +780,7 @@ class ResearchAPIParser:
             news_html = BeautifulSoup(await req.text(), 'html.parser')
 
         header = str(news_html.find('h1', class_='popupTitle').text).strip()
-        if self.is_suitable_article(header, starts_with):
+        if self.is_suitable_article(header, params['starts_with']):
             self._logger.info('CIB: сохранение отчета: %s', article_id)
 
             date = self.cib_date_to_normal_date(str(news_html.find('span',
@@ -854,19 +854,24 @@ class ResearchAPIParser:
                 break
         else:
             self._logger.error('CIB: не получилось запросить отчеты со страницы: %s', params['url'])
+            # self._logger.error('')
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
         articles = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
 
         self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(articles)))
+        print(len(articles))
+        # if len(articles) == 0:
+            # self._logger.info('%s', str(BeautifulSoup(content, 'html.parser')))
 
         for news in articles:
             if element_with_id := news.text:
                 self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
-                await loop.create_task(
-                    self.parse_articles_by_id(element_with_id, session, params),
-                )
+                if not await self.article_exist_in_db(element_with_id):
+                    await loop.create_task(
+                        self.parse_articles_by_id(element_with_id, session, params),
+                    )
 
     async def parse_pages(self) -> None:
         """
