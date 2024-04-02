@@ -7,7 +7,7 @@ COMMODITY_MARKS = {
         }
 
 COMMODITY_TABLE_ELEMENTS = [
-    'Нефть WTI'
+    'Нефть WTI',
     'Нефть Urals',
     'Нефть Brent',
     'Медь',
@@ -22,5 +22,5 @@ COMMODITY_TABLE_ELEMENTS = [
     'Кобальт',
     'ЖРС (Китай)',
     'Эн. уголь',
-    # 'Кокс. уголь'
+    'Кокс. уголь'
 ]
