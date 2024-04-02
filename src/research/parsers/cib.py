@@ -746,11 +746,19 @@ class ResearchAPIParser:
         :param article: Отчет
         """
         async with self.postgres_conn.acquire() as connection:
-            query = text(
-                f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                f'VALUES (:research_type_id, :filepath, :header, :text, :parse_datetime, :publication_date, :article_id)'
+            article_id = article['article_id']
+            research_type_id = article['research_type_id']
+            filepath = article['filepath']
+            header = article['header'].replace("'", "''")
+            text = article['text'].replace("'", "''")
+            parse_datetime = article['parse_datetime']
+            publication_date = article['publication_date']
+            await connection.execute(
+                (
+                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')"
+                )
             )
-            await connection.execute(query.bindparams(**article))
 
     async def parse_articles_by_id(
             self,
