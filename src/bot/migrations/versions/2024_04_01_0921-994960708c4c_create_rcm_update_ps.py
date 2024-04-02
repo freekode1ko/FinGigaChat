@@ -11,12 +11,12 @@ from alembic import op
 import sqlalchemy as sa
 
 from db.models import ParserSource, SourceGroup
-from migrations.data.create_rel_commodity_metals import base_rel_commodity_metals
+from migrations.data.create_rcm_update_ps import base_rel_commodity_metals
 
 
 # revision identifiers, used by Alembic.
 revision: str = '994960708c4c'
-down_revision: Union[str, None] = '2e8cea167b16'
+down_revision: Union[str, None] = '8fb2aa98995d'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
