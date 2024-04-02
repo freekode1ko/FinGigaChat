@@ -780,17 +780,17 @@ class ResearchAPIParser:
                 cookies=self.cookies,
                 verify_ssl=False,
         ) as req:
-            news_html = BeautifulSoup(await req.text(), 'html.parser')
+            report_html = BeautifulSoup(await req.text(), 'html.parser')
 
-        header = str(news_html.find('h1', class_='popupTitle').text).strip()
+        header = str(report_html.find('h1', class_='popupTitle').text).strip()
         if self.is_suitable_article(header, params['starts_with']):
             self._logger.info('CIB: сохранение отчета: %s', article_id)
 
-            date = self.cib_date_to_normal_date(str(news_html.find('span',
+            date = self.cib_date_to_normal_date(str(report_html.find('span',
                                                                    class_="date").text).strip())
-            news_text = str(news_html.find('div',
+            report_text = str(report_html.find('div',
                                            class_='summaryContent').text).strip()
-            if file_element_with_href := news_html.find('a', class_='file', href=True):
+            if file_element_with_href := report_html.find('a', class_='file', href=True):
                 async with session.get(
                         url=file_element_with_href['href'].strip(),
                         cookies=self.cookies,
@@ -813,7 +813,7 @@ class ResearchAPIParser:
                 'research_type_id': params['research_type_id'],
                 'filepath': file_path,
                 'header': header,
-                'text': news_text,
+                'text': report_text,
                 'parse_datetime': datetime.datetime.utcnow(),
                 'publication_date': date,
                 'article_id': article_id,
@@ -860,12 +860,12 @@ class ResearchAPIParser:
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
-        articles = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
+        reports = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(articles)))
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
 
-        for news in articles:
-            if element_with_id := news.text:
+        for report in reports:
+            if element_with_id := report.text:
                 self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
                 if not await self.article_exist_in_db(element_with_id):
                     await loop.create_task(

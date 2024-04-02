@@ -20,7 +20,8 @@ from configs import config
 from db.database import engine
 from log import sentry
 from log.logger_base import Logger, selector_logger
-from parsers.cib import ResearchAPIParser
+from parsers.cib import ResearchAPIParser, ResearchParser
+from parsers.user_emulator import InvestingAPIParser, MetalsWireParser
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
 from utils.selenium_utils import get_driver
@@ -99,7 +100,7 @@ class ResearchesGetter:
 
     def get_metals_wire_table_data(self):
         try:
-            metals_wire_parser_obj = ue.MetalsWireParser(self.__driver, self.logger)
+            metals_wire_parser_obj = MetalsWireParser(self.__driver, self.logger)
             self.metals_wire_table = metals_wire_parser_obj.get_table_data()
         except Exception as e:
             self.__driver = get_driver(self.logger)
@@ -127,7 +128,7 @@ class ResearchesGetter:
                 url = self.commodities[commodity]['links'][1]
 
                 try:
-                    InvAPI_obj = ue.InvestingAPIParser(self.__driver, self.logger)
+                    InvAPI_obj = InvestingAPIParser(self.__driver, self.logger)
                     streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
                 except Exception as e:
                     self.logger.error(
@@ -240,7 +241,7 @@ class ResearchesGetter:
         economy, money, comm = 'econ', 'money', 'comm'
 
         try:
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
         except Exception as e:
             error_msg = 'Не удалось авторизоваться на Sberbank CIB Research: %s'
             self.logger.error(error_msg, e)
@@ -251,7 +252,7 @@ class ResearchesGetter:
             key_eco_table = authed_user.get_key_econ_ind_table()
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error('При сборе ключевых показателей компании произошла ошибка: %s', e)
             key_eco_table = None
 
@@ -259,7 +260,7 @@ class ResearchesGetter:
             eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error('При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Ежедневные" произошла ошибка: %s', e)
             eco_day = None
 
@@ -272,7 +273,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
                 'name_of_review="Экономика России. Ежемесячный обзор" произошла ошибка: %s',
@@ -293,7 +294,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Валютный рынок и процентные ставки", '
