@@ -6,7 +6,6 @@ from datetime import date, datetime, timedelta
 from math import ceil
 from typing import List, Optional, Tuple, Union
 
-import module.data_transformer as dt
 import pandas as pd
 from aiogram import Bot, types
 from configs.config import PAGE_ELEMENTS_COUNT, path_to_source
@@ -321,24 +320,6 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
             con=engine,
         )
     return await get_industries_id(handbook)
-
-
-async def __create_fin_table(message: types.Message, client_name: str, client_fin_table: pd.DataFrame) -> None:
-    """
-    Формирование таблицы под финансовые показатели и запись его изображения
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param client_name: Наименование клиента финансовых показателей
-    :param client_fin_table: Таблица финансовых показателей
-    """
-    transformer = dt.Transformer()
-    client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
-    transformer.render_mpl_table(
-        client_fin_table, 'financial_indicator', header_columns=0, col_width=4, title='', alias=client_name.strip().upper(), fin=True
-    )
-    png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
-    photo = types.FSInputFile(png_path)
-    await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
 
 
 def get_page_data_and_info(
