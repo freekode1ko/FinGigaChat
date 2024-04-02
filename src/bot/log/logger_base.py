@@ -56,10 +56,19 @@ class DBHandler(Handler):
 
         with self.engine.connect() as conn:
             query = text(
-                f'insert into user_log (level, date, file_name, func_name, line_no, message, user_id) values '
-                f"('{level}','{date}', '{file_name}','{func_name}',{line_no}, '{message}', {user_id})"
+                'insert into user_log (level, date, file_name, func_name, line_no, message, user_id) values '
+                '(:level, :date, :file_name, :func_name, :line_no, :message, :user_id)'
             )
-            conn.execute(query)
+            querykwargs = {
+                'level': level,
+                'date': date,
+                'file_name': file_name,
+                'func_name': func_name,
+                'line_no': line_no,
+                'message': message,
+                'user_id': user_id,
+            }
+            conn.execute(query.bindparams(**querykwargs))
             conn.commit()
 
 

@@ -1,8 +1,7 @@
 import datetime
 
-from sqlalchemy import text
-
 from db import database
+from sqlalchemy import text
 
 __table_name__ = 'parser_source'
 
