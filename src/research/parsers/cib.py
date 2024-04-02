@@ -854,16 +854,12 @@ class ResearchAPIParser:
                 break
         else:
             self._logger.error('CIB: не получилось запросить отчеты со страницы: %s', params['url'])
-            # self._logger.error('')
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
         articles = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
 
         self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(articles)))
-        print(len(articles))
-        # if len(articles) == 0:
-            # self._logger.info('%s', str(BeautifulSoup(content, 'html.parser')))
 
         for news in articles:
             if element_with_id := news.text:
