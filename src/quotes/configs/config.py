@@ -58,7 +58,6 @@ charts_links = {
     'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
 }
 
-dict_of_commodities: dict = read_asset_from_json('commodities_dict.json')
 tradingeconomics_commodities: dict = read_asset_from_json('tradingeconomics_commodities.json')
 
 
