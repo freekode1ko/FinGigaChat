@@ -15,6 +15,8 @@ import selenium
 import selenium.webdriver as wb
 from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
 from bs4 import BeautifulSoup
+from sqlalchemy import text
+
 from configs import config
 from db import parser_source
 from log.logger_base import Logger
@@ -744,17 +746,11 @@ class ResearchAPIParser:
         :param article: Отчет
         """
         async with self.postgres_conn.acquire() as connection:
-            article_id = article['article_id']
-            research_type_id = article['research_type_id']
-            filepath = article['filepath']
-            header = article['header']
-            text = article['text']
-            parse_datetime = article['parse_datetime']
-            publication_date = article['publication_date']
-            await connection.execute(
-                (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                 f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')")
+            query = text(
+                f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                f'VALUES (:research_type_id, :filepath, :header, :text, :parse_datetime, :publication_date, :article_id)'
             )
+            await connection.execute(query.bindparams(**article))
 
     async def parse_articles_by_id(
             self,

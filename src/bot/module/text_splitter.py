@@ -31,4 +31,7 @@ class SentenceSplitter:
                 chunk = ''
             chunk += sentence
 
+        if chunk:
+            chunks.append(chunk)
+
         return chunks
