@@ -261,20 +261,18 @@ class ArticleProcess:
         return res
 
     @staticmethod
-    def _make_format_commodity_pricing(commodity_data: list[tuple]) -> tuple[str, list]:
+    def _make_format_commodity_pricing(commodity_data: list[tuple]) -> str:
         """
         Создает текст с финансовыми показателями по коммодам
-        и создает список с именами картинок, на которых нарисована динамика цены коммода.
 
         :param commodity_data: список с данными о коммоде
-        return: форматированный текст о показателях коммода и список с названиями картинок
+        return: форматированный текст о показателях коммода
         """
 
         if not commodity_data:
-            return '', []
+            return ''
 
         com_msg = ''
-        img_name_list = []
         first_words = COMMODITY_MARKS.copy()
 
         for com in commodity_data:
@@ -285,15 +283,11 @@ class ArticleProcess:
             if not any(fin_marks):
                 continue
 
-            # get img_name
-            img_name_list.append(sub_name.replace(' ', '_').replace('/', '_'))
-
             for fin_name, fin_val in fin_marks.items():
                 fin_val_frmt = ArticleProcess._make_place_number(fin_val)
                 if not fin_val_frmt:
                     continue
 
-                # create rows with commodity pricing
                 if fin_name != 'price':
                     fin_marks[fin_name] = f'{first_words[fin_name]}: <i>{fin_val_frmt} % </i>'
                 else:
@@ -308,13 +302,13 @@ class ArticleProcess:
             com_format = '\n'.join(row_list)
             com_msg += f'\n\n{com_format}'
 
-        return com_msg, img_name_list
+        return com_msg
 
     @staticmethod
     def make_format_msg(subject_name: str,
                         articles: list,
                         com_data: list[tuple]
-                        ) -> tuple[str, str | bool, list]:
+                        ) -> tuple[str, str | bool]:
         """
         Make format to message.
         :param subject_name: name of client(commodity)
@@ -334,9 +328,9 @@ class ArticleProcess:
         else:
             frmt_msg = True
 
-        com_msg, img_name_list = ArticleProcess._make_format_commodity_pricing(com_data)
+        com_msg = ArticleProcess._make_format_commodity_pricing(com_data)
 
-        return com_msg, frmt_msg, img_name_list
+        return com_msg, frmt_msg
 
     @staticmethod
     def make_format_industry_msg(articles):
@@ -368,32 +362,28 @@ class ArticleProcess:
         return format_msg
 
     def process_user_alias(self, subject_id: int, subject: str = '', limit_all: int = NEWS_LIMIT + 1,
-                           offset_all: int = 0):
-        """Process user alias and return reply for it"""
+                           offset_all: int = 0) -> tuple[str, str]:
+        """Обработка пользовательского запроса"""
 
-        com_data, reply_msg, img_name_list = None, '', []
+        com_data, reply_msg = None, ''
 
         if subject == 'client':
             subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
         elif subject == 'commodity':
             subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
             com_data = self._get_commodity_pricing(subject_id)
-        elif subject == 'industry':
+        else:  # subject == 'industry':
             articles = self._get_industry_articles(subject_id)
             reply_msg = self.make_format_industry_msg(articles)
-            return '', reply_msg, img_name_list
-        else:
-            # данный случай не вызывается
-            print('user do not want articles')
-            return '', False, img_name_list
+            return '', reply_msg
 
-        com_cotirov, reply_msg, img_name_list = self.make_format_msg(subject_name, articles, com_data)
+        com_pricing, reply_msg = self.make_format_msg(subject_name, articles, com_data)
 
-        if subject_id and not articles and ((subject == 'client') or (not img_name_list and subject == 'commodity')):
+        if subject_id and not articles:
             self._logger.warning(f'По {subject_name} не найдены новости')
             reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
 
-        return com_cotirov, reply_msg, img_name_list
+        return com_pricing, reply_msg
 
     def get_news_by_time(self, hours: int, table: str, columns: str = '*'):
         """
