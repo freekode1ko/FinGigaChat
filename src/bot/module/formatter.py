@@ -21,7 +21,7 @@ class ResearchFormatter:
             f'{research_row["text"]}\n\n'
             f'Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}\n'
             f'Источник: Sber CIB Research, подробнее на портале:'
-            f'{config.RESEARCH_SOURCE_URL}{research_row["news_id"]}"\n'
+            f'{config.RESEARCH_SOURCE_URL}{research_row["news_id"]}\n'
         )
 
         return formatted_text
