@@ -1,3 +1,4 @@
+import math
 import re
 
 
@@ -23,12 +24,18 @@ class SentenceSplitter:
         chunks = []
         chunk = ''
 
-        sentences = cls.split_text_by_sentences(txt)
+        for i in range(math.ceil(len(txt) / chunk_size)):
+            chunks.append(txt[i * chunk_size: (i + 1) * chunk_size])
 
-        for sentence in sentences:
-            if len(chunk + sentence) > chunk_size:
-                chunks.append(chunk)
-                chunk = ''
-            chunk += sentence
+        # sentences = cls.split_text_by_sentences(txt)
+        #
+        # for sentence in sentences:
+        #     if len(chunk + sentence) > chunk_size:
+        #         chunks.append(chunk)
+        #         chunk = ''
+        #     chunk += sentence
+        #
+        # if chunk:
+        #     chunks.append(chunk)
 
         return chunks

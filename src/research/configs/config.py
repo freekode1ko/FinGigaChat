@@ -2,8 +2,9 @@ import json
 import pathlib
 from typing import Dict, List, Union
 
-from constants.enums import Environment
 from environs import Env
+
+from constants.enums import Environment
 
 env = Env()
 env.read_env()

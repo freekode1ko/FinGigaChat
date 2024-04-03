@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import os
 import time
 from typing import List
 
@@ -241,10 +242,10 @@ async def send_new_researches_to_users(bot: Bot) -> None:
             )
 
             for i, msg_txt in enumerate(msg_txt_lst):
-                msg = await bot.send_message(user_id, msg_txt, protect_content=True, parse_mode='HTML')
+                msg = await bot.send_message(user_id, msg_txt, protect_content=True)
                 saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
-            if research['filepath']:
+            if research['filepath'] and os.path.exists(research['filepath']):
                 file = types.FSInputFile(research['filepath'])
                 msg_txt = f'Полная версия отчета: <b>{research["header"]}</b>'
                 msg = await bot.send_document(

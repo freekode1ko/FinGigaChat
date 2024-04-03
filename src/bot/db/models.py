@@ -510,8 +510,8 @@ class UserResearchSubscriptions(Base):
     __tablename__ = 'user_research_subscription'
     __table_args__ = {'comment': 'Справочник подписок пользователей на отчеты CIB Research'}
 
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 
 t_relation_commodity_metals = Table(

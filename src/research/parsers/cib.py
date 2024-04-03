@@ -7,25 +7,26 @@ import random
 import re
 import time
 
-from aiohttp import ClientSession
-from asyncpg.pool import Pool as asyncpgPool
 import pandas as pd
 import requests
 import selenium
 import selenium.webdriver as wb
+from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
+from asyncpg.pool import Pool as asyncpgPool
 from bs4 import BeautifulSoup
-from configs import config
-from db import parser_source
-from log.logger_base import Logger
-from module import weekly_pulse_parse
-from parsers.exceptions import ResearchError
 from pdf2image import convert_from_path
 from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+from configs import config
+from db import parser_source
+from log.logger_base import Logger
+from module import weekly_pulse_parse
+from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
 
@@ -731,6 +732,13 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
+    async def article_exist_in_db(self, article_id: str) -> bool:
+        async with self.postgres_conn.acquire() as connection:
+            count_news = await connection.fetchrow(
+                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{article_id}'"
+            )
+            return bool(count_news['count_news'])
+
     async def save_article_to_db(self, article: dict) -> None:
         """
         Метод для сохранения отчетов в базу данных
@@ -738,35 +746,30 @@ class ResearchAPIParser:
         """
         async with self.postgres_conn.acquire() as connection:
             article_id = article['article_id']
-            count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{article_id}'"
-            )
-            if count_news['count_news']:
-                research_type_id = article['research_type_id']
-                filepath = article['filepath']
-                header = article['header']
-                text = article['text']
-                parse_datetime = article['parse_datetime']
-                publication_date = article['publication_date']
-                await connection.execute(
-                    (f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')")
+            research_type_id = article['research_type_id']
+            filepath = article['filepath']
+            header = article['header'].replace("'", "''")
+            text = article['text'].replace("'", "''")
+            parse_datetime = article['parse_datetime']
+            publication_date = article['publication_date']
+            await connection.execute(
+                (
+                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')"
                 )
-        pass
+            )
 
     async def parse_articles_by_id(
             self,
             article_id: int,
             session: ClientSession,
-            params: dict[str, int | str | dict | None],
-            starts_with: list[str] | None = None,
+            params: dict[str, int | str | dict | None]
     ) -> None:
         """
         Метод для выгрузки новости по айди из разделов
         :param article_id: айди отчета
         :param session: сессия aiohttp
         :param params: словарь с параметрами страницы
-        :param starts_with: реглярные выражения для проверки того подходит новость или нет
         """
 
         self._logger.info('CIB: задача для получения отчета начата: %s', str(article_id))
@@ -777,17 +780,17 @@ class ResearchAPIParser:
                 cookies=self.cookies,
                 verify_ssl=False,
         ) as req:
-            news_html = BeautifulSoup(await req.text(), 'html.parser')
+            report_html = BeautifulSoup(await req.text(), 'html.parser')
 
-        header = str(news_html.find('h1', class_='popupTitle').text).strip()
-        if self.is_suitable_article(header, starts_with):
+        header = str(report_html.find('h1', class_='popupTitle').text).strip()
+        if self.is_suitable_article(header, params['starts_with']):
             self._logger.info('CIB: сохранение отчета: %s', article_id)
 
-            date = self.cib_date_to_normal_date(str(news_html.find('span',
+            date = self.cib_date_to_normal_date(str(report_html.find('span',
                                                                    class_="date").text).strip())
-            news_text = str(news_html.find('div',
+            report_text = str(report_html.find('div',
                                            class_='summaryContent').text).strip()
-            if file_element_with_href := news_html.find('a', class_='file', href=True):
+            if file_element_with_href := report_html.find('a', class_='file', href=True):
                 async with session.get(
                         url=file_element_with_href['href'].strip(),
                         cookies=self.cookies,
@@ -810,7 +813,7 @@ class ResearchAPIParser:
                 'research_type_id': params['research_type_id'],
                 'filepath': file_path,
                 'header': header,
-                'text': news_text,
+                'text': report_text,
                 'parse_datetime': datetime.datetime.utcnow(),
                 'publication_date': date,
                 'article_id': article_id,
@@ -857,16 +860,17 @@ class ResearchAPIParser:
             raise HTTPNoContent
 
         loop = asyncio.get_event_loop()
-        articles = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
+        reports = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(articles)))
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
 
-        for news in articles:
-            if element_with_id := news.text:
+        for report in reports:
+            if element_with_id := report.text:
                 self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
-                await loop.create_task(
-                    self.parse_articles_by_id(element_with_id, session, params),
-                )
+                if not await self.article_exist_in_db(element_with_id):
+                    await loop.create_task(
+                        self.parse_articles_by_id(element_with_id, session, params),
+                    )
 
     async def parse_pages(self) -> None:
         """

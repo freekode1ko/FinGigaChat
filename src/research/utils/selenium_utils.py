@@ -12,11 +12,12 @@ import logging
 import time
 
 import docker
-from configs import config
 from docker import errors as docker_errors
-from log.logger_base import Logger
 from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
+
+from configs import config
+from log.logger_base import Logger
 
 
 def restart_container(logger: Logger.logger = None) -> None:
