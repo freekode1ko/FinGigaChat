@@ -574,6 +574,7 @@ def main():
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(0 + 1) % res_get_times_len]
         run_researches_getter(next_collect_time, logger)
 
+    run_researches_getter('12:00', logger)
     # сборка происходит каждый день в
     for index, collect_time in enumerate(config.RESEARCH_GETTING_TIMES_LIST):
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(index + 1) % res_get_times_len]
