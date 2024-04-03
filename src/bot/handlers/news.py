@@ -60,7 +60,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
 
     ap_obj = ArticleProcess(logger)
 
-    com_price, reply_msg, img_name_list = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
     new_offset = offset_all + config.NEWS_LIMIT * 2
 
     if reply_msg and isinstance(reply_msg, str):

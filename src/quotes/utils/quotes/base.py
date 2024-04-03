@@ -124,12 +124,12 @@ class QuotesGetter(ABC):
         self.save(data)
         self.save_last_time_update(preprocessed_ids)
 
-    @staticmethod
-    def find_number(data_list):
+    def find_number(self, name: str, data_list: list[str]) -> float | None:
         """Находит первое число в списке"""
         for item in data_list[:20]:
             try:
                 return float(item)
             except ValueError:
                 pass
+        self.logger.info('Не было найдено число при парсинге котировки %s' % name)
         return None

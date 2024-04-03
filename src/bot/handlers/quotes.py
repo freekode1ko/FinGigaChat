@@ -1,20 +1,19 @@
-# import logging
+from pathlib import Path
 import re
 import textwrap
-from pathlib import Path
 
-import numpy as np
-import pandas as pd
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.utils.chat_action import ChatActionMiddleware
+import numpy as np
+import pandas as pd
 from sqlalchemy import text
 
-from log.bot_logger import user_logger
 from configs.config import path_to_source
 from constants.constants import sample_of_img_title
 from constants.quotes import COMMODITY_TABLE_ELEMENTS, COMMODITY_MARKS
 from db.database import engine
+from log.bot_logger import user_logger
 from module import data_transformer as dt
 from utils.base import (
     __replacer,
@@ -23,7 +22,6 @@ from utils.base import (
     user_in_whitelist,
 )
 
-# logger = logging.getLogger(__name__)
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
@@ -355,15 +353,11 @@ async def metal_info(message: types.Message) -> None:
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
 
-        materials = []
         query = text('select sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" from metals '
                      'join relation_commodity_metals rcm on rcm.name_from_source=metals."Metals" '
-                     'where sub_name=:sub_name')
+                     'where sub_name IN :sub_names order by sub_name')
         with engine.connect() as conn:
-            for element in COMMODITY_TABLE_ELEMENTS:
-                element_data = conn.execute(query.bindparams(sub_name=element)).fetchall()
-                if element_data:
-                    materials.append(*element_data)
+            materials = conn.execute(query.bindparams(sub_names=COMMODITY_TABLE_ELEMENTS)).fetchall()
 
         number_columns = list(COMMODITY_MARKS.values())
         materials_df = pd.DataFrame(materials, columns=['Сырье', 'Ед. изм.', *number_columns])
@@ -394,22 +388,19 @@ async def metal_info(message: types.Message) -> None:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-def format_cell_in_commodity_df(value) -> str | None:
+def format_cell_in_commodity_df(value: str | float | None) -> str | None:
     """Преобразование показателя в нужный формат"""
     if not value:
         return
 
     try:
-        result = str(value).replace(',', '.')
-        result = __replacer(result)
-        result = result.replace('s', '')
-        result = result.replace('%', '')
-        result = result.replace('–', '-')
-        result = '{0:,}'.format(round(float(result))).replace(',', ' ')
-        result = result.replace('-0.0', '0')
-        result = result.replace('0.0', '0')
+        frmt_value = str(value).replace(',', '.')
+        frmt_value = __replacer(frmt_value)
+        frmt_value = re.sub(r'[%s–]', '', frmt_value)
+        frmt_value = '{0:,}'.format(round(float(frmt_value))).replace(',', ' ')
+        frmt_value = re.sub(r'-?0.0', '0', frmt_value)
     except Exception as e:
         print(e)
-        result = None
+        frmt_value = None
 
-    return result
+    return frmt_value

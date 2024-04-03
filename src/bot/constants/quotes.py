@@ -6,7 +6,7 @@ COMMODITY_MARKS = {
             'year': 'Δ Год'
         }
 
-COMMODITY_TABLE_ELEMENTS = [
+COMMODITY_TABLE_ELEMENTS = (
     'Нефть WTI',
     'Нефть Urals',
     'Нефть Brent',
@@ -23,4 +23,4 @@ COMMODITY_TABLE_ELEMENTS = [
     'ЖРС (Китай)',
     'Эн. уголь',
     'Кокс. уголь'
-]
+)

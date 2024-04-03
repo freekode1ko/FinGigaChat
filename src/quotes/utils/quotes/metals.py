@@ -1,14 +1,13 @@
-import datetime
 import re
 
+from lxml import html
 import pandas as pd
 import requests as req
-from lxml import html
 from sqlalchemy import text
 
 from db import database
-from utils.quotes.base import QuotesGetter
 from configs import config
+from utils.quotes.base import QuotesGetter
 
 
 class MetalsGetter(QuotesGetter):
@@ -97,7 +96,7 @@ class MetalsGetter(QuotesGetter):
                            url: str,
                            xpath_price: str,
                            xpath_date: str
-                           ):
+                           ) -> list[str, float | None, None, str]:
         """
         Получение цены и даты металла с html страницы.
 
@@ -110,7 +109,7 @@ class MetalsGetter(QuotesGetter):
         useless, page_html = self.parser_obj.get_html(url, session)
         tree = html.fromstring(page_html)
         data_price = tree.xpath(xpath_price)
-        price = self.find_number(data_price)
+        price = self.find_number(metal_name, data_price)
         data_date = tree.xpath(xpath_date)
         date = [date for date in data_date if date.strip()][0]
         return [metal_name, price, None, date]
@@ -155,7 +154,5 @@ class MetalsGetter(QuotesGetter):
                               for commodity in com_list
                               if re.search('Lbs', commodity['unit'])]
         indexes = df[df['Metals'].isin(commodities_in_lbs)].index
-        for index in indexes:
-            df.loc[index, 'Price'] *= self.LBS_IN_T
-            df.loc[index, 'Day'] *= self.LBS_IN_T
+        df.loc[indexes, ['Price', 'Day']] = df.loc[indexes, ['Price', 'Day']] * self.LBS_IN_T
         return df

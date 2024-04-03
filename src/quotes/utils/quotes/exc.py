@@ -25,7 +25,7 @@ class ExcGetter(QuotesGetter):
         euro_standard, page_html = self.parser_obj.get_html(table_exchange[3], session)
         tree = html.fromstring(page_html)
         data = tree.xpath('//*[@data-test="instrument-price-last"]//text()')
-        price = self.find_number(data)
+        price = self.find_number(self.NAME, data)
         return [[exchange_page, price]]
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:

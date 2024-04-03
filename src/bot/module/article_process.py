@@ -9,8 +9,8 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
+from configs.config import BASE_DATE_FORMAT, dict_of_emoji, NEWS_LIMIT
 from constants.quotes import COMMODITY_MARKS
-from configs.config import NEWS_LIMIT, dict_of_emoji, BASE_DATE_FORMAT
 from db.database import engine
 from log.logger_base import Logger
 
@@ -278,9 +278,9 @@ class ArticleProcess:
         for com in commodity_data:
 
             sub_name, unit, price, day, week, month, year = com
-            fin_marks = {key: val for key, val in zip(first_words.keys(), [price, day, week, month, year])}
+            fin_marks = {key: val for key, val in zip(first_words, [price, day, week, month, year])}
 
-            if not any(fin_marks):
+            if not any(fin_marks.values()):
                 continue
 
             for fin_name, fin_val in fin_marks.items():
@@ -364,18 +364,19 @@ class ArticleProcess:
     def process_user_alias(self, subject_id: int, subject: str = '', limit_all: int = NEWS_LIMIT + 1,
                            offset_all: int = 0) -> tuple[str, str]:
         """Обработка пользовательского запроса"""
-
-        com_data, reply_msg = None, ''
+        com_data = None
 
         if subject == 'client':
             subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
         elif subject == 'commodity':
             subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
             com_data = self._get_commodity_pricing(subject_id)
-        else:  # subject == 'industry':
+        elif subject == 'industry':
             articles = self._get_industry_articles(subject_id)
             reply_msg = self.make_format_industry_msg(articles)
             return '', reply_msg
+        else:
+            return '', ''
 
         com_pricing, reply_msg = self.make_format_msg(subject_name, articles, com_data)
 
