@@ -793,8 +793,15 @@ class ResearchAPIParser:
 
             date = self.cib_date_to_normal_date(str(report_html.find('span',
                                                                    class_="date").text).strip())
-            report_text = str(report_html.find('div',
-                                           class_='summaryContent').text).strip()
+            soup = report_html.find('div',class_='summaryContent').find_all('p')
+            report_texts = []
+            for i in soup:
+                if i.find('a'):
+                    continue
+                if text := str(i.text).strip():
+                    report_texts.append(text)
+            report_text = '\n'.join(report_texts)
+
             if file_element_with_href := report_html.find('a', class_='file', href=True):
                 async with session.get(
                         url=file_element_with_href['href'].strip(),
