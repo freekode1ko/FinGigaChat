@@ -717,14 +717,14 @@ class ResearchAPIParser:
         day = int(cib_date[:2])
         return datetime.date(year=year, month=month, day=day)
 
-    def is_suitable_article(
+    def is_suitable_report(
             self,
             header: str,
             starts_with: list[str] | None = None,
     ) -> bool:
         """
         Метод для определения подходит ли отчет для парсинга на основе регулярок из разделов
-        :param header: Заголовок новости
+        :param header: Заголовок отчета
         :param starts_with: Список регулярных выражений для проверки новости
         return Булевое значение говорящее о том что новость подошла или нет
         """
@@ -732,59 +732,64 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
-    async def article_exist_in_db(self, article_id: str) -> bool:
+    async def report_exist_in_db(self, report_id: str) -> bool:
+        """
+        Проверка о том загружен ли отчет в БД или нет
+        :param report_id: уникальный айди отчета
+        :return: булевое значение с ифнормацией о том есть отчет или нет
+        """
         async with self.postgres_conn.acquire() as connection:
             count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{article_id}'"
+                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{report_id}'"
             )
             return bool(count_news['count_news'])
 
-    async def save_article_to_db(self, article: dict) -> None:
+    async def save_report_to_db(self, report: dict) -> None:
         """
         Метод для сохранения отчетов в базу данных
-        :param article: Отчет
+        :param report: Отчет
         """
         async with self.postgres_conn.acquire() as connection:
-            article_id = article['article_id']
-            research_type_id = article['research_type_id']
-            filepath = article['filepath']
-            header = article['header'].replace("'", "''")
-            text = article['text'].replace("'", "''")
-            parse_datetime = article['parse_datetime']
-            publication_date = article['publication_date']
+            report_id = report['report_id']
+            research_type_id = report['research_type_id']
+            filepath = report['filepath']
+            header = report['header'].replace("'", "''")
+            text = report['text'].replace("'", "''")
+            parse_datetime = report['parse_datetime']
+            publication_date = report['publication_date']
             await connection.execute(
                 (
                     f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{article_id}')"
+                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{report_id}')"
                 )
             )
 
-    async def parse_articles_by_id(
+    async def parse_reports_by_id(
             self,
-            article_id: int,
+            report_id: int,
             session: ClientSession,
             params: dict[str, int | str | dict | None]
     ) -> None:
         """
         Метод для выгрузки новости по айди из разделов
-        :param article_id: айди отчета
+        :param report_id: айди отчета
         :param session: сессия aiohttp
         :param params: словарь с параметрами страницы
         """
 
-        self._logger.info('CIB: задача для получения отчета начата: %s', str(article_id))
+        self._logger.info('CIB: задача для получения отчета начата: %s', str(report_id))
 
         async with session.get(
                 url=config.ARTICLE_URL,
-                params={'publicationId': article_id},
+                params={'publicationId': report_id},
                 cookies=self.cookies,
                 verify_ssl=False,
         ) as req:
             report_html = BeautifulSoup(await req.text(), 'html.parser')
 
         header = str(report_html.find('h1', class_='popupTitle').text).strip()
-        if self.is_suitable_article(header, params['starts_with']):
-            self._logger.info('CIB: сохранение отчета: %s', article_id)
+        if self.is_suitable_report(header, params['starts_with']):
+            self._logger.info('CIB: сохранение отчета: %s', report_id)
 
             date = self.cib_date_to_normal_date(str(report_html.find('span',
                                                                    class_="date").text).strip())
@@ -798,28 +803,28 @@ class ResearchAPIParser:
                 ) as req:
                     if req.status == 200:
 
-                        file_path = f'./sources/articles/{article_id}.pdf'
+                        file_path = f'./sources/reports/{report_id}.pdf'
                         with open(file_path, "wb") as f:
                             while True:
                                 chunk = await req.content.readany()
                                 if not chunk:
                                     break
                                 f.write(chunk)
-                self._logger.info('CIB: успешное сохранение файла: %s', article_id)
+                self._logger.info('CIB: успешное сохранение файла: %s', report_id)
             else:
                 file_path = None
 
-            await self.save_article_to_db({
+            await self.save_report_to_db({
                 'research_type_id': params['research_type_id'],
                 'filepath': file_path,
                 'header': header,
                 'text': report_text,
                 'parse_datetime': datetime.datetime.utcnow(),
                 'publication_date': date,
-                'article_id': article_id,
+                'report_id': report_id,
             })
 
-    async def get_article_ids_from_page(
+    async def get_report_ids_from_page(
             self,
             params: dict[str, int | str | list | dict | None],
             session: ClientSession) -> None:
@@ -867,14 +872,14 @@ class ResearchAPIParser:
         for report in reports:
             if element_with_id := report.text:
                 self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
-                if not await self.article_exist_in_db(element_with_id):
+                if not await self.report_exist_in_db(element_with_id):
                     await loop.create_task(
-                        self.parse_articles_by_id(element_with_id, session, params),
+                        self.parse_reports_by_id(element_with_id, session, params),
                     )
 
     async def parse_pages(self) -> None:
         """
-        Основной метод, который запускает весь парсинг отчетов
+        Стартовая точка, метод который запускает весь парсинг отчетов
         """
         pages_list = await self.get_pages_to_parse_from_db()
 
@@ -883,7 +888,7 @@ class ResearchAPIParser:
             for page in pages_list:
                 try:
                     await loop.create_task(
-                        self.get_article_ids_from_page(page, session),
+                        self.get_report_ids_from_page(page, session),
                     )
                 except HTTPNoContent as e:
                     self._logger.error('Ошибка при соединении c CIB: %s', e)
