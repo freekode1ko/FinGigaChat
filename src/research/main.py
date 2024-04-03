@@ -334,7 +334,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Валютный рынок и процентные ставки", '
@@ -349,7 +349,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все",'
                 'name_of_review="Ежемесячный обзор по юаню" произошла ошибка: %s',
@@ -365,7 +365,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
                 'name_of_review="Ежемесячный обзор по мягким валютам" произошла ошибка: %s',
@@ -386,7 +386,7 @@ class ResearchesGetter:
             self.logger.info('Блок по сырью собран')
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Сырьевые товары - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Сырьевые рынки", '
