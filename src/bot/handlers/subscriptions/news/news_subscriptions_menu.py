@@ -4,31 +4,29 @@ import math
 from typing import List, Union
 
 import pandas as pd
-from aiogram import F, Router, types
+from aiogram import F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import text
 
 from configs import config
-from log.bot_logger import logger, user_logger
 from constants import subscriptions as callback_prefixes
 from constants.constants import handbook_prefix
 from db.database import engine
+from handlers.subscriptions.handler import router
 from keyboards.subscriptions.news.callbacks import (
     AddAllSubsByDomain,
 )
 from keyboards.subscriptions import constructors as kb_maker
 from keyboards.subscriptions.news import constructors as kb_maker
+from log.bot_logger import logger, user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import user_in_whitelist, bot_send_msg, send_or_edit
 
-emoji = copy.deepcopy(config.dict_of_emoji)
 
-router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+emoji = copy.deepcopy(config.dict_of_emoji)
 
 
 class SubscriptionsStates(StatesGroup):
