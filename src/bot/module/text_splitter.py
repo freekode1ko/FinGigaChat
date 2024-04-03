@@ -17,25 +17,21 @@ class SentenceSplitter:
         return sentences
 
     @classmethod
-    def split_text_by_chunks(cls, txt: str, chunk_size: int) -> list[str]:
+    def split_text_by_chunks(cls, txt: str, chunk_size: int, delimiter: str = '\n\n') -> list[str]:
         if len(txt) < chunk_size:
             return [txt]
 
         chunks = []
         chunk = ''
 
-        for i in range(math.ceil(len(txt) / chunk_size)):
-            chunks.append(txt[i * chunk_size: (i + 1) * chunk_size])
+        for paragraph in txt.split(delimiter):
+            if len(chunk) + len(paragraph) + len(delimiter) < chunk_size:
+                chunk += paragraph + delimiter
+            else:
+                chunks.append(chunk.strip())
+                chunk = paragraph + delimiter
 
-        # sentences = cls.split_text_by_sentences(txt)
-        #
-        # for sentence in sentences:
-        #     if len(chunk + sentence) > chunk_size:
-        #         chunks.append(chunk)
-        #         chunk = ''
-        #     chunk += sentence
-        #
-        # if chunk:
-        #     chunks.append(chunk)
+        if chunk:
+            chunks.append(chunk.strip())
 
         return chunks

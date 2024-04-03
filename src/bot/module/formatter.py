@@ -17,11 +17,11 @@ class ResearchFormatter:
         # Список сообщений (длина списка > 1, если текст сообщения слишком длинный)
         formatted_text = (
             f'{research_section_name}\n'
-            f'{research_row["header"]}:\n\n'
+            f'<b>{research_row["header"]}:</b>\n\n'
             f'{research_row["text"]}\n\n'
-            f'Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}\n'
-            f'Источник: Sber CIB Research, подробнее на портале:'
-            f'{config.RESEARCH_SOURCE_URL}{research_row["news_id"]}\n'
+            f'<i>Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}</i>\n'
+            f'Источник: Sber CIB Research, подробнее на '
+            f'<a href="{config.RESEARCH_SOURCE_URL}{research_row["news_id"]}" >портале</a>\n'
         )
 
         return formatted_text
