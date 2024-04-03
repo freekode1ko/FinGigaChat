@@ -793,12 +793,13 @@ class ResearchAPIParser:
 
             date = self.cib_date_to_normal_date(str(report_html.find('span',
                                                                    class_="date").text).strip())
-            soup = report_html.find('div',class_='summaryContent').find_all('p')
             report_texts = []
-            for i in soup:
-                if i.find('a'):
+            for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
+                # Удаляем все ссылки
+                if paragraph_tag.find('a'):
                     continue
-                if text := str(i.text).strip():
+                # Удаление пустых paragraph
+                if text := str(paragraph_tag.text).strip():
                     report_texts.append(text)
             report_text = '\n'.join(report_texts)
 
