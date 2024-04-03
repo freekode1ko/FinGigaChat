@@ -2,15 +2,15 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from math import ceil
-from typing import List, Union, Tuple, Optional
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 from aiogram import Bot, types
 
 import module.data_transformer as dt
-from configs.config import path_to_source, PAGE_ELEMENTS_COUNT
+from configs.config import PAGE_ELEMENTS_COUNT, path_to_source
 from constants.constants import research_footer
 from db.database import engine
 from log.logger_base import Logger

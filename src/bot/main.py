@@ -8,17 +8,18 @@ import pandas as pd
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from configs import config, newsletter_config
-from log.bot_logger import logger
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
 from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag
+from log.bot_logger import logger
+from log.sentry import init_sentry
 from utils.base import (
     next_weekday_time, wait_until,
 )
-from log.sentry import init_sentry
+from utils import newsletter
 
 storage = MemoryStorage()
 bot = Bot(token=config.api_token)
@@ -31,6 +32,7 @@ async def passive_newsletter(
         newsletter_minute: int,
         newsletter_executor: Callable,
         newsletter_info: str,
+        apscheduler: AsyncIOScheduler,
         **kwargs: Any,
 ) -> None:
     """
@@ -41,6 +43,7 @@ async def passive_newsletter(
     :param newsletter_minute: минута, в которую производим рассылку
     :param newsletter_executor: Исполнитель рассылки
     :param newsletter_info: Подпись, какая рассылка производится
+    :param apscheduler: Планировщик, который производит рассылку отчетов по CIB Research
     :param kwargs: доп параметры для рассылки
     """
     while True:
@@ -48,6 +51,7 @@ async def passive_newsletter(
         next_newsletter_datetime = next_weekday_time(now, newsletter_weekday, newsletter_hour, newsletter_minute)
         newsletter_dt_str = next_newsletter_datetime.strftime(config.INVERT_DATETIME_FORMAT)
         await wait_until(next_newsletter_datetime)
+        apscheduler.pause()
         logger.info(f'Начинается рассылка новостей в {newsletter_dt_str} по {newsletter_info}')
 
         start_tm = time.time()
@@ -63,6 +67,7 @@ async def passive_newsletter(
             f'Рассылка в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
             f'Переходим в ожидание следующей рассылки.'
         )
+        apscheduler.resume()
 
 
 async def set_bot_commands() -> None:
@@ -84,7 +89,7 @@ async def start_bot():
         common.router,
         admin.router,
         quotes.router,
-        subscriptions.router,
+        *subscriptions.routers,
         gigachat.router,
         referencebook.router,
         industry.router,
@@ -104,6 +109,16 @@ async def main():
     print('Инициализация бота')
     loop = asyncio.get_event_loop()
 
+    scheduler = AsyncIOScheduler()
+    # Каждые N минут (CIB_RESEARCH_NEWSLETTER_PARAMS) производится проверка на новые отчеты CIB Research в базе,
+    # если есть новые отчеты -> рассылка
+    scheduler.add_job(
+        newsletter.send_new_researches_to_users,
+        kwargs={'bot': bot},
+        **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
+    )
+    scheduler.start()
+
     for passive_newsletter_params in newsletter_config.NEWSLETTER_CONFIG:
         executor = passive_newsletter_params['executor']
         newsletter_info = passive_newsletter_params['newsletter_info']
@@ -118,6 +133,7 @@ async def main():
                 newsletter_minute=send_time_dt.minute,
                 newsletter_executor=executor,
                 newsletter_info=newsletter_info,
+                apscheduler=scheduler,
                 **param['kwargs'],
             ))
 

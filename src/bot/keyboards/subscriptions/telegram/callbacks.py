@@ -24,7 +24,3 @@ class TGSubAction(CallbackData, prefix=callback_prefixes.TG_SUB_ACTION):
     telegram_id: int
     back: str
     need_add: bool
-
-
-class AddAllSubsByDomain(CallbackData, prefix=callback_prefixes.ADD_ALL_SUBS_BY_DOMAIN):
-    domain: str

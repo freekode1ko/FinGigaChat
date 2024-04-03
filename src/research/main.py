@@ -1,11 +1,12 @@
+import asyncio
 import datetime
 import json
 import re
 import time
 import warnings
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
+import asyncpg
 import numpy as np
 import pandas as pd
 import requests as req
@@ -13,15 +14,16 @@ import schedule
 from selenium.webdriver.remote.webdriver import WebDriver
 from sqlalchemy.orm import sessionmaker
 
-from configs import config
 import module.crawler as crawler
 import module.data_transformer as dt
-import module.user_emulator as ue
-from log.logger_base import selector_logger, Logger
+from configs import config
 from db.database import engine
+from log import sentry
+from log.logger_base import Logger, selector_logger
+from parsers.cib import ResearchAPIParser, ResearchParser
+from parsers.user_emulator import InvestingAPIParser, MetalsWireParser
 from sql_model.commodity import Commodity
 from sql_model.commodity_pricing import CommodityPricing
-from log import sentry
 from utils.selenium_utils import get_driver
 
 
@@ -98,7 +100,7 @@ class ResearchesGetter:
 
     def get_metals_wire_table_data(self):
         try:
-            metals_wire_parser_obj = ue.MetalsWireParser(self.__driver, self.logger)
+            metals_wire_parser_obj = MetalsWireParser(self.__driver, self.logger)
             self.metals_wire_table = metals_wire_parser_obj.get_table_data()
         except Exception as e:
             self.__driver = get_driver(self.logger)
@@ -126,7 +128,7 @@ class ResearchesGetter:
                 url = self.commodities[commodity]['links'][1]
 
                 try:
-                    InvAPI_obj = ue.InvestingAPIParser(self.__driver, self.logger)
+                    InvAPI_obj = InvestingAPIParser(self.__driver, self.logger)
                     streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
                 except Exception as e:
                     self.logger.error(
@@ -239,7 +241,7 @@ class ResearchesGetter:
         economy, money, comm = 'econ', 'money', 'comm'
 
         try:
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
         except Exception as e:
             error_msg = 'Не удалось авторизоваться на Sberbank CIB Research: %s'
             self.logger.error(error_msg, e)
@@ -250,7 +252,7 @@ class ResearchesGetter:
             key_eco_table = authed_user.get_key_econ_ind_table()
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error('При сборе ключевых показателей компании произошла ошибка: %s', e)
             key_eco_table = None
 
@@ -258,7 +260,7 @@ class ResearchesGetter:
             eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error('При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Ежедневные" произошла ошибка: %s', e)
             eco_day = None
 
@@ -271,7 +273,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
                 'name_of_review="Экономика России. Ежемесячный обзор" произошла ошибка: %s',
@@ -292,7 +294,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Валютный рынок и процентные ставки", '
@@ -332,7 +334,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Валютный рынок и процентные ставки", '
@@ -347,7 +349,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все",'
                 'name_of_review="Ежемесячный обзор по юаню" произошла ошибка: %s',
@@ -363,7 +365,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
                 'name_of_review="Ежемесячный обзор по мягким валютам" произошла ошибка: %s',
@@ -384,7 +386,7 @@ class ResearchesGetter:
             self.logger.info('Блок по сырью собран')
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Сырьевые товары - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Сырьевые рынки", '
@@ -485,6 +487,18 @@ def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datet
     return next_collect_dt
 
 
+async def run_parse_cib(logger):
+    postgres_pool = await asyncpg.create_pool(
+        user=config.DB_USER,
+        password=config.DB_PASS,
+        host=config.DB_HOST,
+        port=config.DB_PORT,
+        database=config.DB_NAME,
+        max_inactive_connection_lifetime=60,
+    )
+    await ResearchAPIParser(logger, postgres_pool).parse_pages()
+
+
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
     start_tm = time.time()
 
@@ -530,6 +544,11 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     logger.info('Запись даты и времени последней успешной сборки researches и графиков')
     runner.save_date_of_last_build()
 
+    # Запуск парсинга CIB через условный апиай
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run_parse_cib(logger))
+    loop.close()
+
     work_time = time.time() - start_tm
     end_dt = datetime.datetime.now().strftime(config.INVERT_DATETIME_FORMAT)
     next_collect_dt = get_next_collect_datetime(next_research_getting_time).strftime(config.INVERT_DATETIME_FORMAT)
@@ -555,6 +574,7 @@ def main():
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(0 + 1) % res_get_times_len]
         run_researches_getter(next_collect_time, logger)
 
+    run_researches_getter('12:00', logger)
     # сборка происходит каждый день в
     for index, collect_time in enumerate(config.RESEARCH_GETTING_TIMES_LIST):
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(index + 1) % res_get_times_len]
@@ -563,9 +583,6 @@ def main():
 
     while True:
         schedule.run_pending()
-        # эту команду можно использовать, если хотим, чтобы сборка началась сразу при запуске файла,
-        # после первого прогона сборка вновь будет собираться по заданному времени
-        # schedule.run_all()
         time.sleep(config.STATS_COLLECTOR_SLEEP_TIME)
 
 

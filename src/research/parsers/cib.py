@@ -1,15 +1,19 @@
+import asyncio
 import copy
+import datetime
 import json
 import os
 import random
 import re
 import time
-from typing import List
 
 import pandas as pd
 import requests
 import selenium
 import selenium.webdriver as wb
+from aiohttp import ClientSession
+from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
+from asyncpg.pool import Pool as asyncpgPool
 from bs4 import BeautifulSoup
 from pdf2image import convert_from_path
 from PIL import Image
@@ -19,17 +23,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from configs import config
-from module import data_transformer as Transformer
-from module import weekly_pulse_parse
-from log.logger_base import Logger
 from db import parser_source
+from log.logger_base import Logger
+from module import weekly_pulse_parse
+from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
-
-
-class ResearchError(Exception):
-    """Base class for Research exception"""
-
-    __module__ = Exception.__module__
 
 
 class ResearchParser:
@@ -77,7 +75,7 @@ class ResearchParser:
         return match.group(0)
 
     @staticmethod
-    def process_commodity_text(text_rows: List[str]) -> str:
+    def process_commodity_text(text_rows: list[str]) -> str:
         """
         Get necessary part of the commodity review.
         :param text_rows: rows of text of money review
@@ -127,7 +125,7 @@ class ResearchParser:
         else:
             return li_element
 
-    def find_reviews_by_name(self, name: str, count: int) -> List:
+    def find_reviews_by_name(self, name: str, count: int) -> list:
         """
         Find reviews elements by review's name.
         :param name: name of the review for filter
@@ -212,8 +210,9 @@ class ResearchParser:
         return date, text
 
     def get_reviews(
-        self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1, type_of_review: str = ''
-    ) -> List[tuple]:
+            self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1,
+            type_of_review: str = ''
+    ) -> list[tuple]:
         """
         Get data of reviews from CIB Research
         :param url_part: link for page where locate the reviews
@@ -248,7 +247,7 @@ class ResearchParser:
         self._logger.info(f'Собираем содержимое для всех отчетов. Всего в обработке {reviews_elements_size} отчетов')
         for review_num, review_element in enumerate(reviews_elements):
             title = review_element.text
-            self._logger.info(f'Отчет {title} в обработке. {review_num+1} из {reviews_elements_size}')
+            self._logger.info(f'Отчет {title} в обработке. {review_num + 1} из {reviews_elements_size}')
             date, text = self.get_date_and_text_of_review(review_element, type_of_review)
             reviews_data.append((title, text, date))
 
@@ -344,7 +343,7 @@ class ResearchParser:
         df['id'] = range(1, df.shape[0] + 1)
         df['alias'] = aliases_series
         idx_name = list(df.columns).index('name')
-        cols = df.columns[idx_name - 4 : idx_name + 1]
+        cols = df.columns[idx_name - 4: idx_name + 1]
         df_new = df[cols]
         numeric_cols = []
         for col in df_new.columns:
@@ -443,7 +442,8 @@ class ResearchParser:
         cookies = driver.get_cookies()
         headers = {
             header['name']: header['value']
-            for header in driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming")
+            for header in
+            driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming")
             if header.get('name')
         }
         session = requests.Session()
@@ -473,12 +473,13 @@ class ResearchParser:
         reviews_size = len(reviews_rows)
         self._logger.info(f'Обработка отчетов по индустриям ({reviews_size})')
         for review_num, review in enumerate(reviews_rows):
-            self._logger.info(f'Начало обработки отчет по индустриям № {review_num+1} из {reviews_size}')
+            self._logger.info(f'Начало обработки отчет по индустриям № {review_num + 1} из {reviews_size}')
             link = review.find_element(By.XPATH, './a[1]')
             self.driver.execute_script('arguments[0].scrollIntoView();', link)
             filename = review.get_attribute('title').replace(' ', '_')
             self._logger.info(f'Установлено название обрабатываемого отчета: {filename}')
-            date = review.find_element(By.XPATH, '..').find_element(By.XPATH, '..').find_element(By.CLASS_NAME, 'date').text
+            date = review.find_element(By.XPATH, '..').find_element(By.XPATH, '..').find_element(By.CLASS_NAME,
+                                                                                                 'date').text
             self._logger.info(f'Установлена дата ({date}) для {filename}')
             filename = f'{filename}__{date}.pdf'
             filename = '{}/{}'.format(pdf_dir, filename)
@@ -538,7 +539,8 @@ class ResearchParser:
         self.driver.get(base_url)
         self._logger.info('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
         WebDriverWait(self.driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and EC.invisibility_of_element_located((By.ID, 'all_loading'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and EC.invisibility_of_element_located(
+                (By.ID, 'all_loading'))
         )
         self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
         self._logger.info('Поиск Weekly Pulse отчета')
@@ -559,7 +561,8 @@ class ResearchParser:
                 self._logger.info('Загрузка следующих публикаций')
                 more.click()
                 self._logger.info('Ожидание доступности дополнительных отчетов для открытия')
-                WebDriverWait(self.driver, 30).until(EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
+                WebDriverWait(self.driver, 30).until(
+                    EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
                 weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
                 self.__sleep_some_time()
         except Exception as e:
@@ -635,86 +638,259 @@ class ResearchParser:
         print('Weekly review готов')
 
 
-class InvestingAPIParser:
+
+class ResearchAPIParser:
     """
-    Class for InvestingAPI parsing
+    Class for parse pages from API CIB Research
     """
 
-    def __init__(self, driver, logger: Logger.logger):
-        self.driver = driver
+    def __init__(self, logger: Logger.logger, postgres_conn: asyncpgPool) -> None:
+        self.postgres_conn = postgres_conn
         self._logger = logger
 
-    def get_graph_investing(self, url: str):
-        """
-        Get plot data of investing.com api
-        :param url: investing.com api url
-        :return: price chart df
-        """
-        self._logger.info('Начала загрузки данных для графика с investing.com')
-        self.driver.get(url)
-        data = self.driver.find_element(By.ID, 'json').text
-        json_obj = json.loads(data)
-        self._logger.info('Обработка данных для графика с investing.com')
-        df = pd.DataFrame()
-        for day in json_obj['data']:
-            date = Transformer.Transformer.unix_to_default(day[0])
-            x = day[0]
-            y = day[4]
-            row = {'date': date, 'x': x, 'y': y}
-            df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-        self._logger.info('Данные для графика готовы')
-        return df
+        login = config.research_cred[0]
+        password = config.research_cred[1]
+        self.auth = (login, password)
 
-    def get_streaming_chart_investing(self, url: str):
+        self.REPEAT_TRIES = config.REPEAT_TRIES
+        self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
+        self.month_dict = config.MONTH_NAMES_DICT
+
+        self.home_page = config.HOME_PAGE
+
+        self.cookies = {
+            "JSESSIONID": config.CIB_JSESSIONID,
+            "LOGIN": config.CIB_LOGIN,
+            "PASSWORD": config.CIB_PASSWORD,
+            "ID": config.CIB_ID,
+            "REMEMBER_ME": 'true',
+        }
+        self.update_cookies()
+
+    def update_cookies(self) -> None:
         """
-        Get streaming chart data of investing.com
-        :param url: rows of text of money review
-        :return: price chart df
+        Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы
         """
-        self._logger.info('Обработка данных для стримингового графика с investing.com')
-        url = f'{url}-streaming-chart'
-        self.driver.get(url)
-        data = self.driver.find_element(By.CSS_SELECTOR, "div[data-test='instrument-price-last']").text.replace(',', '.')
 
-        return data
+        with requests.get(
+                url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
+                cookies=self.cookies,
+                verify=False,
+        ) as req:
+            if req.status_code == 200 and 'JSESSIONID' in req.cookies:
+                self.cookies['JSESSIONID'] = req.cookies['JSESSIONID']
 
-
-class MetalsWireParser:
-    """
-    Class for MetalsWire table data parsing
-    """
-
-    def __init__(self, driver, logger: Logger.logger):
-        table_link = config.table_link
-        self._logger = logger
-        self.driver = driver
-        self.table_link = table_link
-
-    def get_table_data(self):
+    async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
-        Get table data of MetalsWire
-        :return: commodities price chart df
+        Метод возвращает список источников, из которых необходимо взять отчеты
+        return: возвращает список источников с доп параметрами
         """
-        self._logger.info('Сборка табличных данных для MetalsWire')
-        self.driver.get(self.table_link)
-        time.sleep(5)
-        page_html = self.driver.page_source
-        soup = BeautifulSoup(page_html, 'html.parser')
-        self._logger.info('Разметка табличных данных для MetalsWire')
-        elems = soup.find(class_='table__container').find_all(class_='sticky-col')
-        df = pd.DataFrame()
-        for elem in elems:
-            if elem.find('div'):
-                row_data = []
-                for col in elem.parent:
-                    row_data.append(col.text)
-                row = {
-                    'Resource': row_data[0].strip(),
-                    'SPOT': row_data[4],
-                    '1M diff.': row_data[7],
-                    'YTD diff.': row_data[8],
-                    "Cons-s'23": row_data[12],
+
+        async with self.postgres_conn.acquire() as connection:
+            all_sources = await connection.fetch(
+                'SELECT research_type.id, parser_source.source, parser_source.params, '
+                'parser_source.alt_names, parser_source.before_link, parser_source.response_format '
+                'FROM research_type INNER JOIN parser_source ON parser_source.id=research_type.source_id'
+            )
+            pages = [
+                {
+                    'research_type_id': source['id'],
+                    'url': source['source'],
+                    'params': source['params'] or {},
+                    'starts_with': source['alt_names'],
+                    'before_link': source['before_link'],
+                    'request_method': source['response_format']
                 }
-                df = pd.concat([df, pd.DataFrame(row, index=[0])], ignore_index=True)
-        self._logger.info('Табличные данные для MetalsWire собраны и обработаны')
-        return df
+                for source in all_sources
+            ]
+            return pages
+
+    def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
+        """
+        Метод приводящий из "04 мар. 24" в питоновский date
+        :param cib_date: строка с датой из новости CIB
+        return дата в питоновском формате
+        """
+
+        year = int('20' + cib_date[-2:])
+        month = self.month_dict[cib_date[3:6]]
+        day = int(cib_date[:2])
+        return datetime.date(year=year, month=month, day=day)
+
+    def is_suitable_report(
+            self,
+            header: str,
+            starts_with: list[str] | None = None,
+    ) -> bool:
+        """
+        Метод для определения подходит ли отчет для парсинга на основе регулярок из разделов
+        :param header: Заголовок отчета
+        :param starts_with: Список регулярных выражений для проверки новости
+        return Булевое значение говорящее о том что новость подошла или нет
+        """
+        if starts_with:
+            return any([re.search(x, header) for x in starts_with])
+        return True
+
+    async def report_exist_in_db(self, report_id: str) -> bool:
+        """
+        Проверка о том загружен ли отчет в БД или нет
+        :param report_id: уникальный айди отчета
+        :return: булевое значение с ифнормацией о том есть отчет или нет
+        """
+        async with self.postgres_conn.acquire() as connection:
+            count_news = await connection.fetchrow(
+                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{report_id}'"
+            )
+            return bool(count_news['count_news'])
+
+    async def save_report_to_db(self, report: dict) -> None:
+        """
+        Метод для сохранения отчетов в базу данных
+        :param report: Отчет
+        """
+        async with self.postgres_conn.acquire() as connection:
+            report_id = report['report_id']
+            research_type_id = report['research_type_id']
+            filepath = report['filepath']
+            header = report['header'].replace("'", "''")
+            text = report['text'].replace("'", "''")
+            parse_datetime = report['parse_datetime']
+            publication_date = report['publication_date']
+            await connection.execute(
+                (
+                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{report_id}')"
+                )
+            )
+
+    async def parse_reports_by_id(
+            self,
+            report_id: int,
+            session: ClientSession,
+            params: dict[str, int | str | dict | None]
+    ) -> None:
+        """
+        Метод для выгрузки новости по айди из разделов
+        :param report_id: айди отчета
+        :param session: сессия aiohttp
+        :param params: словарь с параметрами страницы
+        """
+
+        self._logger.info('CIB: задача для получения отчета начата: %s', str(report_id))
+
+        async with session.get(
+                url=config.ARTICLE_URL,
+                params={'publicationId': report_id},
+                cookies=self.cookies,
+                verify_ssl=False,
+        ) as req:
+            report_html = BeautifulSoup(await req.text(), 'html.parser')
+
+        header = str(report_html.find('h1', class_='popupTitle').text).strip()
+        if self.is_suitable_report(header, params['starts_with']):
+            self._logger.info('CIB: сохранение отчета: %s', report_id)
+
+            date = self.cib_date_to_normal_date(str(report_html.find('span',
+                                                                   class_="date").text).strip())
+            report_text = str(report_html.find('div',
+                                           class_='summaryContent').text).strip()
+            if file_element_with_href := report_html.find('a', class_='file', href=True):
+                async with session.get(
+                        url=file_element_with_href['href'].strip(),
+                        cookies=self.cookies,
+                        verify_ssl=False,
+                ) as req:
+                    if req.status == 200:
+
+                        file_path = f'./sources/reports/{report_id}.pdf'
+                        with open(file_path, "wb") as f:
+                            while True:
+                                chunk = await req.content.readany()
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                self._logger.info('CIB: успешное сохранение файла: %s', report_id)
+            else:
+                file_path = None
+
+            await self.save_report_to_db({
+                'research_type_id': params['research_type_id'],
+                'filepath': file_path,
+                'header': header,
+                'text': report_text,
+                'parse_datetime': datetime.datetime.utcnow(),
+                'publication_date': date,
+                'report_id': report_id,
+            })
+
+    async def get_report_ids_from_page(
+            self,
+            params: dict[str, int | str | list | dict | None],
+            session: ClientSession) -> None:
+        """
+        Метод для получений айди новостей из разделов
+        :param params: Параметры для выгрузки отчетов
+        :param session: сессия aiohttp
+        """
+        for i in range(self.REPEAT_TRIES):
+            if params['before_link']:
+                # Тут нужно запрашивать отчеты по порядку
+                requests.get(url=params['before_link'], cookies=self.cookies, verify=False)
+                req = requests.request(
+                    method=params['request_method'],
+                    url=params['url'],
+                    params=json.loads(params['params']),
+                    cookies=self.cookies,
+                    verify=False
+                )
+                status_code = req.status_code
+                content = req.content
+            else:
+                try:
+                    req = await session.post(
+                        url=params['url'],
+                        params=json.loads(params['params']),
+                        cookies=self.cookies,
+                        verify_ssl=False,
+                    )
+                    content = await req.text()
+                    status_code = req.status
+                except Exception as e:
+                    continue
+            if status_code == 200 and len(content) > self.content_len:
+                break
+        else:
+            self._logger.error('CIB: не получилось запросить отчеты со страницы: %s', params['url'])
+            raise HTTPNoContent
+
+        loop = asyncio.get_event_loop()
+        reports = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
+
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
+
+        for report in reports:
+            if element_with_id := report.text:
+                self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
+                if not await self.report_exist_in_db(element_with_id):
+                    await loop.create_task(
+                        self.parse_reports_by_id(element_with_id, session, params),
+                    )
+
+    async def parse_pages(self) -> None:
+        """
+        Стартовая точка, метод который запускает весь парсинг отчетов
+        """
+        pages_list = await self.get_pages_to_parse_from_db()
+
+        loop = asyncio.get_event_loop()
+        async with ClientSession() as session:
+            for page in pages_list:
+                try:
+                    await loop.create_task(
+                        self.get_report_ids_from_page(page, session),
+                    )
+                except HTTPNoContent as e:
+                    self._logger.error('Ошибка при соединении c CIB: %s', e)
+                except Exception as e:
+                    self._logger.error('Ошибка при работе с CIB: %s', e)
