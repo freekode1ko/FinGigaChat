@@ -9,7 +9,11 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
-from configs.config import BASE_DATE_FORMAT, dict_of_emoji, NEWS_LIMIT
+from configs.config import (
+    BASE_DATE_FORMAT,
+    dict_of_emoji,
+    NEWS_LIMIT,
+)
 from constants.quotes import COMMODITY_MARKS
 from db.database import engine
 from log.logger_base import Logger
@@ -183,7 +187,7 @@ class ArticleProcess:
         :return: list(dict) data about commodity pricing
         """
 
-        query = text('select sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" from metals '
+        query = text('select source, sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" from metals '
                      'join relation_commodity_metals rcm on rcm.name_from_source=metals."Metals" '
                      'where commodity_id=:subject_id')
         with self.engine.connect() as conn:
@@ -277,7 +281,7 @@ class ArticleProcess:
 
         for com in commodity_data:
 
-            sub_name, unit, price, day, week, month, year = com
+            source, sub_name, unit, price, day, week, month, year = com
             fin_marks = {key: val for key, val in zip(first_words, [price, day, week, month, year])}
 
             if not any(fin_marks.values()):
@@ -296,7 +300,7 @@ class ArticleProcess:
             row_list = list(
                 filter(
                     None,
-                    [f'<b>{sub_name}</b>', *fin_marks.values()]
+                    [f'<a href="{source}"><b>{sub_name}</b></a>', *fin_marks.values()]
                 )
             )
             com_format = '\n'.join(row_list)

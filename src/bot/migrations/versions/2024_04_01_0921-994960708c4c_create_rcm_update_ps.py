@@ -71,6 +71,7 @@ def upgrade() -> None:
         'relation_commodity_metals',
         sa.Column('commodity_id', sa.Integer(), nullable=False),
         sa.Column('name_from_source', sa.String(length=100), nullable=False),
+        sa.Column('source', sa.Text(), nullable=False),
         sa.Column('unit', sa.String(length=10), nullable=True),
         sa.Column('sub_name', sa.String(length=100), nullable=False),
         sa.ForeignKeyConstraint(['commodity_id'], ['commodity.id'],

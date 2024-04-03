@@ -240,7 +240,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             if reply_msg:
 
                 if com_price:
-                    await message.answer(com_price, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
+                    await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
 
                 if isinstance(reply_msg, str):
                     articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
