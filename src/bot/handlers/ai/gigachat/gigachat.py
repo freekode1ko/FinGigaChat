@@ -1,17 +1,15 @@
-
-from aiogram import Router, types
+from aiogram import types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.utils.chat_action import ChatActionMiddleware
 
 import module.gigachat as gig
 from log.bot_logger import logger, user_logger
 from constants.constants import giga_ans_footer
+from handlers.ai.handler import router
 from utils.base import user_in_whitelist
 
-router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+
 chat = gig.GigaChat(logger)
 
 

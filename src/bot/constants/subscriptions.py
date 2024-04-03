@@ -11,7 +11,7 @@ TG_SUB_ACTION = 'tg_sub_action'
 TG_END_WRITE_SUBS = 'tg_end_write_subs'
 # ----------------------------------------------------
 # ------------NEWS SUBSCRIPTIONS ---------------------
-SUBS_MENU = 'subscriptions_menu'
+SUBS_MENU = 'news_subscriptions_menu'
 SUBS_DELETE_ALL_DONE = 'subs_delete_all_done'
 ADD_ALL_SUBS_BY_DOMAIN = 'add_all_subs_by_domain'
 # ----------------------------------------------------
