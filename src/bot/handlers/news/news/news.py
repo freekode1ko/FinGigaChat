@@ -10,7 +10,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
 from configs import config
-from log.bot_logger import logger, user_logger
 from constants.aliases import (
     bonds_aliases,
     eco_aliases,
@@ -19,15 +18,16 @@ from constants.aliases import (
     view_aliases, help_aliases, gigachat_aliases, rag_aliases
 )
 from constants.constants import PATH_TO_COMMODITY_GRAPH
-from handlers import common, quotes, gigachat, rag
+from db import parser_source
+from handlers import common, quotes
+from handlers.ai.gigachat import gigachat
+from handlers.ai.rag import rag
+from handlers.news.handler import router
+from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
-from db import parser_source
-
-router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):

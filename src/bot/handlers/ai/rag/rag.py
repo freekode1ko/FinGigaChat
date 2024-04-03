@@ -1,22 +1,19 @@
 import copy
 
-from aiogram import Router, types, F
+from aiogram import types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardMarkup
 
-from log.bot_logger import user_logger
-from utils.base import user_in_whitelist
-from utils.rag_router import RAGRouter
 from configs.config import dict_of_emoji
 from constants.constants import LIKE_FEEDBACK, DISLIKE_FEEDBACK
 from db.rag_user_feedback import add_rag_activity, update_user_reaction
+from handlers.ai.handler import router
+from log.bot_logger import user_logger
+from utils.base import user_in_whitelist
+from utils.rag_router import RAGRouter
 
-
-router = Router()
-router.message.middleware(ChatActionMiddleware())
 
 emoji = copy.deepcopy(dict_of_emoji)
 

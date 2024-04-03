@@ -13,7 +13,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
-from handlers import admin, call_reports, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag
+from handlers import admin, ai, call_reports, common, industry, news, quotes, referencebook, subscriptions
 from log.bot_logger import logger
 from log.sentry import init_sentry
 from utils.base import (
@@ -91,10 +91,9 @@ async def start_bot():
         quotes.router,
         subscriptions.router,
         call_reports.router,
-        gigachat.router,
+        ai.router,
         referencebook.router,
         industry.router,
-        rag.router,
         news.router,
     )
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен

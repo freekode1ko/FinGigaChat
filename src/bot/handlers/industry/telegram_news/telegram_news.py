@@ -1,24 +1,19 @@
-# import logging
 from datetime import timedelta
 from typing import Union
 
-from aiogram import Router, types, F
+from aiogram import F, types
 from aiogram.filters import Command
-from aiogram.utils.chat_action import ChatActionMiddleware
 
 from log.bot_logger import user_logger
 from constants.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
     BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
+from handlers.industry.handler import router
 from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
 from keyboards.industry.constructors import get_industry_kb, get_select_period_kb
 from utils.base import user_in_whitelist, bot_send_msg
 from utils.industry import get_msg_text_for_tg_newsletter
 
 from db.industry import get_industry_name, get_industries_with_tg_channels, get_industry_tg_news
-
-# logger = logging.getLogger(__name__)
-router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
 
 async def list_industries(message: Union[types.CallbackQuery, types.Message]) -> None:
