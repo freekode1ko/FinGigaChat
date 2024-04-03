@@ -1,20 +1,16 @@
 from typing import Union
 
-from aiogram import F, Router, types
+from aiogram import F, types
 from aiogram.filters import Command
-from aiogram.utils.chat_action import ChatActionMiddleware
 
-from log.bot_logger import user_logger
 from constants import subscriptions as callback_prefixes
 from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
+from db import subscriptions as subscriptions_db_api
+from handlers.subscriptions.handler import router
 from keyboards.subscriptions.research import callbacks
 from keyboards.subscriptions.research import constructors as kb_maker
+from log.bot_logger import user_logger
 from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
-from db import subscriptions as subscriptions_db_api
-
-
-router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
 
 
 @router.callback_query(callbacks.GetUserCIBResearchSubs.filter())

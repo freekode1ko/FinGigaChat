@@ -1,21 +1,11 @@
 from typing import Union
 
-from aiogram import F, Router, types
+from aiogram import F, types
 from aiogram.filters import Command
-from aiogram.utils.chat_action import ChatActionMiddleware
 
 from log.bot_logger import user_logger
 from constants import subscriptions as callback_prefixes
 from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
-from keyboards.subscriptions.telegram.callbacks import (
-    UserTGSubs,
-    TGChannelMoreInfo,
-    IndustryTGChannels,
-    TGSubAction,
-)
-from keyboards.subscriptions.telegram import constructors as kb_maker
-from keyboards.subscriptions.telegram.constructors import get_tg_info_kb
-from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 from db.industry import get_industries_with_tg_channels, get_industry_name
 from db.subscriptions import (
     get_user_tg_subscriptions_df,
@@ -25,10 +15,16 @@ from db.subscriptions import (
     get_telegram_channel_info,
     add_user_telegram_subscription,
 )
-
-
-router = Router()
-router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+from keyboards.subscriptions.telegram.callbacks import (
+    UserTGSubs,
+    TGChannelMoreInfo,
+    IndustryTGChannels,
+    TGSubAction,
+)
+from keyboards.subscriptions.telegram import constructors as kb_maker
+from keyboards.subscriptions.telegram.constructors import get_tg_info_kb
+from handlers.subscriptions.handler import router
+from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 
 
 @router.callback_query(UserTGSubs.filter())

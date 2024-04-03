@@ -27,8 +27,6 @@ from db.whitelist import update_user_email, is_new_user_email
 
 # States
 class Form(StatesGroup):
-    permission_to_delete = State()
-    send_to_users = State()
     new_user_reg = State()
     continue_user_reg = State()
 
