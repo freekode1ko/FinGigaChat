@@ -4,7 +4,7 @@ import re
 
 class SentenceSplitter:
 
-    sentence_end_characters = r'(\.\.\.)|[\.!?]'
+    sentence_end_characters = r'(\.\.\.)|(\. )|[!?]'
 
     @classmethod
     def split_text_by_sentences(cls, txt: str) -> list[str]:
@@ -25,13 +25,23 @@ class SentenceSplitter:
         chunk = ''
 
         for paragraph in txt.split(delimiter):
-            if len(chunk) + len(paragraph) + len(delimiter) < chunk_size:
-                chunk += paragraph + delimiter
-            else:
-                chunks.append(chunk.strip())
-                chunk = paragraph + delimiter
+            if len(paragraph) > chunk_size:
+                sentences = cls.split_text_by_sentences(paragraph)
+
+                for sentence in sentences:
+                    if len(chunk) + len(sentence) > chunk_size:
+                        chunks.append(chunk)
+                        chunk = ''
+                    chunk += sentence
+
+                chunk += delimiter
+
+            if len(chunk) + len(paragraph) > chunk_size:
+                chunks.append(chunk)
+                chunk = ''
+            chunk += paragraph + delimiter
 
         if chunk:
-            chunks.append(chunk.strip())
+            chunks.append(chunk)
 
         return chunks
