@@ -1,6 +1,7 @@
 import copy
 import datetime
 import os
+from typing import List
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -334,6 +335,18 @@ class Transformer:
                 commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
                 commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
         return commodities
+
+    @staticmethod
+    def filter_list(lst: List[str]) -> List[str]:
+        """
+        Форматирование колонок для DataFrame. Убирает первые 'Unnamed: N' колонки оставляя с наибольшей N
+
+        :param lst: List[] или numpy.ndarray с наименованиями колонок
+        """
+        for i in range(len(lst)):
+            if lst[i].isdigit():
+                return lst[i - 1:]
+        return lst
 
 
 class Newsletter:
