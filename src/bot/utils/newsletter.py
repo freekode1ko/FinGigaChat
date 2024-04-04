@@ -13,7 +13,7 @@ import module.data_transformer as dt
 from constants import constants
 from log.bot_logger import logger, user_logger
 from db.database import engine
-from module import formatter, text_splitter
+from module import formatter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
@@ -220,45 +220,61 @@ async def send_new_researches_to_users(bot: Bot) -> None:
 
     # Получаем список пользователей, которым требуется разослать отчеты
     user_df = subscriptions.get_users_by_research_types_df(research_type_ids)
-    #
+    # Словарь key=research_type.id, value=research_section
     research_section_dict = subscriptions.get_research_sections_by_research_types_df(research_type_ids)
 
     # Сохранение отправленных сообщений
     saved_messages = []
     newsletter_type = 'cib_research_newsletter'
 
+    research_df['research_section_name'] = research_df['research_type_id'].apply(lambda x: research_section_dict[x]['name'])
+
     for _, user_row in user_df.iterrows():
         user_id = user_row["user_id"]
         user_name = user_row["username"]
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
-        for _, research in research_df[research_df['research_type_id'].isin(user_row['research_types'])].iterrows():
-            user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
-            research_section_name = research_section_dict[research['research_type_id']]['name']
+        # filter by user`s subs and group research_df by research_section_name
+        research_df_group_by_section = (
+            research_df[
+                research_df['research_type_id'].isin(user_row['research_types'])
+            ]
+            .groupby('research_section_name')
+        )
+        for research_section_name, section_researches_df in research_df_group_by_section:
             # отправка отчета пользователю
-            formatted_msg_txt = formatter.ResearchFormatter.format(research_section_name, research)
-            msg_txt_lst = text_splitter.SentenceSplitter.split_text_by_chunks(
-                formatted_msg_txt, chunk_size=constants.TELEGRAM_MESSAGE_MAX_LEN
-            )
+            start_msg = f'Ваша новостная рассылка по подпискам на отчеты по разделу <b>{research_section_name}</b>:'
+            msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
+            saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
-            for i, msg_txt in enumerate(msg_txt_lst):
-                msg = await bot.send_message(user_id, msg_txt, protect_content=True)
-                saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+            for _, research in section_researches_df.iterrows():
+                user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
+                formatted_msg_txt = formatter.ResearchFormatter.format(research)
+                is_shorter_than_max_len = len(formatted_msg_txt) <= constants.TELEGRAM_MESSAGE_MAX_LEN
 
-            if research['filepath'] and os.path.exists(research['filepath']):
-                file = types.FSInputFile(research['filepath'])
-                msg_txt = f'Полная версия отчета: <b>{research["header"]}</b>'
-                msg = await bot.send_document(
-                    document=file,
-                    chat_id=user_id,
-                    caption=msg_txt,
-                    parse_mode='HTML',
-                    protect_content=True,
-                )
-                saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+                # Если отчет не влезает с одно сбщ, то не отправляем текст отчета, а только файл
+                if is_shorter_than_max_len:
+                    msg = await bot.send_message(user_id, formatted_msg_txt, protect_content=True, parse_mode='HTML')
+                    saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
-            user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
-            await asyncio.sleep(1.1)
+                # Если есть файл - отправляем
+                if research['filepath'] and os.path.exists(research['filepath']):
+                    file = types.FSInputFile(research['filepath'])
+                    msg_txt = (
+                        f'Полная версия отчета: <b>{research["header"]}</b>' if is_shorter_than_max_len
+                        else f'<b>{research["header"]}</b>'
+                    )
+                    msg = await bot.send_document(
+                        document=file,
+                        chat_id=user_id,
+                        caption=msg_txt,
+                        parse_mode='HTML',
+                        protect_content=True,
+                    )
+                    saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+
+                user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
+                await asyncio.sleep(1.1)
 
     message.add_all(saved_messages)
 

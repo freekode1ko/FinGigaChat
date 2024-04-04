@@ -4,7 +4,7 @@ import re
 
 class SentenceSplitter:
 
-    sentence_end_characters = r'(\.\.\.)|[\.!?]'
+    sentence_end_characters = r'(\.\.\.)|(\. )|[!?]'
 
     @classmethod
     def split_text_by_sentences(cls, txt: str) -> list[str]:
@@ -17,25 +17,31 @@ class SentenceSplitter:
         return sentences
 
     @classmethod
-    def split_text_by_chunks(cls, txt: str, chunk_size: int) -> list[str]:
+    def split_text_by_chunks(cls, txt: str, chunk_size: int, delimiter: str = '\n\n') -> list[str]:
         if len(txt) < chunk_size:
             return [txt]
 
         chunks = []
         chunk = ''
 
-        for i in range(math.ceil(len(txt) / chunk_size)):
-            chunks.append(txt[i * chunk_size: (i + 1) * chunk_size])
+        for paragraph in txt.split(delimiter):
+            if len(paragraph) > chunk_size:
+                sentences = cls.split_text_by_sentences(paragraph)
 
-        # sentences = cls.split_text_by_sentences(txt)
-        #
-        # for sentence in sentences:
-        #     if len(chunk + sentence) > chunk_size:
-        #         chunks.append(chunk)
-        #         chunk = ''
-        #     chunk += sentence
-        #
-        # if chunk:
-        #     chunks.append(chunk)
+                for sentence in sentences:
+                    if len(chunk) + len(sentence) > chunk_size:
+                        chunks.append(chunk)
+                        chunk = ''
+                    chunk += sentence
+
+                chunk += delimiter
+
+            if len(chunk) + len(paragraph) > chunk_size:
+                chunks.append(chunk)
+                chunk = ''
+            chunk += paragraph + delimiter
+
+        if chunk:
+            chunks.append(chunk)
 
         return chunks
