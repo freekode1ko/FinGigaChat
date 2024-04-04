@@ -497,6 +497,7 @@ async def run_parse_cib(logger):
         max_inactive_connection_lifetime=60,
     )
     await ResearchAPIParser(logger, postgres_pool).parse_pages()
+    await ResearchAPIParser(logger, postgres_pool).get_fin_summary()
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:

@@ -27,6 +27,8 @@ from configs import config
 from db import parser_source
 from log.logger_base import Logger
 from module import weekly_pulse_parse
+from module import data_tansformer
+from db.database import engine
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
@@ -903,3 +905,30 @@ class ResearchAPIParser:
                     self._logger.error('Ошибка при соединении c CIB: %s', e)
                 except Exception as e:
                     self._logger.error('Ошибка при работе с CIB: %s', e)
+
+    async def get_fin_summary(self) -> None:
+        columns = ['sector_id', 'company_id', 'client_id', 'pl', 'balance', 'money']
+        metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
+        # получим список секторов для парсинга
+        sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
+        metadata_df[['pl', 'balance', 'money']] = None
+        tf = data_tansformer.Transformer()
+        df_parts = pd.DataFrame(columns=columns)
+
+        async with ClientSession() as session:
+            for sector_id in sectors_id:
+                self._logger.info()
+                # выберем блок из DF по обрабатываемому сектору
+                sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
+                for company_id in sector_df['company_id'].values.tolist():
+                    try:
+                        self._logger.info()
+                        sector_page = session.post(
+                            url=f'https://research.sberbank-cib.com/group/guest/companies?companyId={company_id}',
+                            verify=False, cookies=self.cookies)
+                        df_parts = pd.concat([tf.process_fin_summary_table(sector_page.text, company_id, sector_df),
+                                              df_parts], ignore_index=True)
+                    except HTTPNoContent as e:
+                        self._logger.error('Ошибка при соединении c CIB: %s', e)
+                    except Exception as e:
+                        self._logger.error('Ошибка при работе с CIB: %s', e)
