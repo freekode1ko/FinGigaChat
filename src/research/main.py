@@ -30,205 +30,12 @@ from utils.selenium_utils import get_driver
 class ResearchesGetter:
     def __init__(self, logger):
         self.logger = logger
-        parser_obj = crawler.Parser(self.logger)
-        transformer_obj = dt.Transformer()
-        psql_engine = config.psql_engine
-        list_of_companies = config.list_of_companies
-        data_market_base_url = config.data_market_base_url
-
-        self.psql_engine = psql_engine
-        self.parser_obj = parser_obj
-        self.transformer_obj = transformer_obj
-        self.list_of_companies = list_of_companies
-        self.data_market_base_url = data_market_base_url
-        self.commodities = self.transformer_obj.url_updater()
-        self.metals_wire_table = None
+        self.parser_obj = crawler.Parser(self.logger)
+        self.list_of_companies = config.list_of_companies
         self.__driver = None
 
     def set_driver(self, driver: WebDriver):
         self.__driver = driver
-
-    def graph_collector(self, url, session: req.sessions.Session, name=''):
-        self.logger.info(f'Сборка графиков. Источник: {url}')
-        if 'api.investing' in url:
-            try:
-                InvAPI_obj = ue.InvestingAPIParser(self.__driver, self.logger)
-                data = InvAPI_obj.get_graph_investing(url)
-            except Exception as e:
-                self.logger.error('При загрузке данных для графика с investing.com произошла ошибка: %s', e)
-                self.__driver = get_driver(self.logger)
-                raise Exception('get graph investing error: %s' % e)  # FIXME криво, подумать еще
-
-            if data is not None:
-                self.transformer_obj.five_year_graph(data, name)
-
-        elif 'metals-wire' in url:
-            euro_standard, page_html = self.parser_obj.get_html(url, session)
-            page_html = json.loads(page_html)
-            data = pd.DataFrame()
-            for day in page_html:
-                day['x'] = day['time']
-                day['date'] = dt.Transformer.unix_to_default(day['time'])
-                row = {'date': day['date'], 'x': day['x'], 'y': day['close']}
-                data = pd.concat([data, pd.DataFrame(row, index=[0])], ignore_index=True)
-
-            self.transformer_obj.five_year_graph(data, name)
-
-        elif 'profinance' in url:
-            response = session.get(url)
-            name = name.replace('/', '_')
-            name = name.replace(' ', '_')
-            name = name.split(',')
-            name = f'{name[0]}_graph.png'
-            with open(f'./sources/img/{name}', 'wb') as f:
-                f.write(response.content)
-        else:
-            name = url.split('/')[-1]
-            euro_standard, page_html = self.parser_obj.get_html(url, session)
-            auth = re.findall(r"TESecurify = ('.+');", page_html)
-            graph_url = (
-                '{}chart?s=lmahds03:com&'
-                'span=5y&'
-                'securify=new&'
-                'url=/commodity/{}&'
-                'AUTH={}&'
-                'ohlc=0'.format(self.data_market_base_url, name, auth[-1][1:-1])
-            )
-            data = req.get(graph_url, verify=False)
-
-            self.transformer_obj.five_year_graph(data, name)
-
-    def get_metals_wire_table_data(self):
-        try:
-            metals_wire_parser_obj = MetalsWireParser(self.__driver, self.logger)
-            self.metals_wire_table = metals_wire_parser_obj.get_table_data()
-        except Exception as e:
-            self.__driver = get_driver(self.logger)
-            self.logger.critical('При сборке табличных данных для MetalsWire произошла ошибка: %s', e)
-
-    def commodities_plot_collect(self, session: req.sessions.Session):
-        # FIXME что делать, если тут произошла ошибка? Пока пропускаю elif
-        self.get_metals_wire_table_data()
-        commodity_pricing = pd.DataFrame()
-        self.logger.info(f'Сборка по сырью {len(self.commodities)}')
-        for commodity in self.commodities:
-            link = self.commodities[commodity]['links'][0]
-            name = self.commodities[commodity]['naming']
-            self.logger.info(commodity)
-            self.logger.info(self.commodities[commodity]['links'][0])
-
-            # FIXME что делать, если мы не смогли сохранить картинку, потому что возникла ошибка получения данных?
-            try:
-                self.graph_collector(link, session, commodity)
-            except Exception as e:
-                self.logger.warning(f'Не удалось получить графики для {commodity}: %s', e)
-                continue
-
-            if len(self.commodities[commodity]['links']) > 1:
-                url = self.commodities[commodity]['links'][1]
-
-                try:
-                    InvAPI_obj = InvestingAPIParser(self.__driver, self.logger)
-                    streaming_price = InvAPI_obj.get_streaming_chart_investing(url)
-                except Exception as e:
-                    self.logger.error(
-                        f'При обработке данных для стримингового графика с investing.com ({url}) произошла ошибка: %s',
-                        e,
-                    )
-                    self.__driver = get_driver(self.logger)
-                    continue
-
-                ''' What's the difference?
-                dict_row = {'Resource': commodity.split(',')[0], 'SPOT': round(float(streaming_price), 1),
-                            'alias': self.commodities[commodity]['alias'].lower().strip(),
-                            'unit': self.commodities[commodity]['measurables']}
-                '''
-                dict_row = {
-                    'Resource': commodity.split(',')[0],
-                    'SPOT': round(float(streaming_price), 1),
-                    'alias': self.commodities[commodity]['alias'].lower().strip(),
-                    'unit': self.commodities[commodity]['measurables'],
-                }
-
-                commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-
-            elif self.commodities[commodity]['naming'] != 'Gas' and self.metals_wire_table is not None:
-                to_take = self.commodities[commodity]['to_take'] + 1
-
-                table = self.metals_wire_table
-                row_index = table.index[table['Resource'] == name][0]
-                dict_row = {}
-                for key in table.iloc[row_index][:to_take].keys():
-                    dict_row[key] = table.iloc[row_index][:to_take][key]
-
-                for key in dict_row:
-                    if key not in ['Resource']:
-                        if dict_row[key].strip() != '':
-                            num = round(float(dict_row[key].strip().split('%')[0]), 1)
-                            dict_row[key] = num
-                        else:
-                            dict_row[key] = np.nan
-
-                dict_row['alias'] = self.commodities[commodity]['alias'].lower().strip()
-                dict_row['unit'] = self.commodities[commodity]['measurables']
-                dict_row['Resource'] = commodity.split(',')[0]
-                commodity_pricing = pd.concat([commodity_pricing, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-
-        commodity = pd.read_sql_query('SELECT * FROM commodity', con=engine)
-        commodity_ids = pd.DataFrame()
-
-        for i, row in commodity_pricing.iterrows():
-            commodity_id = commodity[commodity['name'] == row['alias']]['id']
-
-            dict_row = {'commodity_id': commodity_id.values[0]}
-            commodity_ids = pd.concat([commodity_ids, pd.DataFrame(dict_row, index=[0])], ignore_index=True)
-
-        df_combined = pd.concat([commodity_pricing, commodity_ids], axis=1)
-        df_combined = df_combined.rename(
-            columns={'Resource': 'subname', 'SPOT': 'price', '1M diff.': 'm_delta', 'YTD diff.': 'y_delta', "Cons-s'23": 'cons'}
-        )
-        df_combined = df_combined.loc[:, ~df_combined.columns.str.contains('^Unnamed')]
-        df_combined = df_combined.drop(columns=['alias'])
-
-        Session = sessionmaker(bind=engine)
-        with Session() as session:
-            q = session.query(CommodityPricing)
-
-            if q.count() == 28:
-                for i, row in df_combined.iterrows():
-                    session.query(CommodityPricing).filter(CommodityPricing.subname == row['subname']).update(
-                        {
-                            'price': row['price'],
-                            'm_delta': np.nan,
-                            'y_delta': row['y_delta'],
-                            'cons': row['cons'],
-                        }
-                    )
-                    # update({"price": row['price'], "m_delta": row['m_delta'],
-                    # "y_delta": row['y_delta'], "cons": row['cons']})
-
-                    session.commit()
-            else:
-                for i, row in df_combined.iterrows():
-                    commodity_price_obj = CommodityPricing(
-                        commodity_id=int(row['commodity_id']),
-                        subname=row['subname'],
-                        unit=row['unit'],
-                        price=row['price'],
-                        m_delta=np.nan,
-                        # m_delta=row['m_delta'],
-                        y_delta=row['y_delta'],
-                        cons=row['cons'],
-                    )
-                    session.merge(commodity_price_obj, load=True)
-                    session.commit()
-
-                q_gas = session.query(Commodity).filter(Commodity.name == 'газ')
-                commodity_price_obj = CommodityPricing(
-                    commodity_id=q_gas[0].id, subname='Газ', unit=np.nan, price=np.nan, m_delta=np.nan, y_delta=np.nan, cons=np.nan
-                )
-                session.merge(commodity_price_obj, load=True)
-                session.commit()
 
     def collect_research(self) -> Tuple[Optional[dict], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         """
@@ -313,7 +120,7 @@ class ResearchesGetter:
             )
         except Exception as e:
             self.__driver = get_driver(logger=self.logger)
-            authed_user = ue.ResearchParser(self.__driver, self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Все",'
                 'name_of_review="Обзор рынка процентных ставок" произошла ошибка: %s',
@@ -502,7 +309,7 @@ async def run_parse_cib(logger):
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
     start_tm = time.time()
 
-    logger.info('Инициализация сборщика researches и графиков')
+    logger.info('Инициализация сборщика researches')
     runner = ResearchesGetter(logger)
     logger.info('Загрузка прокси')
     runner.parser_obj.get_proxy_addresses()
@@ -525,14 +332,6 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
             runner.save_reviews(reviews_dict)
         except Exception as e:
             logger.error('Ошибка при сборке отчетов с Research: %s', e)
-
-        try:
-            logger.info('Поднятие новой сессии')
-            session = req.Session()
-            logger.info('Сборки графиков')
-            runner.commodities_plot_collect(session)
-        except Exception as e:
-            logger.error('Ошибка при парсинге источников по сырью: %s', e)
 
         try:
             driver.quit()
@@ -559,7 +358,7 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
 
 def main():
     """
-    Сборщик researches и графиков
+    Сборщик researches
     Сборка происходит каждый день в '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'
     Время сборки указано в списке в config.RESEARCH_GETTING_TIMES_LIST
     """

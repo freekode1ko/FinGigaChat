@@ -60,7 +60,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
 
     ap_obj = ArticleProcess(logger)
 
-    com_price, reply_msg, img_name_list = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
     new_offset = offset_all + config.NEWS_LIMIT * 2
 
     if reply_msg and isinstance(reply_msg, str):
@@ -222,7 +222,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
         subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
         if subject_ids:
             industry_id = subject_ids[0]
-            not_use, reply_msg, not_use_ = ap_obj.process_user_alias(industry_id, subject)
+            not_use, reply_msg = ap_obj.process_user_alias(industry_id, subject)
             await bot_send_msg(message.bot, chat_id, reply_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
             return
@@ -233,21 +233,14 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
             subject_ids, subject = ap_obj.find_subject_id(msg_text, 'commodity'), 'commodity'
 
         for subject_id in subject_ids:
-            com_price, reply_msg, img_name_list = ap_obj.process_user_alias(subject_id, subject)
+            com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject)
 
             return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
 
             if reply_msg:
 
-                if img_name_list:
-                    await message.bot.send_chat_action(chat_id, ChatAction.UPLOAD_PHOTO)
-                    media = MediaGroupBuilder()
-                    for name in img_name_list:
-                        media.add_photo(types.FSInputFile(PATH_TO_COMMODITY_GRAPH.format(name)))
-                    await message.answer_media_group(media=media.build(), protect_content=False)
-
                 if com_price:
-                    await message.answer(com_price, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
+                    await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
 
                 if isinstance(reply_msg, str):
                     articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
