@@ -6,6 +6,7 @@ import os
 import random
 import re
 import time
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -793,8 +794,16 @@ class ResearchAPIParser:
 
             date = self.cib_date_to_normal_date(str(report_html.find('span',
                                                                    class_="date").text).strip())
-            report_text = str(report_html.find('div',
-                                           class_='summaryContent').text).strip()
+            report_texts = []
+            for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
+                # Удаляем все ссылки
+                if paragraph_tag.find('a'):
+                    continue
+                # Удаление пустых paragraph
+                if text := str(paragraph_tag.text).strip():
+                    report_texts.append(text)
+            report_text = '\n\n'.join(report_texts).replace('>', '-')
+
             if file_element_with_href := report_html.find('a', class_='file', href=True):
                 async with session.get(
                         url=file_element_with_href['href'].strip(),
@@ -803,7 +812,7 @@ class ResearchAPIParser:
                 ) as req:
                     if req.status == 200:
 
-                        file_path = f'./sources/reports/{report_id}.pdf'
+                        file_path = Path(f'./sources/reports/{report_id}.pdf')
                         with open(file_path, "wb") as f:
                             while True:
                                 chunk = await req.content.readany()
