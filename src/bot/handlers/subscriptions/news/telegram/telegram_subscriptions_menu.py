@@ -245,7 +245,7 @@ async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> No
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.BACK_TO_TG_MENU))
+@router.callback_query(F.data.startswith(callback_prefixes.TG_MENU))
 async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     """
     Фозвращает пользователя в меню (меняет сообщение, с которым связан колбэк)
@@ -253,14 +253,14 @@ async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_prefixes.BACK_TO_TG_MENU
+    user_msg = callback_prefixes.TG_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await tg_subs_menu(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(Command('tg_subscriptions_menu'))
+@router.message(Command(callback_prefixes.TG_MENU))
 async def tg_subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками на telegram каналы (влияет на сводку новостей по отрасли)

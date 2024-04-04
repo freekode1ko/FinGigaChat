@@ -295,15 +295,15 @@ async def cib_research_subs_menu(message: Union[types.CallbackQuery, types.Messa
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.BACK_TO_CIB_RESEARCH_MENU))
-async def back_to_tg_subs_menu(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data.startswith(callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU))
+async def back_cib_subs_menu(callback_query: types.CallbackQuery) -> None:
     """
     Фозвращает пользователя в меню (меняет сообщение, с которым связан колбэк)
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_prefixes.BACK_TO_CIB_RESEARCH_MENU
+    user_msg = callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await cib_research_subs_menu(callback_query)

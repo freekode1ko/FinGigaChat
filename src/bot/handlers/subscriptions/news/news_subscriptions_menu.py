@@ -39,8 +39,8 @@ async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='Напишу сам/Справочник по подпискам', callback_data='writesubs'))
     keyboard.row(types.InlineKeyboardButton(text='Выберу из меню/Подписка на отрасль', callback_data='selectsubs'))
-    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.CLIENT_SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS))
     await state.clear()
 
     await callback_query.message.edit_text('Как вы хотите заполнить подписки?', reply_markup=keyboard.as_markup())
@@ -64,8 +64,8 @@ async def write_new_subscriptions_callback(callback_query: types.CallbackQuery, 
         await state.set_state(SubscriptionsStates.user_subscriptions)
         keyboard = InlineKeyboardBuilder()
         keyboard.row(types.InlineKeyboardButton(text='Показать готовые подборки', callback_data='showmeindustry:yes'))
-        keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
         keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data='addnewsubscriptions'))
+        keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS))
         await callback_query.message.edit_text(
             'Сформируйте полный список интересующих клиентов и/или commodities, и/или отрасли '
             'для подписки на пассивную отправку новостей по ним.\n'
@@ -178,8 +178,8 @@ async def pagination(pages, search, cur_page: int = 0, first_button: types.Inlin
         bottom_buttons.append(types.InlineKeyboardButton(text=emoji['forward'], callback_data=callback))
 
     buttons.append(bottom_buttons)
-    buttons.append([types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs')])
     buttons.append([types.InlineKeyboardButton(text='Назад к выбору раздела', callback_data='selectsubs')])
+    buttons.append([types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS)])
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=buttons)
     return keyboard
 
@@ -233,8 +233,8 @@ async def select_subs_from_menu(callback_query: types.CallbackQuery = None) -> N
     keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='page:empty:1:client'))
     keyboard.row(types.InlineKeyboardButton(text='Сырьевые товары', callback_data='page:empty:1:commodity'))
     keyboard.row(types.InlineKeyboardButton(text='Отрасли', callback_data='page:empty:1:industry'))
-    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
     keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data='addnewsubscriptions'))
+    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS))
 
     await callback_query.message.edit_text(text='Выберете раздел', reply_markup=keyboard.as_markup())
 
@@ -364,7 +364,7 @@ async def set_user_subscriptions(message: types.Message, state: FSMContext) -> N
                     subscriptions.append(other_name)
 
     continue_keyboard = InlineKeyboardBuilder()
-    continue_keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+    continue_keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS))
     continue_keyboard = continue_keyboard.as_markup()
     continue_msg = '\n\nЕсли хотите завершить формирование подписок, то нажмите кнопку "Завершить"'
 
@@ -424,7 +424,7 @@ async def continue_write_subs(callback_query: types.CallbackQuery, state: FSMCon
     await state.set_state(SubscriptionsStates.user_subscriptions)
     await callback_query.message.edit_reply_markup()
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data='end_write_subs'))
+    keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS))
     await callback_query.message.answer(text='Продолжайте вводить подписки', reply_markup=keyboard.as_markup())
 
 
@@ -557,7 +557,7 @@ async def delete_subscriptions(callback_query: types.CallbackQuery, state: FSMCo
     await callback_query.message.answer(msg_txt, reply_markup=keyboard)
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.SUBS_DELETE_ALL_DONE))
+@router.callback_query(F.data.startswith(callback_prefixes.CLIENT_SUBS_DELETE_ALL_DONE))
 async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     """
     Получение сообщением информации о своих подписках для их удаления
@@ -565,7 +565,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_prefixes.SUBS_DELETE_ALL_DONE
+    user_msg = callback_prefixes.CLIENT_SUBS_DELETE_ALL_DONE
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -575,7 +575,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
         conn.commit()
 
     msg_txt = 'Подписки удалены'
-    keyboard = kb_maker.get_back_to_subs_menu_kb()
+    keyboard = kb_maker.get_back_to_client_subs_menu_kb()
     await callback_query.message.edit_text(text=msg_txt, reply_markup=keyboard)
 
 
@@ -596,7 +596,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
 
     if not user_subs:
         msg_text = 'У вас отсутствуют подписки'
-        keyboard = kb_maker.get_back_to_subs_menu_kb()
+        keyboard = kb_maker.get_back_to_client_subs_menu_kb()
     else:
         msg_text = 'Вы уверены, что хотите удалить все подписки?'
         keyboard = kb_maker.get_prepare_subs_delete_all_kb()
@@ -605,31 +605,31 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+async def client_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     """Формирует меню подписок"""
-    keyboard = kb_maker.get_subscriptions_kb()
-    msg_text = 'Меню управления подписками\n'
+    keyboard = kb_maker.get_client_subscriptions_menu_kb()
+    msg_text = 'Меню управления подписками на клиентов, сырье, отрасли\n'
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.SUBS_MENU))
-async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> None:
+@router.callback_query(F.data.startswith(callback_prefixes.CLIENT_SUBS_MENU))
+async def client_subscriptions_menu_callback(callback_query: types.CallbackQuery) -> None:
     """
     Получение меню для взаимодействия с подписками
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_prefixes.SUBS_MENU
+    user_msg = callback_prefixes.CLIENT_SUBS_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    await subs_menu(callback_query)
+    await client_subs_menu(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(Command(callback_prefixes.SUBS_MENU))
-async def subscriptions_menu(message: types.Message) -> None:
+@router.message(Command(callback_prefixes.CLIENT_SUBS_MENU))
+async def client_subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками
 
@@ -639,6 +639,6 @@ async def subscriptions_menu(message: types.Message) -> None:
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        await subs_menu(message)
+        await client_subs_menu(message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')

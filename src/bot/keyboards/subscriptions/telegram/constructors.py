@@ -30,6 +30,7 @@ def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
         text='Удалить все подписки',
         callback_data=callback_prefixes.TG_SUBS_DELETE_ALL,
     ))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.NEWS_SUBS_MENU))
     keyboard.row(types.InlineKeyboardButton(text='Завершить',
                                             callback_data=callback_prefixes.TG_END_WRITE_SUBS))
     return keyboard.as_markup()
@@ -67,7 +68,7 @@ def get_tg_subs_watch_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> 
     else:
         keyboard.row(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))
 
-    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_TG_MENU))
+    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.TG_MENU))
 
     if page < max_pages - 1:
         keyboard.add(types.InlineKeyboardButton(
@@ -125,7 +126,7 @@ def get_tg_subs_industries_menu_kb(industry_df: pd.DataFrame) -> InlineKeyboardM
         keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
     keyboard.row(types.InlineKeyboardButton(
         text='Назад',
-        callback_data=callback_prefixes.BACK_TO_TG_MENU
+        callback_data=callback_prefixes.TG_MENU
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Завершить',
@@ -176,8 +177,8 @@ def get_prepare_tg_subs_delete_all_kb() -> InlineKeyboardMarkup:
     """
     return constructors.get_approve_action_kb(
         callback_prefixes.TG_SUBS_DELETE_ALL_DONE,
-        callback_prefixes.BACK_TO_TG_MENU,
-        callback_prefixes.BACK_TO_TG_MENU,
+        callback_prefixes.TG_MENU,
+        callback_prefixes.TG_MENU,
     )
 
 
@@ -187,5 +188,5 @@ def get_back_to_tg_subs_menu_kb() -> InlineKeyboardMarkup:
     [   назад в меню   ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_TG_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.TG_MENU))
     return keyboard.as_markup()
