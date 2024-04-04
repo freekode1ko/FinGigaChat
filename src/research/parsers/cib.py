@@ -6,6 +6,7 @@ import os
 import random
 import re
 import time
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -801,7 +802,7 @@ class ResearchAPIParser:
                 # Удаление пустых paragraph
                 if text := str(paragraph_tag.text).strip():
                     report_texts.append(text)
-            report_text = '\n'.join(report_texts)
+            report_text = '\n\n'.join(report_texts).replace('>', '-')
 
             if file_element_with_href := report_html.find('a', class_='file', href=True):
                 async with session.get(
@@ -811,7 +812,7 @@ class ResearchAPIParser:
                 ) as req:
                     if req.status == 200:
 
-                        file_path = f'./sources/reports/{report_id}.pdf'
+                        file_path = Path(f'./sources/reports/{report_id}.pdf')
                         with open(file_path, "wb") as f:
                             while True:
                                 chunk = await req.content.readany()
