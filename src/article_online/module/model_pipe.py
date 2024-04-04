@@ -19,7 +19,6 @@ from log.logger_base import Logger
 import datetime as dt
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
-CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'data/model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
@@ -381,12 +380,18 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
                 labels += f';{label}'
         # after deranking labels score should still be positive
         if len(labels) > 1:
-            labels = str(max(1, sum(list(map(int, list(labels.split(';')))))))
+            labels = str(max(1, sum(map(int, labels.split(';')))))
 
     return labels
 
 
-def search_top_sources(link, score):
+def search_top_sources(link: str, score: int) -> int:
+    """
+    Raise score for article if found top sources
+    :param link: link of article
+    :param score: current score of article
+    :return: new score of article
+    """
     if link and isinstance(link, str):
         if search(TOP_SOURCES, link):
             return score + 5
