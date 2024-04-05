@@ -1,1 +1,1 @@
-from handlers.quotes.handler import router
+from handlers.quotes.handler import *

@@ -1,1 +1,1 @@
-from handlers.analytics.analytics_sell_side import cib_research_reports
+from handlers.analytics.analytics_sell_side import handler

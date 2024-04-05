@@ -1,11 +1,10 @@
 import asyncio
 
-from aiogram import F, Router, types
+from aiogram import F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
-from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
@@ -15,9 +14,11 @@ from constants.aliases import (
     eco_aliases,
     exchange_aliases,
     metal_aliases,
-    view_aliases, help_aliases, gigachat_aliases, rag_aliases
+    view_aliases,
+    help_aliases,
+    gigachat_aliases,
+    rag_aliases,
 )
-from constants.constants import PATH_TO_COMMODITY_GRAPH
 from db import parser_source
 from handlers import common, quotes
 from handlers.ai.gigachat import gigachat

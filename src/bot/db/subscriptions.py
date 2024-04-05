@@ -1,3 +1,4 @@
+import datetime
 from typing import Any
 
 import pandas as pd
@@ -379,6 +380,58 @@ def get_new_researches() -> pd.DataFrame:
         )
         data = conn.execute(query).all()
         conn.commit()
+        data_df = pd.DataFrame(data, columns=columns)
+
+    return data_df
+
+
+def get_researches_over_period(
+        from_date: datetime.date,
+        to_date: datetime.date,
+        research_type_ids: list[int] = None,
+) -> pd.DataFrame:
+    """
+    Возвращает все отчеты по отрасли за период с from_date по to_date
+    Если research_type_ids не пустой массив, то отчеты вынимаются только где research_type_id=ANY(research_type_ids)
+
+    :param from_date: от какой даты_времени вынимаются
+    :param to_date: до какой даты_времени вынимаются
+    :param research_type_ids: ID типов отчетов, по которым выгружаются отчеты (по умолчанию все отчеты)
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    """
+    query = (
+        'SELECT id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id '
+        'FROM research '
+        'WHERE publication_date BETWEEN :from_date AND :to_date '
+        '{dop_condition} '
+        'ORDER BY publication_date DESC'
+    )
+
+    kwargs = {
+        'from_date': from_date,
+        'to_date': to_date,
+    }
+
+    if not research_type_ids:
+        dop_condition = ''
+    else:
+        dop_condition = 'AND research_type_id=ANY(:research_type_ids)'
+        kwargs['research_type_ids'] = research_type_ids
+
+    query = text(query.format(dop_condition=dop_condition)).bindparams(**kwargs)
+
+    with database.engine.connect() as conn:
+        columns = [
+            'id',
+            'research_type_id',
+            'filepath',
+            'header',
+            'text',
+            'parse_datetime',
+            'publication_date',
+            'news_id',
+        ]
+        data = conn.execute(query).all()
         data_df = pd.DataFrame(data, columns=columns)
 
     return data_df

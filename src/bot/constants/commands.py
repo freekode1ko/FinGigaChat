@@ -58,6 +58,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Подписки на аналитические отчеты',
     },
     {
+        'command': 'analytics_menu',
+        'description': 'Аналитика',
+    },
+    {
         'command': 'delete_article',
         'description': 'Удалить новость',
     },
