@@ -672,7 +672,7 @@ class ResearchAPIParser:
         """
         Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы
         """
-        self._logger.info('Начала обновления куков')
+        self._logger.info('Начало обновления куков')
         with requests.get(
                 url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
                 cookies=self.cookies,
@@ -682,9 +682,9 @@ class ResearchAPIParser:
                 self.cookies['JSESSIONID'] = req.cookies['JSESSIONID']
                 self._logger.info("Куки успешно обновлены")
             elif req.status_code == 200:
-                self._logger.info('Куки не нуждаются в обновлении')
+                self._logger.info('CIB: Куки не нуждаются в обновлении')
             else:
-                self._logger.info('Ошибка обновления куков')
+                self._logger.error('CIB: Ошибка обновления куков')
 
     async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
@@ -909,8 +909,8 @@ class ResearchAPIParser:
                         self.get_report_ids_from_page(page, session),
                     )
                 except HTTPNoContent as e:
-                    self._logger.error('Ошибка при соединении c CIB: %s', e)
+                    self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                 except Exception as e:
-                    self._logger.error('Ошибка при работе с CIB: %s', e)
+                    self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
 
         self._logger.info('CIB: Конец парсинга CIB')
