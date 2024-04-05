@@ -345,8 +345,16 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
 
     # Запуск парсинга CIB через условный апиай
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run_parse_cib(logger))
-    loop.close()
+    try:
+        if loop.is_closed():
+            asyncio.set_event_loop(asyncio.new_event_loop())
+        loop.run_until_complete(run_parse_cib(logger))
+    except Exception as e:
+        logger.error('CIB: сборка завершилась с ошибкой: %s', e)
+    else:
+        logger.info('CIB: сборка успешно завершилась!')
+    finally:
+        loop.close()
 
     work_time = time.time() - start_tm
     end_dt = datetime.datetime.now().strftime(config.INVERT_DATETIME_FORMAT)
