@@ -16,6 +16,8 @@ def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     [ Просмотреть подписки ]
     [ Изменить подписки    ]
     [ Удалить все подписки ]
+    [ Назад ]
+    [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
@@ -30,9 +32,14 @@ def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
         text='Удалить все подписки',
         callback_data=callback_prefixes.TG_SUBS_DELETE_ALL,
     ))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.NEWS_SUBS_MENU))
-    keyboard.row(types.InlineKeyboardButton(text='Завершить',
-                                            callback_data=callback_prefixes.TG_END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Назад',
+        callback_data=callback_prefixes.NEWS_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Завершить',
+        callback_data=callback_prefixes.TG_END_WRITE_SUBS,
+    ))
     return keyboard.as_markup()
 
 
@@ -126,11 +133,11 @@ def get_tg_subs_industries_menu_kb(industry_df: pd.DataFrame) -> InlineKeyboardM
         keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
     keyboard.row(types.InlineKeyboardButton(
         text='Назад',
-        callback_data=callback_prefixes.TG_MENU
+        callback_data=callback_prefixes.TG_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Завершить',
-        callback_data=callback_prefixes.TG_END_WRITE_SUBS
+        callback_data=callback_prefixes.TG_END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
 

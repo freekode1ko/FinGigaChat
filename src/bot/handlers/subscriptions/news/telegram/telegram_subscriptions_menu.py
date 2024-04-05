@@ -15,20 +15,15 @@ from db.subscriptions import (
     get_telegram_channel_info,
     add_user_telegram_subscription,
 )
-from keyboards.subscriptions.telegram.callbacks import (
-    UserTGSubs,
-    TGChannelMoreInfo,
-    IndustryTGChannels,
-    TGSubAction,
-)
+from keyboards.subscriptions.telegram import callbacks
 from keyboards.subscriptions.telegram import constructors as kb_maker
 from keyboards.subscriptions.telegram.constructors import get_tg_info_kb
 from handlers.subscriptions.handler import router
 from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 
 
-@router.callback_query(UserTGSubs.filter())
-async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_data: UserTGSubs) -> None:
+@router.callback_query(callbacks.UserTGSubs.filter())
+async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_data: callbacks.UserTGSubs) -> None:
     """
     Изменяет сообщение, отображая информацию о подписках на тг каналы пользователя
 
@@ -82,8 +77,8 @@ async def show_tg_channel_more_info(
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(TGSubAction.filter())
-async def update_sub_on_tg_channel(callback_query: types.CallbackQuery, callback_data: TGSubAction) -> None:
+@router.callback_query(callbacks.TGSubAction.filter())
+async def update_sub_on_tg_channel(callback_query: types.CallbackQuery, callback_data: callbacks.TGSubAction) -> None:
     """
     Предоставляет инфу о тг канале
 
@@ -106,8 +101,8 @@ async def update_sub_on_tg_channel(callback_query: types.CallbackQuery, callback
     )
 
 
-@router.callback_query(TGChannelMoreInfo.filter())
-async def get_tg_channel_more_info(callback_query: types.CallbackQuery, callback_data: TGChannelMoreInfo) -> None:
+@router.callback_query(callbacks.TGChannelMoreInfo.filter())
+async def get_tg_channel_more_info(callback_query: types.CallbackQuery, callback_data: callbacks.TGChannelMoreInfo) -> None:
     """
     Предоставляет инфу о тг канале
 
@@ -123,8 +118,8 @@ async def get_tg_channel_more_info(callback_query: types.CallbackQuery, callback
     )
 
 
-@router.callback_query(IndustryTGChannels.filter())
-async def get_industry_tg_channels(callback_query: types.CallbackQuery, callback_data: IndustryTGChannels) -> None:
+@router.callback_query(callbacks.IndustryTGChannels.filter())
+async def get_industry_tg_channels(callback_query: types.CallbackQuery, callback_data: callbacks.IndustryTGChannels) -> None:
     """
     Предоставляет подборку тг каналов по отрасли
 
