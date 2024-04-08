@@ -208,6 +208,49 @@ async def weekly_pulse_newsletter(
     message.add_all(saved_messages)
 
 
+async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, research_df: pd.DataFrame) -> list[types.Message]:
+    """
+    Отправка отчетов пользователю с форматированием
+    :param bot: объект тг бота
+    :param user_id: телеграм id пользователя, которому отправляются отчеты
+    :param user_name: имя пользователя для логирования
+    :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    return: Список объектов отправленных сообщений
+    """
+    sent_msg_list = []
+
+    for _, research in research_df.iterrows():
+        user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
+        formatted_msg_txt = formatter.ResearchFormatter.format(research)
+        is_shorter_than_max_len = len(formatted_msg_txt) <= constants.TELEGRAM_MESSAGE_MAX_LEN
+
+        # Если отчет не влезает с одно сбщ, то не отправляем текст отчета, а только файл
+        if is_shorter_than_max_len:
+            msg = await bot.send_message(user_id, formatted_msg_txt, protect_content=True, parse_mode='HTML')
+            sent_msg_list.append(msg)
+
+        # Если есть файл - отправляем
+        if research['filepath'] and os.path.exists(research['filepath']):
+            file = types.FSInputFile(research['filepath'])
+            msg_txt = (
+                f'Полная версия отчета: <b>{research["header"]}</b>' if is_shorter_than_max_len
+                else f'<b>{research["header"]}</b>'
+            )
+            msg = await bot.send_document(
+                document=file,
+                chat_id=user_id,
+                caption=msg_txt,
+                parse_mode='HTML',
+                protect_content=True,
+            )
+            sent_msg_list.append(msg)
+
+        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
+        await asyncio.sleep(1.1)
+
+    return sent_msg_list
+
+
 async def send_new_researches_to_users(bot: Bot) -> None:
     now = datetime.datetime.now()
     newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
@@ -247,34 +290,11 @@ async def send_new_researches_to_users(bot: Bot) -> None:
             msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
             saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
-            for _, research in section_researches_df.iterrows():
-                user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
-                formatted_msg_txt = formatter.ResearchFormatter.format(research)
-                is_shorter_than_max_len = len(formatted_msg_txt) <= constants.TELEGRAM_MESSAGE_MAX_LEN
-
-                # Если отчет не влезает с одно сбщ, то не отправляем текст отчета, а только файл
-                if is_shorter_than_max_len:
-                    msg = await bot.send_message(user_id, formatted_msg_txt, protect_content=True, parse_mode='HTML')
-                    saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
-
-                # Если есть файл - отправляем
-                if research['filepath'] and os.path.exists(research['filepath']):
-                    file = types.FSInputFile(research['filepath'])
-                    msg_txt = (
-                        f'Полная версия отчета: <b>{research["header"]}</b>' if is_shorter_than_max_len
-                        else f'<b>{research["header"]}</b>'
-                    )
-                    msg = await bot.send_document(
-                        document=file,
-                        chat_id=user_id,
-                        caption=msg_txt,
-                        parse_mode='HTML',
-                        protect_content=True,
-                    )
-                    saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
-
-                user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
-                await asyncio.sleep(1.1)
+            sent_msg_list = await send_researches_to_user(bot, user_id, user_name, section_researches_df)
+            saved_messages.extend(
+                dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type)
+                for m in sent_msg_list
+            )
 
     message.add_all(saved_messages)
 

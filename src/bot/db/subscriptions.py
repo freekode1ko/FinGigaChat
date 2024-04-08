@@ -391,7 +391,7 @@ def get_researches_over_period(
         research_type_ids: list[int] = None,
 ) -> pd.DataFrame:
     """
-    Возвращает все отчеты по отрасли за период с from_date по to_date
+    Возвращает все отчеты по отрасли [клиенту] за период с from_date по to_date
     Если research_type_ids не пустой массив, то отчеты вынимаются только где research_type_id=ANY(research_type_ids)
 
     :param from_date: от какой даты_времени вынимаются
