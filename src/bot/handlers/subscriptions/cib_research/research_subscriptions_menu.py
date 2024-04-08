@@ -7,8 +7,7 @@ from constants import subscriptions as callback_prefixes
 from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
 from db import subscriptions as subscriptions_db_api
 from handlers.subscriptions.handler import router
-from keyboards.subscriptions.research import callbacks
-from keyboards.subscriptions.research import constructors as keyboards
+from keyboards.subscriptions.research import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 

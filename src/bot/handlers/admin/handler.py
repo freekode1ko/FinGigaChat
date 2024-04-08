@@ -10,13 +10,15 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from configs import config
-from db import database
-from log.bot_logger import logger, user_logger
-from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
-from db.database import engine
-from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
 import keyboards.admin.constructors as keyboards
+from configs import config
+from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+from db import database
+from db.database import engine
+from db.message import get_messages_by_type, delete_messages, add_all
+from db.message_type import message_types
+from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
+from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
 from utils.base import (
@@ -26,8 +28,6 @@ from utils.base import (
     user_in_whitelist,
 )
 from utils.newsletter import subscriptions_newsletter
-from db.message import get_messages_by_type, delete_messages, add_all
-from db.message_type import message_types
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
 

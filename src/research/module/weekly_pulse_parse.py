@@ -51,7 +51,7 @@ def is_needed_slide(criteria: str, slide_text: str) -> bool:
 
 
 def get_page_table(
-    pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
+    pdf_file: str | Path, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
 ) -> Optional[pandas.DataFrame]:
     return None
     # try:
@@ -67,7 +67,7 @@ def get_page_table(
     # return tables[0] if tables else None
 
 
-def get_special_slides(filename: str, slides_meta: Union[List[dict], Iterable[dict]]) -> defaultdict:
+def get_special_slides(filename: str | Path, slides_meta: Union[List[dict], Iterable[dict]]) -> defaultdict:
     slides_titles2data = defaultdict(default_slide_item)
 
     if not filename or not isinstance(filename, (str, Path)) or not os.path.isfile(filename) or not slides_meta:
@@ -190,7 +190,7 @@ class ParsePresentationPDF:
 
     @staticmethod
     def parse_table(
-        pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
+        pdf_file: str | Path, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
     ) -> Optional[pandas.DataFrame]:
         """
         Возвращает найденную на слайде первую таблицу
@@ -207,7 +207,7 @@ class ParsePresentationPDF:
 
         return None
 
-    def parse(self, filename: str, slides_meta: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
+    def parse(self, filename: str | Path, slides_meta: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
         """
         Возвращает словарь, где ключом является заголовок слайда, а по заголовку содержится информация:
         page_number: номер слайда с заданным заголовком int, -1 если не найден

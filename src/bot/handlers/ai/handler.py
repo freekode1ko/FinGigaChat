@@ -1,4 +1,4 @@
-from aiogram import F, Router, types
+from aiogram import Router
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 
