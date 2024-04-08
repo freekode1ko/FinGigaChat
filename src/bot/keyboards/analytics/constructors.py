@@ -25,13 +25,13 @@ def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]
     """
     keyboard = InlineKeyboardBuilder()
 
-    for index, item in group_df.iterrows():
+    for _, item in group_df.iterrows():
         get_group_sections_callback = callback_factory(
             group_id=item['id'],
         )
 
         keyboard.row(types.InlineKeyboardButton(
-            text=item['name'].capitalize(),
+            text=item['name'],
             callback_data=get_group_sections_callback.pack()),
         )
 

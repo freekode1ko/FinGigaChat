@@ -3,7 +3,7 @@ from aiogram import types
 
 from log.bot_logger import user_logger
 from handlers.analytics.handler import router
-from keyboards.analytics.industry import callbacks, constructors as kb_maker
+from keyboards.analytics.industry import callbacks, constructors as keyboards
 
 
 @router.callback_query(callbacks.Menu.filter())
@@ -20,7 +20,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     item_df = pd.DataFrame()
-    keyboard = kb_maker.get_menu_kb(item_df)
+    keyboard = keyboards.get_menu_kb(item_df)
     msg_text = 'Отраслевая аналитика\n'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

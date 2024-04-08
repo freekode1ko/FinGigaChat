@@ -16,8 +16,7 @@ from db.subscriptions import (
     add_user_telegram_subscription,
 )
 from keyboards.subscriptions.telegram import callbacks
-from keyboards.subscriptions.telegram import constructors as kb_maker
-from keyboards.subscriptions.telegram.constructors import get_tg_info_kb
+from keyboards.subscriptions.telegram import constructors as keyboards
 from handlers.subscriptions.handler import router
 from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 
@@ -49,7 +48,7 @@ async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_
         f'Для получения более детальной информации о канале - нажмите на него\n\n'
         f'Для удаления канала из подписок - нажмите на "{DELETE_CROSS}" рядом с каналом'
     )
-    keyboard = kb_maker.get_tg_subs_watch_kb(page_data, page, max_pages)
+    keyboard = keyboards.get_tg_subs_watch_kb(page_data, page, max_pages)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -71,7 +70,7 @@ async def show_tg_channel_more_info(
         f'Ссылка: {telegram_channel_info["link"]}\n'
         f'Отрасль: <b>{telegram_channel_info["industry_name"]}</b>\n'
     )
-    keyboard = get_tg_info_kb(telegram_id, is_subscribed, back)
+    keyboard = keyboards.get_tg_info_kb(telegram_id, is_subscribed, back)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -149,7 +148,7 @@ async def get_industry_tg_channels(callback_query: types.CallbackQuery, callback
         f'Для добавления/удаления подписки на telegram канала нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
         f'Для получения более детальной информации о канале - нажмите на него'
     )
-    keyboard = kb_maker.get_industry_tg_channels_kb(industry_id, tg_channel_df)
+    keyboard = keyboards.get_industry_tg_channels_kb(industry_id, tg_channel_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -168,7 +167,7 @@ async def get_tg_subs_industries_menu(callback_query: types.CallbackQuery) -> No
 
     industry_df = get_industries_with_tg_channels()
     msg_text = 'Выберите подборку telegram каналов по отраслям'
-    keyboard = kb_maker.get_tg_subs_industries_menu_kb(industry_df)
+    keyboard = keyboards.get_tg_subs_industries_menu_kb(industry_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -190,7 +189,7 @@ async def delete_all_tg_subs_done(callback_query: types.CallbackQuery) -> None:
     delete_all_user_telegram_subscriptions(user_id)
 
     msg_text = 'Ваши подписки на telegram каналы были удалены'
-    keyboard = kb_maker.get_back_to_tg_subs_menu_kb()
+    keyboard = keyboards.get_back_to_tg_subs_menu_kb()
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -212,10 +211,10 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
 
     if user_tg_subs.empty:
         msg_text = 'У вас отсутствуют подписки'
-        keyboard = kb_maker.get_back_to_tg_subs_menu_kb()
+        keyboard = keyboards.get_back_to_tg_subs_menu_kb()
     else:
         msg_text = 'Вы уверены, что хотите удалить все подписки на telegram каналы?'
-        keyboard = kb_maker.get_prepare_tg_subs_delete_all_kb()
+        keyboard = keyboards.get_prepare_tg_subs_delete_all_kb()
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -232,7 +231,7 @@ async def tg_end_write_subs(callback_query: types.CallbackQuery) -> None:
 
 
 async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
-    keyboard = kb_maker.get_tg_subscriptions_menu_kb()
+    keyboard = keyboards.get_tg_subscriptions_menu_kb()
     msg_text = (
         'Меню управления подписками на telegram каналы\n\n'
         'На основе ваших подписок формируется сводка новостей по отрасли, с которой связаны telegram каналы'

@@ -16,7 +16,7 @@ from log.bot_logger import logger, user_logger
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
 from db.database import engine
 from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
-import keyboards.admin.constructors as kb_maker
+import keyboards.admin.constructors as keyboards
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
 from utils.base import (
@@ -391,7 +391,7 @@ async def dailynews(message: types.Message) -> None:
 
 async def delete_newsletter_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     """Отправляет или изменяет сообщение, формируя там клавиатуру выбора типов сообщений"""
-    keyboard = kb_maker.get_message_types_kb()
+    keyboard = keyboards.get_message_types_kb()
     msg_text = (
         'Выберите рассылку, сообщения по которой хотите удалить.\n\n'
         'Удалены могут быть лишь те сообщения, с момента отправки которых прошло менее 48 часов.'
@@ -444,7 +444,7 @@ async def approve_delete_messages_by_type(callback_query: types.CallbackQuery, c
         f'Вы уверены, что хотите удалить сообщения с типом "<b>{msg_type_descr}</b>", которые были отправлены за последние 48 часов, '
         f'у всех пользователей?'
     )
-    keyboard = kb_maker.get_approve_delete_messages_by_type_kb(callback_data.message_type_id)
+    keyboard = keyboards.get_approve_delete_messages_by_type_kb(callback_data.message_type_id)
 
     await callback_query.message.edit_text(text=msg_text, reply_markup=keyboard, parse_mode='HTML', disable_web_page_preview=True)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

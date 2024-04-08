@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 from constants import subscriptions as callback_prefixes
-from keyboards.subscriptions import constructors as kb_maker
+from keyboards.subscriptions import constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import user_in_whitelist, send_or_edit
 
@@ -32,14 +32,14 @@ async def news_subs_menu(callback_query: types.CallbackQuery) -> None:
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    keyboard = kb_maker.get_news_subscriptions_menu_kb()
+    keyboard = keyboards.get_news_subscriptions_menu_kb()
     msg_text = 'Меню управления подписками на новости\n'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
 
 
 async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
     """Формирует меню подписок"""
-    keyboard = kb_maker.get_subscriptions_menu_kb()
+    keyboard = keyboards.get_subscriptions_menu_kb()
     msg_text = 'Меню управления подписками\n'
     await send_or_edit(message, msg_text, keyboard)
 

@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 from constants import analytics as callback_prefixes
-from keyboards.analytics import callbacks, constructors as kb_maker
+from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import send_or_edit, user_in_whitelist
 
@@ -27,7 +27,7 @@ async def subs_menu_end(callback_query: types.CallbackQuery, state: FSMContext) 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """Формирует меню аналитики"""
-    keyboard = kb_maker.get_menu_kb()
+    keyboard = keyboards.get_menu_kb()
     msg_text = 'Аналитика\n'
     await send_or_edit(message, msg_text, keyboard)
 

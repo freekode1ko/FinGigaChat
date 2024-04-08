@@ -8,8 +8,8 @@ from log.bot_logger import user_logger
 from constants.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
     BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
 from handlers.industry.handler import router
-from keyboards.industry.callbacks import SelectNewsPeriod, GetNewsDaysCount
-from keyboards.industry.constructors import get_industry_kb, get_select_period_kb
+from keyboards.industry import callbacks
+from keyboards.industry import constructors as keyboards
 from utils.base import user_in_whitelist, bot_send_msg
 from utils.industry import get_msg_text_for_tg_newsletter
 
@@ -19,7 +19,7 @@ from db.industry import get_industry_name, get_industries_with_tg_channels, get_
 async def list_industries(message: Union[types.CallbackQuery, types.Message]) -> None:
     msg_text = 'Выберите отрасль для получения краткой сводки новостей из telegram каналов по ней'
     industry_df = get_industries_with_tg_channels()
-    keyboard = get_industry_kb(industry_df)
+    keyboard = keyboards.get_industry_kb(industry_df)
 
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
     if isinstance(message, types.Message):
@@ -57,8 +57,8 @@ async def back_to_menu(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(SelectNewsPeriod.filter())
-async def select_news_period(callback_query: types.CallbackQuery, callback_data: SelectNewsPeriod) -> None:
+@router.callback_query(callbacks.SelectNewsPeriod.filter())
+async def select_news_period(callback_query: types.CallbackQuery, callback_data: callbacks.SelectNewsPeriod) -> None:
     """
     Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
 
@@ -81,14 +81,14 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
         f'Для получения новостей из всех telegram каналов, связанных с отраслью, выберите '
         f'<b>"{ALL_TG_CHANNELS_CALLBACK_TEXT}"</b>'
     )
-    keyboard = get_select_period_kb(industry_id, my_subs)
+    keyboard = keyboards.get_select_period_kb(industry_id, my_subs)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : Выбрал отрасль с id {industry_id}')
 
 
-@router.callback_query(GetNewsDaysCount.filter())
-async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, callback_data: GetNewsDaysCount) -> None:
+@router.callback_query(callbacks.GetNewsDaysCount.filter())
+async def get_industry_summary_tg_news(callback_query: types.CallbackQuery, callback_data: callbacks.GetNewsDaysCount) -> None:
     """
     Отправка пользователю сводки новостей по отрасли за указанный период
 

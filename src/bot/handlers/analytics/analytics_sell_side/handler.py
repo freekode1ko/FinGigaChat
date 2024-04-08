@@ -4,7 +4,7 @@ from aiogram import types
 
 from db import subscriptions as subscriptions_db_api
 from handlers.analytics.handler import router
-from keyboards.analytics.analytics_sell_side import callbacks, constructors as kb_maker
+from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from utils.newsletter import send_researches_to_user
 
@@ -26,7 +26,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
         'Аналитика sell-side\n'
         'Группы:'
     )
-    keyboard = kb_maker.get_menu_kb(group_df)
+    keyboard = keyboards.get_menu_kb(group_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -57,7 +57,7 @@ async def get_group_sections_menu(
         f'Аналитика sell-side\n'
         f'Группа "{group_info["name"]}":\n'
     )
-    keyboard = kb_maker.get_sections_by_group_menu_kb(section_df)
+    keyboard = keyboards.get_sections_by_group_menu_kb(section_df)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -89,7 +89,7 @@ async def get_section_research_types_menu(
         f'Аналитика sell-side\n'
         f'Раздел "{section_info["name"]}":'
     )
-    keyboard = kb_maker.get_research_types_by_section_menu_kb(section_info['research_group_id'], research_type_df)
+    keyboard = keyboards.get_research_types_by_section_menu_kb(section_info['research_group_id'], research_type_df)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -119,7 +119,7 @@ async def select_period_to_get_researches(
         f'Выберите период, за который хотите получить отчеты по '
         f'<b>{research_info["name"]}</b>\n\n'
     )
-    keyboard = kb_maker.get_select_period_kb(research_type_id, research_info['research_section_id'])
+    keyboard = keyboards.get_select_period_kb(research_type_id, research_info['research_section_id'])
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
