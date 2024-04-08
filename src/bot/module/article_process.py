@@ -265,7 +265,7 @@ class ArticleProcess:
         return res
 
     @staticmethod
-    def _make_format_commodity_pricing(commodity_data: list[tuple]) -> str:
+    def _make_format_commodity_pricing(commodity_data: list[tuple] | None) -> str:
         """
         Создает текст с финансовыми показателями по коммодам
 
@@ -311,7 +311,7 @@ class ArticleProcess:
     @staticmethod
     def make_format_msg(subject_name: str,
                         articles: list,
-                        com_data: list[tuple]
+                        com_data: list[tuple] | None
                         ) -> tuple[str, str | bool]:
         """
         Make format to message.
