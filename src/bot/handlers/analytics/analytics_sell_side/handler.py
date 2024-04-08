@@ -55,7 +55,7 @@ async def get_group_sections_menu(
 
     msg_text = (
         f'Аналитика sell-side\n'
-        f'Группа {group_info["name"]}:\n'
+        f'Группа "{group_info["name"]}":\n'
     )
     keyboard = kb_maker.get_sections_by_group_menu_kb(section_df)
 
@@ -87,7 +87,7 @@ async def get_section_research_types_menu(
 
     msg_text = (
         f'Аналитика sell-side\n'
-        f'Раздел {section_info["name"]}:'
+        f'Раздел "{section_info["name"]}":'
     )
     keyboard = kb_maker.get_research_types_by_section_menu_kb(section_info['research_group_id'], research_type_df)
 
