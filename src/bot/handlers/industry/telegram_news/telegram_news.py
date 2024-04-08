@@ -4,16 +4,16 @@ from typing import Union
 from aiogram import F, types
 from aiogram.filters import Command
 
-from log.bot_logger import user_logger
 from constants.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
     BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
+from db.industry import get_industry_name, get_industries_with_tg_channels, get_industry_tg_news
 from handlers.industry.handler import router
 from keyboards.industry import callbacks
 from keyboards.industry import constructors as keyboards
+from log.bot_logger import user_logger
 from utils.base import user_in_whitelist, bot_send_msg
 from utils.industry import get_msg_text_for_tg_newsletter
 
-from db.industry import get_industry_name, get_industries_with_tg_channels, get_industry_tg_news
 
 
 async def list_industries(message: Union[types.CallbackQuery, types.Message]) -> None:

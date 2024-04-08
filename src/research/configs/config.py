@@ -15,7 +15,11 @@ ENV: Environment = Environment.from_str(_env_value)
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
+PATH_TO_SOURCES = PROJECT_DIR / 'sources'
+PATH_TO_REPORTS = PROJECT_DIR / 'sources' / 'reports'
 DEBUG: bool = env.bool('DEBUG', default=False)
+
+PATH_TO_REPORTS.mkdir(parents=True, exist_ok=True)
 
 
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
@@ -62,7 +66,6 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
-path_to_source = './sources'
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
 CIB_JSESSIONID = '1111akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'

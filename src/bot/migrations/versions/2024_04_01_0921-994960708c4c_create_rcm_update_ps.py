@@ -51,7 +51,7 @@ def upgrade_insert_row_in_parser_source(session: sa.orm.Session) -> None:
 
 def downgrade_insert_row_in_parser_source(session: sa.orm.Session) -> None:
     stmt = sa.delete(ParserSource).where(
-        source='https://www.investing.com/commodities/lng-japan-korea-marker-platts-futures'
+        ParserSource.source == 'https://www.investing.com/commodities/lng-japan-korea-marker-platts-futures'
     )
     session.execute(stmt)
 

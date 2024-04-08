@@ -15,8 +15,7 @@ from db.subscriptions import (
     get_telegram_channel_info,
     add_user_telegram_subscription,
 )
-from keyboards.subscriptions.telegram import callbacks
-from keyboards.subscriptions.telegram import constructors as keyboards
+from keyboards.subscriptions.telegram import callbacks, constructors as keyboards
 from handlers.subscriptions.handler import router
 from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 

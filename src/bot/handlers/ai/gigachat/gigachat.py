@@ -4,9 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 import module.gigachat as gig
-from log.bot_logger import logger, user_logger
 from constants.constants import giga_ans_footer
 from handlers.ai.handler import router
+from log.bot_logger import logger, user_logger
 from utils.base import user_in_whitelist
 
 
