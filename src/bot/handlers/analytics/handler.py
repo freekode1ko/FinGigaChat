@@ -26,16 +26,16 @@ async def subs_menu_end(callback_query: types.CallbackQuery, state: FSMContext) 
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
-    """Формирует меню подписок"""
+    """Формирует меню аналитики"""
     keyboard = kb_maker.get_menu_kb()
-    msg_text = 'Меню управления подписками\n'
+    msg_text = 'Аналитика\n'
     await send_or_edit(message, msg_text, keyboard)
 
 
 @router.callback_query(callbacks.AnalyticsMenu.filter())
 async def main_menu_callback(callback_query: types.CallbackQuery, callback_data: callbacks.AnalyticsMenu) -> None:
     """
-    Получение меню для взаимодействия с подписками
+    Получение меню для просмотра аналитики
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
