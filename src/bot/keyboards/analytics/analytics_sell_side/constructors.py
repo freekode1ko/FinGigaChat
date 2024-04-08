@@ -1,5 +1,3 @@
-from typing import Any
-
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
@@ -38,7 +36,7 @@ def get_sections_by_group_menu_kb(
     """
     keyboard = InlineKeyboardBuilder()
 
-    for index, item in section_df.iterrows():
+    for _, item in section_df.iterrows():
         button_txt = item['name'].capitalize()
         section_callback = callbacks.GetCIBSectionResearches(section_id=item['id'])
 
@@ -74,7 +72,7 @@ def get_research_types_by_section_menu_kb(
     """
     keyboard = InlineKeyboardBuilder()
 
-    for index, item in research_types_df.iterrows():
+    for _, item in research_types_df.iterrows():
         research_type_callback = callbacks.GetCIBResearchType(research_type_id=item['id'])
         button_txt = item["name"].capitalize()
         keyboard.row(types.InlineKeyboardButton(text=button_txt, callback_data=research_type_callback.pack()))

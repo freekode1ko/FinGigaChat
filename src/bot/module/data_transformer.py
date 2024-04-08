@@ -1,5 +1,5 @@
 import datetime
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -225,25 +225,25 @@ class Newsletter:
     __newsletter_dict = dict(weekly_result='Основные события прошедшей недели', weekly_event='Календарь и прогнозы текущей недели')
 
     @classmethod
-    def get_newsletter_dict(cls):
+    def get_newsletter_dict(cls) -> dict[str, str]:
         return cls.__newsletter_dict
 
     @classmethod
-    def make_weekly_result(cls):
+    def make_weekly_result(cls) -> tuple[str, str, list[Path]]:
         """Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
         img_path_list = [weekly_dir / i for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
+        newsletter = f'<b>{title}</b>\n'
         return title, newsletter, img_path_list
 
     @classmethod
-    def make_weekly_event(cls):
+    def make_weekly_event(cls) -> tuple[str, str, list[Path]]:
         """Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
         img_path_list = [weekly_dir / i for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
+        newsletter = f'<b>{title}</b>\n'
         return title, newsletter, img_path_list

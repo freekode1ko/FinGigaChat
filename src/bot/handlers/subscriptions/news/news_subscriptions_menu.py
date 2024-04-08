@@ -19,8 +19,7 @@ from handlers.subscriptions.handler import router
 from keyboards.subscriptions.news.callbacks import (
     AddAllSubsByDomain,
 )
-from keyboards.subscriptions import constructors as kb_maker
-from keyboards.subscriptions.news import constructors as kb_maker
+from keyboards.subscriptions.news import constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import user_in_whitelist, bot_send_msg, send_or_edit
@@ -575,7 +574,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
         conn.commit()
 
     msg_txt = 'Подписки удалены'
-    keyboard = kb_maker.get_back_to_client_subs_menu_kb()
+    keyboard = keyboards.get_back_to_client_subs_menu_kb()
     await callback_query.message.edit_text(text=msg_txt, reply_markup=keyboard)
 
 
@@ -596,10 +595,10 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
 
     if not user_subs:
         msg_text = 'У вас отсутствуют подписки'
-        keyboard = kb_maker.get_back_to_client_subs_menu_kb()
+        keyboard = keyboards.get_back_to_client_subs_menu_kb()
     else:
         msg_text = 'Вы уверены, что хотите удалить все подписки?'
-        keyboard = kb_maker.get_prepare_subs_delete_all_kb()
+        keyboard = keyboards.get_prepare_subs_delete_all_kb()
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -607,7 +606,7 @@ async def delete_all_subscriptions(callback_query: types.CallbackQuery) -> None:
 
 async def client_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     """Формирует меню подписок"""
-    keyboard = kb_maker.get_client_subscriptions_menu_kb()
+    keyboard = keyboards.get_client_subscriptions_menu_kb()
     msg_text = 'Меню управления подписками на клиентов, сырье, отрасли\n'
     await send_or_edit(message, msg_text, keyboard)
 

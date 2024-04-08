@@ -27,5 +27,6 @@ class GetCIBResearchType(CallbackData, prefix=callback_prefixes.RESEARCH_TYPE_IN
 
 
 class GetResearchesOverDays(CallbackData, prefix=callback_prefixes.GET_RESEARCHES):
+    """Выгрузка отчетов за последние days_count"""
     research_type_id: int
     days_count: int

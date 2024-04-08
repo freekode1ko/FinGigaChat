@@ -412,9 +412,8 @@ def get_researches_over_period(
         'to_date': to_date,
     }
 
-    if not research_type_ids:
-        dop_condition = ''
-    else:
+    dop_condition = ''
+    if research_type_ids:
         dop_condition = 'AND research_type_id=ANY(:research_type_ids)'
         kwargs['research_type_ids'] = research_type_ids
 

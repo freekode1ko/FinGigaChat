@@ -8,7 +8,7 @@ from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
 from db import subscriptions as subscriptions_db_api
 from handlers.subscriptions.handler import router
 from keyboards.subscriptions.research import callbacks
-from keyboards.subscriptions.research import constructors as kb_maker
+from keyboards.subscriptions.research import constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
 
@@ -43,7 +43,7 @@ async def get_my_research_subscriptions(
         f'Для получения более детальной информации об отчете - нажмите на него\n\n'
         f'Для удаления подписки - нажмите на "{DELETE_CROSS}"'
     )
-    keyboard = kb_maker.get_user_research_subs_kb(page_data, page, max_pages)
+    keyboard = keyboards.get_user_research_subs_kb(page_data, page, max_pages)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -63,7 +63,7 @@ async def show_cib_research_type_more_info(
         f'Название отчета: <b>{research_info["name"]}</b>\n'
         f'Описание: {research_info["description"]}\n'
     )
-    keyboard = kb_maker.get_research_type_info_kb(research_id, is_subscribed, back)
+    keyboard = keyboards.get_research_type_info_kb(research_id, is_subscribed, back)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -160,7 +160,7 @@ async def get_cib_section_research_types_menu(
         f'Для добавления/удаления подписки на отчет нажмите на {UNSELECTED}/{SELECTED} соответственно'
     )
 
-    keyboard = kb_maker.get_research_types_by_section_menu_kb(group_id, section_id, research_type_df)
+    keyboard = keyboards.get_research_types_by_section_menu_kb(group_id, section_id, research_type_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -174,7 +174,7 @@ async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, grou
     if not section_df[~section_df['dropdown_flag']].empty:
         msg_text += f'Для добавления/удаления подписки на раздел нажмите на {UNSELECTED}/{SELECTED} соответственно'
 
-    keyboard = kb_maker.get_research_sections_by_group_menu_kb(group_info, section_df)
+    keyboard = keyboards.get_research_sections_by_group_menu_kb(group_info, section_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
 
 
@@ -226,7 +226,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
 
     group_df = subscriptions_db_api.get_research_groups_df()  # id, name
     msg_text = 'Изменить подписки'
-    keyboard = kb_maker.get_research_groups_menu_kb(group_df)
+    keyboard = keyboards.get_research_groups_menu_kb(group_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -248,7 +248,7 @@ async def delete_all_research_subs(callback_query: types.CallbackQuery) -> None:
     subscriptions_db_api.delete_all_user_research_subscriptions(user_id)
 
     msg_text = 'Ваши подписки были удалены'
-    keyboard = kb_maker.get_back_to_research_subs_main_menu_kb()
+    keyboard = keyboards.get_back_to_research_subs_main_menu_kb()
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -270,10 +270,10 @@ async def approve_delete_all_research_subs(callback_query: types.CallbackQuery) 
 
     if user_subs.empty:
         msg_text = 'У вас отсутствуют подписки'
-        keyboard = kb_maker.get_back_to_research_subs_main_menu_kb()
+        keyboard = keyboards.get_back_to_research_subs_main_menu_kb()
     else:
         msg_text = 'Вы уверены, что хотите удалить все подписки?'
-        keyboard = kb_maker.get_research_subs_approve_delete_all_kb()
+        keyboard = keyboards.get_research_subs_approve_delete_all_kb()
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -290,7 +290,7 @@ async def research_subs_menu_end(callback_query: types.CallbackQuery) -> None:
 
 
 async def cib_research_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
-    keyboard = kb_maker.get_research_subscriptions_main_menu_kb()
+    keyboard = keyboards.get_research_subscriptions_main_menu_kb()
     msg_text = 'Подписки на аналитические отчеты'
     await send_or_edit(message, msg_text, keyboard)
 
