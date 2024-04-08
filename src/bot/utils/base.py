@@ -10,7 +10,7 @@ import pandas as pd
 from aiogram import Bot, types
 
 import module.data_transformer as dt
-from configs.config import path_to_source, PAGE_ELEMENTS_COUNT
+from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
 from constants.constants import research_footer
 from db.database import engine
 from log.logger_base import Logger
@@ -336,7 +336,7 @@ async def __create_fin_table(message: types.Message, client_name: str, client_fi
     transformer.render_mpl_table(
         client_fin_table, 'financial_indicator', header_columns=0, col_width=4, title='', alias=client_name.strip().upper(), fin=True
     )
-    png_path = '{}/img/{}_table.png'.format(path_to_source, 'financial_indicator')
+    png_path = PATH_TO_SOURCES / 'img' / 'financial_indicator_table.png'
     photo = types.FSInputFile(png_path)
     await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
 

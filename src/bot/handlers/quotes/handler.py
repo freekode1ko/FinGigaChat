@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import text
 
-from configs.config import path_to_source
+from configs.config import PATH_TO_SOURCES
 from constants.constants import sample_of_img_title
 from constants.quotes import COMMODITY_TABLE_ELEMENTS, COMMODITY_MARKS
 from db.database import engine
@@ -47,7 +47,7 @@ async def bonds_info(message: types.Message) -> None:
             bond_ru['Cрок до погашения'].values[num] = years[num]
 
         transformer = dt.Transformer()
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'bonds')
+        png_path = PATH_TO_SOURCES / 'img' / 'bonds_table.png'
         transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5, title='Доходности ОФЗ.')
         photo = types.FSInputFile(png_path)
         day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
@@ -103,7 +103,7 @@ async def economy_info(message: types.Message) -> None:
         for num, country in enumerate(world_bet['Страна'].values):
             world_bet.Страна[world_bet.Страна == country] = countries[country]
         transformer = dt.Transformer()
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'world_bet')
+        png_path = PATH_TO_SOURCES / 'img' / 'world_bet_table.png'
         world_bet = world_bet.round(2)
         transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2, title='Ключевые ставки ЦБ мира.')
         photo = types.FSInputFile(png_path)
@@ -136,7 +136,7 @@ async def economy_info(message: types.Message) -> None:
         transformer.render_mpl_table(
             rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2, title='Ежемесячная инфляция в России.'
         )
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'rus_infl')
+        png_path = PATH_TO_SOURCES / 'img' / 'rus_infl_table.png'
         photo = types.FSInputFile(png_path)
         title = 'Инфляция в России'
         data_source = 'ЦБ РФ'
@@ -163,7 +163,7 @@ async def economy_info(message: types.Message) -> None:
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
         title = 'Прогноз динамики ключевой ставки'
         data_source = 'Sber analytical research'
-        png_path = Path(path_to_source) / 'weeklies' / 'key_rate_dynamics_table.png'
+        png_path = PATH_TO_SOURCES / 'weeklies' / 'key_rate_dynamics_table.png'
 
         photo = types.FSInputFile(png_path)
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
@@ -272,7 +272,7 @@ async def data_mart(message: types.Message) -> None:
                 key_eco = key_eco.loc[:, cols_to_keep]
 
                 transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
-                png_path = '{}/img/{}_table.png'.format(path_to_source, 'key_eco')
+                png_path = PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
 
                 photo = types.FSInputFile(png_path)
                 await __sent_photo_and_msg(message, photo, title='')
@@ -293,7 +293,7 @@ async def exchange_info(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'exc')
+        png_path = PATH_TO_SOURCES / 'img' / 'exc_table.png'
         exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
         exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
 
@@ -328,11 +328,11 @@ async def exchange_info(message: types.Message) -> None:
             message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, curdatetime)
         )
 
-        fx_predict = pd.read_excel('{}/tables/fx_predict.xlsx'.format(path_to_source)).rename(columns={'базовый сценарий': ' '})
+        fx_predict = pd.read_excel(PATH_TO_SOURCES / 'tables' / 'fx_predict.xlsx').rename(columns={'базовый сценарий': ' '})
         title = 'Прогноз валютных курсов'
         data_source = 'Sber analytical research'
         transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0, col_width=1.5, title=title)
-        png_path = Path('{}/weeklies/{}.png'.format(path_to_source, 'exc_rate_prediction_table'))
+        png_path = PATH_TO_SOURCES / 'weeklies' / 'exc_rate_prediction_table.png'
         photo = types.FSInputFile(png_path)
         await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
 
@@ -374,7 +374,7 @@ async def metal_info(message: types.Message) -> None:
             title='Цены на ключевые сырьевые товары.'
         )
 
-        png_path = '{}/img/{}_table.png'.format(path_to_source, 'metal')
+        png_path = PATH_TO_SOURCES / 'img' / 'metal_table.png'
         day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
         photo = types.FSInputFile(png_path)
         title = 'Сырьевые товары'
