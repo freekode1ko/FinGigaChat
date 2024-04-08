@@ -3,8 +3,6 @@
 SUBS_MENU = 'subscriptions_menu'
 NEWS_SUBS_MENU = 'news_subscriptions_menu'
 END_WRITE_SUBS = 'tg_end_write_subs'
-# SUBS_DELETE_ALL_DONE = 'subs_delete_all_done'
-# ADD_ALL_SUBS_BY_DOMAIN = 'add_all_subs_by_domain'
 # ----------------------------------------------------
 # ------------TELEGRAM SUBSCRIPTIONS -----------------
 TG_MENU = 'tg_subs_menu'

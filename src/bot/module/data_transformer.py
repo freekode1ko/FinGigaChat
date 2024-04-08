@@ -1,9 +1,7 @@
-import copy
 import datetime
 import os
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import six
@@ -195,7 +193,7 @@ class Transformer:
                     cell.get_text().set_color('white')
 
         # save png and return it to user
-        png_path = '{}/img/{}_table.png'.format('./sources', name)
+        png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
         plt.savefig(png_path, transparent=False)
 
     @staticmethod
@@ -234,9 +232,9 @@ class Newsletter:
     def make_weekly_result(cls):
         """Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
+        img_path_list = [weekly_dir / i for i in slides_fnames]
         newsletter = f'<b>{title}</b>\n' f''
         return title, newsletter, img_path_list
 
@@ -244,8 +242,8 @@ class Newsletter:
     def make_weekly_event(cls):
         """Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
+        img_path_list = [weekly_dir / i for i in slides_fnames]
         newsletter = f'<b>{title}</b>\n' f''
         return title, newsletter, img_path_list

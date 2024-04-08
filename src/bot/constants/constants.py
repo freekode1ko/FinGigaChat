@@ -3,7 +3,6 @@ sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}<
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 
 handbook_prefix = '<b>{}</b>\n\n'
-PATH_TO_COMMODITY_GRAPH = 'sources/img/{}_graph.png'
 
 research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'

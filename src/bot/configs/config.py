@@ -18,6 +18,7 @@ STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice'
 TMP_VOICE_FILE_DIR.mkdir(parents=True, exist_ok=True)
 
+PATH_TO_SOURCES = PROJECT_DIR / 'sources'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
@@ -57,7 +58,6 @@ giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
-path_to_source = './sources'
 api_key_gpt = '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'
 
 NEWS_LIMIT = 5
