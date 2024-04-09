@@ -907,6 +907,9 @@ class ResearchAPIParser:
                     self._logger.error('Ошибка при работе с CIB: %s', e)
 
     async def get_fin_summary(self) -> None:
+        """
+        Стартовая точка для парсинга финансовых показателей по клиентам
+        """
         columns = ['sector_id', 'company_id', 'client_id', 'pl', 'balance', 'money']
         metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
         # получим список секторов для парсинга

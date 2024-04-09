@@ -13,16 +13,6 @@ class ExcGetter(QuotesGetter):
     fx_columns: List[str] = ['Валюта', 'Курс']
 
     @staticmethod
-    def find_number(data_list):
-        """Находит первое число в списке"""
-        for item in data_list[:20]:
-            try:
-                return float(item)
-            except ValueError:
-                pass
-        return None
-
-    @staticmethod
     def filter(table_row: list) -> bool:
         page = QuotesGetter.get_source_page_from_table_row(table_row)
         pages = ['usd-rub', 'eur-rub', 'cny-rub', 'eur-usd', 'usd-cnh', 'usdollar']
@@ -35,7 +25,7 @@ class ExcGetter(QuotesGetter):
         euro_standard, page_html = self.parser_obj.get_html(table_exchange[3], session)
         tree = html.fromstring(page_html)
         data = tree.xpath('//*[@data-test="instrument-price-last"]//text()')
-        price = self.find_number(data)
+        price = self.find_number(self.NAME, data)
         return [[exchange_page, price]]
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
