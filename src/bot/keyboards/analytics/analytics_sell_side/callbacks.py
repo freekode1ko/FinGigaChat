@@ -21,9 +21,14 @@ class GetCIBSectionResearches(CallbackData, prefix=callback_prefixes.RESEARCH_TY
     section_id: int
 
 
-class GetCIBResearchType(CallbackData, prefix=callback_prefixes.RESEARCH_TYPE_INFO):
-    """Меню для получения отчетов за время"""
+class GetCIBResearchData(CallbackData, prefix=callback_prefixes.RESEARCH_TYPE_INFO):
+    """
+    Меню для получения отчетов за время
+    research_type_id=0 или research_type.id
+    summary_type - тип, на основе которого формируется меню или делается выгрузка данных
+    """
     research_type_id: int
+    summary_type: int
 
 
 class GetResearchesOverDays(CallbackData, prefix=callback_prefixes.GET_RESEARCHES):

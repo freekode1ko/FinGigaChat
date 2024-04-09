@@ -1,9 +1,9 @@
 import pandas as pd
 from aiogram import types
 
-from log.bot_logger import user_logger
 from handlers.analytics.handler import router
 from keyboards.analytics.macro_view import callbacks, constructors as keyboards
+from log.bot_logger import user_logger
 
 
 @router.callback_query(callbacks.Menu.filter())
@@ -21,6 +21,9 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
     item_df = pd.DataFrame()
     keyboard = keyboards.get_menu_kb(item_df)
-    msg_text = 'MacroView\n'
+    msg_text = (
+        'MacroView\n\n'
+        'Функционал появиться позднее'
+    )
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

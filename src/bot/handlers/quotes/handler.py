@@ -14,6 +14,7 @@ from constants.quotes import COMMODITY_TABLE_ELEMENTS, COMMODITY_MARKS
 from db.database import engine
 from log.bot_logger import user_logger
 from module import data_transformer as dt
+from utils import weekly_pulse
 from utils.base import (
     __replacer,
     __sent_photo_and_msg,
@@ -160,15 +161,113 @@ async def economy_info(message: types.Message) -> None:
         rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
         rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
         await message.answer(rates_message, parse_mode='HTML', protect_content=False)
-        title = 'Прогноз динамики ключевой ставки'
-        data_source = 'Sber analytical research'
-        png_path = PATH_TO_SOURCES / 'weeklies' / 'key_rate_dynamics_table.png'
-
-        photo = types.FSInputFile(png_path)
-        await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
+        await weekly_pulse.key_rate_dynamics_table(message.bot, message.chat.id)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+async def data_mart_body(message: types.Message) -> None:
+    """
+    Отправка витрины данных
+
+    :param message: Объект, содержащий инфу о пользователе, чате, сообщении
+    """
+    transformer = dt.Transformer()
+    key_eco_table = pd.read_sql_query('SELECT * FROM key_eco', con=engine)
+    split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
+    key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
+
+    spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
+    title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
+    await message.answer(text=title, parse_mode='HTML', protect_content=True)
+
+    for table in spld_keys_eco:
+        table.reset_index(drop=True, inplace=True)
+    spld_keys_eco = [table for table in spld_keys_eco if not table.empty]
+
+    groups = {
+        'Национальные счета': 1,
+        'Бюджет': 1,
+        'Внешний долг': 1,
+        'ИПЦ': 2,
+        'ИЦП': 2,
+        'Денежное предложение': 3,
+        'Средняя процентная ставка': 3,
+        'Социальный сектор': 4,
+        'Норма сбережений': 4,
+        'Платежный баланс': 5,
+        'Обменный курс': 6,
+    }
+    groups_dict = {group: [] for group in range(1, 7)}
+
+    for table in spld_keys_eco:
+        table_group = None
+        for condition, group in groups.items():
+            if condition in table['alias'].iloc[0]:
+                table_group = group
+                break
+        if table_group:
+            groups_dict[table_group].append(table)
+
+    tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
+    # Денежное предложение
+    for table in tables:
+        table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = (
+                'Денежное предложение '
+                + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+        )
+    # Средняя процентная ставка
+    for table in tables:
+        condition = table['alias'].str.contains('Средняя процентная ставка')
+        values_to_update = table.loc[condition, 'Экономические показатели']
+        values_to_update = values_to_update.apply(lambda x: '\n'.join(textwrap.wrap(x, width=30)))
+        updated_values = 'Средняя ставка ' + values_to_update.str.lower()
+        table.loc[condition, 'Экономические показатели'] = updated_values
+
+    # рубль/доллар
+    for table in tables:
+        table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = (
+                table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
+        )
+    # ИПЦ
+    for table in tables:
+        table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = (
+                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
+        )
+    # ИЦП
+    for table in tables:
+        table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = (
+                table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
+        )
+    # Юралз
+    for table in tables:
+        condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
+        table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели'] + ', €/руб'
+
+    titles = []
+    for key_eco in tables:
+        title = key_eco['alias'].unique()
+        title = ', '.join(title)
+        if 'рубль/доллар' in title:
+            title = 'Курсы валют и нефть Urals'
+        titles.append(title)
+
+    for i, key_eco in enumerate(tables):
+        if not key_eco.empty:
+            key_eco.reset_index(inplace=True, drop=True)
+            key_eco = key_eco.drop(['id', 'alias'], axis=1)
+
+            cols_to_keep = [col for col in key_eco.columns if re.match(r'\d{4}', col) and col != 'alias'][-4:]
+            cols_to_keep.insert(0, 'Экономические показатели')
+            key_eco = key_eco.loc[:, cols_to_keep]
+
+            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, title=title,
+                                         alias=titles[i])
+            png_path = PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
+
+            photo = types.FSInputFile(png_path)
+            await __sent_photo_and_msg(message, photo, title='')
 
 
 @router.message(Command('view'))
@@ -181,100 +280,7 @@ async def data_mart(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        transformer = dt.Transformer()
-        key_eco_table = pd.read_sql_query('SELECT * FROM key_eco', con=engine)
-        split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
-        key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
-
-        spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
-        title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
-        await message.answer(text=title, parse_mode='HTML', protect_content=True)
-
-        for table in spld_keys_eco:
-            table = table.reset_index(drop=True, inplace=True)
-        spld_keys_eco = [table for table in spld_keys_eco if not table.empty]
-
-        groups = {
-            'Национальные счета': 1,
-            'Бюджет': 1,
-            'Внешний долг': 1,
-            'ИПЦ': 2,
-            'ИЦП': 2,
-            'Денежное предложение': 3,
-            'Средняя процентная ставка': 3,
-            'Социальный сектор': 4,
-            'Норма сбережений': 4,
-            'Платежный баланс': 5,
-            'Обменный курс': 6,
-        }
-        groups_dict = {group: [] for group in range(1, 7)}
-
-        for table in spld_keys_eco:
-            table_group = None
-            for condition, group in groups.items():
-                if condition in table['alias'].iloc[0]:
-                    table_group = group
-                    break
-            if table_group:
-                groups_dict[table_group].append(table)
-
-        tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
-        # Денежное предложение
-        for table in tables:
-            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = (
-                'Денежное предложение '
-                + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
-            )
-        # Средняя процентная ставка
-        for table in tables:
-            condition = table['alias'].str.contains('Средняя процентная ставка')
-            values_to_update = table.loc[condition, 'Экономические показатели']
-            values_to_update = values_to_update.apply(lambda x: '\n'.join(textwrap.wrap(x, width=30)))
-            updated_values = 'Средняя ставка ' + values_to_update.str.lower()
-            table.loc[condition, 'Экономические показатели'] = updated_values
-
-        # рубль/доллар
-        for table in tables:
-            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = (
-                table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
-            )
-        # ИПЦ
-        for table in tables:
-            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = (
-                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
-            )
-        # ИЦП
-        for table in tables:
-            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = (
-                table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
-            )
-        # Юралз
-        for table in tables:
-            condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
-            table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели'] + ', €/руб'
-
-        titles = []
-        for key_eco in tables:
-            title = key_eco['alias'].unique()
-            title = ', '.join(title)
-            if 'рубль/доллар' in title:
-                title = 'Курсы валют и нефть Urals'
-            titles.append(title)
-
-        for i, key_eco in enumerate(tables):
-            if not key_eco.empty:
-                key_eco.reset_index(inplace=True, drop=True)
-                key_eco = key_eco.drop(['id', 'alias'], axis=1)
-
-                cols_to_keep = [col for col in key_eco.columns if re.match(r'\d{4}', col) and col != 'alias'][-4:]
-                cols_to_keep.insert(0, 'Экономические показатели')
-                key_eco = key_eco.loc[:, cols_to_keep]
-
-                transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, title=title, alias=titles[i])
-                png_path = PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
-
-                photo = types.FSInputFile(png_path)
-                await __sent_photo_and_msg(message, photo, title='')
+        await data_mart_body(message)
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -328,12 +334,8 @@ async def exchange_info(message: types.Message) -> None:
         )
 
         fx_predict = pd.read_excel(PATH_TO_SOURCES / 'tables' / 'fx_predict.xlsx').rename(columns={'базовый сценарий': ' '})
-        title = 'Прогноз валютных курсов'
-        data_source = 'Sber analytical research'
         transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0, col_width=1.5, title=title)
-        png_path = PATH_TO_SOURCES / 'weeklies' / 'exc_rate_prediction_table.png'
-        photo = types.FSInputFile(png_path)
-        await __sent_photo_and_msg(message, photo, title=sample_of_img_title.format(title, data_source, curdatetime))
+        await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:

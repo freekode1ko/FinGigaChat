@@ -1,9 +1,11 @@
+from typing import Any
+
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import analytics
+from constants import analytics, enums
 from keyboards.analytics import constructors
 from keyboards.analytics.analytics_sell_side import callbacks
 
@@ -57,7 +59,7 @@ def get_sections_by_group_menu_kb(
 
 
 def get_research_types_by_section_menu_kb(
-        group_id: int,
+        group_info: dict[str, Any],
         research_types_df: pd.DataFrame,
 ) -> InlineKeyboardMarkup:
     """
@@ -67,19 +69,46 @@ def get_research_types_by_section_menu_kb(
     [][ отчет n ]
     [   назад   ]
 
-    :param group_id: id группы CIB Research
-    :param research_types_df: DataFrame[id, name, is_signed] инфа о подборке подписок
+    :param group_info: dict[id группы CIB Research, section_type]
+    :param research_types_df: DataFrame[id, name, is_signed, summary_type] инфа о подборке подписок
     """
     keyboard = InlineKeyboardBuilder()
 
-    for _, item in research_types_df.iterrows():
-        research_type_callback = callbacks.GetCIBResearchType(research_type_id=item['id'])
-        button_txt = item["name"].capitalize()
+    # update research_type_df by section_type (add weekly pulse, view)
+    match group_info['section_type']:
+        case enums.ResearchSectionType.economy.value:
+            # add weekly pulse прогноз динамики КС ЦБ
+            # add view
+            extra_rows = pd.DataFrame(
+                [
+                    [0, 'Прогноз по ключевой ставке', False, enums.ResearchSummaryType.key_rate_dynamics_table],
+                    [0, 'Макроэкономические показатели', False, enums.ResearchSummaryType.data_mart],
+                ],
+                columns=['id', 'name', 'is_signed', 'summary_type'],
+            )
+        case enums.ResearchSectionType.financial_exchange.value:
+            # add weekly pulse прогноз валютных курсов
+            extra_rows = pd.DataFrame(
+                [
+                    [0, 'Прогноз валютных курсов', False, enums.ResearchSummaryType.exc_rate_prediction_table],
+                ],
+                columns=['id', 'name', 'is_signed', 'summary_type'],
+            )
+        case _:
+            extra_rows = None
+
+    for _, item in pd.concat([extra_rows, research_types_df]).iterrows():
+        research_type_callback = callbacks.GetCIBResearchData(
+            research_type_id=item['id'],
+            summary_type=item['summary_type'],
+        )
+
+        button_txt = item["name"]
         keyboard.row(types.InlineKeyboardButton(text=button_txt, callback_data=research_type_callback.pack()))
 
     keyboard.row(types.InlineKeyboardButton(
         text='Назад',
-        callback_data=callbacks.GetCIBGroupSections(group_id=group_id).pack(),
+        callback_data=callbacks.GetCIBGroupSections(group_id=group_info['id']).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Завершить',

@@ -1,5 +1,5 @@
 import datetime
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from sqlalchemy import text
@@ -137,7 +137,7 @@ def get_research_type_info(research_type_id: int) -> dict:
     return: dict(id, name, description, research_section_id)
     """
     query = text(
-        'SELECT rt.id, rt.name, rt.description, rt.research_section_id '
+        'SELECT rt.id, rt.name, rt.description, rt.research_section_id, rt.summary_type '
         'FROM research_type rt '
         'WHERE rt.id=:research_type_id'
     )
@@ -149,6 +149,7 @@ def get_research_type_info(research_type_id: int) -> dict:
             'name': data[1],
             'description': data[2],
             'research_section_id': data[3],
+            'summary_type': data[4],
         }
 
     return data
@@ -306,10 +307,10 @@ def get_cib_section_info(section_id: int) -> dict[str, Any]:
     Возвращает информацию по разделу CIB Research
 
     :param section_id: research_section.id
-    return: dict(id, name, research_group_id)
+    return: dict(id, name, research_group_id, section_type)
     """
     query = text(
-        'SELECT id, name, research_group_id '
+        'SELECT id, name, research_group_id, section_type '
         'FROM research_section '
         'WHERE id=:section_id'
     )
@@ -320,6 +321,7 @@ def get_cib_section_info(section_id: int) -> dict[str, Any]:
             'id': data[0],
             'name': data[1],
             'research_group_id': data[2],
+            'section_type': data[3],
         }
 
     return data
@@ -329,19 +331,19 @@ def get_cib_research_types_by_section_df(section_id: int, user_id: int) -> pd.Da
     """
     Возвращает набор отчетов по разделу section_id
     Если пользователь подписан на отчет, то is_subscribed=True
-    return: DataFrame[id, name, is_subscribed]
+    return: DataFrame[id, name, is_subscribed, summary_type]
     """
     query = text(
-        'SELECT rt.id, rt.name, (CASE WHEN urg.user_id IS NULL THEN false ELSE true END) as is_subscribed '
+        'SELECT rt.id, rt.name, (CASE WHEN urg.user_id IS NULL THEN false ELSE true END) as is_subscribed, rt.summary_type '
         'FROM research_type rt '
         'LEFT JOIN user_research_subscription urg ON rt.id=urg.research_type_id and urg.user_id=:user_id '
         'WHERE research_section_id=:section_id AND (urg.user_id=:user_id OR urg.user_id IS NULL)'
         'ORDER BY rt.name'
     )
 
-    with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
+    with database.engine.connect() as conn:
         data = conn.execute(query.bindparams(section_id=section_id, user_id=user_id)).all()
-        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
+        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed', 'summary_type'])
 
     return data_df
 
@@ -431,6 +433,35 @@ def get_researches_over_period(
             'news_id',
         ]
         data = conn.execute(query).all()
+        data_df = pd.DataFrame(data, columns=columns)
+
+    return data_df
+
+
+def get_researches_by_type(research_type_id: int) -> pd.DataFrame:
+    """
+    Вынимает отчеты из таблицы research
+    :param research_type_id: id типа отчета, который вынимается (по умолчанию все)
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    """
+    with database.engine.connect() as conn:
+        columns = [
+            'id',
+            'research_type_id',
+            'filepath',
+            'header',
+            'text',
+            'parse_datetime',
+            'publication_date',
+            'news_id',
+        ]
+        query = text(
+            f'SELECT {", ".join(columns)} '
+            f'FROM research '
+            f'WHERE research_type_id=:research_type_id'
+        )
+        data = conn.execute(query.bindparams(research_type_id=research_type_id)).all()
+        conn.commit()
         data_df = pd.DataFrame(data, columns=columns)
 
     return data_df
