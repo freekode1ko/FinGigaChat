@@ -50,16 +50,12 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Сводка новостей из telegram каналов по отраслям',
     },
     {
-        'command': 'tg_subscriptions_menu',
-        'description': 'Подписки на telegram каналы',
-    },
-    {
-        'command': 'research_subscriptions_menu',
-        'description': 'Подписки на аналитические отчеты',
-    },
-    {
         'command': 'analytics_menu',
         'description': 'Аналитика',
+    },
+    {
+        'command': 'products_menu',
+        'description': 'Продукты',
     },
     {
         'command': 'delete_article',

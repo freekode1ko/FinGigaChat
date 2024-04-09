@@ -1,10 +1,10 @@
-from aiogram import F, Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from constants import analytics as callback_prefixes
-from keyboards.analytics import callbacks, constructors as keyboards
+from constants import products as callback_prefixes
+from keyboards.products import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import send_or_edit, user_in_whitelist
 
@@ -15,27 +15,27 @@ router.message.middleware(ChatActionMiddleware())  # on every message use chat a
 @router.callback_query(F.data.startswith(callback_prefixes.END_MENU))
 async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """
-    Завершает работу с меню аналитики
+    Завершает работу с меню продукты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Состояние FSM
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр аналитики завершен')
+    await callback_query.message.edit_text(text='Завершена работа с меню "продукты"')
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
-    """Формирует меню аналитики"""
+    """Формирует меню продукты"""
     keyboard = keyboards.get_menu_kb()
-    msg_text = 'Аналитика\n'
+    msg_text = 'Продукты\n'
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(callbacks.AnalyticsMenu.filter())
-async def main_menu_callback(callback_query: types.CallbackQuery, callback_data: callbacks.AnalyticsMenu) -> None:
+@router.callback_query(callbacks.ProductsMenu.filter())
+async def main_menu_callback(callback_query: types.CallbackQuery, callback_data: callbacks.ProductsMenu) -> None:
     """
-    Получение меню для просмотра аналитики
+    Получение меню продукты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
@@ -49,10 +49,10 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(Command(callbacks.AnalyticsMenu.__prefix__))
+@router.message(Command(callbacks.ProductsMenu.__prefix__))
 async def main_menu_command(message: types.Message) -> None:
     """
-    Получение меню для просмотра аналитики
+    Получение меню продукты
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
