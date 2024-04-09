@@ -25,6 +25,7 @@ class Transformer:
         :param metadata_df: DataFrame содержащий в себе основные данные по отчетам. [id сектора на research,
         id клиента на research, id клиента в нашей БД, отчет PL, балансовый отчет, отчет денежных движений]
         """
+        tables_handbook = {0: 'review_table', 1: 'pl_table', 2: 'balance_table', 3: 'money_table'}
         ecom_tables = pd.read_html(page_html.text, decimal=',', thousands='.')
         for table_num, table in enumerate(ecom_tables):
             self._logger.info()
@@ -34,12 +35,7 @@ class Transformer:
                 table.rename(columns={cleaned_columns[0]: ''}, inplace=True)
                 table[cleaned_columns[1:]] = table[cleaned_columns[1:]].replace('\.', ',', regex=True)
                 # запись полученных таблиц в исходных df
-                if table_num == 0:
-                    metadata_df.loc[metadata_df.company_id == company_id, 'review_table'] = [table.to_dict()]
-                elif table_num == 1:
-                    metadata_df.loc[metadata_df.company_id == company_id, 'pl_table'] = [table.to_dict()]
-                elif table_num == 2:
-                    metadata_df.loc[metadata_df.company_id == company_id, 'balance_table'] = [table.to_dict()]
-                elif table_num == 3:
-                    metadata_df.loc[metadata_df.company_id == company_id, 'money_table'] = [table.to_dict()]
+                company_filter = metadata_df.company_id == company_id
+                metadata_df.loc[company_filter, tables_handbook[table_num]] = [table.to_dict()]
+
         return metadata_df
