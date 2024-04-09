@@ -659,7 +659,7 @@ class ResearchAPIParser:
         self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
         self.month_dict = config.MONTH_NAMES_DICT
 
-        self.home_page = config.HOME_PAGE
+        self.home_page = config.research_base_url[:-1]
 
         self.cookies = {
             "JSESSIONID": config.CIB_JSESSIONID,
@@ -676,7 +676,9 @@ class ResearchAPIParser:
         """
         self._logger.info('Начало обновления куков')
         with requests.get(
-                url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
+                url=f'{self.home_page}/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_'
+                    f'cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode='
+                    f'view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
                 cookies=self.cookies,
                 verify=False,
         ) as req:
@@ -938,7 +940,7 @@ class ResearchAPIParser:
                     try:
                         self._logger.info()
                         sector_page = session.post(
-                            url=f'https://research.sberbank-cib.com/group/guest/companies?companyId={company_id}',
+                            url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
                             verify=False, cookies=self.cookies)
                         df_parts = pd.concat([tf.process_fin_summary_table(sector_page.text, company_id, sector_df),
                                               df_parts], ignore_index=True)

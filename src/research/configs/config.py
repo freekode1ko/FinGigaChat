@@ -228,4 +228,3 @@ MONTH_NAMES_DICT = {
 }
 REPEAT_TRIES = 5
 CONTENT_LENGTH__HTML_WITH_ARTICLE = 10000
-HOME_PAGE = 'https://research.sberbank-cib.com'
