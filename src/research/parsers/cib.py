@@ -945,6 +945,6 @@ class ResearchAPIParser:
                         df_parts = pd.concat([tf.process_fin_summary_table(sector_page.text, company_id, sector_df),
                                               df_parts], ignore_index=True)
                     except HTTPNoContent as e:
-                        self._logger.error('Ошибка при соединении c CIB: %s', e)
+                        self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                     except Exception as e:
-                        self._logger.error('Ошибка при работе с CIB: %s', e)
+                        self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
