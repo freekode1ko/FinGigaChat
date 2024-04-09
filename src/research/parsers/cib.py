@@ -923,11 +923,11 @@ class ResearchAPIParser:
         """
         Стартовая точка для парсинга финансовых показателей по клиентам
         """
-        columns = ['sector_id', 'company_id', 'client_id', 'pl', 'balance', 'money']
+        columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
         metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
         # получим список секторов для парсинга
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
-        metadata_df[['pl', 'balance', 'money']] = None
+        metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
         tf = data_tansformer.Transformer()
         df_parts = pd.DataFrame(columns=columns)
 
