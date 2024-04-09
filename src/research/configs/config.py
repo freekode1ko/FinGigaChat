@@ -101,6 +101,7 @@ CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
 QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
 RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
+RESEARCH_FINANCIAL_SUMMARY_PATH = pathlib.Path('sources') / 'tables' / 'financial_summary.xlsx'
 
 BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
 NEWS_LIMIT = 5
