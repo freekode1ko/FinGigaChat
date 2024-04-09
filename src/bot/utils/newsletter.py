@@ -130,7 +130,7 @@ async def subscriptions_newsletter(
 
                 for subject in client_commodity_name_list:
                     articles = user_client_comm_df.loc[user_client_comm_df['name'] == subject]
-                    _, msg, _ = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
+                    _, msg = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
                     msg = await bot.send_message(user_id, text=msg, parse_mode='HTML', disable_web_page_preview=True)
                     saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
