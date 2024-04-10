@@ -164,8 +164,8 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 async def __sent_photo_and_msg(
     message: types.Message,
     photo: Union[types.InputFile, str],
-    day: List[str] = None,
-    month: List[str] = None,
+    day: list[list] = None,
+    month: list[list] = None,
     title: str = '',
     source: str = '',
     protect_content: bool = True,

@@ -1,3 +1,15 @@
+from constants import enums
+
+MENU = 'quotes_menu'
+END_MENU = 'end_quotes_menu'
+
+FX = 'fx'
+FI = 'fi'
+EQUITY = 'equity'
+COMMODITIES = 'commodities'
+
+GET_FI_ITEM_DATA = 'get_fi_item_data'
+
 COMMODITY_MARKS = {
             'price': 'Цена',
             'day': 'Δ День',

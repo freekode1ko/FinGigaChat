@@ -1,14 +1,20 @@
 import datetime
+import re
+import textwrap
 
+import numpy as np
+import pandas as pd
 from aiogram import types
 
+from configs import config
 from constants import enums
-from db import subscriptions as subscriptions_db_api
-from handlers import quotes
+from db import subscriptions as subscriptions_db_api, database
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
+from module import data_transformer as dt
 from utils import weekly_pulse
+from utils.base import __sent_photo_and_msg
 from utils.newsletter import send_researches_to_user
 
 
@@ -188,6 +194,109 @@ async def key_rate_weekly_pulse_table(
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
+async def data_mart_body(message: types.Message) -> None:
+    """
+    Отправка витрины данных
+
+    :param message: Объект, содержащий инфу о пользователе, чате, сообщении
+    """
+    transformer = dt.Transformer()
+    key_eco_table = pd.read_sql_query('SELECT * FROM key_eco', con=database.engine)
+    split_numbers = key_eco_table.groupby('alias')['id'].max().reset_index().sort_values('id', ascending=True)
+    key_eco_table = key_eco_table.rename(columns=({'name': 'Экономические показатели'}))
+
+    spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
+    title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
+    await message.answer(text=title, parse_mode='HTML', protect_content=True)
+
+    for table in spld_keys_eco:
+        table.reset_index(drop=True, inplace=True)
+    spld_keys_eco = [table for table in spld_keys_eco if not table.empty]
+
+    groups = {
+        'Национальные счета': 1,
+        'Бюджет': 1,
+        'Внешний долг': 1,
+        'ИПЦ': 2,
+        'ИЦП': 2,
+        'Денежное предложение': 3,
+        'Средняя процентная ставка': 3,
+        'Социальный сектор': 4,
+        'Норма сбережений': 4,
+        'Платежный баланс': 5,
+        'Обменный курс': 6,
+    }
+    groups_dict = {group: [] for group in range(1, 7)}
+
+    for table in spld_keys_eco:
+        table_group = None
+        for condition, group in groups.items():
+            if condition in table['alias'].iloc[0]:
+                table_group = group
+                break
+        if table_group:
+            groups_dict[table_group].append(table)
+
+    tables = [pd.concat([df for df in groups_dict[group]]) for group in groups_dict.keys()]
+    # Денежное предложение
+    for table in tables:
+        table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = (
+                'Денежное предложение '
+                + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+        )
+    # Средняя процентная ставка
+    for table in tables:
+        condition = table['alias'].str.contains('Средняя процентная ставка')
+        values_to_update = table.loc[condition, 'Экономические показатели']
+        values_to_update = values_to_update.apply(lambda x: '\n'.join(textwrap.wrap(x, width=30)))
+        updated_values = 'Средняя ставка ' + values_to_update.str.lower()
+        table.loc[condition, 'Экономические показатели'] = updated_values
+
+    # рубль/доллар
+    for table in tables:
+        table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = (
+                table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
+        )
+    # ИПЦ
+    for table in tables:
+        table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = (
+                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
+        )
+    # ИЦП
+    for table in tables:
+        table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = (
+                table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
+        )
+    # Юралз
+    for table in tables:
+        condition = table['alias'].str.contains('рубль/евро') & ~table['Экономические показатели'].str.contains('Юралз')
+        table.loc[condition, 'Экономические показатели'] = table.loc[condition, 'Экономические показатели'] + ', €/руб'
+
+    titles = []
+    for key_eco in tables:
+        title = key_eco['alias'].unique()
+        title = ', '.join(title)
+        if 'рубль/доллар' in title:
+            title = 'Курсы валют и нефть Urals'
+        titles.append(title)
+
+    for i, key_eco in enumerate(tables):
+        if not key_eco.empty:
+            key_eco.reset_index(inplace=True, drop=True)
+            key_eco = key_eco.drop(['id', 'alias'], axis=1)
+
+            cols_to_keep = [col for col in key_eco.columns if re.match(r'\d{4}', col) and col != 'alias'][-4:]
+            cols_to_keep.insert(0, 'Экономические показатели')
+            key_eco = key_eco.loc[:, cols_to_keep]
+
+            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, title=title,
+                                         alias=titles[i])
+            png_path = config.PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
+
+            photo = types.FSInputFile(png_path)
+            await __sent_photo_and_msg(message, photo, title='')
+
+
 async def data_mart_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
@@ -197,7 +306,7 @@ async def data_mart_callback(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    await quotes.data_mart_body(callback_query.message)
+    await data_mart_body(callback_query.message)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 

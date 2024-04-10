@@ -48,3 +48,17 @@ class ResearchSummaryType(Enum):
     key_rate_dynamics_table = 3  # Выгрузка таблицы викли пульс с прогнозом КС ЦБ
     exc_rate_prediction_table = 4  # Выгрузка таблицы викли пульс с прогнозом валют
     data_mart = 5  # Выгрузка витрины данных
+
+
+class FIGroupType(Enum):
+    bonds = 0, 'ОФЗ'
+    obligates = 1, 'Корпоративные облигации '
+    foreign_markets = 2, 'Зарубежные рынки '
+
+    def __init__(self, value, title):
+        self._value_ = value
+        self._title_ = title
+
+    @property
+    def title(self):
+        return self._title_
