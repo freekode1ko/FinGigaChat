@@ -659,7 +659,7 @@ class ResearchAPIParser:
         self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
         self.month_dict = config.MONTH_NAMES_DICT
 
-        self.home_page = config.HOME_PAGE
+        self.home_page = config.research_base_url[:-1]
 
         self.cookies = {
             "JSESSIONID": config.CIB_JSESSIONID,
@@ -674,14 +674,21 @@ class ResearchAPIParser:
         """
         Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы
         """
-
+        self._logger.info('Начало обновления куков')
         with requests.get(
-                url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
+                url=f'{self.home_page}/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_'
+                    f'cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode='
+                    f'view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
                 cookies=self.cookies,
                 verify=False,
         ) as req:
             if req.status_code == 200 and 'JSESSIONID' in req.cookies:
                 self.cookies['JSESSIONID'] = req.cookies['JSESSIONID']
+                self._logger.info("Куки успешно обновлены")
+            elif req.status_code == 200:
+                self._logger.info('CIB: Куки не нуждаются в обновлении')
+            else:
+                self._logger.error('CIB: Ошибка обновления куков')
 
     async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
@@ -844,6 +851,7 @@ class ResearchAPIParser:
         :param params: Параметры для выгрузки отчетов
         :param session: сессия aiohttp
         """
+        self._logger.info('CIB: Начат парсинг страницы %s', params['url'])
         for i in range(self.REPEAT_TRIES):
             if params['before_link']:
                 # Тут нужно запрашивать отчеты по порядку
@@ -882,16 +890,19 @@ class ResearchAPIParser:
 
         for report in reports:
             if element_with_id := report.text:
-                self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
                 if not await self.report_exist_in_db(element_with_id):
+                    self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
                     await loop.create_task(
                         self.parse_reports_by_id(element_with_id, session, params),
                     )
+                    self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
 
     async def parse_pages(self) -> None:
         """
         Стартовая точка, метод который запускает весь парсинг отчетов
         """
+        self._logger.info('CIB: Начало парсинга CIB')
+
         pages_list = await self.get_pages_to_parse_from_db()
 
         loop = asyncio.get_event_loop()
@@ -902,16 +913,21 @@ class ResearchAPIParser:
                         self.get_report_ids_from_page(page, session),
                     )
                 except HTTPNoContent as e:
-                    self._logger.error('Ошибка при соединении c CIB: %s', e)
+                    self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                 except Exception as e:
-                    self._logger.error('Ошибка при работе с CIB: %s', e)
+                    self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
+
+        self._logger.info('CIB: Конец парсинга CIB')
 
     async def get_fin_summary(self) -> None:
-        columns = ['sector_id', 'company_id', 'client_id', 'pl', 'balance', 'money']
+        """
+        Стартовая точка для парсинга финансовых показателей по клиентам
+        """
+        columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
         metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
         # получим список секторов для парсинга
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
-        metadata_df[['pl', 'balance', 'money']] = None
+        metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
         tf = data_tansformer.Transformer()
         df_parts = pd.DataFrame(columns=columns)
 
@@ -924,11 +940,11 @@ class ResearchAPIParser:
                     try:
                         self._logger.info()
                         sector_page = session.post(
-                            url=f'https://research.sberbank-cib.com/group/guest/companies?companyId={company_id}',
+                            url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
                             verify=False, cookies=self.cookies)
                         df_parts = pd.concat([tf.process_fin_summary_table(sector_page.text, company_id, sector_df),
                                               df_parts], ignore_index=True)
                     except HTTPNoContent as e:
-                        self._logger.error('Ошибка при соединении c CIB: %s', e)
+                        self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                     except Exception as e:
-                        self._logger.error('Ошибка при работе с CIB: %s', e)
+                        self._logger.error('CIB: Ошибка при работе с CIB: %s', e)

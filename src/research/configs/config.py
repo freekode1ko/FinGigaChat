@@ -18,7 +18,6 @@ STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
-
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
     Считывает константу из json-файла
@@ -63,7 +62,6 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
-data_market_base_url = 'https://markets.tradingeconomics.com/'
 path_to_source = './sources'
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
@@ -103,6 +101,7 @@ CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
 TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
 QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
 RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
+RESEARCH_FINANCIAL_SUMMARY_PATH = pathlib.Path('sources') / 'tables' / 'financial_summary.xlsx'
 
 BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
 NEWS_LIMIT = 5
@@ -181,17 +180,8 @@ help_text = (
     'обратную связь по контенту, функционалу и новым идеям команде проекта.'
 )
 
-table_link = 'https://metals-wire.com/data'
-
-charts_links = {
-    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
-    'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
-}
-
-dict_of_commodities: dict = read_asset_from_json('commodities_dict.json')
 dict_of_companies: dict = read_asset_from_json('companies_dict.json')
 industry_reviews: Dict[str, str] = read_asset_from_json('industry_reviews.json')
-
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 industry_base_url = (
@@ -238,4 +228,3 @@ MONTH_NAMES_DICT = {
 }
 REPEAT_TRIES = 5
 CONTENT_LENGTH__HTML_WITH_ARTICLE = 10000
-HOME_PAGE = 'https://research.sberbank-cib.com'

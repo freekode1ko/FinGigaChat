@@ -12,6 +12,7 @@ from config import (
     COMMODITY_NAME_PATH,
     QUOTES_SOURCES_PATH,
     TELEGRAM_CHANNELS_DATA_PATH,
+    RESEARCH_FINANCIAL_SUMMARY_PATH,
     psql_engine,
 )
 
@@ -252,6 +253,26 @@ def main(engine):
         'TABLESPACE pg_default;'
     )
 
+    # create financial_summary table for clients financial tables
+    query_financial_summary = ('CREATE TABLE IF NOT EXISTS public.financial_summary'
+                               '('
+                               'id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                               '( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ), '
+                               'sector_id integer NOT NULL, '
+                               'company_id integer NOT NULL, '
+                               'client_id integer NOT NULL, '
+                               'review_table text, '
+                               'pl_table text, '
+                               'balance_table text, '
+                               'money_table text, '
+                               'CONSTRAINT financial_summary_pkey PRIMARY KEY (id), '
+                               'CONSTRAINT client_id FOREIGN KEY (client_id) '
+                               '  REFERENCES public.client (id) MATCH SIMPLE'
+                               '  ON UPDATE CASCADE'
+                               '  ON DELETE CASCADE'
+                               ')'
+                               'TABLESPACE pg_default;'
+                               )
     # create tables
     queries = [
         query_client,
@@ -267,6 +288,7 @@ def main(engine):
         query_relation_commodity_msg,
         query_whitelist,
         query_date_of_last_build,
+        query_financial_summary,
     ]
 
     with engine.connect() as conn:
@@ -515,6 +537,12 @@ def update_tg_channels(engine):
     print('Telegram channel table was updated')
 
 
+def update_financial_summary(engine):
+    df_db = pd.read_excel(RESEARCH_FINANCIAL_SUMMARY_PATH)[['sector_id', 'company_id', 'client_id', 'pl', 'balance', 'money']]
+    df_db.to_sql('financial_summary', con=engine, if_exists='replace', index=False)
+    print('financial summary table was updated')
+
+
 def update_quote_group_table(engine) -> None:
     from utils import quotes
 
@@ -693,6 +721,7 @@ def drop_tables(engine):
         'relation_commodity_article',
         'relation_commodity_message',
         'article_name_impact',
+        'financial_summary',
     ]
 
     with engine.connect() as conn:
@@ -756,6 +785,9 @@ if __name__ == '__main__':
     # update_database(main_engine, query_message_table)
     # # update message_type table
     # update_message_type_table(main_engine)
+
+    # load base data about financial summary
+    update_financial_summary(main_engine)
 
     # add navi_link column to client table
     update_database(main_engine, query_add_navi_link_to_client_table)

@@ -514,6 +514,16 @@ class UserResearchSubscriptions(Base):
     research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 
+t_relation_commodity_metals = Table(
+    'relation_commodity_metals', metadata,
+    Column('commodity_id', ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True),
+    Column('name_from_source', String(100), primary_key=True),
+    Column('source', Text, nullable=False),
+    Column('unit', String(10)),
+    Column('sub_name', String(100), nullable=False)
+)
+
+
 class FinancialSummary(Base):
     __tablename__ = 'financial_summary'
     __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}

@@ -123,3 +123,13 @@ class QuotesGetter(ABC):
         data, preprocessed_ids = self.preprocess(all_tables, session)
         self.save(data)
         self.save_last_time_update(preprocessed_ids)
+
+    def find_number(self, name: str, data_list: list[str]) -> float | None:
+        """Находит первое число в списке"""
+        for item in data_list[:20]:
+            try:
+                return float(item)
+            except ValueError:
+                pass
+        self.logger.info('Не было найдено число при парсинге котировки %s' % name)
+        return None
