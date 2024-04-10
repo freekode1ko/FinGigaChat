@@ -219,16 +219,6 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.TG_END_WRITE_SUBS))
-async def tg_end_write_subs(callback_query: types.CallbackQuery) -> None:
-    """
-    Завершает работу с меню подписок на тг каналы
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    await callback_query.message.edit_text(text='Формирование подписок завершено')
-
-
 async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     keyboard = keyboards.get_tg_subscriptions_menu_kb()
     msg_text = (

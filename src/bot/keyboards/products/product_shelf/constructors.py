@@ -15,4 +15,4 @@ def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
 
     :param item_df: DataFrame[id, name]
     """
-    return constructors.get_sub_menu_kb(item_df, callbacks.GetGroupPDF)
+    return constructors.get_sub_menu_kb(item_df, callbacks.GetGroupFiles)

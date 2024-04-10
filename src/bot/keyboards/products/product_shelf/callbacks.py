@@ -7,6 +7,6 @@ class Menu(CallbackData, prefix=callback_prefixes.MENU):
     pass
 
 
-class GetGroupPDF(CallbackData, prefix=callback_prefixes.GET_PRODUCT_PDF):
+class GetGroupFiles(CallbackData, prefix=callback_prefixes.GET_PRODUCT_PDF):
     """Выгрузка пдф файлов по группе (продуктовая полка)"""
     group_id: int

@@ -390,7 +390,7 @@ def get_new_researches() -> pd.DataFrame:
 def get_researches_over_period(
         from_date: datetime.date,
         to_date: datetime.date,
-        research_type_ids: list[int] = None,
+        research_type_ids: Optional[list[int]] = None,
 ) -> pd.DataFrame:
     """
     Возвращает все отчеты по отрасли [клиенту] за период с from_date по to_date

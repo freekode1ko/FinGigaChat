@@ -31,8 +31,8 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(callbacks.GetGroupPDF.filter())
-async def get_group_pdf(callback_query: types.CallbackQuery, callback_data: callbacks.GetGroupPDF) -> None:
+@router.callback_query(callbacks.GetGroupFiles.filter())
+async def get_group_files(callback_query: types.CallbackQuery, callback_data: callbacks.GetGroupFiles) -> None:
     """
     Получение пдф файлов для группы продуктовой полки
 
@@ -51,7 +51,10 @@ async def get_group_pdf(callback_query: types.CallbackQuery, callback_data: call
     pdf_files = os.listdir(dir_path) if dir_path else []
 
     if pdf_files:
-        media_group = MediaGroupBuilder(caption=product_shelf_item_name)
+        msg_text = f'Продуктовые предложения по полке "<b>{product_shelf_item_name}</b>"'
+        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+
+        media_group = MediaGroupBuilder()
         for fpath in pdf_files:
             media_group.add_document(media=types.FSInputFile(dir_path / fpath))
 
