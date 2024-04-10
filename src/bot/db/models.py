@@ -512,3 +512,17 @@ class UserResearchSubscriptions(Base):
 
     user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class FinancialSummary(Base):
+    __tablename__ = 'financial_summary'
+    __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
+
+    id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    sector_id = Column(Text, nullable=False)
+    company_id = Column(Text, nullable=False)
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    review_table = Column(Text, nullable=True)
+    pl_table = Column(Text, nullable=True)
+    balance_table = Column(Text, nullable=True)
+    money_table = Column(Text, nullable=True)
