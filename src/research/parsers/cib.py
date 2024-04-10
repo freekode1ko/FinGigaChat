@@ -923,9 +923,10 @@ class ResearchAPIParser:
         """
         Стартовая точка для парсинга финансовых показателей по клиентам
         """
+        self._logger.info('Чтение таблицы financial_summary')
         columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
         metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
-        # получим список секторов для парсинга
+        self._logger.info('Очистка прошлых записей в таблице financial_summary')
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
         metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
         tf = data_transformer.Transformer()
@@ -933,12 +934,11 @@ class ResearchAPIParser:
 
         async with ClientSession() as session:
             for sector_id in sectors_id:
-                self._logger.info()
+                self._logger.info(f'Обработка сектора {sector_id} для поиска фин. показателей')
                 # выберем блок из DF по обрабатываемому сектору
                 sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
                 for company_id in sector_df['company_id'].values.tolist():
                     try:
-                        self._logger.info()
                         sector_page = session.post(
                             url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
                             verify=False, cookies=self.cookies)
@@ -948,3 +948,7 @@ class ResearchAPIParser:
                         self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                     except Exception as e:
                         self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
+                self._logger.info(f'Сектор {sector_id} с фин. показателями обработан')
+        self._logger.info('Запись таблицы financial_summary')
+        metadata_df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        self._logger.info('Таблица financial_indicators записана')
