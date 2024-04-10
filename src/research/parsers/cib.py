@@ -27,7 +27,7 @@ from configs import config
 from db import parser_source
 from log.logger_base import Logger
 from module import weekly_pulse_parse
-from module import data_tansformer
+from module import data_transformer
 from db.database import engine
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
@@ -928,7 +928,7 @@ class ResearchAPIParser:
         # получим список секторов для парсинга
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
         metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
-        tf = data_tansformer.Transformer()
+        tf = data_transformer.Transformer()
         df_parts = pd.DataFrame(columns=columns)
 
         async with ClientSession() as session:
