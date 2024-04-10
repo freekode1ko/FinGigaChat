@@ -2,7 +2,7 @@
 # ------------NEWS SUBSCRIPTIONS ---------------------
 SUBS_MENU = 'subscriptions_menu'
 NEWS_SUBS_MENU = 'news_subscriptions_menu'
-END_WRITE_SUBS = 'tg_end_write_subs'
+END_WRITE_SUBS = 'end_write_subs'
 # ----------------------------------------------------
 # ------------TELEGRAM SUBSCRIPTIONS -----------------
 TG_MENU = 'tg_subs_menu'
@@ -18,7 +18,6 @@ TG_SUBS_DELETE_ALL = 'tg_subs_delete_all'
 TG_SUBS_DELETE_ALL_DONE = 'tg_subs_delete_all_done'
 
 TG_SUB_ACTION = 'tg_sub_action'
-TG_END_WRITE_SUBS = 'tg_end_write_subs'
 # ----------------------------------------------------
 # ------------CLIENT, COMMODITY, INDUSTRY SUBSCRIPTIONS ---------------------
 CLIENT_SUBS_MENU = 'client_subscriptions_menu'

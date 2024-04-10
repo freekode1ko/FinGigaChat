@@ -5,7 +5,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import analytics, enums
+from constants import analytics, enums, constants
 from keyboards.analytics import constructors
 from keyboards.analytics.analytics_sell_side import callbacks
 
@@ -17,6 +17,7 @@ def get_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     ...
     [ Группа n ]
     [  назад  ]
+    [   Завершить   ]
 
     :param group_df: DataFrame[id, name] инфа о группах CIB Research
     """
@@ -32,6 +33,7 @@ def get_sections_by_group_menu_kb(
     ...
     [ Раздел n ]
     [  назад  ]
+    [   Завершить   ]
 
     :param group_info: dict[id, name] инфа о группе CIB Research
     :param section_df: DataFrame[id, name, dropdown_flag, is_subscribed] инфа о разделах CIB Research
@@ -48,18 +50,18 @@ def get_sections_by_group_menu_kb(
         )
 
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
+        text=constants.BACK_BUTTON_TXT,
         callback_data=callbacks.Menu().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
     ))
     return keyboard.as_markup()
 
 
 def get_research_types_by_section_menu_kb(
-        group_info: dict[str, Any],
+        section_info: dict[str, Any],
         research_types_df: pd.DataFrame,
 ) -> InlineKeyboardMarkup:
     """
@@ -68,14 +70,15 @@ def get_research_types_by_section_menu_kb(
     ...
     [][ отчет n ]
     [   назад   ]
+    [   Завершить   ]
 
-    :param group_info: dict[id группы CIB Research, section_type]
+    :param section_info: dict[id раздела CIB Research, section_type, research_group_id id группы CIB Research]
     :param research_types_df: DataFrame[id, name, is_signed, summary_type] инфа о подборке подписок
     """
     keyboard = InlineKeyboardBuilder()
 
     # update research_type_df by section_type (add weekly pulse, view)
-    match group_info['section_type']:
+    match section_info['section_type']:
         case enums.ResearchSectionType.economy.value:
             # add weekly pulse прогноз динамики КС ЦБ
             # add view
@@ -107,11 +110,11 @@ def get_research_types_by_section_menu_kb(
         keyboard.row(types.InlineKeyboardButton(text=button_txt, callback_data=research_type_callback.pack()))
 
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
-        callback_data=callbacks.GetCIBGroupSections(group_id=group_info['id']).pack(),
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callbacks.GetCIBGroupSections(group_id=section_info['research_group_id']).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
     ))
     return keyboard.as_markup()
@@ -160,11 +163,11 @@ def get_select_period_kb(item_id: int, section_id: int) -> InlineKeyboardMarkup:
 
         keyboard.row(types.InlineKeyboardButton(text=period['text'], callback_data=by_days.pack()))
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
+        text=constants.BACK_BUTTON_TXT,
         callback_data=callbacks.GetCIBSectionResearches(section_id=section_id).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
     ))
 

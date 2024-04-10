@@ -2,7 +2,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import subscriptions as callback_prefixes
+from constants import subscriptions as callback_prefixes, constants
 from keyboards.subscriptions import constructors
 
 
@@ -25,7 +25,10 @@ def get_back_to_client_subs_menu_kb() -> InlineKeyboardMarkup:
     [   назад в меню   ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.CLIENT_SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.CLIENT_SUBS_MENU,
+    ))
     return keyboard.as_markup()
 
 
@@ -42,6 +45,12 @@ def get_client_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     keyboard.row(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
     keyboard.row(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
     keyboard.row(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.NEWS_SUBS_MENU))
-    keyboard.row(types.InlineKeyboardButton(text='Завершить', callback_data=callback_prefixes.END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.NEWS_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_prefixes.END_WRITE_SUBS,
+    ))
     return keyboard.as_markup()

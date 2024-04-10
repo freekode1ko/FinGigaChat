@@ -16,6 +16,9 @@ STOP = '⛔'
 
 CANCEL_CALLBACK = 'cancel'
 
+BACK_BUTTON_TXT = 'Назад'
+END_BUTTON_TXT = 'Завершить'
+
 # константы для RAG
 DEFAULT_RAG_ANSWER = 'В базе знаний нет ответа на этот вопрос, обратитесь к команде проекта.'
 ERROR_RAG_ANSWER = 'Извините, я пока не могу ответить на ваш запрос.'

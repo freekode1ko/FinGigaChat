@@ -6,7 +6,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import analytics
+from constants import analytics, constants
 from constants.analytics import analytics_sell_side
 from constants.analytics import industry
 from constants.analytics import macro_view
@@ -36,11 +36,11 @@ def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]
         )
 
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
+        text=constants.BACK_BUTTON_TXT,
         callback_data=analytics.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
     ))
     return keyboard.as_markup()
@@ -68,7 +68,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
         callback_data=macro_view.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
     ))
     return keyboard.as_markup()

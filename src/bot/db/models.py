@@ -520,7 +520,7 @@ class Research(Base):
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
     news_id = Column(String(64), nullable=False)
-    is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что новость еще не рассылалась пользователям')
+    is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что отчет еще не рассылался пользователям')
 
 
 class UserResearchSubscriptions(Base):
