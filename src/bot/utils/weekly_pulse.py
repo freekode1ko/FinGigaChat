@@ -13,7 +13,7 @@ def __get_weekly_pulse_parse_datetime() -> str:
 
 async def key_rate_dynamics_table(bot: Bot, chat_id: int) -> None:
     title = 'Прогноз динамики ключевой ставки'
-    data_source = 'Sber analytical research'
+    data_source = 'SberCIB Investment Research'
     png_path = config.PATH_TO_SOURCES / 'weeklies' / 'key_rate_dynamics_table.png'
 
     parse_datetime = __get_weekly_pulse_parse_datetime()
@@ -25,7 +25,7 @@ async def key_rate_dynamics_table(bot: Bot, chat_id: int) -> None:
 
 async def exc_rate_prediction_table(bot: Bot, chat_id: int) -> None:
     title = 'Прогноз валютных курсов'
-    data_source = 'Sber analytical research'
+    data_source = 'SberCIB Investment Research'
     png_path = config.PATH_TO_SOURCES / 'weeklies' / 'exc_rate_prediction_table.png'
 
     parse_datetime = __get_weekly_pulse_parse_datetime()

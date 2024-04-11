@@ -33,14 +33,22 @@ async def news_subs_menu(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     keyboard = keyboards.get_news_subscriptions_menu_kb()
-    msg_text = 'Меню управления подписками на новости\n'
+    msg_text = 'Меню управления подписками на новости из телеграм каналов и доверенных источников\n'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
 
 
 async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
-    """Формирует меню подписок"""
+    """
+    Формирует меню подписок
+    :param message: types.CallbackQuery | types.Message
+    """
     keyboard = keyboards.get_subscriptions_menu_kb()
-    msg_text = 'Меню управления подписками\n'
+    msg_text = (
+        'Меню управления подписками:\n\n'
+        'Выберете раздел подписок, который вы хотели бы изменить.\n\n'
+        'Новости из телеграм каналов и доверенных источников\n\n'
+        'Аналитика - SberCIB Investment Research\n\n'
+    )
     await send_or_edit(message, msg_text, keyboard)
 
 

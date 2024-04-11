@@ -48,6 +48,8 @@ class ResearchSummaryType(Enum):
     key_rate_dynamics_table = 3  # Выгрузка таблицы викли пульс с прогнозом КС ЦБ
     exc_rate_prediction_table = 4  # Выгрузка таблицы викли пульс с прогнозом валют
     data_mart = 5  # Выгрузка витрины данных
+    economy_monthly = 6  # Выгрузка ежемесячных обзоров по экономике РФ
+    economy_daily = 7  # Выгрузка ежедневных обзоров по экономике РФ
 
 
 class FIGroupType(Enum):

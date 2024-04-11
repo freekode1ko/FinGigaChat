@@ -4,7 +4,7 @@ sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 
 handbook_prefix = '<b>{}</b>\n\n'
 
-research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
+research_footer = 'Источник: SberCIB Investment Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
 SELECTED = '✅'
@@ -28,6 +28,7 @@ GIGA_RAG_FOOTER = 'Ответ сгенерирован Gigachat с помощь�
 
 TELEGRAM_MESSAGE_MAX_LEN = 4096
 TELEGRAM_MESSAGE_CAPTION_MAX_LEN = 1024
+TELEGRAM_MAX_MEDIA_ITEMS = 10
 
 REGISTRATION_CODE_MIN = 100_000
 REGISTRATION_CODE_MAX = 999_999

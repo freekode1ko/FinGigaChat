@@ -1,9 +1,11 @@
+import math
 import os
 
 import pandas as pd
 from aiogram import types
 from aiogram.utils.media_group import MediaGroupBuilder
 
+from constants import constants
 from constants.products import product_shelf
 from handlers.products.handler import router
 from keyboards.products.product_shelf import callbacks, constructors as keyboards
@@ -51,19 +53,20 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
     pdf_files = os.listdir(dir_path) if dir_path else []
 
     if pdf_files:
-        msg_text = f'Продуктовые предложения по полке "<b>{product_shelf_item_name}</b>"'
+        msg_text = f'Продуктовые предложения по полке\n"<b>{product_shelf_item_name}</b>"'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
 
-        media_group = MediaGroupBuilder()
-        for fpath in pdf_files:
-            media_group.add_document(media=types.FSInputFile(dir_path / fpath))
+        for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
+            media_group = MediaGroupBuilder()
+            for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
+                media_group.add_document(media=types.FSInputFile(dir_path / fpath))
 
-        await callback_query.message.answer_media_group(media_group.build(), protect_content=True)
+            await callback_query.message.answer_media_group(media_group.build(), protect_content=True)
     else:
         msg_text = (
             f'Продуктовая полка\n'
             f'{product_shelf_item_name}\n'
-            f'На данный момент, информация в системе отсутствует'
+            f'Функционал появится позднее'
         )
         await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

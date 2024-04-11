@@ -134,7 +134,7 @@ def get_research_type_info(research_type_id: int) -> dict:
     Возвращает информацию по типу отчета CIB Research
 
     :param research_type_id: research_type.id
-    return: dict(id, name, description, research_section_id)
+    return: dict(id, name, description, research_section_id, summary_type)
     """
     query = text(
         'SELECT rt.id, rt.name, rt.description, rt.research_section_id, rt.summary_type '
@@ -292,7 +292,7 @@ def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
         'FROM research_section rs '
         'JOIN section_subscriptions ss ON rs.id=ss.research_section_id '
         'WHERE research_group_id=:group_id '
-        'ORDER BY rs.dropdown_flag, rs.name'
+        'ORDER BY rs.display_order'
     )
 
     with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить

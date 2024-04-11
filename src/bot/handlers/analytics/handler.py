@@ -26,9 +26,15 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
-    """Формирует меню аналитики"""
+    """
+    Формирует меню аналитики
+    :param message: types.CallbackQuery | types.Message
+    """
     keyboard = keyboards.get_menu_kb()
-    msg_text = 'Аналитика\n'
+    msg_text = (
+        'В этом разделе вы можете получить, всесторонний анализ российского финансового рынка '
+        'от SberCIB Investment Research'
+    )
     await send_or_edit(message, msg_text, keyboard)
 
 
