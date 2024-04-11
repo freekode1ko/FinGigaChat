@@ -5,6 +5,7 @@ from sqlalchemy import select, insert, CursorResult
 
 from db.models import UserMeeting, Whitelist
 from db.database import engine
+from constants.constants import REMEMBER_TIME
 
 
 def data_as_dict(data: CursorResult) -> list[dict[str, Any]]:
@@ -71,12 +72,12 @@ def get_user_meetings(user_id: int | str) -> list[dict[str, Any]]:
         return data_as_dict(meetings)
 
 
-# def get_user_meetings_for_notification() -> list[dict[str, Any]]:
-#     """Получение всех предстоящих встреч для реализации напоминаний"""
-#     min_start_time = dt.datetime.now() + dt.timedelta(minutes=REMEMBER_TIME['last']['minutes'])
-#     query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start).
-#              where(UserMeeting.date_start > min_start_time))
-#     with engine.connect() as conn:
-#         meetings = conn.execute(query).all()
-#
-#     return [dict(user_id=meeting[0], theme=meeting[1], date_start=meeting[2]) for meeting in meetings]
+def get_user_meetings_for_notification() -> list[dict[str, Any]]:
+    """Получение всех предстоящих встреч для реализации напоминаний"""
+    min_start_time = dt.datetime.now() + dt.timedelta(minutes=REMEMBER_TIME['last']['minutes'])
+    query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start).
+             where(UserMeeting.date_start > min_start_time))
+    with engine.connect() as conn:
+        meetings = conn.execute(query).all()
+
+    return [dict(user_id=meeting[0], theme=meeting[1], date_start=meeting[2]) for meeting in meetings]
