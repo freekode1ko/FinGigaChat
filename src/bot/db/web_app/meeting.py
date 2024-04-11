@@ -25,7 +25,7 @@ def get_user_email(user_id: int | str) -> str:
     with engine.connect() as conn:
         query = select(Whitelist.user_email).where(Whitelist.user_id==user_id)
         email = conn.execute(query)
-    return email.scalar()
+        return email.scalar()
 
 
 def add_meeting(data: dict[str, Any]) -> None:
