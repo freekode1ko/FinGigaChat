@@ -8,6 +8,7 @@ from db.web_app.meeting import *
 from module.email_send import SmtpSend
 from utils.web_app.meeting_app.utils import format_date, reformat_data
 from configs.config import mail_smpt_port, mail_smpt_server
+from schedular import send_schedular_new_data
 
 app = FastAPI()
 
@@ -47,6 +48,7 @@ def create_meeting(user_id, theme, date_start, date_end, description, timezone):
     }
     data = reformat_data(data)
     add_meeting(data)
+    send_schedular_new_data(data)
 
     user_email = get_user_email(user_id=user_id)
     smtp = SmtpSend(os.getenv('MAIL_RU_LOGIN'), os.getenv('MAIL_RU_PASSWORD'), mail_smpt_server, mail_smpt_port)
@@ -54,5 +56,3 @@ def create_meeting(user_id, theme, date_start, date_end, description, timezone):
         smtp.send_meeting(user_email, data)
 
     return 'OK'
-
-

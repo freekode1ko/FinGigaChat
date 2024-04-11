@@ -41,9 +41,9 @@ def add_meeting(data: dict[str, Any]) -> None:
         user_id=int(data.get('user_id')),
         theme=data.get('theme'),
         description=data.get('description'),
-        date_start=data.get('date_start') + dt.timedelta(hours=user_timezone),
-        date_end=data.get('date_end') + dt.timedelta(hours=user_timezone),
-        timezone=-user_timezone
+        date_start=data.get('date_start'),
+        date_end=data.get('date_end'),
+        timezone=user_timezone
     )
     with engine.connect() as conn:
         conn.execute(query)
@@ -74,10 +74,15 @@ def get_user_meetings(user_id: int | str) -> list[dict[str, Any]]:
 
 def get_user_meetings_for_notification() -> list[dict[str, Any]]:
     """Получение всех предстоящих встреч для реализации напоминаний"""
-    min_start_time = dt.datetime.now() + dt.timedelta(minutes=REMEMBER_TIME['last']['minutes'])
-    query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start).
+    minutes = REMEMBER_TIME['last']['minutes']
+    dt_utc_now = dt.datetime.now(dt.timezone.utc)
+    min_start_time = dt.datetime(dt_utc_now.year, dt_utc_now.month,
+                                 dt_utc_now.day, dt_utc_now.hour, dt_utc_now.minute + minutes)
+    query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start, UserMeeting.timezone).
              where(UserMeeting.date_start > min_start_time))
     with engine.connect() as conn:
         meetings = conn.execute(query).all()
 
-    return [dict(user_id=meeting[0], theme=meeting[1], date_start=meeting[2]) for meeting in meetings]
+    return [
+        dict(user_id=meeting[0], theme=meeting[1], date_start=meeting[2], timezone=meeting[3]) for meeting in meetings
+    ]
