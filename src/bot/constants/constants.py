@@ -4,7 +4,7 @@ sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
 
 handbook_prefix = '<b>{}</b>\n\n'
 
-research_footer = 'Источник: Sber Analytical Research. Распространение материалов за пределами Сбербанка запрещено'
+research_footer = 'Источник: SberCIB Investment Research. Распространение материалов за пределами Сбербанка запрещено'
 giga_ans_footer = 'Ответ сгенерирован Gigachat. Информация требует дополнительной верификации'
 
 SELECTED = '✅'

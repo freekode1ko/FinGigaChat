@@ -155,7 +155,7 @@ class Transformer:
                 clip_on=False,
             )
 
-            sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
+            sample_of_img_title_view = 'SberCIB Investment Research. Данные на {}*'
             sample_of_img_title_view = sample_of_img_title_view.format(read_curdatetime().split()[0])
             title_loc = 'left'
             ax.text(
