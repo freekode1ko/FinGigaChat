@@ -13,7 +13,7 @@ import requests
 import selenium
 import selenium.webdriver as wb
 from aiohttp import ClientSession
-from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
+from aiohttp.web_exceptions import HTTPNoContent
 from asyncpg.pool import Pool as asyncpgPool
 from bs4 import BeautifulSoup
 from pdf2image import convert_from_path
@@ -22,9 +22,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from sqlalchemy import insert, select, func
 
 from configs import config
 from db import parser_source
+from db.database import async_session
+from db.models import Research, ResearchType, ParserSource
 from log.logger_base import Logger
 from module import weekly_pulse_parse
 from module import data_transformer
@@ -641,7 +644,6 @@ class ResearchParser:
         print('Weekly review готов')
 
 
-
 class ResearchAPIParser:
     """
     Class for parse pages from API CIB Research
@@ -696,24 +698,20 @@ class ResearchAPIParser:
         return: возвращает список источников с доп параметрами
         """
 
-        async with self.postgres_conn.acquire() as connection:
-            all_sources = await connection.fetch(
-                'SELECT research_type.id, parser_source.source, parser_source.params, '
-                'parser_source.alt_names, parser_source.before_link, parser_source.response_format '
-                'FROM research_type INNER JOIN parser_source ON parser_source.id=research_type.source_id'
+        async with async_session() as session:
+            all_sources = await session.execute(
+                select(
+                    ResearchType.id,
+                    ParserSource.source.label('url'),
+                    ParserSource.params,
+                    ParserSource.alt_names,
+                    ParserSource.before_link,
+                    ParserSource.response_format.label('request_method'),
+                )
+                .select_from(ResearchType)
+                .join(ParserSource)
             )
-            pages = [
-                {
-                    'research_type_id': source['id'],
-                    'url': source['source'],
-                    'params': source['params'] or {},
-                    'starts_with': source['alt_names'],
-                    'before_link': source['before_link'],
-                    'request_method': source['response_format']
-                }
-                for source in all_sources
-            ]
-            return pages
+            return [_._asdict() for _ in all_sources]
 
     def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
         """
@@ -748,31 +746,30 @@ class ResearchAPIParser:
         :param report_id: уникальный айди отчета
         :return: булевое значение с ифнормацией о том есть отчет или нет
         """
-        async with self.postgres_conn.acquire() as connection:
-            count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{report_id}'"
-            )
-            return bool(count_news['count_news'])
+        async with async_session() as session:
+            count_news = await session.execute(
+                select(func.count()).select_from(Research).filter(Research.news_id == report_id))
+
+            return bool(count_news.scalar())
 
     async def save_report_to_db(self, report: dict) -> None:
         """
         Метод для сохранения отчетов в базу данных
         :param report: Отчет
         """
-        async with self.postgres_conn.acquire() as connection:
-            report_id = report['report_id']
-            research_type_id = report['research_type_id']
-            filepath = report['filepath']
-            header = report['header'].replace("'", "''")
-            text = report['text'].replace("'", "''")
-            parse_datetime = report['parse_datetime']
-            publication_date = report['publication_date']
-            await connection.execute(
-                (
-                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
-                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{report_id}')"
+        async with async_session() as session:
+            session.add(
+                Research(
+                    research_type_id=report['research_type_id'],
+                    filepath=report['filepath'],
+                    header=report['header'],
+                    text=report['text'],
+                    parse_datetime=report['parse_datetime'],
+                    publication_date=report['publication_date'],
+                    news_id=report['report_id']
                 )
             )
+            await session.commit()
 
     async def parse_reports_by_id(
             self,
@@ -798,7 +795,7 @@ class ResearchAPIParser:
             report_html = BeautifulSoup(await req.text(), 'html.parser')
 
         header = str(report_html.find('h1', class_='popupTitle').text).strip()
-        if self.is_suitable_report(header, params['starts_with']):
+        if self.is_suitable_report(header, params['alt_names']):
             self._logger.info('CIB: сохранение отчета: %s', report_id)
 
             date = self.cib_date_to_normal_date(str(report_html.find('span',
@@ -833,8 +830,8 @@ class ResearchAPIParser:
                 file_path = None
 
             await self.save_report_to_db({
-                'research_type_id': params['research_type_id'],
-                'filepath': file_path,
+                'research_type_id': params['id'],
+                'filepath': str(file_path),
                 'header': header,
                 'text': report_text,
                 'parse_datetime': datetime.datetime.utcnow(),
