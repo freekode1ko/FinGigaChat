@@ -23,7 +23,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     keyboard = keyboards.get_menu_kb(item_df)
     msg_text = (
         'MacroView\n\n'
-        'Функционал появиться позднее'
+        'Функционал появится позднее'
     )
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

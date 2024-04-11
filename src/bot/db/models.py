@@ -300,6 +300,7 @@ class Client(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
+    navi_link = Column(Text, nullable=True, server_default='')
     industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
 
     industry = relationship('Industry', back_populates='client')

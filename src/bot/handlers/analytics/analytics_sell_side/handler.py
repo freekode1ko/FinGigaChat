@@ -11,7 +11,7 @@ from aiogram.filters.callback_data import CallbackData
 from configs import config
 from constants import enums
 from constants.analytics import analytics_sell_side
-from db import subscriptions as subscriptions_db_api, database
+from db import client as client_db_api, subscriptions as subscriptions_db_api, database
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
@@ -129,7 +129,7 @@ async def get_cib_research_data(
     Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранная отрасль и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     """
     summary_type = callback_data.summary_type
 
@@ -156,9 +156,17 @@ async def get_cib_research_data(
 
 async def select_period_to_get_researches(
         callback_query: types.CallbackQuery,
-        callback_data: callbacks.GetCIBResearchData,
+        callback_data: callbacks.GetCIBResearchData | callbacks.SelectClientResearchesGettingPeriod,
         callback_factory: Optional[Type[CallbackData]] = callbacks.GetResearchesOverDays,
+        back_callback: Optional[str] = None,
 ) -> None:
+    """
+    Меню выбора периода, за который выгружаются отчеты
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_factory: Фабрика создания callback_data для выгрузки отчетов за период
+    :param back_callback: callback_data для кнопки Назад
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -172,10 +180,15 @@ async def select_period_to_get_researches(
         f'Выберите период, за который хотите получить отчеты по '
         f'<b>{research_info["name"]}</b>\n\n'
     )
+
+    back_callback = (
+            back_callback or callbacks.GetCIBSectionResearches(section_id=research_info['research_section_id']).pack()
+    )
+
     keyboard = keyboards.get_select_period_kb(
         research_type_id,
-        research_info['research_section_id'],
         callback_factory,
+        back_callback,
     )
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -186,6 +199,12 @@ async def get_last_actual_research(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Получение последнего актуального отчета
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -204,6 +223,12 @@ async def cib_client_analytical_indicators(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Меню аналитических показателей по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -212,12 +237,9 @@ async def cib_client_analytical_indicators(
     research_type_id = callback_data.research_type_id
 
     research_info = subscriptions_db_api.get_research_type_info(research_type_id)
-
-    msg_text = (
-        f'Выберите период, за который хотите получить отчеты по '
-        f'<b>{research_info["name"]}</b>\n\n'
-    )
-    keyboard = keyboards.get_select_period_kb(research_type_id, research_info['research_section_id'], callbacks.GetResearchesOverDays)
+    # FIXME
+    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info["name"]}</b>?'
+    keyboard = keyboards.client_analytical_indicators_kb(research_info)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
@@ -227,6 +249,12 @@ async def exc_rate_weekly_pulse_table(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Получение курса валют (слайд из викли пульс)
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -240,6 +268,12 @@ async def key_rate_weekly_pulse_table(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Получение ключевой ставки (слайд из викли пульс)
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -356,6 +390,12 @@ async def data_mart_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Получение витрины данных
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -369,6 +409,12 @@ async def ecomony_monthly_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Получение последнего актуального ежемесячного отчета по Экономике РФ
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -390,6 +436,12 @@ async def ecomony_daily_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
+    """
+    Меню выбора периода для выгрузки ежедневных отчетов по Экономике РФ
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    """
     await select_period_to_get_researches(callback_query, callback_data, callbacks.GetEconomyDailyResearchesOverDays)
 
 
@@ -442,3 +494,76 @@ async def get_economy_daily_researches_over_period(
         callback_data,
         header_not_contains=analytics_sell_side.ECONOMY_MONTHLY_HEADER_CONTAINS,
     )
+
+
+@router.callback_query(callbacks.GetINavigatorSource.filter())
+async def get_client_inavigator_source(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetINavigatorSource,
+) -> None:
+    """
+    Отправка пользователю сводки ежедневных отчетов по экономике РФ за указанный период
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    research_type_id = callback_data.research_type_id
+
+    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
+    navi_link = client_db_api.get_client_navi_link_by_name(research_info['name'])
+
+    if navi_link:
+        msg_text = f'<a href="{str(navi_link)}">Цифровая справка клиента: "{research_info["name"]}"</a>'
+    else:
+        msg_text = f'Цифровая справка по клиенту "{research_info["name"]}" отсутствует'
+
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
+
+
+@router.callback_query(callbacks.SelectClientResearchesGettingPeriod.filter())
+async def select_client_period(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.SelectClientResearchesGettingPeriod,
+) -> None:
+    """
+    Отправка пользователю сводки ежедневных отчетов по экономике РФ за указанный период
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета и способ получения новостей
+    """
+    await select_period_to_get_researches(
+        callback_query,
+        callback_data,
+        back_callback=callbacks.GetCIBResearchData(
+            research_type_id=callback_data.research_type_id,
+            summary_type=callback_data.summary_type,
+        ).pack(),
+    )
+
+
+@router.callback_query(callbacks.NotImplementedFunctionality.filter())
+async def not_implemented_functionality(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.NotImplementedFunctionality,
+) -> None:
+    """
+    Сообщение, что функционал не реализован
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    msg_text = 'Функционал появится позднее'
+
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')

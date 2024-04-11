@@ -214,6 +214,7 @@ def upgrade() -> None:
     op.create_table('client',
     sa.Column('id', sa.Integer(), sa.Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), nullable=False),
     sa.Column('name', sa.Text(), nullable=False),
+    sa.Column('navi_link', sa.Text(), nullable=True, server_default=''),
     sa.Column('industry_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['industry_id'], ['industry.id'], onupdate='CASCADE'),
     sa.PrimaryKeyConstraint('id')

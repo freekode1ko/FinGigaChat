@@ -134,7 +134,7 @@ def get_research_type_info(research_type_id: int) -> dict:
     Возвращает информацию по типу отчета CIB Research
 
     :param research_type_id: research_type.id
-    return: dict(id, name, description, research_section_id)
+    return: dict(id, name, description, research_section_id, summary_type)
     """
     query = text(
         'SELECT rt.id, rt.name, rt.description, rt.research_section_id, rt.summary_type '

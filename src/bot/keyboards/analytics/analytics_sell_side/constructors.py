@@ -135,13 +135,17 @@ def get_research_types_by_section_menu_kb(
     return keyboard.as_markup()
 
 
-def get_select_period_kb(item_id: int, section_id: int, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
+def get_select_period_kb(
+        item_id: int,
+        callback_factory: Type[CallbackData],
+        back_callback: str,
+) -> InlineKeyboardMarkup:
     """
     Создает клавиатуру для выбора периода, за который пользователь получит сводку новостей
 
     :param item_id: id объекта, по которому идет выгрузка данных
-    :param section_id: id раздела, в котором только что был пользователь
     :param callback_factory: класс формирования callback_data  [research_type_id, days_count]
+    :param back_callback: callback_data для кнопки Назад
     return: Клавиатура с кнопками
             1а) за 1 день
             1б) за 3 дня
@@ -180,11 +184,74 @@ def get_select_period_kb(item_id: int, section_id: int, callback_factory: Type[C
         keyboard.row(types.InlineKeyboardButton(text=period['text'], callback_data=by_days.pack()))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callbacks.GetCIBSectionResearches(section_id=section_id).pack(),
+        callback_data=back_callback,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
     ))
 
+    return keyboard.as_markup()
+
+
+def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Справка ]
+    [ Аналитические обзоры ]
+    [ P&L модель ]
+    [ Модель баланса ]
+    [ Модель CF ]
+    [ Коэффициенты ]
+    [  назад  ]
+    [   Завершить   ]
+
+    :param research_type_info: инфа о типе отчета CIB Research dict[id, research_section_id, summary_type]
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    buttons = [
+        {
+            'name': 'Цифровая справка',
+            'callback_data': callbacks.GetINavigatorSource(research_type_id=research_type_info['id']).pack(),
+        },
+        {
+            'name': 'Аналитические обзоры',
+            'callback_data': callbacks.SelectClientResearchesGettingPeriod(
+                research_type_id=research_type_info['id'],
+                summary_type=research_type_info['summary_type'],
+            ).pack(),
+        },
+        {
+            'name': 'P&L модель',
+            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        },
+        {
+            'name': 'Модель баланса',
+            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        },
+        {
+            'name': 'Модель CF',
+            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        },
+        {
+            'name': 'Коэффициенты',
+            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        },
+    ]
+
+    for item in buttons:
+        keyboard.row(types.InlineKeyboardButton(
+            text=item['name'],
+            callback_data=item['callback_data'],
+        ))
+
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callbacks.GetCIBSectionResearches(section_id=research_type_info['research_section_id']).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=analytics.END_MENU,
+    ))
     return keyboard.as_markup()
