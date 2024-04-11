@@ -1,0 +1,174 @@
+from typing import Any
+
+import pandas as pd
+from aiogram import types
+from aiogram.types import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from constants import analytics, enums, constants
+from keyboards.analytics import constructors
+from keyboards.analytics.analytics_sell_side import callbacks
+
+
+def get_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Группа 1 ]
+    ...
+    [ Группа n ]
+    [  назад  ]
+    [   Завершить   ]
+
+    :param group_df: DataFrame[id, name] инфа о группах CIB Research
+    """
+    return constructors.get_sub_menu_kb(group_df, callbacks.GetCIBGroupSections)
+
+
+def get_sections_by_group_menu_kb(
+        section_df: pd.DataFrame,
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Раздел 1 ]
+    ...
+    [ Раздел n ]
+    [  назад  ]
+    [   Завершить   ]
+
+    :param group_info: dict[id, name] инфа о группе CIB Research
+    :param section_df: DataFrame[id, name, dropdown_flag, is_subscribed] инфа о разделах CIB Research
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    for _, item in section_df.iterrows():
+        button_txt = item['name'].capitalize()
+        section_callback = callbacks.GetCIBSectionResearches(section_id=item['id'])
+
+        keyboard.row(types.InlineKeyboardButton(
+            text=button_txt,
+            callback_data=section_callback.pack()),
+        )
+
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callbacks.Menu().pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=analytics.END_MENU,
+    ))
+    return keyboard.as_markup()
+
+
+def get_research_types_by_section_menu_kb(
+        section_info: dict[str, Any],
+        research_types_df: pd.DataFrame,
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [][ отчет 1 ]
+    ...
+    [][ отчет n ]
+    [   назад   ]
+    [   Завершить   ]
+
+    :param section_info: dict[id раздела CIB Research, section_type, research_group_id id группы CIB Research]
+    :param research_types_df: DataFrame[id, name, is_signed, summary_type] инфа о подборке подписок
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    # update research_type_df by section_type (add weekly pulse, view)
+    match section_info['section_type']:
+        case enums.ResearchSectionType.economy.value:
+            # add weekly pulse прогноз динамики КС ЦБ
+            # add view
+            extra_rows = pd.DataFrame(
+                [
+                    [0, 'Прогноз по ключевой ставке', False, enums.ResearchSummaryType.key_rate_dynamics_table],
+                    [0, 'Макроэкономические показатели', False, enums.ResearchSummaryType.data_mart],
+                ],
+                columns=['id', 'name', 'is_signed', 'summary_type'],
+            )
+        case enums.ResearchSectionType.financial_exchange.value:
+            # add weekly pulse прогноз валютных курсов
+            extra_rows = pd.DataFrame(
+                [
+                    [0, 'Прогноз валютных курсов', False, enums.ResearchSummaryType.exc_rate_prediction_table],
+                ],
+                columns=['id', 'name', 'is_signed', 'summary_type'],
+            )
+        case _:
+            extra_rows = None
+
+    for _, item in pd.concat([extra_rows, research_types_df]).iterrows():
+        research_type_callback = callbacks.GetCIBResearchData(
+            research_type_id=item['id'],
+            summary_type=item['summary_type'],
+        )
+
+        button_txt = item["name"]
+        keyboard.row(types.InlineKeyboardButton(text=button_txt, callback_data=research_type_callback.pack()))
+
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callbacks.GetCIBGroupSections(group_id=section_info['research_group_id']).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=analytics.END_MENU,
+    ))
+    return keyboard.as_markup()
+
+
+def get_select_period_kb(item_id: int, section_id: int) -> InlineKeyboardMarkup:
+    """
+    Создает клавиатуру для выбора периода, за который пользователь получит сводку новостей
+
+    :param item_id: id объекта, по которому идет выгрузка данных
+    :param section_id: id раздела, в котором только что был пользователь
+    return: Клавиатура с кнопками
+            1а) за 1 день
+            1б) за 3 дня
+            2) за неделю
+            3) за месяц
+            4) назад
+            5) Завершить
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    periods_list = [
+        {
+            'text': 'За 1 день',
+            'days': 1,
+        },
+        {
+            'text': 'За 3 дня',
+            'days': 3,
+        },
+        {
+            'text': 'За неделю',
+            'days': 7,
+        },
+        {
+            'text': 'За месяц',
+            'days': 30,  # average
+        },
+    ]
+
+    for period in periods_list:
+        by_days = callbacks.GetResearchesOverDays(
+            research_type_id=item_id,
+            days_count=period['days'],
+        )
+
+        keyboard.row(types.InlineKeyboardButton(text=period['text'], callback_data=by_days.pack()))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callbacks.GetCIBSectionResearches(section_id=section_id).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=analytics.END_MENU,
+    ))
+
+    return keyboard.as_markup()

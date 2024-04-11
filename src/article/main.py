@@ -13,8 +13,12 @@ from log.logger_base import selector_logger
 from module.mail_parse import ImapParse
 from log import sentry
 
-CLIENT_FOLDER_DIR = 'sources/articles/client'
-COMMODITY_FOLDER_DIR = 'sources/articles/commodity'
+CLIENT_FOLDER_DIR = Path('sources/articles/client')
+COMMODITY_FOLDER_DIR = Path('sources/articles/commodity')
+
+CLIENT_FOLDER_DIR.mkdir(exist_ok=True, parents=True)
+COMMODITY_FOLDER_DIR.mkdir(exist_ok=True, parents=True)
+
 HOUR_TO_PARSE = dt.timedelta(hours=3, minutes=30)
 
 

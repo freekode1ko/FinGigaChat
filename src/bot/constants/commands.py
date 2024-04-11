@@ -6,6 +6,22 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Информация о боте',
     },
     {
+        'command': 'analytics_menu',
+        'description': 'Аналитика',
+    },
+    {
+        'command': 'products_menu',
+        'description': 'Продукты',
+    },
+    {
+        'command': 'quotes_menu',
+        'description': 'Котировки',
+    },
+    {
+        'command': 'subscriptions_menu',
+        'description': 'Меню подписок',
+    },
+    {
         'command': 'gigachat',
         'description': 'Переход в режим общения с GigaChat',
     },
@@ -14,48 +30,20 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Спросить у Базы Знаний',
     },
     {
-        'command': 'eco',
-        'description': 'Экономика',
-    },
-    {
-        'command': 'bonds',
-        'description': 'Облигации',
-    },
-    {
-        'command': 'fx',
-        'description': 'Курсы валют',
-    },
-    {
-        'command': 'commodities',
-        'description': 'Сырьевые товары',
-    },
-    {
-        'command': 'view',
-        'description': 'Витрина данных',
+        'command': 'referencebook',
+        'description': 'Справочник',
     },
     {
         'command': 'newsletter',
         'description': 'События недели',
     },
     {
-        'command': 'referencebook',
-        'description': 'Справочник',
-    },
-    {
-        'command': 'subscriptions_menu',
-        'description': 'Меню подписок',
+        'command': 'eco',
+        'description': 'Экономика',
     },
     {
         'command': 'industry_tgnews',
         'description': 'Сводка новостей из telegram каналов по отраслям',
-    },
-    {
-        'command': 'tg_subscriptions_menu',
-        'description': 'Подписки на telegram каналы',
-    },
-    {
-        'command': 'research_subscriptions_menu',
-        'description': 'Подписки на аналитические отчеты',
     },
     {
         'command': 'delete_article',
