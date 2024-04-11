@@ -45,7 +45,15 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """Формирует меню Котировки"""
     keyboard = keyboards.get_menu_kb()
-    msg_text = 'Котировки\n'
+    msg_text = (
+        'Выберите интересующий вас рынок, чтобы получить актуальные котировки:\n\n'
+        'FX - валютный рынок. Получите курс валют и анализ валютных пар.\n\n'
+        'FI - рынок фиксированного дохода. Исследуйте облигации, долговые обязательства и другие '
+        'финансовые инструменты с фиксированным доходом.\n\n'
+        'Equity - рынок акций. Просмотрите актуальные котировки акций, индексов.\n\n'
+        'Commodities - товарный рынок. Узнайте последние цены на сырьевые товары, такие как нефть, '
+        'золото, серебро и многое другое.\n\n'
+    )
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -164,7 +172,7 @@ async def fin_indicators(callback_query: types.CallbackQuery, callback_data: cal
         columns=['id', 'name', 'type'],
     )
     keyboard = keyboards.get_sub_menu_kb(item_df, callbacks.GetFIItemData)
-    msg_text = 'Финансовые показатели\n'
+    msg_text = 'Выберите финансовый инструмент, по которому вы хотели бы получить информацию'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
