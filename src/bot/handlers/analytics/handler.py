@@ -32,8 +32,8 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     keyboard = keyboards.get_menu_kb()
     msg_text = (
-        'В этом разделе вы можете получить, всесторонний анализ российской экономики финансового рынка '
-        'от Sberbank Investment Research'
+        'В этом разделе вы можете получить, всесторонний анализ российского финансового рынка '
+        'от SberCIB Investment Research'
     )
     await send_or_edit(message, msg_text, keyboard)
 
