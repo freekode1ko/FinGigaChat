@@ -541,6 +541,25 @@ t_relation_commodity_metals = Table(
 )
 
 
+class UserMeeting(Base):
+    __tablename__ = 'user_meeting'
+    __table_args__ = {'comment': 'Перечень встреч пользователей'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    theme = Column(Text, nullable=False, default='Напоминание', comment='Тема встречи')
+    date_start = Column(DateTime, nullable=False, comment='Время начала встречи (UTC)')
+    date_end = Column(DateTime, nullable=False, comment='Время окончания встречи (UTC)')
+    timezone = Column(Integer, comment='Таймзона пользователя во время использования web app', nullable=False)
+    is_notify_first = Column(Boolean, server_default=sa.text('false'),
+                             comment='Указывает на отправку первого уведомления')
+    is_notify_second = Column(Boolean, server_default=sa.text('false'),
+                              comment='Указывает на отправку второго уведомления')
+    is_notify_last = Column(Boolean, server_default=sa.text('false'),
+                            comment='Указывает на отправку последнего уведомления')
+    description = Column(Text, comment='Описание встречи')
+
+
 class CallReports(Base):
     __tablename__ = 'bot_call_reports'
     __table_args__ = {'comment': 'Записи call reports'}
