@@ -51,7 +51,7 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
     pdf_files = os.listdir(dir_path) if dir_path else []
 
     if pdf_files:
-        msg_text = f'Продуктовые предложения по полке "<b>{product_shelf_item_name}</b>"'
+        msg_text = f'Продуктовые предложения по полке\n"<b>{product_shelf_item_name}</b>"'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
 
         media_group = MediaGroupBuilder()

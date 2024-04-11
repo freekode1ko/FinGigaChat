@@ -43,7 +43,10 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
-    """Формирует меню Котировки"""
+    """
+    Формирует меню Котировки
+    :param message: types.CallbackQuery | types.Message
+    """
     keyboard = keyboards.get_menu_kb()
     msg_text = (
         'Выберите интересующий вас рынок, чтобы получить актуальные котировки:\n\n'
