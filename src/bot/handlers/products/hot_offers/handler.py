@@ -24,7 +24,7 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
 
     pdf_files = os.listdir(hot_offers.DATA_ROOT_PATH)
     if pdf_files:
-        msg_text = 'Горячие предложения'
+        msg_text = 'Актуальные предложения для клиента'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
 
         media_group = MediaGroupBuilder()

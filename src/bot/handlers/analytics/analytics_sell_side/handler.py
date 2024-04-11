@@ -1,13 +1,16 @@
 import datetime
 import re
 import textwrap
+from typing import Optional, Type
 
 import numpy as np
 import pandas as pd
 from aiogram import types
+from aiogram.filters.callback_data import CallbackData
 
 from configs import config
 from constants import enums
+from constants.analytics import analytics_sell_side
 from db import subscriptions as subscriptions_db_api, database
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
@@ -35,7 +38,16 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
         'Аналитика sell-side\n'
         'Группы:'
     )
-    keyboard = keyboards.get_menu_kb(group_df)
+
+    section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
+    group_df = group_df[group_df['name'] != 'Разделы']
+
+    section_df = subscriptions_db_api.get_cib_sections_by_group_df(section_group_id, from_user.id)
+
+    section_df['callback_data'] = section_df['id'].apply(lambda x: callbacks.GetCIBSectionResearches(section_id=x).pack())
+    group_df['callback_data'] = group_df['id'].apply(lambda x: callbacks.GetCIBGroupSections(group_id=x).pack())
+
+    keyboard = keyboards.get_menu_kb(pd.concat([section_df, group_df]))
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -91,22 +103,65 @@ async def get_section_research_types_menu(
     user_id = callback_query.from_user.id
     section_id = callback_data.section_id
 
+    group_df = subscriptions_db_api.get_research_groups_df()  # id, name
+    section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
+
     section_info = subscriptions_db_api.get_cib_section_info(section_id)
     research_type_df = subscriptions_db_api.get_cib_research_types_by_section_df(section_id, user_id)
+
+    back_callback_data = (
+        callbacks.GetCIBGroupSections(group_id=section_info['research_group_id']).pack()
+        if section_info['research_group_id'] != section_group_id else callbacks.Menu().pack()
+    )
 
     msg_text = (
         f'Аналитика sell-side\n'
         f'Раздел "{section_info["name"]}":'
     )
-    keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df)
+    keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+@router.callback_query(callbacks.GetCIBResearchData.filter())
+async def get_cib_research_data(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetCIBResearchData,
+) -> None:
+    """
+    Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранная отрасль и способ получения новостей (по подпискам или по всем каналам)
+    """
+    summary_type = callback_data.summary_type
+
+    match summary_type:
+        case enums.ResearchSummaryType.periodic.value:
+            await select_period_to_get_researches(callback_query, callback_data)
+        case enums.ResearchSummaryType.last_actual.value:
+            await get_last_actual_research(callback_query, callback_data)
+        case enums.ResearchSummaryType.analytical_indicators.value:
+            await cib_client_analytical_indicators(callback_query, callback_data)
+        case enums.ResearchSummaryType.exc_rate_prediction_table.value:
+            await exc_rate_weekly_pulse_table(callback_query, callback_data)
+        case enums.ResearchSummaryType.key_rate_dynamics_table.value:
+            await key_rate_weekly_pulse_table(callback_query, callback_data)
+        case enums.ResearchSummaryType.data_mart.value:
+            await data_mart_callback(callback_query, callback_data)
+        case enums.ResearchSummaryType.economy_daily.value:
+            await ecomony_daily_callback(callback_query, callback_data)
+        case enums.ResearchSummaryType.economy_monthly.value:
+            await ecomony_monthly_callback(callback_query, callback_data)
+        case _:
+            pass
+
+
 async def select_period_to_get_researches(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        callback_factory: Optional[Type[CallbackData]] = callbacks.GetResearchesOverDays,
 ) -> None:
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -121,7 +176,11 @@ async def select_period_to_get_researches(
         f'Выберите период, за который хотите получить отчеты по '
         f'<b>{research_info["name"]}</b>\n\n'
     )
-    keyboard = keyboards.get_select_period_kb(research_type_id, research_info['research_section_id'])
+    keyboard = keyboards.get_select_period_kb(
+        research_type_id,
+        research_info['research_section_id'],
+        callback_factory,
+    )
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
@@ -194,7 +253,7 @@ async def key_rate_weekly_pulse_table(
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
-async def data_mart_body(message: types.Message) -> None:
+async def _data_mart_body(message: types.Message) -> None:
     """
     Отправка витрины данных
 
@@ -306,50 +365,50 @@ async def data_mart_callback(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    await data_mart_body(callback_query.message)
+    await _data_mart_body(callback_query.message)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
-@router.callback_query(callbacks.GetCIBResearchData.filter())
-async def get_cib_research_data(
+async def ecomony_monthly_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
-    """
-    Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранная отрасль и способ получения новостей (по подпискам или по всем каналам)
-    """
-    summary_type = callback_data.summary_type
+    research_type_id = callback_data.research_type_id
 
-    match summary_type:
-        case enums.ResearchSummaryType.periodic.value:
-            await select_period_to_get_researches(callback_query, callback_data)
-        case enums.ResearchSummaryType.last_actual.value:
-            await get_last_actual_research(callback_query, callback_data)
-        case enums.ResearchSummaryType.analytical_indicators.value:
-            await cib_client_analytical_indicators(callback_query, callback_data)
-        case enums.ResearchSummaryType.exc_rate_prediction_table.value:
-            await exc_rate_weekly_pulse_table(callback_query, callback_data)
-        case enums.ResearchSummaryType.key_rate_dynamics_table.value:
-            await key_rate_weekly_pulse_table(callback_query, callback_data)
-        case enums.ResearchSummaryType.data_mart.value:
-            await data_mart_callback(callback_query, callback_data)
-        case _:
-            pass
+    research_df = subscriptions_db_api.get_researches_by_type(research_type_id)
+    if not research_df.empty:
+        research_df = research_df[
+            research_df['header'].str.contains(analytics_sell_side.ECONOMY_MONTHLY_HEADER_CONTAINS, case=False)
+        ]
+        last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
+        await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
+
+
+async def ecomony_daily_callback(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetCIBResearchData,
+) -> None:
+    await select_period_to_get_researches(callback_query, callback_data, callbacks.GetEconomyDailyResearchesOverDays)
 
 
 @router.callback_query(callbacks.GetResearchesOverDays.filter())
 async def get_researches_over_period(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetResearchesOverDays,
+        header_not_contains: Optional[str] = '',
 ) -> None:
     """
-    Отправка пользователю сводки новостей по отрасли за указанный период
+    Отправка пользователю сводки отчетов по отрасли за указанный период
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
+    :param header_not_contains: фильтрация полученных отчетов по header
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -364,6 +423,26 @@ async def get_researches_over_period(
     from_date = to_date - datetime.timedelta(days=days)
 
     researches_df = subscriptions_db_api.get_researches_over_period(from_date, to_date, [research_type_id])
+    if header_not_contains:
+        researches_df = researches_df[~researches_df['header'].str.contains(header_not_contains, case=False)]
     await send_researches_to_user(callback_query.bot, user_id, full_name, researches_df)
 
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : получил отчеты с {research_type_id=:} за {days} дней')
+
+
+@router.callback_query(callbacks.GetEconomyDailyResearchesOverDays.filter())
+async def get_economy_daily_researches_over_period(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetResearchesOverDays,
+) -> None:
+    """
+    Отправка пользователю сводки ежедневных отчетов по экономике РФ за указанный период
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
+    """
+    await get_researches_over_period(
+        callback_query,
+        callback_data,
+        header_not_contains=analytics_sell_side.ECONOMY_MONTHLY_HEADER_CONTAINS,
+    )

@@ -1,5 +1,7 @@
 import pandas as pd
+from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from keyboards.analytics import constructors
 from keyboards.analytics.macro_view import callbacks
@@ -15,4 +17,12 @@ def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
 
     :param item_df: DataFrame[id, name]
     """
-    return constructors.get_sub_menu_kb(item_df, callbacks.GetGroupSections)
+    keyboard = InlineKeyboardBuilder()
+
+    for _, item in item_df.iterrows():
+        keyboard.row(types.InlineKeyboardButton(
+            text=item['name'],
+            callback_data=callbacks.GetGroupSections(group_id=item['id']).pack()),
+        )
+
+    return constructors.get_sub_menu_kb(keyboard)

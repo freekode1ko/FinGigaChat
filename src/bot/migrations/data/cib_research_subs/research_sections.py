@@ -2,7 +2,7 @@
 research_sections = [
     {
         'id': 1,
-        'name': 'Экономика',
+        'name': 'Экономика РФ',
         'research_group_id': 1,
         'dropdown_flag': False,
     },

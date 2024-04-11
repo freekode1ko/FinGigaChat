@@ -1,7 +1,8 @@
-from typing import Any
+from typing import Any, Type
 
 import pandas as pd
 from aiogram import types
+from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -10,7 +11,7 @@ from keyboards.analytics import constructors
 from keyboards.analytics.analytics_sell_side import callbacks
 
 
-def get_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
+def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
     [ Группа 1 ]
@@ -19,9 +20,17 @@ def get_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     [  назад  ]
     [   Завершить   ]
 
-    :param group_df: DataFrame[id, name] инфа о группах CIB Research
+    :param item_df: DataFrame[name, callback_data] инфа о группах/разделах CIB Research
     """
-    return constructors.get_sub_menu_kb(group_df, callbacks.GetCIBGroupSections)
+    keyboard = InlineKeyboardBuilder()
+
+    for _, item in item_df.iterrows():
+        keyboard.row(types.InlineKeyboardButton(
+            text=item['name'],
+            callback_data=item['callback_data']),
+        )
+
+    return constructors.get_sub_menu_kb(keyboard)
 
 
 def get_sections_by_group_menu_kb(
@@ -63,6 +72,7 @@ def get_sections_by_group_menu_kb(
 def get_research_types_by_section_menu_kb(
         section_info: dict[str, Any],
         research_types_df: pd.DataFrame,
+        back_callback_data: str,
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
@@ -73,7 +83,8 @@ def get_research_types_by_section_menu_kb(
     [   Завершить   ]
 
     :param section_info: dict[id раздела CIB Research, section_type, research_group_id id группы CIB Research]
-    :param research_types_df: DataFrame[id, name, is_signed, summary_type] инфа о подборке подписок
+    :param research_types_df: DataFrame[id, name, is_subscribed, summary_type] инфа о подборке подписок
+    :param back_callback_data: Данные для кнопки Назад
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -82,20 +93,24 @@ def get_research_types_by_section_menu_kb(
         case enums.ResearchSectionType.economy.value:
             # add weekly pulse прогноз динамики КС ЦБ
             # add view
+            economy_research_type_id = research_types_df.loc[0, 'id']
             extra_rows = pd.DataFrame(
                 [
                     [0, 'Прогноз по ключевой ставке', False, enums.ResearchSummaryType.key_rate_dynamics_table],
+                    [economy_research_type_id, 'Ежемесячные обзоры', False, enums.ResearchSummaryType.economy_monthly],
+                    [economy_research_type_id, 'Ежедневные обзоры', False, enums.ResearchSummaryType.economy_daily],
                     [0, 'Макроэкономические показатели', False, enums.ResearchSummaryType.data_mart],
                 ],
-                columns=['id', 'name', 'is_signed', 'summary_type'],
+                columns=['id', 'name', 'is_subscribed', 'summary_type'],
             )
+            research_types_df = None
         case enums.ResearchSectionType.financial_exchange.value:
             # add weekly pulse прогноз валютных курсов
             extra_rows = pd.DataFrame(
                 [
                     [0, 'Прогноз валютных курсов', False, enums.ResearchSummaryType.exc_rate_prediction_table],
                 ],
-                columns=['id', 'name', 'is_signed', 'summary_type'],
+                columns=['id', 'name', 'is_subscribed', 'summary_type'],
             )
         case _:
             extra_rows = None
@@ -111,7 +126,7 @@ def get_research_types_by_section_menu_kb(
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callbacks.GetCIBGroupSections(group_id=section_info['research_group_id']).pack(),
+        callback_data=back_callback_data,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
@@ -120,12 +135,13 @@ def get_research_types_by_section_menu_kb(
     return keyboard.as_markup()
 
 
-def get_select_period_kb(item_id: int, section_id: int) -> InlineKeyboardMarkup:
+def get_select_period_kb(item_id: int, section_id: int, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
     """
     Создает клавиатуру для выбора периода, за который пользователь получит сводку новостей
 
     :param item_id: id объекта, по которому идет выгрузка данных
     :param section_id: id раздела, в котором только что был пользователь
+    :param callback_factory: класс формирования callback_data  [research_type_id, days_count]
     return: Клавиатура с кнопками
             1а) за 1 день
             1б) за 3 дня
@@ -156,7 +172,7 @@ def get_select_period_kb(item_id: int, section_id: int) -> InlineKeyboardMarkup:
     ]
 
     for period in periods_list:
-        by_days = callbacks.GetResearchesOverDays(
+        by_days = callback_factory(
             research_type_id=item_id,
             days_count=period['days'],
         )

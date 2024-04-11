@@ -56,7 +56,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
-        text='Hot offers',
+        text='🔥Hot offers',
         callback_data=hot_offers.GET_HOT_OFFERS_PDF,
     ))
     keyboard.row(types.InlineKeyboardButton(
