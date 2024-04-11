@@ -36,7 +36,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     group_df = subscriptions_db_api.get_research_groups_df()  # id, name
     msg_text = (
         'Аналитика sell-side\n'
-        'Группы:'  # FIXME text
+        'Выберите раздел'
     )
 
     section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
