@@ -42,7 +42,7 @@ def get_news_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на клиентов, сырье, отрасли',
+        text='Подписки на клиентов, сырьевые товары, отрасли',
         callback_data=callback_prefixes.CLIENT_SUBS_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(

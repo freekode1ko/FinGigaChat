@@ -35,15 +35,13 @@ def get_back_to_client_subs_menu_kb() -> InlineKeyboardMarkup:
 def get_client_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [ Список активных подписок ]
+    [ Просмотреть подписки ]
     [ Добавить новые подписки  ]
-    [ Удалить подписки  ]
     [ Удалить все подписки ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Список активных подписок', callback_data='myactivesubscriptions'))
+    keyboard.row(types.InlineKeyboardButton(text='Просмотреть подписки', callback_data='myactivesubscriptions'))
     keyboard.row(types.InlineKeyboardButton(text='Добавить новые подписки', callback_data='addnewsubscriptions'))
-    keyboard.row(types.InlineKeyboardButton(text='Удалить подписки', callback_data='deletesubscriptions'))
     keyboard.row(types.InlineKeyboardButton(text='Удалить все подписки', callback_data='deleteallsubscriptions'))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
@@ -54,3 +52,32 @@ def get_client_subscriptions_menu_kb() -> InlineKeyboardMarkup:
         callback_data=callback_prefixes.END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
+
+
+def menu_kb(group_df) -> InlineKeyboardMarkup:
+    """
+    [ group 1 ]
+    ...
+    [ group N ]
+    [ Назад ]
+    [ Завершить ]
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    for _, item in group_df:
+        keyboard.row(types.InlineKeyboardButton(
+            text=item['name'],
+            callback_data=item['callback_data'],
+        ))
+
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.NEWS_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_prefixes.END_WRITE_SUBS,
+    ))
+    return keyboard.as_markup()
+
+
