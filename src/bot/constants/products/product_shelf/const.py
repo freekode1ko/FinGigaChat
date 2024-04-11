@@ -6,7 +6,7 @@ MENU = 'product_shelf_menu'
 GET_PRODUCT_PDF = 'get_product_pdf'
 
 
-DATA_ROOT_PATH = config.PATH_TO_SOURCES / 'products/product_shelf'
+DATA_ROOT_PATH = config.PATH_TO_SOURCES / 'products' / 'product_shelf'
 
 PRODUCT_SHELF_DATA = [
     {

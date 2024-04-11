@@ -36,7 +36,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     group_df = subscriptions_db_api.get_research_groups_df()  # id, name
     msg_text = (
         'Аналитика sell-side\n'
-        'Группы:'
+        'Группы:'  # FIXME text
     )
 
     section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
@@ -71,13 +71,9 @@ async def get_group_sections_menu(
     user_id = callback_query.from_user.id
     group_id = callback_data.group_id
 
-    group_info = subscriptions_db_api.get_cib_group_info(group_id)
     section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
 
-    msg_text = (
-        f'Аналитика sell-side\n'
-        f'Группа "{group_info["name"]}":\n'
-    )
+    msg_text = 'Выберете отрасль клиента, по которому вы хотели бы получить данные из SberCIB Investment Research'
     keyboard = keyboards.get_sections_by_group_menu_kb(section_df)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
@@ -116,7 +112,7 @@ async def get_section_research_types_menu(
 
     msg_text = (
         f'Аналитика sell-side\n'
-        f'Раздел "{section_info["name"]}":'
+        f'Раздел "{section_info["name"]}":'  # FIXME text
     )
     keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)
 
@@ -221,7 +217,7 @@ async def cib_client_analytical_indicators(
         f'Выберите период, за который хотите получить отчеты по '
         f'<b>{research_info["name"]}</b>\n\n'
     )
-    keyboard = keyboards.get_select_period_kb(research_type_id, research_info['research_section_id'])
+    keyboard = keyboards.get_select_period_kb(research_type_id, research_info['research_section_id'], callbacks.GetResearchesOverDays)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')

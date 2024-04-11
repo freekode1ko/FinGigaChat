@@ -38,7 +38,10 @@ async def news_subs_menu(callback_query: types.CallbackQuery) -> None:
 
 
 async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
-    """Формирует меню подписок"""
+    """
+    Формирует меню подписок
+    :param message: types.CallbackQuery | types.Message
+    """
     keyboard = keyboards.get_subscriptions_menu_kb()
     msg_text = (
         'Меню управления подписками:\n\n'
