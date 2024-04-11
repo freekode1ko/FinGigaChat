@@ -1,4 +1,4 @@
-import json
+﻿import json
 import random
 import re
 
@@ -20,7 +20,7 @@ from constants.constants import (
     REGISTRATION_CODE_MAX,
 )
 from db.database import engine
-from module.mail_parse import SmtpSend
+from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
 from db.whitelist import update_user_email, is_new_user_email
 
@@ -128,15 +128,17 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
             return
 
         reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
-        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
-        SS.send_msg(
-            config.mail_username,
-            user_msg,
-            config.mail_register_subject,
-            config.reg_mail_text.format(reg_code),
+
+        smtp_email = SmtpSend(
+            config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.mail_smpt_server, config.mail_smpt_port
         )
-        SS.close_connection()
+        with smtp_email:
+            smtp_email.send_msg(
+                config.MAIL_RU_LOGIN,
+                user_msg,
+                config.mail_register_subject,
+                config.reg_mail_text.format(reg_code),
+            )
 
         await state.clear()
         await state.set_state(Form.continue_user_reg)
