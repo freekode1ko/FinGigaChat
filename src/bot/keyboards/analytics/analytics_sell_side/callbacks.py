@@ -35,3 +35,9 @@ class GetResearchesOverDays(CallbackData, prefix=callback_prefixes.GET_RESEARCHE
     """Выгрузка отчетов за последние days_count"""
     research_type_id: int
     days_count: int
+
+
+class GetEconomyDailyResearchesOverDays(CallbackData, prefix=callback_prefixes.GET_ECONOMY_DAILY_RESEARCHES):
+    """Выгрузка отчетов за последние days_count"""
+    research_type_id: int
+    days_count: int

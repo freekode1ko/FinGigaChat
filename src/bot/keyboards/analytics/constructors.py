@@ -12,7 +12,7 @@ from constants.analytics import industry
 from constants.analytics import macro_view
 
 
-def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
+def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
     [ Группа 1 ]
@@ -20,21 +20,8 @@ def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]
     [ Группа n ]
     [  назад  ]
 
-    :param group_df: DataFrame[id, name] инфа о группах CIB Research
-    :param callback_factory: Объект, который создает данные для callback
+    :param keyboard: сформированная клавиатура без кнопок завершить и назад
     """
-    keyboard = InlineKeyboardBuilder()
-
-    for _, item in group_df.iterrows():
-        get_group_sections_callback = callback_factory(
-            group_id=item['id'],
-        )
-
-        keyboard.row(types.InlineKeyboardButton(
-            text=item['name'],
-            callback_data=get_group_sections_callback.pack()),
-        )
-
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=analytics.MENU,

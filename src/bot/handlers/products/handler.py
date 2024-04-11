@@ -28,7 +28,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """Формирует меню продукты"""
     keyboard = keyboards.get_menu_kb()
-    msg_text = 'Продукты\n'
+    msg_text = 'Актуальные предложения для клиента'
     await send_or_edit(message, msg_text, keyboard)
 
 
