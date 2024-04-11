@@ -10,6 +10,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.types.web_app_info import WebAppInfo
 
 from configs import config
 from log.bot_logger import user_logger
@@ -22,7 +23,7 @@ from constants.constants import (
 from db.database import engine
 from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
-from db.whitelist import update_user_email, is_new_user_email
+from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist
 
 
 # States
@@ -213,3 +214,20 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         await message.answer(f'Вы ввели некорректный регистрационный код. Осталось {attempts_left} попытки.')
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : пользователь ввел некорректный код, '
                             f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
+
+
+@router.message(Command('app'))
+async def open_meeting_app(message: types.Message) -> None:
+    """Открытие веб приложения со встречами"""
+    user_id = message.from_user.id
+    if not is_user_email_exist(user_id):
+        await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')
+        return
+
+    app_url_s = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
+    markup = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=app_url_s))], ],
+        resize_keyboard=True
+    )
+    await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+
