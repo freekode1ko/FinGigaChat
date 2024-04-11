@@ -2,7 +2,7 @@ import json
 import pickle
 import re
 from re import search
-from typing import Dict
+from typing import Dict, Optional, Any
 
 import pandas as pd
 import pymorphy2
@@ -385,7 +385,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
     return labels
 
 
-def search_top_sources(link: str, score: int) -> int:
+def search_top_sources(link: Optional[str or Any], score: int) -> int:
     """
     Raise score for article if found top sources
     :param link: link of article
