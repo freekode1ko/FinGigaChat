@@ -480,6 +480,7 @@ class ResearchSection(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
+    display_order = Column(Integer, nullable=True, server_default='0')
     dropdown_flag = Column(Boolean, server_default='true')
     section_type = Column(
         Integer,

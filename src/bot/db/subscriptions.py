@@ -292,7 +292,7 @@ def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
         'FROM research_section rs '
         'JOIN section_subscriptions ss ON rs.id=ss.research_section_id '
         'WHERE research_group_id=:group_id '
-        'ORDER BY rs.dropdown_flag, rs.name'
+        'ORDER BY rs.display_order'
     )
 
     with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
