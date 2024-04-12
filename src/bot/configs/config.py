@@ -19,6 +19,7 @@ TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice'
 TMP_VOICE_FILE_DIR.mkdir(parents=True, exist_ok=True)
 
 PATH_TO_SOURCES = PROJECT_DIR / 'sources'
+TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice' # FIXME: CREATE DIR
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
