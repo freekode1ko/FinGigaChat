@@ -26,12 +26,12 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
     pdf_files = os.listdir(state_support.DATA_ROOT_PATH)
     if pdf_files:
         msg_text = 'Господдержка'
-        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+        await callback_query.message.answer(msg_text, parse_mode='HTML')
 
         for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
             media_group = MediaGroupBuilder()
             for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
                 media_group.add_document(media=types.FSInputFile(state_support.DATA_ROOT_PATH / fpath))
 
-            await callback_query.message.answer_media_group(media_group.build(), protect_content=True)
+            await callback_query.message.answer_media_group(media_group.build())
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
