@@ -32,6 +32,7 @@ from log.logger_base import Logger
 from module import weekly_pulse_parse
 from module import data_transformer
 from db.database import engine
+from db.models import FinancialSummary
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
@@ -921,13 +922,21 @@ class ResearchAPIParser:
         Стартовая точка для парсинга финансовых показателей по клиентам
         """
         self._logger.info('Чтение таблицы financial_summary')
-        columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
-        metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
+        # columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
+        # metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
+        query = (select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
+                        FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
+                        FinancialSummary.balance_table, FinancialSummary.money_table))
+        with engine.connect() as conn:
+            metadata = conn.execute(query).fetchall()
+            metadata_df = pd.DataFrame(metadata)
+            metadata_df.columns = metadata.keys()
+
         self._logger.info('Очистка прошлых записей в таблице financial_summary')
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
         metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
         tf = data_transformer.Transformer()
-        df_parts = pd.DataFrame(columns=columns)
+        df_parts = pd.DataFrame(columns=metadata_df.columns)
 
         async with ClientSession() as session:
             for sector_id in sectors_id:
