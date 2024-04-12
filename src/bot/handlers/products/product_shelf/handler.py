@@ -54,14 +54,14 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
 
     if pdf_files:
         msg_text = f'Продуктовые предложения по полке\n"<b>{product_shelf_item_name}</b>"'
-        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+        await callback_query.message.answer(msg_text, parse_mode='HTML')
 
         for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
             media_group = MediaGroupBuilder()
             for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
                 media_group.add_document(media=types.FSInputFile(dir_path / fpath))
 
-            await callback_query.message.answer_media_group(media_group.build(), protect_content=True)
+            await callback_query.message.answer_media_group(media_group.build())
     else:
         msg_text = (
             f'Продуктовая полка\n'

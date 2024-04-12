@@ -54,8 +54,8 @@ PUBLIC_COMMANDS: List[dict] = [
     #     'description': 'Удалить новость',
     # },
     {
-        'command': 'call_report',
-        'description': 'Протокол встречи с клиентами',
+        'command': 'call_reports',
+        'description': 'Call reports',
     },
 ]
 
