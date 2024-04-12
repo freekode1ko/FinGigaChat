@@ -15,7 +15,9 @@ ENV: Environment = Environment.from_str(_env_value)
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
-TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice' # FIXME: CREATE DIR
+TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice'
+TMP_VOICE_FILE_DIR.mkdir(parents=True, exist_ok=True)
+
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 

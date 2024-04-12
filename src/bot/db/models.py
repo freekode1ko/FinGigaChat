@@ -523,7 +523,8 @@ t_relation_commodity_metals = Table(
     Column('sub_name', String(100), nullable=False)
 )
 
-class СallReports(Base):
+
+class CallReports(Base):
     __tablename__ = 'bot_call_reports'
     __table_args__ = {'comment': 'Записи call reports'}
 
