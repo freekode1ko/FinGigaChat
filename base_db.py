@@ -12,7 +12,7 @@ from config import (
     COMMODITY_NAME_PATH,
     QUOTES_SOURCES_PATH,
     TELEGRAM_CHANNELS_DATA_PATH,
-    psql_engine,
+    PSQL_ENGINE,
 )
 
 # CLIENT_NAME_PATH = 'data/name/client_name.csv'
@@ -704,7 +704,7 @@ def drop_tables(engine):
 
 #  TODO: пока при вводе имен клиентов должны быть пробелы в начале и в конце
 if __name__ == '__main__':
-    main_engine = create_engine(psql_engine)
+    main_engine = create_engine(PSQL_ENGINE)
 
     # !!! DROP TABLE !!!
     # # # # drop_tables(main_engine)

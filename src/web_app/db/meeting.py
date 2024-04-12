@@ -5,7 +5,7 @@ from sqlalchemy import select, insert, CursorResult
 
 from db.models import UserMeeting, Whitelist
 from db.database import engine
-from constants.constants import REMEMBER_TIME
+from config import REMEMBER_TIME
 
 
 def data_as_dict(data: CursorResult) -> list[dict[str, Any]]:

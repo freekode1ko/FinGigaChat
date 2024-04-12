@@ -1,7 +1,7 @@
 import datetime as dt
 from typing import Any
 
-from configs.config import BASE_DATETIME_FORMAT
+from config import BASE_DATETIME_FORMAT
 
 
 def format_date(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
