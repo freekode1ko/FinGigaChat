@@ -1,8 +1,7 @@
 import datetime as dt
 from typing import Any
 
-
-DATE_PICKER_FORMAT = '%d.%m.%Y %H:%M'
+from configs.config import BASE_DATETIME_FORMAT
 
 
 def format_date(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -14,7 +13,7 @@ def format_date(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     for i, row in enumerate(data):
         date_start = row['date_start'] + dt.timedelta(hours=row['timezone'])
-        data[i]['date_start'] = date_start.strftime(DATE_PICKER_FORMAT)
+        data[i]['date_start'] = date_start.strftime(BASE_DATETIME_FORMAT)
     return data
 
 
@@ -26,8 +25,8 @@ def reformat_data(data: dict[str: Any]) -> dict[str: Any]:
     :return: отформатированные данные
     """
     data['timezone'] = - int(data.get('timezone')) / 60
-    data['date_start'] = dt.datetime.strptime(data.get('date_start'), DATE_PICKER_FORMAT)
-    data['date_end'] = dt.datetime.strptime(data.get('date_end'), DATE_PICKER_FORMAT) \
+    data['date_start'] = dt.datetime.strptime(data.get('date_start'), BASE_DATETIME_FORMAT)
+    data['date_end'] = dt.datetime.strptime(data.get('date_end'), BASE_DATETIME_FORMAT) \
         if data.get('date_end') \
         else data['date_start'] + dt.timedelta(minutes=1)
 

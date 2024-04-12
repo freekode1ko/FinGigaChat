@@ -64,9 +64,9 @@ class SmtpSend:
         meeting_start = data.get('date_start')
         meeting_end = data.get('date_end')
 
-        user_timezone = data.get('timezone')
-        meeting_start += datetime.timedelta(hours=user_timezone)
-        meeting_end += datetime.timedelta(hours=user_timezone)
+        # user_timezone = data.get('timezone')
+        # meeting_start += datetime.timedelta(hours=user_timezone)
+        # meeting_end += datetime.timedelta(hours=user_timezone)
 
         meeting_start_frmt = meeting_start.strftime(date_format)
         meeting_end_frmt = meeting_end.strftime(date_format)
