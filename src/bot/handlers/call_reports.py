@@ -16,7 +16,7 @@ from sqlalchemy import text
 from configs import config
 from log.bot_logger import logger
 from db.database import engine
-from module.mail_parse import SmtpSend
+from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
 
 router = Router()
@@ -49,6 +49,10 @@ async def audio_to_text(message: types.Message,) -> str:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :return: строку полученную из аудио сообщения
     """
+    result = ''
+    path_to_file_oga = ''
+    path_to_file_wav = ''
+
     try:
         logger.info(f'Call Report: Start audio_to_text for user id: {message.chat.id}')
         file_id = message.voice.file_id
@@ -69,6 +73,7 @@ async def audio_to_text(message: types.Message,) -> str:
         voice_message = sr.AudioFile(str(path_to_file_wav))
         with voice_message as source:
             audio = r.record(source)
+
         try:
             result = r.recognize_google(audio, language="ru_RU")
             logger.info(f'Call Report: Успешная обработка аудио через гугл для {message.chat.id}')
@@ -79,8 +84,10 @@ async def audio_to_text(message: types.Message,) -> str:
     except Exception as e:
         logger.error(f'Call Report: Не успешная обработка аудио для {message.chat.id} из-за {e}')
     finally:
-        os.remove(path_to_file_wav)
-        os.remove(path_to_file_oga)
+        if path_to_file_wav and os.path.exists(path_to_file_wav):
+            os.remove(path_to_file_wav)
+        if path_to_file_oga and os.path.exists(path_to_file_oga):
+            os.remove(path_to_file_oga)
         logger.info(f'Call Report: Успешная обработка аудио для {message.chat.id}')
         return result
 
@@ -144,8 +151,7 @@ async def call_reports_handler_my_reports(callback_query: types.CallbackQuery, s
 
 
 @router.callback_query(F.data.startswith('call_reports:send_to_mail'))
-async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
-                                          state: FSMContext) -> None:
+async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """
     Обработка кнопок отправки на почту кол репорта
 
@@ -159,7 +165,6 @@ async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
     date = state_data.get("date", None)
     report = state_data.get("text", None)
 
-
     with engine.connect() as conn:
         data = conn.execute(
             text(
@@ -170,19 +175,22 @@ async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
 
     try:
         logger.info(f'Call Report: Начало отправки на почту report для {callback_query.message.chat.id}')
-        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
-        SS.send_msg(
-            config.mail_username,
-            user_email,
-            f'Протокол Встречи: {client} {date}',
-            (
-                f'Клиент: {client}\n'
-                f'Дата: {date}\n'
-                f'Запись встречи: {report}\n'
-            ),
-        )
-        SS.close_connection()
+        with SmtpSend(
+                config.MAIL_RU_LOGIN,
+                config.MAIL_RU_PASSWORD,
+                config.mail_smpt_server,
+                config.mail_smpt_port
+        ) as SS:
+            SS.send_msg(
+                config.MAIL_RU_LOGIN,
+                user_email,
+                f'Протокол Встречи: {client} {date}',
+                (
+                    f'Клиент: {client}\n'
+                    f'Дата: {date}\n'
+                    f'Запись встречи: {report}\n'
+                ),
+            )
         await callback_query.message.answer(
             f'Протокол на почту {user_email} отправлен',
         )
@@ -195,17 +203,16 @@ async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
         logger.info(f'Call Report: Сохранение call report для {callback_query.message.chat.id}')
         with engine.connect() as conn:
             query = text(
-                f'INSERT INTO bot_call_reports (user_id, client, report_date, description) '
+                'INSERT INTO bot_call_reports (user_id, client, report_date, description) '
                 'VALUES (:user_id, :client, :date, :report) '
             )
 
-            data = conn.execute(query)
+            conn.execute(query.bindparams(user_id=user_id, client=client, date=date, report=report))
             conn.commit()
     except Exception as e:
         logger.error(f'Call Report: Сохранение call report не удалось для {callback_query.message.chat.id} из-за {e}')
     finally:
         logger.info(f'Call Report: Успешное сохранение call report для {callback_query.message.chat.id}')
-
 
 
 @router.message(CallReportsStates.enter_clint_name)
@@ -250,7 +257,8 @@ async def enter_date(message: types.Message, state: FSMContext) -> None:
         )
     logger.info(f'Call Report: Конец сохранения даты в call report для {message.chat.id}')
 
-@router.message(CallReportsStates.enter_text_message, F.content_type.in_({'voice', 'text',}), )
+
+@router.message(CallReportsStates.enter_text_message, F.content_type.in_({'voice', 'text'}), )
 async def enter_text_message(message: types.Message, state: FSMContext) -> None:
     """
       Обработка текста/аудио, который ввел пользователь для создания кол репорта
