@@ -13,7 +13,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
-from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag
+from handlers import admin, common, gigachat, news, quotes, referencebook, subscriptions, industry, rag, call_reports
 from log.bot_logger import logger
 from log.sentry import init_sentry
 from utils.base import (
@@ -90,6 +90,7 @@ async def start_bot():
         admin.router,
         quotes.router,
         *subscriptions.routers,
+        call_reports.router,
         gigachat.router,
         referencebook.router,
         industry.router,

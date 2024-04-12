@@ -522,3 +522,13 @@ t_relation_commodity_metals = Table(
     Column('unit', String(10)),
     Column('sub_name', String(100), nullable=False)
 )
+
+class СallReports(Base):
+    __tablename__ = 'bot_call_reports'
+    __table_args__ = {'comment': 'Записи call reports'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False)
+    client = Column(String(255), nullable=False)
+    report_date = Column(Date, nullable=False)
+    description = Column(Text, nullable=False)

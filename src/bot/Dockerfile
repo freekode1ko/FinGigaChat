@@ -1,4 +1,8 @@
-FROM python:3.10
+FROM ubuntu:22.04
+
+RUN apt-get update
+RUN apt-get install python3-dev python3 python3-pip libpq-dev -y
+RUN apt-get install ffmpeg -y
 
 COPY . /code
 WORKDIR /code
