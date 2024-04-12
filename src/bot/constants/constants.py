@@ -33,20 +33,3 @@ TELEGRAM_MAX_MEDIA_ITEMS = 10
 REGISTRATION_CODE_MIN = 100_000
 REGISTRATION_CODE_MAX = 999_999
 MAX_REGISTRATION_CODE_ATTEMPTS = 5  # макс кол-во попыток ввода кода пользователем при регистрации
-
-
-# за сколько минут нужно напомнить о встрече и каким сообщением
-REMEMBER_TIME = {
-    'first': {
-        'minutes': 24 * 60,
-        'msg': 'Встреча "{meeting_theme}" назначена на завтра'
-    },
-    'second': {
-        'minutes': 60,
-        'msg': 'Встреча "{meeting_theme}" начнется через час'
-    },
-    'last': {
-        'minutes': 15,
-        'msg': 'Встреча "{meeting_theme}" начнется через 15 минут'
-    }
-}
