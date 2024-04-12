@@ -14,6 +14,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import text
 
 from configs import config
+from log.bot_logger import user_logger
 from db.database import engine
 from module.mail_parse import SmtpSend
 from utils.base import user_in_whitelist
@@ -49,6 +50,7 @@ async def audio_to_text(message: types.Message,) -> str:
     :return: строку полученную из аудио сообщения
     """
     try:
+        user_logger.info(f'Call Report: Start audio_to_text for user id: {message.chat.id}')
         file_id = message.voice.file_id
         audio_file = await message.bot.get_file(file_id)
 
@@ -69,13 +71,17 @@ async def audio_to_text(message: types.Message,) -> str:
             audio = r.record(source)
         try:
             result = r.recognize_google(audio, language="ru_RU")
-        except Exception:
+            user_logger.info(f'Call Report: Успешная обработка аудио через гугл для {message.chat.id}')
+        except Exception as e:
+            user_logger.error(f'Call Report: Не успешная обработка аудио через гугл для {message.chat.id} из-за {e}')
             result = r.recognize_whisper(audio, model=config.WHISPER_MODEL, language="ru")
+            user_logger.info(f'Call Report: Успешная обработка аудио через whisper для {message.chat.id}')
     except Exception as e:
-        pass
+        user_logger.error(f'Call Report: Не успешная обработка аудио для {message.chat.id} из-за {e}')
     finally:
         os.remove(path_to_file_wav)
         os.remove(path_to_file_oga)
+        user_logger.info(f'Call Report: Успешная обработка аудио для {message.chat.id}')
         return result
 
 
@@ -89,6 +95,7 @@ async def call_reports(message: types.Message, state: FSMContext) -> None:
     """
     await state.clear()
     if await user_in_whitelist(message.from_user.model_dump_json()):
+        user_logger.info(f'Call Report: Страт call reports для {message.chat.id}')
         keyboard = InlineKeyboardBuilder()
         keyboard.row(
             types.InlineKeyboardButton(text='Создать новый протокол встречи', callback_data='call_reports:create_new'))
@@ -101,76 +108,104 @@ async def call_reports(message: types.Message, state: FSMContext) -> None:
         )
 
 
-@router.callback_query(F.data.startswith('call_reports'))
-async def call_reports_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+@router.callback_query(F.data.startswith('call_reports:create_new'))
+async def call_reports_handler_create_new(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """
-    Обработка кнопок по кол репортам
+    Обработка кнопки для создания нового кол репорта
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
-    match callback_query.data.split(':')[1]:
-        case 'create_new':
-            await callback_query.message.answer(
-                'Вы перешли в режим записи протокола встречи с клиентом следуйте инструкциям, чтобы завершить процесс.',
+    user_logger.info(f'Call Report: Нажали на конпу создания нового call report для {callback_query.message.chat.id}')
+    await callback_query.message.answer(
+        'Вы перешли в режим записи протокола встречи с клиентом следуйте инструкциям, чтобы завершить процесс.',
+    )
+    await callback_query.message.answer(
+        'Пожалуйста, не включайте в отчет конфиденциальную информацию',
+    )
+    await callback_query.message.answer(
+        'Введите, пожалуйста, Клиента, с кем проходила встреча:',
+    )
+    await state.set_state(CallReportsStates.enter_clint_name)
+
+
+@router.callback_query(F.data.startswith('call_reports:my_reports'))
+async def call_reports_handler_my_reports(callback_query: types.CallbackQuery, state: FSMContext) -> None: # TODO: добавить список кол репортов
+    """
+    Обработка кнопок по получению списка уже созданных кол репортов
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    user_logger.info(f'Call Report: Нажали на конпу получения списка call report для {callback_query.message.chat.id}')
+    await callback_query.message.answer(
+        'Данный функционал будет позже',
+    )
+
+
+@router.callback_query(F.data.startswith('call_reports:send_to_mail'))
+async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
+                                          state: FSMContext) -> None:
+    """
+    Обработка кнопок отправки на почту кол репорта
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    user_logger.info(f'Call Report: Нажали на конпу отправки на почту report для {callback_query.message.chat.id}')
+    state_data = await state.get_data()
+    user_id = callback_query.message.chat.id
+    client = state_data.get("client", None)
+    date = state_data.get("date", None)
+    report = state_data.get("text", None)
+
+
+    with engine.connect() as conn:
+        data = conn.execute(
+            text(
+                f'SELECT user_email FROM whitelist WHERE  user_id={user_id}'
             )
-            await callback_query.message.answer(
-                'Пожалуйста, не включайте в отчет конфиденциальную информацию',
+        ).fetchone()
+        user_email = data[0]
+
+    try:
+        user_logger.info(f'Call Report: Начало отправки на почту report для {callback_query.message.chat.id}')
+        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
+        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
+        SS.send_msg(
+            config.mail_username,
+            user_email,
+            f'Протокол Встречи: {client} {date}',
+            (
+                f'Клиент: {client}\n'
+                f'Дата: {date}\n'
+                f'Запись встречи: {report}\n'
+            ),
+        )
+        SS.close_connection()
+        await callback_query.message.answer(
+            f'Протокол на почту {user_email} отправлен',
+        )
+    except Exception as e:
+        user_logger.error(f'Call Report: Письмо не отправлено на почту report для {callback_query.message.chat.id} из-за {e}')
+    finally:
+        user_logger.info(f'Call Report: Письмо успешно отправлено на почту report для {callback_query.message.chat.id}')
+
+    try:
+        user_logger.info(f'Call Report: Сохранение call report для {callback_query.message.chat.id}')
+        with engine.connect() as conn:
+            query = text(
+                f'INSERT INTO bot_call_reports (user_id, client, report_date, description) '
+                f'VALUES (:user_id, :client, :date, :report) '
             )
-            await callback_query.message.answer(
-                'Введите, пожалуйста, Клиента, с кем проходила встреча:',
-            )
 
-            await state.clear()
-            await state.set_state(CallReportsStates.enter_clint_name)
-        case 'my_reports':
-            await callback_query.message.answer(
-                'Данный функционал будет позже',
-            )
-        case 'send_to_mail':
-            state_data = await state.get_data()
-            user_id = callback_query.message.chat.id
-            client = state_data.get("client", None)
-            date = state_data.get("date", None)
-            report = state_data.get("text", None)
+            data = conn.execute(query)
+            conn.commit()
+    except Exception as e:
+        user_logger.error(f'Call Report: Сохранение call report не удалось для {callback_query.message.chat.id} из-за {e}')
+    finally:
+        user_logger.info(f'Call Report: Успешное сохранение call report для {callback_query.message.chat.id}')
 
-
-            with engine.connect() as conn:
-                data = conn.execute(
-                    text(
-                        f'SELECT user_email FROM whitelist WHERE  user_id={user_id}'
-                    )
-                ).fetchone()
-                user_email = data[0]
-
-
-            SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-            SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
-            SS.send_msg(
-                config.mail_username,
-                user_email,
-                f'Протокол Встречи: {client} {date}',
-                (
-                    f'Клиент: {client}\n'
-                    f'Дата: {date}\n'
-                    f'Запись встречи: {report}\n'
-                ),
-            )
-            SS.close_connection()
-            await callback_query.message.answer(
-                f'Протокол на почту {user_email} отправлен',
-            )
-            with engine.connect() as conn:
-
-                query = text(
-                    f'INSERT INTO bot_call_reports (user_id, client, report_date, description) '
-                    f'VALUES (:user_id, :client, :date, :report) '
-                )
-
-                data = conn.execute(query)
-                conn.commit()
-        case _:
-            pass
 
 
 @router.message(CallReportsStates.enter_clint_name)
@@ -181,6 +216,7 @@ async def enter_clint_name(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
+    user_logger.info(f'Call Report: Сохранение клиента в call report для {message.chat.id}')
     if True:  # FIXME В дальнейшем будет браться из таблицы в БД
         await message.answer(
             'Укажите дату встречи в формате ДД.ММ.ГГГГ:',
@@ -199,6 +235,7 @@ async def enter_date(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
+    user_logger.info(f'Call Report: Сохранение даты в call report для {message.chat.id}')
     if date := validate_and_parse_date(message.text):
         await message.answer(
             'Запишите основные моменты встречи(Голосом или текстом)',
@@ -211,6 +248,7 @@ async def enter_date(message: types.Message, state: FSMContext) -> None:
         await message.answer(
             'Кажется, дата введена некорректно.\nУбедитесь, что вы используете формат ДД.ММ.ГГГГ и попробуйте еще раз:',
         )
+    user_logger.info(f'Call Report: Конец сохранения даты в call report для {message.chat.id}')
 
 @router.message(CallReportsStates.enter_text_message, F.content_type.in_({'voice', 'text',}), )
 async def enter_text_message(message: types.Message, state: FSMContext) -> None:
@@ -220,6 +258,8 @@ async def enter_text_message(message: types.Message, state: FSMContext) -> None:
       :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
       :param state: Объект, который хранит состояние FSM для пользователя
       """
+    user_logger.info(f'Call Report: Сохранения текста/аудио в call report для {message.chat.id}')
+
     if message.voice:
         result = await audio_to_text(message)
     else:
@@ -244,3 +284,4 @@ async def enter_text_message(message: types.Message, state: FSMContext) -> None:
         ),
         reply_markup=keyboard.as_markup(),
     )
+    user_logger.info(f'Call Report: Конец сохранения текста/аудио в call report для {message.chat.id}')
