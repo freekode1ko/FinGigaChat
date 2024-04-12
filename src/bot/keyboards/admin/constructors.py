@@ -50,7 +50,7 @@ def get_approve_delete_messages_by_type_kb(message_type_id: int) -> InlineKeyboa
         callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
+        text=constants.BACK_BUTTON_TXT,
         callback_data=callback_prefixes.BACK_TO_DELETE_NEWSLETTER_MSG_MENU,
     ))
     return keyboard.as_markup()

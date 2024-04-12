@@ -33,8 +33,14 @@ def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
         text='Удалить все подписки',
         callback_data=callback_prefixes.CIB_RESEARCH_SUBS_APPROVE_DELETE_ALL,
     ))
-    keyboard.row(types.InlineKeyboardButton(text='Завершить',
-                                            callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS,
+    ))
     return keyboard.as_markup()
 
 
@@ -70,7 +76,10 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
     else:
         keyboard.row(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))
 
-    keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_CIB_RESEARCH_MENU))
+    keyboard.add(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+    ))
 
     if page < max_pages - 1:
         keyboard.add(types.InlineKeyboardButton(
@@ -80,8 +89,10 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
     else:
         keyboard.add(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))
 
-    keyboard.row(types.InlineKeyboardButton(text='Завершить',
-                                            callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS,
+    ))
     return keyboard.as_markup()
 
 
@@ -105,7 +116,7 @@ def get_research_type_info_kb(cib_research_type_id: int, is_subscribed: bool, ba
         back=back
     ).pack()
     keyboard.row(types.InlineKeyboardButton(text=add_del_text, callback_data=action_call))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=unwrap_callback_data(back)))
+    keyboard.row(types.InlineKeyboardButton(text=constants.BACK_BUTTON_TXT, callback_data=unwrap_callback_data(back)))
     return keyboard.as_markup()
 
 
@@ -136,11 +147,11 @@ def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     #     callback_data=callbacks.UpdateSubOnCIBSection().pack()
     # ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
-        callback_data=callback_prefixes.BACK_TO_CIB_RESEARCH_MENU
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS
     ))
     return keyboard.as_markup()
@@ -188,11 +199,11 @@ def get_research_sections_by_group_menu_kb(
     #     callback_data=callbacks.UpdateSubOnCIBSection().pack()
     # ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Назад',
+        text=constants.BACK_BUTTON_TXT,
         callback_data=callbacks.GetCIBGroups().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Завершить',
+        text=constants.END_BUTTON_TXT,
         callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
@@ -231,10 +242,14 @@ def get_research_types_by_section_menu_kb(
     #     text='Подписаться на все',
     #     callback_data=callbacks.UpdateSubOnCIBSection(domain_id=domain_id, is_domain_page=False).pack(),
     # ))
-    keyboard.row(types.InlineKeyboardButton(text='Назад',
-                                            callback_data=callbacks.GetCIBGroupSections(group_id=group_id).pack()))
-    keyboard.row(types.InlineKeyboardButton(text='Завершить',
-                                            callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callbacks.GetCIBGroupSections(group_id=group_id).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS,
+    ))
     return keyboard.as_markup()
 
 
@@ -246,8 +261,8 @@ def get_research_subs_approve_delete_all_kb() -> InlineKeyboardMarkup:
     """
     return constructors.get_approve_action_kb(
         callback_prefixes.CIB_RESEARCH_SUBS_DELETE_ALL,
-        callback_prefixes.BACK_TO_CIB_RESEARCH_MENU,
-        callback_prefixes.BACK_TO_CIB_RESEARCH_MENU,
+        callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+        callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
     )
 
 
@@ -257,5 +272,8 @@ def get_back_to_research_subs_main_menu_kb() -> InlineKeyboardMarkup:
     [   назад в меню   ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_CIB_RESEARCH_MENU))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+    ))
     return keyboard.as_markup()

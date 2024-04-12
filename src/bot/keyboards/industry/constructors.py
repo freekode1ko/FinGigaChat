@@ -84,6 +84,9 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
         )
 
         keyboard.row(types.InlineKeyboardButton(text=period['text'], callback_data=by_days.pack()))
-    keyboard.row(types.InlineKeyboardButton(text='Назад', callback_data=callback_prefixes.BACK_TO_MENU))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_prefixes.BACK_TO_MENU,
+    ))
 
     return keyboard.as_markup()

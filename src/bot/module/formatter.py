@@ -1,12 +1,14 @@
 from typing import Any
 
+import pandas as pd
+
 from configs import config
 
 
 class ResearchFormatter:
 
     @classmethod
-    def format(cls, research_row: dict[str, Any]) -> str:
+    def format(cls, research_row: dict[str, Any] | pd.Series) -> str:
         """
         Формирует сообщение на основе данных, хранящихся в базе, по собранному отчету
 

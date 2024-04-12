@@ -175,7 +175,7 @@ research_types = [
         "source_id": 47
     },
     {
-        "name": "Норникель",
+        "name": "Норильский никель",
         "description": "Раздел Металургия",
         "research_section_id": 13,
         "source_id": 48
@@ -295,7 +295,7 @@ research_types = [
         "source_id": 67
     },
     {
-        "name": "X5 Group",
+        "name": "X5 retail group",
         "description": "Раздел торговля",
         "research_section_id": 10,
         "source_id": 68
@@ -349,13 +349,13 @@ research_types = [
         "source_id": 76
     },
     {
-        "name": "ГК \"Эталон\"",
+        "name": "Эталон",
         "description": "Раздел Недвижимость",
         "research_section_id": 11,
         "source_id": 77
     },
     {
-        "name": "Группа ЛСР",
+        "name": "ЛСР",
         "description": "Раздел Недвижимость",
         "research_section_id": 11,
         "source_id": 78
@@ -373,7 +373,7 @@ research_types = [
         "source_id": 80
     },
     {
-        "name": "СовкомфлотТранспорт",
+        "name": "Совкомфлот",
         "description": "Раздел Транспорт",
         "research_section_id": 12,
         "source_id": 81
