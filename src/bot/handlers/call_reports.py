@@ -13,9 +13,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import text
 
-from configs.config import (TMP_VOICE_FILE_DIR, WHISPER_MODEL, api_token,
-                            mail_password, mail_smpt_port, mail_smpt_server,
-                            mail_username)
+from configs import config
 from db.database import engine
 from module.mail_parse import SmtpSend
 from utils.base import user_in_whitelist
@@ -31,13 +29,13 @@ class CallReportsStates(StatesGroup):
     final_check = State()
 
 
-def is_validate_and_parse_date(date_str: str) -> Optional[datetime.date]:
+def validate_and_parse_date(date_str: str) -> Optional[datetime.date]:
     """
     Валидация строки с датой и возвращение ее в datetime object
     :param date_str: date string
     """
     try:
-        date_obj = datetime.strptime(date_str, "%d.%m.%Y")
+        date_obj = datetime.strptime(date_str, config.BASE_DATE_FORMAT)
         return date_obj.date()
     except ValueError:
         return
@@ -54,14 +52,14 @@ async def audio_to_text(message: types.Message,) -> str:
         file_id = message.voice.file_id
         audio_file = await message.bot.get_file(file_id)
 
-        audio_file_url = f"https://api.telegram.org/file/bot{api_token}/{audio_file.file_path}"
+        audio_file_url = f"https://api.telegram.org/file/bot{config.api_token}/{audio_file.file_path}"
         req = requests.get(audio_file_url)
-        path_to_file_oga = TMP_VOICE_FILE_DIR / f'{file_id}.oga'
+        path_to_file_oga = config.TMP_VOICE_FILE_DIR / f'{file_id}.oga'
 
         with open(path_to_file_oga, 'wb') as f:
             f.write(req.content)
 
-        path_to_file_wav = TMP_VOICE_FILE_DIR / f'{file_id}.wav'
+        path_to_file_wav = config.TMP_VOICE_FILE_DIR / f'{file_id}.wav'
 
         process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])
 
@@ -72,7 +70,7 @@ async def audio_to_text(message: types.Message,) -> str:
         try:
             result = r.recognize_google(audio, language="ru_RU")
         except Exception:
-            result = r.recognize_whisper(audio, model=WHISPER_MODEL, language="ru")
+            result = r.recognize_whisper(audio, model=config.WHISPER_MODEL, language="ru")
     except Exception as e:
         pass
     finally:
@@ -147,9 +145,9 @@ async def call_reports_handler(callback_query: types.CallbackQuery, state: FSMCo
 
 
             SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-            SS.get_connection(mail_username, mail_password, mail_smpt_server, mail_smpt_port)
+            SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
             SS.send_msg(
-                mail_username,
+                config.mail_username,
                 user_email,
                 f'Протокол Встречи: {client} {date}',
                 (
@@ -201,7 +199,7 @@ async def enter_date(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
-    if date := is_validate_and_parse_date(message.text):
+    if date := validate_and_parse_date(message.text):
         await message.answer(
             'Запишите основные моменты встречи(Голосом или текстом)',
         )
