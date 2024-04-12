@@ -120,7 +120,7 @@ async def call_reports_handler(callback_query: types.CallbackQuery, state: FSMCo
                 'Пожалуйста, не включайте в отчет конфиденциальную информацию',
             )
             await callback_query.message.answer(
-                'Введите, пожалуйста, наименование клиента с кем проходила встреча:',
+                'Введите, пожалуйста, Клиента, с кем проходила встреча:',
             )
 
             await state.clear()
