@@ -22,8 +22,8 @@ from utils.base import (
 )
 from utils import newsletter
 
-bot = Bot(token=config.api_token)
 storage = MemoryStorage()
+bot = Bot(token=config.api_token)
 dp = Dispatcher(storage=storage)
 
 
