@@ -529,7 +529,7 @@ class CallReports(Base):
     __table_args__ = {'comment': 'Записи call reports'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, nullable=False)
-    client = Column(String(255), nullable=False)
-    report_date = Column(Date, nullable=False)
-    description = Column(Text, nullable=False)
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, comment='Айди пользователя')
+    client = Column(String(255), nullable=False, comment='Клиент')
+    report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
+    description = Column(Text, nullable=False, comment='Отчет по встрече')
