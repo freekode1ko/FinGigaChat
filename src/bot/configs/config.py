@@ -39,6 +39,7 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
+meeting_web_app_url = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
 
 log_file = 'bot_runner'
 LOG_LEVEL_DEBUG = 10
@@ -68,8 +69,8 @@ BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 
 INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 
-mail_username = 'ai-helper@mail.ru'
-mail_password = 'ExamKejCpmcpr8kM5emw'
+MAIL_RU_LOGIN: str = env.str('MAIL_RU_LOGIN', default='')
+MAIL_RU_PASSWORD: str = env.str('MAIL_RU_PASSWORD', default='')
 mail_imap_server = 'imap.mail.ru'
 mail_smpt_server = 'smtp.mail.ru'
 mail_smpt_port = 465

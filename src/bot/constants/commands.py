@@ -30,6 +30,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Спросить у Базы Знаний',
     },
     {
+        'command': 'meeting',
+        'description': 'Мои встречи',
+    },
+    {
         'command': 'referencebook',
         'description': 'Справочник',
     },

@@ -1,4 +1,4 @@
-import json
+﻿import json
 import random
 import re
 
@@ -10,6 +10,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.types.web_app_info import WebAppInfo
 
 from configs import config
 from log.bot_logger import user_logger
@@ -20,9 +21,9 @@ from constants.constants import (
     REGISTRATION_CODE_MAX,
 )
 from db.database import engine
-from module.mail_parse import SmtpSend
+from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
-from db.whitelist import update_user_email, is_new_user_email
+from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist
 
 
 # States
@@ -127,15 +128,15 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
             return
 
         reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
-        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
-        SS.send_msg(
-            config.mail_username,
-            user_msg,
-            config.mail_register_subject,
-            config.reg_mail_text.format(reg_code),
-        )
-        SS.close_connection()
+
+        with SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.mail_smpt_server, config.mail_smpt_port) as smtp_email:
+
+            smtp_email.send_msg(
+                config.MAIL_RU_LOGIN,
+                user_msg,
+                config.mail_register_subject,
+                config.reg_mail_text.format(reg_code),
+            )
 
         await state.clear()
         await state.set_state(Form.continue_user_reg)
@@ -211,3 +212,21 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         await message.answer(f'Вы ввели некорректный регистрационный код. Осталось {attempts_left} попытки.')
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : пользователь ввел некорректный код, '
                             f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
+
+
+@router.message(Command('meeting'))
+async def open_meeting_app(message: types.Message) -> None:
+    """Открытие веб приложения со встречами"""
+    user_id = message.from_user.id
+    if not is_user_email_exist(user_id):
+        await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')
+        return
+
+    markup = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=config.meeting_web_app_url))],
+        ],
+        resize_keyboard=True
+    )
+    await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+

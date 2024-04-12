@@ -18,6 +18,7 @@ from constants.aliases import (
     help_aliases,
     gigachat_aliases,
     rag_aliases,
+    web_app_aliases,
 )
 from db import parser_source
 from handlers import common, quotes
@@ -312,6 +313,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
                 **{alias: (common.help_handler, {}) for alias in help_aliases},
                 **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in gigachat_aliases},
                 **{alias: (rag.set_rag_mode, {'state': state}) for alias in rag_aliases},
+                **{alias: (common.open_meeting_app, {}) for alias in web_app_aliases},
                 **{alias: (quotes.bonds_info, {}) for alias in bonds_aliases},
                 **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
                 **{alias: (quotes.metal_info, {}) for alias in metal_aliases},

@@ -33,4 +33,3 @@ TELEGRAM_MAX_MEDIA_ITEMS = 10
 REGISTRATION_CODE_MIN = 100_000
 REGISTRATION_CODE_MAX = 999_999
 MAX_REGISTRATION_CODE_ATTEMPTS = 5  # макс кол-во попыток ввода кода пользователем при регистрации
-
