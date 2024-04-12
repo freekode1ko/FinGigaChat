@@ -296,10 +296,11 @@ async def run_parse_cib(logger):
         database=config.DB_NAME,
         max_inactive_connection_lifetime=60,
     )
-    logger.info('Старт парсинга отчетов с CIB')
-    await ResearchAPIParser(logger, postgres_pool).parse_pages()
     logger.info('Старт парсинга финансовых показателей по клиентам в CIB')
     await ResearchAPIParser(logger, postgres_pool).get_fin_summary()
+
+    logger.info('Старт парсинга отчетов с CIB')
+    await ResearchAPIParser(logger, postgres_pool).parse_pages()
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
