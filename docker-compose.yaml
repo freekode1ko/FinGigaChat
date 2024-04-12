@@ -80,6 +80,28 @@ services:
         restart: always
 
 
+    meeting-api:
+        build:
+            context: ./src/bot
+            dockerfile: Dockerfile-meeting
+        container_name: web_app_meeting_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - "8020:8020"
+        command: bash -c "poetry run uvicorn utils.web_app.meeting_app.app:app --host 0.0.0.0 --port 8020"
+        depends_on:
+            - database
+            - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
     quotes:
         build:
             context: ./src/quotes

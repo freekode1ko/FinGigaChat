@@ -1,5 +1,10 @@
 from aiogram import Bot
 from configs import config
+
+
+bot = Bot(token=config.api_token)
+
+'''
 import datetime as dt
 from typing import Any
 
@@ -10,8 +15,6 @@ from dramatiq.brokers.redis import RedisBroker
 from constants.constants import REMEMBER_TIME
 from db.web_app.meeting import get_user_meetings_for_notification
 
-
-bot = Bot(token=config.api_token)
 broker = RedisBroker(url='redis://127.0.0.1', middleware=[AsyncIO()])
 broker.flush_all()
 dramatiq.set_broker(broker=broker)
@@ -58,3 +61,4 @@ def send_schedular_new_data(meeting: dict[str, Any]):
         send_notification.send_with_options(
             args=(meeting['user_id'], meeting['theme'], rem_time_dict['msg']),
             delay=delay_val)
+'''
