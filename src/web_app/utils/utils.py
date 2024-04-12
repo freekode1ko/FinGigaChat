@@ -24,10 +24,10 @@ def reformat_data(data: dict[str: Any]) -> dict[str: Any]:
     :param data: Request с данными из формы
     :return: отформатированные данные
     """
-    data['timezone'] = - int(data.get('timezone')) / 60
-    data['date_start'] = dt.datetime.strptime(data.get('date_start'), BASE_DATETIME_FORMAT)
-    data['date_end'] = dt.datetime.strptime(data.get('date_end'), BASE_DATETIME_FORMAT) \
-        if data.get('date_end') \
+    data['timezone'] = - int(data['timezone']) / 60
+    data['date_start'] = dt.datetime.strptime(data['date_start'], BASE_DATETIME_FORMAT)
+    data['date_end'] = dt.datetime.strptime(data['date_end'], BASE_DATETIME_FORMAT) \
+        if data['date_end'] \
         else data['date_start'] + dt.timedelta(minutes=1)
 
     # to utc

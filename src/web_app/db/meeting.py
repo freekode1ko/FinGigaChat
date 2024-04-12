@@ -35,14 +35,14 @@ def add_meeting(data: dict[str, Any]) -> None:
 
     :param data: данные о встрече
     """
-    user_timezone = data.get('timezone')
+    user_timezone = data['timezone']
 
     query = insert(UserMeeting).values(
-        user_id=int(data.get('user_id')),
-        theme=data.get('theme'),
-        description=data.get('description'),
-        date_start=data.get('date_start'),
-        date_end=data.get('date_end'),
+        user_id=int(data['user_id']),
+        theme=data['theme'],
+        description=data['description'],
+        date_start=data['date_start'],
+        date_end=data['date_end'],
         timezone=user_timezone
     )
     with engine.connect() as conn:
