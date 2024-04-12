@@ -1,21 +1,23 @@
 import os
 import subprocess
+from datetime import datetime
+from typing import Optional
 
-from sqlalchemy import text
-
-from module.mail_parse import SmtpSend
 import requests
 import speech_recognition as sr
-from configs.config import api_token, TMP_VOICE_FILE_DIR, WHISPER_MODEL, mail_username, mail_password, mail_smpt_server, mail_smpt_port
-from datetime import datetime
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from db.database import engine
+from sqlalchemy import text
 
+from configs.config import (TMP_VOICE_FILE_DIR, WHISPER_MODEL, api_token,
+                            mail_password, mail_smpt_port, mail_smpt_server,
+                            mail_username)
+from db.database import engine
+from module.mail_parse import SmtpSend
 from utils.base import user_in_whitelist
 
 router = Router()
@@ -29,7 +31,11 @@ class CallReportsStates(StatesGroup):
     final_check = State()
 
 
-def is_validate_and_parse_date(date_str):
+def is_validate_and_parse_date(date_str: str) -> Optional[datetime.date]:
+    """
+    Валидация строки с датой и возвращение ее в datetime object
+    :param date_str: date string
+    """
     try:
         date_obj = datetime.strptime(date_str, "%d.%m.%Y")
         return date_obj.date()
@@ -37,8 +43,52 @@ def is_validate_and_parse_date(date_str):
         return
 
 
+async def audio_to_text(message: types.Message,) -> str:
+    """
+    Превращает аудио сообщение в текст
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :return: строку полученную из аудио сообщения
+    """
+    try:
+        file_id = message.voice.file_id
+        audio_file = await message.bot.get_file(file_id)
+
+        audio_file_url = f"https://api.telegram.org/file/bot{api_token}/{audio_file.file_path}"
+        req = requests.get(audio_file_url)
+        path_to_file_oga = TMP_VOICE_FILE_DIR / f'{file_id}.oga'
+
+        with open(path_to_file_oga, 'wb') as f:
+            f.write(req.content)
+
+        path_to_file_wav = TMP_VOICE_FILE_DIR / f'{file_id}.wav'
+
+        process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])
+
+        r = sr.Recognizer()
+        voice_message = sr.AudioFile(str(path_to_file_wav))
+        with voice_message as source:
+            audio = r.record(source)
+        try:
+            result = r.recognize_google(audio, language="ru_RU")
+        except Exception:
+            result = r.recognize_whisper(audio, model=WHISPER_MODEL, language="ru")
+    except Exception as e:
+        pass
+    finally:
+        os.remove(path_to_file_wav)
+        os.remove(path_to_file_oga)
+        return result
+
+
 @router.message(Command('call_reports'))
 async def call_reports(message: types.Message, state: FSMContext) -> None:
+    """
+    Входная точка для создания или просмотра кол репортов
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
     await state.clear()
     if await user_in_whitelist(message.from_user.model_dump_json()):
         keyboard = InlineKeyboardBuilder()
@@ -55,13 +105,19 @@ async def call_reports(message: types.Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith('call_reports'))
 async def call_reports_handler(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    """
+    Обработка кнопок по кол репортам
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
     match callback_query.data.split(':')[1]:
         case 'create_new':
             await callback_query.message.answer(
                 'Вы перешли в режим записи протокола встречи с клиентом следуйте инструкциям, чтобы завершить процесс.',
             )
             await callback_query.message.answer(
-                'Важно: Пожалуйста, не включайте в отчет информацию, превышающую уровень конфиденциальности K4. Ваша ответственность — обеспечить соблюдение норм конфиденциальности.',
+                'Пожалуйста, не включайте в отчет конфиденциальную информацию',
             )
             await callback_query.message.answer(
                 'Введите, пожалуйста, наименование клиента с кем проходила встреча:',
@@ -121,7 +177,13 @@ async def call_reports_handler(callback_query: types.CallbackQuery, state: FSMCo
 
 @router.message(CallReportsStates.enter_clint_name)
 async def enter_clint_name(message: types.Message, state: FSMContext) -> None:
-    if True:  # FIXME
+    """
+    Обработка клиента, который ввел пользователь для создания кол репорта
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    if True:  # FIXME В дальнейшем будет браться из таблицы в БД
         await message.answer(
             'Укажите дату встречи в формате ДД.ММ.ГГГГ:',
         )
@@ -133,6 +195,12 @@ async def enter_clint_name(message: types.Message, state: FSMContext) -> None:
 
 @router.message(CallReportsStates.enter_date)
 async def enter_date(message: types.Message, state: FSMContext) -> None:
+    """
+    Обработка даты, который ввел пользователь для создания кол репорта
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
     if date := is_validate_and_parse_date(message.text):
         await message.answer(
             'Запишите основные моменты встречи(Голосом или текстом)',
@@ -146,40 +214,14 @@ async def enter_date(message: types.Message, state: FSMContext) -> None:
             'Кажется, дата введена некорректно.\nУбедитесь, что вы используете формат ДД.ММ.ГГГГ и попробуйте еще раз:',
         )
 
-async def audio_to_text(message: types.Message,) -> str:
-    try:
-        file_id = message.voice.file_id
-        audio_file = await message.bot.get_file(file_id)
-
-        audio_file_url = f"https://api.telegram.org/file/bot{api_token}/{audio_file.file_path}"
-        req = requests.get(audio_file_url)
-        path_to_file_oga = TMP_VOICE_FILE_DIR / f'{file_id}.oga'
-
-        with open(path_to_file_oga, 'wb') as f:
-            f.write(req.content)
-
-        path_to_file_wav = TMP_VOICE_FILE_DIR / f'{file_id}.wav'
-
-        process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])
-
-        r = sr.Recognizer()
-        voice_message = sr.AudioFile(str(path_to_file_wav))
-        with voice_message as source:
-            audio = r.record(source)
-        try:
-            result = r.recognize_google(audio, language="ru_RU")
-        except Exception:
-            result = r.recognize_whisper(audio, model=WHISPER_MODEL, language="ru")
-    except Exception as e:
-        pass
-    finally:
-        os.remove(path_to_file_wav)
-        os.remove(path_to_file_oga)
-        return result
-
-
 @router.message(CallReportsStates.enter_text_message, F.content_type.in_({'voice', 'text',}), )
 async def enter_text_message(message: types.Message, state: FSMContext) -> None:
+    """
+      Обработка текста/аудио, который ввел пользователь для создания кол репорта
+
+      :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+      :param state: Объект, который хранит состояние FSM для пользователя
+      """
     if message.voice:
         result = await audio_to_text(message)
     else:
