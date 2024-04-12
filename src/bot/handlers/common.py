@@ -129,11 +129,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
 
         reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
 
-        with SmtpSend(
-                config.MAIL_RU_LOGIN,
-                config.MAIL_RU_PASSWORD,
-                config.mail_smpt_server,
-                config.mail_smpt_port) as smtp_email:
+        with SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.mail_smpt_server, config.mail_smpt_port) as smtp_email:
 
             smtp_email.send_msg(
                 config.MAIL_RU_LOGIN,
