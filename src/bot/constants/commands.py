@@ -53,6 +53,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'command': 'delete_article',
         'description': 'Удалить новость',
     },
+{
+        'command': 'call_reports',
+        'description': 'Протокол встречи с клиентами',
+    },
 ]
 
 SECRET_COMMANDS: List[dict] = [

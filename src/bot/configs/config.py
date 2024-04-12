@@ -16,6 +16,7 @@ ENV: Environment = Environment.from_str(_env_value)
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 PATH_TO_SOURCES = PROJECT_DIR / 'sources'
+TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice' # FIXME: CREATE DIR
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
@@ -160,3 +161,5 @@ help_text = (
 )
 
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
+
+WHISPER_MODEL = 'small'
