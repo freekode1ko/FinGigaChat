@@ -81,8 +81,5 @@ def get_user_meetings_for_notification() -> list[dict[str, Any]]:
     query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start, UserMeeting.timezone).
              where(UserMeeting.date_start > min_start_time))
     with engine.connect() as conn:
-        meetings = conn.execute(query).all()
-
-    return [
-        dict(user_id=meeting[0], theme=meeting[1], date_start=meeting[2], timezone=meeting[3]) for meeting in meetings
-    ]
+        meetings = conn.execute(query)
+        return data_as_dict(meetings)

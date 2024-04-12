@@ -97,8 +97,6 @@ services:
             - bot
         volumes:
             - ./logs:/code/logs
-            - ./data:/code/data
-            - ./sources:/code/sources/
         restart: always
 
 

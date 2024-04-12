@@ -560,3 +560,14 @@ class UserMeeting(Base):
     is_notify_last = Column(Boolean, server_default=sa.text('false'),
                             comment='Указывает на отправку последнего уведомления')
     description = Column(Text, comment='Описание встречи')
+
+
+class CallReports(Base):
+    __tablename__ = 'bot_call_reports'
+    __table_args__ = {'comment': 'Записи call reports'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, comment='Айди пользователя')
+    client = Column(String(255), nullable=False, comment='Клиент')
+    report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
+    description = Column(Text, nullable=False, comment='Отчет по встрече')
