@@ -318,7 +318,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
                 **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
                 **{alias: (quotes.metal_info, {}) for alias in metal_aliases},
                 **{alias: (quotes.exchange_info, {}) for alias in exchange_aliases},
-                # **{alias: (analytics_sell_side.data_mart_body, {}) for alias in view_aliases},
+                **{alias: (analytics_sell_side.data_mart_body, {}) for alias in view_aliases},
             }
             message_text = message.text.lower().strip()
             function_to_call, kwargs = aliases_dict.get(message_text, (None, None))
