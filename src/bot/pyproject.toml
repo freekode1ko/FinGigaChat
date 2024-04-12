@@ -10,7 +10,6 @@ python = ">=3.9,<3.11"
 aiogram = "^3.4.1"
 aiohttp = "^3.9.3"
 alembic = "^1.13.1"
-apscheduler = "^3.10.4"
 environs = "^10.3.0"
 fuzzywuzzy = "^0.18.0"
 matplotlib = "^3.8.3"
@@ -29,10 +28,7 @@ soundfile = "^0.12.1"
 speechrecognition = "^3.10.3"
 sqlalchemy = "^2.0.28"
 xgboost = "^2.0.3"
-fastapi = "^0.110.1"
-uvicorn = {extras = ["standard"], version = "^0.29.0"}
-setuptools = "^69.2.0"
-#dramatiq = {extras = ["redis", "watch"], version = "^1.16.0"}
+apscheduler = "^3.10.4"
 
 
 [build-system]

@@ -129,10 +129,12 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
 
         reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
 
-        smtp_email = SmtpSend(
-            config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.mail_smpt_server, config.mail_smpt_port
-        )
-        with smtp_email:
+        with SmtpSend(
+                config.MAIL_RU_LOGIN,
+                config.MAIL_RU_PASSWORD,
+                config.mail_smpt_server,
+                config.mail_smpt_port) as smtp_email:
+
             smtp_email.send_msg(
                 config.MAIL_RU_LOGIN,
                 user_msg,
@@ -216,7 +218,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
                             f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
 
 
-@router.message(Command('app'))
+@router.message(Command('meeting'))
 async def open_meeting_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами"""
     user_id = message.from_user.id
@@ -224,9 +226,10 @@ async def open_meeting_app(message: types.Message) -> None:
         await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')
         return
 
-    app_url_s = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
     markup = types.InlineKeyboardMarkup(
-        inline_keyboard=[[types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=app_url_s))], ],
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=config.meeting_web_app_url))],
+        ],
         resize_keyboard=True
     )
     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)

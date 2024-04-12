@@ -42,6 +42,7 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
+meeting_web_app_url = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
 
 log_file = 'bot_runner'
 LOG_LEVEL_DEBUG = 10
