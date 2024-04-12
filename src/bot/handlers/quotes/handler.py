@@ -265,7 +265,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
 
 async def not_realized_function(callback_query: types.CallbackQuery) -> None:
     """Выводит сообщение, что функция будет реализована позднее"""
-    msg_text = 'Данная функциональность будет реализована позднее'
+    msg_text = 'Функционал появится позднее'
     await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
 
 
