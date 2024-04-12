@@ -16,7 +16,7 @@ from sqlalchemy import text
 from configs import config
 from log.bot_logger import logger
 from db.database import engine
-from module.mail_parse import SmtpSend
+from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
 
 router = Router()
@@ -170,19 +170,18 @@ async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
 
     try:
         logger.info(f'Call Report: Начало отправки на почту report для {callback_query.message.chat.id}')
-        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
-        SS.send_msg(
-            config.mail_username,
-            user_email,
-            f'Протокол Встречи: {client} {date}',
-            (
-                f'Клиент: {client}\n'
-                f'Дата: {date}\n'
-                f'Запись встречи: {report}\n'
-            ),
-        )
-        SS.close_connection()
+        with SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.mail_smpt_server, config.mail_smpt_port) as SS:
+            SS.send_msg(
+                config.MAIL_RU_LOGIN,
+                user_email,
+                f'Протокол Встречи: {client} {date}',
+                (
+                    f'Клиент: {client}\n'
+                    f'Дата: {date}\n'
+                    f'Запись встречи: {report}\n'
+                ),
+            )
+
         await callback_query.message.answer(
             f'Протокол на почту {user_email} отправлен',
         )

@@ -13,7 +13,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
-# from schedular import send_dramatiq_all_data
 from handlers import admin, ai, analytics, call_reports, common, industry, news, quotes, referencebook, subscriptions, products
 from log.bot_logger import logger
 from log.sentry import init_sentry
@@ -145,7 +144,6 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        # send_dramatiq_all_data()  # напоминания
         asyncio.run(main())
     except KeyboardInterrupt:
         print("bot was terminated")
