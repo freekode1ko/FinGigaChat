@@ -21,10 +21,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'command': 'subscriptions_menu',
         'description': 'Меню подписок',
     },
-    {
-        'command': 'gigachat',
-        'description': 'Переход в режим общения с GigaChat',
-    },
+    # {
+    #     'command': 'gigachat',
+    #     'description': 'Переход в режим общения с GigaChat',
+    # },
     {
         'command': 'knowledgebase',
         'description': 'Спросить у Базы Знаний',
@@ -33,28 +33,28 @@ PUBLIC_COMMANDS: List[dict] = [
         'command': 'meeting',
         'description': 'Мои встречи',
     },
-    {
-        'command': 'referencebook',
-        'description': 'Справочник',
-    },
-    {
-        'command': 'newsletter',
-        'description': 'События недели',
-    },
-    {
-        'command': 'eco',
-        'description': 'Экономика',
-    },
+    # {
+    #     'command': 'referencebook',
+    #     'description': 'Справочник',
+    # },
+    # {
+    #     'command': 'newsletter',
+    #     'description': 'События недели',
+    # },
+    # {
+    #     'command': 'eco',
+    #     'description': 'Экономика',
+    # },
     {
         'command': 'industry_tgnews',
         'description': 'Сводка новостей из telegram каналов по отраслям',
     },
+    # {
+    #     'command': 'delete_article',
+    #     'description': 'Удалить новость',
+    # },
     {
-        'command': 'delete_article',
-        'description': 'Удалить новость',
-    },
-{
-        'command': 'call_reports',
+        'command': 'call_report',
         'description': 'Протокол встречи с клиентами',
     },
 ]

@@ -194,6 +194,7 @@ async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
         await callback_query.message.answer(
             f'Протокол на почту {user_email} отправлен',
         )
+        await state.clear()
     except Exception as e:
         logger.error(f'Call Report: Письмо не отправлено на почту report для {callback_query.message.chat.id} из-за {e}')
     finally:

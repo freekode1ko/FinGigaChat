@@ -1,7 +1,8 @@
 FROM ubuntu:22.04
 
-RUN apt-get update
-RUN apt-get install python3-dev python3 python3-pip libpq-dev -y
+RUN apt-get update -y
+RUN apt-get install python3-setuptools python3-dev libpq-dev -y
+RUN apt-get install python3 python3-pip -y
 RUN apt-get install ffmpeg -y
 
 COPY . /code
