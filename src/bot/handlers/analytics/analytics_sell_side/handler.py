@@ -216,6 +216,9 @@ async def get_last_actual_research(
     if not research_df.empty:
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+    else:
+        msg_text = 'На текущий момент, отчеты временно отсутствуют'
+        await callback_query.message.answer(msg_text)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -237,7 +240,7 @@ async def cib_client_analytical_indicators(
     research_type_id = callback_data.research_type_id
 
     research_info = subscriptions_db_api.get_research_type_info(research_type_id)
-    # FIXME
+
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info["name"]}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(research_info)
 
@@ -423,12 +426,18 @@ async def economy_monthly_callback(
     research_type_id = callback_data.research_type_id
 
     research_df = subscriptions_db_api.get_researches_by_type(research_type_id)
+    last_research = pd.DataFrame()
     if not research_df.empty:
         research_df = research_df[
             research_df['header'].str.contains(analytics_sell_side.ECONOMY_MONTHLY_HEADER_CONTAINS, case=False)
         ]
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
+
+    if not last_research.empty:
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+    else:
+        msg_text = 'На текущий момент, отчеты временно отсутствуют'
+        await callback_query.message.answer(msg_text)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -473,7 +482,12 @@ async def get_researches_over_period(
     researches_df = subscriptions_db_api.get_researches_over_period(from_date, to_date, [research_type_id])
     if header_not_contains:
         researches_df = researches_df[~researches_df['header'].str.contains(header_not_contains, case=False)]
-    await send_researches_to_user(callback_query.bot, user_id, full_name, researches_df)
+
+    if not researches_df.empty:
+        await send_researches_to_user(callback_query.bot, user_id, full_name, researches_df)
+    else:
+        msg_text = 'На текущий момент, отчеты временно отсутствуют'
+        await callback_query.message.answer(msg_text)
 
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : получил отчеты с {research_type_id=:} за {days} дней')
 

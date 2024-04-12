@@ -11,7 +11,7 @@ DATA_ROOT_PATH = config.PATH_TO_SOURCES / 'products' / 'product_shelf'
 PRODUCT_SHELF_DATA = [
     {
         'name': 'Кредитование',
-        'pdf_path': DATA_ROOT_PATH / 'crediting',
+        'pdf_path': DATA_ROOT_PATH / 'Crediting',
     },
     {
         'name': 'Пассивы',
