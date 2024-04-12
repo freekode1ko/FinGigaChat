@@ -196,7 +196,7 @@ async def call_reports_handler_send_to_mail(callback_query: types.CallbackQuery,
         with engine.connect() as conn:
             query = text(
                 f'INSERT INTO bot_call_reports (user_id, client, report_date, description) '
-                f'VALUES (:user_id, :client, :date, :report) '
+                'VALUES (:user_id, :client, :date, :report) '
             )
 
             data = conn.execute(query)
