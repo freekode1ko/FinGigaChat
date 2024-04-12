@@ -523,6 +523,7 @@ t_relation_commodity_metals = Table(
     Column('sub_name', String(100), nullable=False)
 )
 
+
 class FinancialSummary(Base):
     __tablename__ = 'financial_summary'
     __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
