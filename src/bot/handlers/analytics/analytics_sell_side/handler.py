@@ -147,9 +147,9 @@ async def get_cib_research_data(
         case enums.ResearchSummaryType.data_mart.value:
             await data_mart_callback(callback_query, callback_data)
         case enums.ResearchSummaryType.economy_daily.value:
-            await ecomony_daily_callback(callback_query, callback_data)
+            await economy_daily_callback(callback_query, callback_data)
         case enums.ResearchSummaryType.economy_monthly.value:
-            await ecomony_monthly_callback(callback_query, callback_data)
+            await economy_monthly_callback(callback_query, callback_data)
         case _:
             pass
 
@@ -283,7 +283,7 @@ async def key_rate_weekly_pulse_table(
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
-async def _data_mart_body(message: types.Message) -> None:
+async def data_mart_body(message: types.Message) -> None:
     """
     Отправка витрины данных
 
@@ -401,11 +401,11 @@ async def data_mart_callback(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    await _data_mart_body(callback_query.message)
+    await data_mart_body(callback_query.message)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
-async def ecomony_monthly_callback(
+async def economy_monthly_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:
@@ -432,7 +432,7 @@ async def ecomony_monthly_callback(
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
-async def ecomony_daily_callback(
+async def economy_daily_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
 ) -> None:

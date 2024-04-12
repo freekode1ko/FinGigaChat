@@ -23,6 +23,7 @@ from db import parser_source
 from handlers import common, quotes
 from handlers.ai.gigachat import gigachat
 from handlers.ai.rag import rag
+from handlers.analytics import analytics_sell_side
 from handlers.news.handler import router
 from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
@@ -315,7 +316,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
                 **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
                 **{alias: (quotes.metal_info, {}) for alias in metal_aliases},
                 **{alias: (quotes.exchange_info, {}) for alias in exchange_aliases},
-                **{alias: (quotes.data_mart, {}) for alias in view_aliases},
+                **{alias: (analytics_sell_side.data_mart_body, {}) for alias in view_aliases},
             }
             message_text = message.text.lower().strip()
             function_to_call, kwargs = aliases_dict.get(message_text, (None, None))
