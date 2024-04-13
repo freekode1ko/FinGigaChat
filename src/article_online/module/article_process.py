@@ -314,7 +314,10 @@ class ArticleProcess:
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
+        article.to_excel('sources/article_test.xlsx')
+        self._logger.info(f'\n\n\n{article=:}\n\n\n')
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
+        self._logger.info('\n\n\nto sql is Done\n\n\n')
         self._logger.info(f'Сохранено {len(article)} новостей')
 
         # add ids to df_article from article table from db
