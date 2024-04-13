@@ -14,13 +14,14 @@ from config import (
 from utils.email_send import SmtpSend
 from db.meeting import *
 from utils.utils import format_date, reformat_data
-from config import STATIC_CERTS_PATH
+from config import STATIC_CHAIN_PATH, STATIC_KEY_PATH
 # from schedular import send_schedular_new_data
 
-app = FastAPI()
+
 app = FastAPI()
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain(STATIC_CERTS_PATH / 'fullchain.pem', keyfile=STATIC_CERTS_PATH / 'privkey.pem')
+ssl_context.load_cert_chain(STATIC_CHAIN_PATH, keyfile=STATIC_KEY_PATH)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[MEETING_PAGES],
