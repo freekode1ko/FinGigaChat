@@ -95,10 +95,8 @@ def regular_func():
                 ap_obj_online.df_article = df_article
                 ap_obj_online.drop_duplicate()
                 ap_obj_online.make_text_sum()
-                logger.info('\n\n\ntext_sum is done\n\n\n')
                 subject_links = ap_obj_online.save_tables()
 
-                logger.info('\n\n\narticles are saved\n\n\n')
                 saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
                 df_article = ap_obj_online.update_tg_articles(saved_tg_df, all_tg_articles_df)
 
