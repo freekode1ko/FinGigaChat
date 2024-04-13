@@ -1,4 +1,9 @@
+from pathlib import Path
+
 from environs import Env
+
+PROJECT_DIR = Path(__file__).parent  # noqa
+STATIC_CERTS_PATH = PROJECT_DIR / 'data' / 'certs'
 
 env = Env()
 env.read_env()
