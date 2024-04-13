@@ -1,3 +1,5 @@
+import ssl
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +17,10 @@ from utils.utils import format_date, reformat_data
 # from schedular import send_schedular_new_data
 
 app = FastAPI()
+
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain(certfile='/etc/letsencrypt/live/ai-bankir-helper-dev.ru/fullchain.pem',
+                            keyfile='/etc/letsencrypt/live/ai-bankir-helper-dev.ru/privkey.pem')
 
 app.add_middleware(
     CORSMiddleware,
