@@ -91,7 +91,7 @@ services:
             - .env
         ports:
             - "443:443"
-        command: bash -c "poetry run uvicorn --ssl-keyfile /etc/letsencrypt/live/ai-bankir-helper-dev.ru/privkey.pem --ssl-certfile /etc/letsencrypt/live/ai-bankir-helper-dev.ru/fullchain.pem app:app --host 0.0.0.0 --port 443"
+        command: bash -c "poetry run uvicorn --ssl-keyfile data/certs/privkey.pem --ssl-certfile data/certs/fullchain.pem app:app --host 0.0.0.0 --port 443"
         depends_on:
             - database
             - bot
