@@ -1,4 +1,11 @@
+from pathlib import Path
+
 from environs import Env
+
+PROJECT_DIR = Path(__file__).parent
+STATIC_CERTS_PATH = PROJECT_DIR / 'data' / 'certs'
+STATIC_CHAIN_PATH = STATIC_CERTS_PATH / 'fullchain.pem'
+STATIC_KEY_PATH = STATIC_CERTS_PATH / 'privkey.pem'
 
 env = Env()
 env.read_env()
