@@ -930,7 +930,7 @@ class ResearchAPIParser:
         with engine.connect() as conn:
             metadata = conn.execute(query).fetchall()
             metadata_df = pd.DataFrame(metadata)
-            metadata_df.columns = metadata.keys()
+            metadata_df.columns = metadata_df.keys()
 
         self._logger.info('Очистка прошлых записей в таблице financial_summary')
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()

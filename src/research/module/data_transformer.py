@@ -1,11 +1,9 @@
-from typing import List
-
 import pandas as pd
 
 
 class Transformer:
     @staticmethod
-    def filter_list(lst: List[str]) -> List[str]:
+    def filter_list(lst: list) -> list:
         """
         Форматирование колонок для DataFrame. Убирает первые 'Unnamed: N' колонки оставляя с наибольшей N
 
