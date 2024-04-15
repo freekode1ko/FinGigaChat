@@ -1,7 +1,12 @@
 import datetime as dt
 from typing import Any
 
-from sqlalchemy import select, insert, CursorResult
+from sqlalchemy import (
+    select,
+    insert,
+    update,
+    CursorResult,
+)
 
 from db.models import UserMeeting, Whitelist
 from db.database import engine
@@ -75,14 +80,43 @@ def get_user_meetings(user_id: int | str) -> list[dict[str, Any]]:
 def get_user_meetings_for_notification() -> list[dict[str, Any]]:
     """Получение всех предстоящих встреч для реализации напоминаний"""
     minutes = REMEMBER_TIME['last']['minutes']
-    dt_utc_now = dt.datetime.now(dt.timezone.utc)
-    min_start_time = dt.datetime(dt_utc_now.year, dt_utc_now.month,
-                                 dt_utc_now.day, dt_utc_now.hour, dt_utc_now.minute + minutes)
+    min_start_time = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=minutes)
+    min_start_time = dt.datetime(min_start_time.year, min_start_time.month,
+                                 min_start_time.day, min_start_time.hour, min_start_time.minute)
     query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start, UserMeeting.timezone).
              # where(UserMeeting.is_notify_first == False or
-             #       UserMeeting.is_notify_second == False or  #TODO: refactor
+             #       UserMeeting.is_notify_second == False or  #TODO: refactor, нужно ли вообще?
              #       UserMeeting.is_notify_last == False).
              where(UserMeeting.date_start > min_start_time))
     with engine.connect() as conn:
         meetings = conn.execute(query)
         return data_as_dict(meetings)
+
+
+def change_notify_flag(user_id: int, col_key: str):
+    """
+    Изменение флага отправки напоминания.
+
+    :param user_id: id пользователя
+    :param col_key: ключ, по которому находится нужный атрибут
+    """
+
+    match col_key:  # FIXME: мб как то по умнее ?
+        case 'first':
+            col_name = UserMeeting.is_notify_first.name
+        case 'second':
+            col_name = UserMeeting.is_notify_second.name
+        case 'last':
+            col_name = UserMeeting.is_notify_last.name
+        case _:
+            raise KeyError('Неизвестный ключ')
+
+    stmt = (
+        update(UserMeeting).
+        where(UserMeeting.user_id == user_id).
+        values({col_name: True})
+    )
+
+    with engine.connect() as conn:
+        conn.execute(stmt)
+        conn.commit()
