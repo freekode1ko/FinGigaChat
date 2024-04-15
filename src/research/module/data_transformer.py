@@ -18,14 +18,13 @@ class Transformer:
         """
         Обработка страницы сектора. Попытка вытащить из нее таблицы P&L (Прибыль и убытки), Баланс и Денежный поток
 
-        :param page_html:
-        :param company_id:
+        :param page_html: HTML код страницы
+        :param company_id: id компании(клиента) на research
         :param metadata_df: DataFrame содержащий в себе основные данные по отчетам. [id сектора на research,
         id клиента на research, id клиента в нашей БД, отчет PL, балансовый отчет, отчет денежных движений]
         """
         tables_handbook = {0: 'review_table', 1: 'pl_table', 2: 'balance_table', 3: 'money_table'}
-        self._logger.info('Преобразуем таблицы из HTML в DF для поиска фин.показателей')
-        ecom_tables = pd.read_html(page_html.text, decimal=',', thousands='.')
+        ecom_tables = pd.read_html(page_html, decimal=',', thousands='.')
         for table_num, table in enumerate(ecom_tables):
             if table_num in [0, 1, 2, 3]:
                 cleaned_columns = self.filter_list(table.columns.values)  # очистка от ненужных колонок

@@ -933,6 +933,7 @@ class ResearchAPIParser:
             metadata_df.columns = metadata_df.keys()
 
         self._logger.info('Очистка прошлых записей в таблице financial_summary')
+        print(metadata_df)
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
         metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
         tf = data_transformer.Transformer()
@@ -942,13 +943,15 @@ class ResearchAPIParser:
             for sector_id in sectors_id:
                 self._logger.info(f'Обработка сектора {sector_id} для поиска фин. показателей')
                 # выберем блок из DF по обрабатываемому сектору
+
                 sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
                 for company_id in sector_df['company_id'].values.tolist():
                     try:
-                        sector_page = session.post(
+                        sector_page = await session.post(
                             url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
-                            verify=False, cookies=self.cookies)
-                        df_parts = pd.concat([tf.process_fin_summary_table(sector_page.text, company_id, sector_df),
+                            verify_ssl=False, cookies=self.cookies)
+                        content = await sector_page.text()
+                        df_parts = pd.concat([tf.process_fin_summary_table(content, company_id, sector_df),
                                               df_parts], ignore_index=True)
                     except HTTPNoContent as e:
                         self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
