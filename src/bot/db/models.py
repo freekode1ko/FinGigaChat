@@ -1,10 +1,12 @@
 import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
     DateTime,
+    DOUBLE_PRECISION,
     Float,
     ForeignKey,
     Identity,
@@ -17,6 +19,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
+
+from constants import enums
 
 Base = declarative_base()
 metadata = Base.metadata
@@ -103,7 +107,7 @@ t_eco_stake = Table(
 t_exc = Table(
     'exc', metadata,
     Column('Валюта', Text),
-    Column('Курс', Text)
+    Column('Курс', DOUBLE_PRECISION(precision=53))
 )
 
 
@@ -165,8 +169,8 @@ class MessageType(Base):
 t_metals = Table(
     'metals', metadata,
     Column('Metals', Text),
-    Column('Price', Text),
-    Column('Day', Text),
+    Column('Price', DOUBLE_PRECISION(precision=53)),
+    Column('Day', DOUBLE_PRECISION(precision=53)),
     Column('%', Text),
     Column('Weekly', Text),
     Column('Monthly', Text),
@@ -272,7 +276,7 @@ class Whitelist(Base):
     full_name = Column(Text)
     user_type = Column(Text)
     user_status = Column(Text)
-    user_email = Column(Text)
+    user_email = Column(Text, server_default=sa.text("''::text"))
     subscriptions = Column(Text)
 
     message = relationship('Message', back_populates='user')
@@ -296,7 +300,8 @@ class Client(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
-    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'))
+    navi_link = Column(Text, nullable=True, server_default='')
+    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
 
     industry = relationship('Industry', back_populates='client')
     client_alternative = relationship('ClientAlternative', back_populates='client')
@@ -308,7 +313,7 @@ class Commodity(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
-    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'))
+    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
 
     industry = relationship('Industry', back_populates='commodity')
     commodity_alternative = relationship('CommodityAlternative', back_populates='commodity')
@@ -476,7 +481,13 @@ class ResearchSection(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
+    display_order = Column(Integer, nullable=True, server_default='0')
     dropdown_flag = Column(Boolean, server_default='true')
+    section_type = Column(
+        Integer,
+        server_default=str(enums.ResearchSectionType.default.value),
+        comment='тип раздела из enums.ResearchSectionType (зависит формирование меню аналитики)',
+    )
     research_group_id = Column(ForeignKey('research_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
 
@@ -487,6 +498,14 @@ class ResearchType(Base):
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
     description = Column(Text, nullable=True, server_default='')
+    summary_type = Column(
+        Integer,
+        server_default=str(enums.ResearchSummaryType.periodic.value),
+        comment=(
+            'тип формирования сводки отчетов CIB Research '
+            'из enums.ResearchSummaryType (зависит формирование меню аналитики)'
+        ),
+    )
     research_section_id = Column(ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
@@ -502,8 +521,8 @@ class Research(Base):
     text = Column(Text, nullable=False)
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
-    news_id = Column(BigInteger, nullable=False)
-    is_new = Column(Boolean, server_default='true', comment='Указывает, что новость еще не рассылалась пользователям')
+    news_id = Column(String(64), nullable=False)
+    is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что отчет еще не рассылался пользователям')
 
 
 class UserResearchSubscriptions(Base):
@@ -522,3 +541,33 @@ t_relation_commodity_metals = Table(
     Column('unit', String(10)),
     Column('sub_name', String(100), nullable=False)
 )
+
+
+class UserMeeting(Base):
+    __tablename__ = 'user_meeting'
+    __table_args__ = {'comment': 'Перечень встреч пользователей'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    theme = Column(Text, nullable=False, default='Напоминание', comment='Тема встречи')
+    date_start = Column(DateTime, nullable=False, comment='Время начала встречи (UTC)')
+    date_end = Column(DateTime, nullable=False, comment='Время окончания встречи (UTC)')
+    timezone = Column(Integer, comment='Таймзона пользователя во время использования web app', nullable=False)
+    is_notify_first = Column(Boolean, server_default=sa.text('false'),
+                             comment='Указывает на отправку первого уведомления')
+    is_notify_second = Column(Boolean, server_default=sa.text('false'),
+                              comment='Указывает на отправку второго уведомления')
+    is_notify_last = Column(Boolean, server_default=sa.text('false'),
+                            comment='Указывает на отправку последнего уведомления')
+    description = Column(Text, comment='Описание встречи')
+
+
+class CallReports(Base):
+    __tablename__ = 'bot_call_reports'
+    __table_args__ = {'comment': 'Записи call reports'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, comment='Айди пользователя')
+    client = Column(String(255), nullable=False, comment='Клиент')
+    report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
+    description = Column(Text, nullable=False, comment='Отчет по встрече')

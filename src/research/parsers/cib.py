@@ -466,7 +466,7 @@ class ResearchParser:
         :param id: id of industry in SberResearch
         :param value: name of industry in SberResearch
         """
-        pdf_dir = f'{config.path_to_source}/reviews'
+        pdf_dir = config.PATH_TO_SOURCES / 'reviews'
         self._logger.info(f'Скачивание отчета по индустриям с Research в {pdf_dir}')
         url = config.industry_base_url.format(id)
         filename = None
@@ -489,15 +489,15 @@ class ResearchParser:
                                                                                                  'date').text
             self._logger.info(f'Установлена дата ({date}) для {filename}')
             filename = f'{filename}__{date}.pdf'
-            filename = '{}/{}'.format(pdf_dir, filename)
+            filename = pdf_dir / filename
             link.click()
             self._logger.info(f'{filename} - Скачан')
             break
 
-        if not os.path.exists(pdf_dir):
-            os.makedirs(pdf_dir)
+        if not pdf_dir.exists():
+            pdf_dir.mkdir(exist_ok=True, parents=True)
         old = [f for f in os.listdir(pdf_dir) if value in f]
-        if os.path.exists(filename):
+        if filename.exists():
             return
 
         # time.sleep(5)
@@ -551,7 +551,7 @@ class ResearchParser:
         )
         self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
         self._logger.info('Поиск Weekly Pulse отчета')
-        weekly_dir = '{}/{}'.format(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
 
         try:
@@ -580,13 +580,13 @@ class ResearchParser:
         weeklies[0].find_element(By.TAG_NAME, 'a').click()
 
         filename = f"{weeklies[0].text.replace(' ', '_')}.pdf"
-        filename = '{}/{}'.format(weekly_dir, filename)
+        filename = weekly_dir / filename
         self._logger.info('Проверка путей до Weekly Pulse')
 
-        if not os.path.exists(weekly_dir):
-            os.makedirs(weekly_dir)
+        if not weekly_dir.exists():
+            weekly_dir.mkdir(parents=True, exist_ok=True)
 
-        if os.path.exists(filename):
+        if filename.exists():
             self._logger.info('Weekly Pulse отчет собран')
             print('Weekly Pulse отчет собран')
             return
@@ -819,7 +819,7 @@ class ResearchAPIParser:
                 ) as req:
                     if req.status == 200:
 
-                        file_path = Path(f'./sources/reports/{report_id}.pdf')
+                        file_path = config.PATH_TO_REPORTS / f'{report_id}.pdf'
                         with open(file_path, "wb") as f:
                             while True:
                                 chunk = await req.content.readany()

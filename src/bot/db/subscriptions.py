@@ -1,4 +1,5 @@
-from typing import Any
+import datetime
+from typing import Any, Optional
 
 import pandas as pd
 from sqlalchemy import text
@@ -133,10 +134,10 @@ def get_research_type_info(research_type_id: int) -> dict:
     Возвращает информацию по типу отчета CIB Research
 
     :param research_type_id: research_type.id
-    return: dict(id, name, description, research_section_id)
+    return: dict(id, name, description, research_section_id, summary_type)
     """
     query = text(
-        'SELECT rt.id, rt.name, rt.description, rt.research_section_id '
+        'SELECT rt.id, rt.name, rt.description, rt.research_section_id, rt.summary_type '
         'FROM research_type rt '
         'WHERE rt.id=:research_type_id'
     )
@@ -148,6 +149,7 @@ def get_research_type_info(research_type_id: int) -> dict:
             'name': data[1],
             'description': data[2],
             'research_section_id': data[3],
+            'summary_type': data[4],
         }
 
     return data
@@ -290,7 +292,7 @@ def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
         'FROM research_section rs '
         'JOIN section_subscriptions ss ON rs.id=ss.research_section_id '
         'WHERE research_group_id=:group_id '
-        'ORDER BY rs.dropdown_flag, rs.name'
+        'ORDER BY rs.display_order'
     )
 
     with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
@@ -305,10 +307,10 @@ def get_cib_section_info(section_id: int) -> dict[str, Any]:
     Возвращает информацию по разделу CIB Research
 
     :param section_id: research_section.id
-    return: dict(id, name, research_group_id)
+    return: dict(id, name, research_group_id, section_type)
     """
     query = text(
-        'SELECT id, name, research_group_id '
+        'SELECT id, name, research_group_id, section_type '
         'FROM research_section '
         'WHERE id=:section_id'
     )
@@ -319,6 +321,7 @@ def get_cib_section_info(section_id: int) -> dict[str, Any]:
             'id': data[0],
             'name': data[1],
             'research_group_id': data[2],
+            'section_type': data[3],
         }
 
     return data
@@ -328,19 +331,19 @@ def get_cib_research_types_by_section_df(section_id: int, user_id: int) -> pd.Da
     """
     Возвращает набор отчетов по разделу section_id
     Если пользователь подписан на отчет, то is_subscribed=True
-    return: DataFrame[id, name, is_subscribed]
+    return: DataFrame[id, name, is_subscribed, summary_type]
     """
     query = text(
-        'SELECT rt.id, rt.name, (CASE WHEN urg.user_id IS NULL THEN false ELSE true END) as is_subscribed '
+        'SELECT rt.id, rt.name, (CASE WHEN urg.user_id IS NULL THEN false ELSE true END) as is_subscribed, rt.summary_type '
         'FROM research_type rt '
         'LEFT JOIN user_research_subscription urg ON rt.id=urg.research_type_id and urg.user_id=:user_id '
         'WHERE research_section_id=:section_id AND (urg.user_id=:user_id OR urg.user_id IS NULL)'
         'ORDER BY rt.name'
     )
 
-    with database.engine.connect() as conn:  # FIXME можно ручками сформировать запрос и сразу в pandas отправить
+    with database.engine.connect() as conn:
         data = conn.execute(query.bindparams(section_id=section_id, user_id=user_id)).all()
-        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
+        data_df = pd.DataFrame(data, columns=['id', 'name', 'is_subscribed', 'summary_type'])
 
     return data_df
 
@@ -378,6 +381,86 @@ def get_new_researches() -> pd.DataFrame:
             'RETURNING id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id '
         )
         data = conn.execute(query).all()
+        conn.commit()
+        data_df = pd.DataFrame(data, columns=columns)
+
+    return data_df
+
+
+def get_researches_over_period(
+        from_date: datetime.date,
+        to_date: datetime.date,
+        research_type_ids: Optional[list[int]] = None,
+) -> pd.DataFrame:
+    """
+    Возвращает все отчеты по отрасли [клиенту] за период с from_date по to_date
+    Если research_type_ids не пустой массив, то отчеты вынимаются только где research_type_id=ANY(research_type_ids)
+
+    :param from_date: от какой даты_времени вынимаются
+    :param to_date: до какой даты_времени вынимаются
+    :param research_type_ids: ID типов отчетов, по которым выгружаются отчеты (по умолчанию все отчеты)
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    """
+    query = (
+        'SELECT id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id '
+        'FROM research '
+        'WHERE publication_date BETWEEN :from_date AND :to_date '
+        '{dop_condition} '
+        'ORDER BY publication_date DESC'
+    )
+
+    kwargs = {
+        'from_date': from_date,
+        'to_date': to_date,
+    }
+
+    dop_condition = ''
+    if research_type_ids:
+        dop_condition = 'AND research_type_id=ANY(:research_type_ids)'
+        kwargs['research_type_ids'] = research_type_ids
+
+    query = text(query.format(dop_condition=dop_condition)).bindparams(**kwargs)
+
+    with database.engine.connect() as conn:
+        columns = [
+            'id',
+            'research_type_id',
+            'filepath',
+            'header',
+            'text',
+            'parse_datetime',
+            'publication_date',
+            'news_id',
+        ]
+        data = conn.execute(query).all()
+        data_df = pd.DataFrame(data, columns=columns)
+
+    return data_df
+
+
+def get_researches_by_type(research_type_id: int) -> pd.DataFrame:
+    """
+    Вынимает отчеты из таблицы research
+    :param research_type_id: id типа отчета, который вынимается (по умолчанию все)
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    """
+    with database.engine.connect() as conn:
+        columns = [
+            'id',
+            'research_type_id',
+            'filepath',
+            'header',
+            'text',
+            'parse_datetime',
+            'publication_date',
+            'news_id',
+        ]
+        query = text(
+            f'SELECT {", ".join(columns)} '
+            f'FROM research '
+            f'WHERE research_type_id=:research_type_id'
+        )
+        data = conn.execute(query.bindparams(research_type_id=research_type_id)).all()
         conn.commit()
         data_df = pd.DataFrame(data, columns=columns)
 

@@ -1,9 +1,7 @@
-import copy
 import datetime
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import six
@@ -157,7 +155,7 @@ class Transformer:
                 clip_on=False,
             )
 
-            sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
+            sample_of_img_title_view = 'SberCIB Investment Research. Данные на {}*'
             sample_of_img_title_view = sample_of_img_title_view.format(read_curdatetime().split()[0])
             title_loc = 'left'
             ax.text(
@@ -195,7 +193,7 @@ class Transformer:
                     cell.get_text().set_color('white')
 
         # save png and return it to user
-        png_path = '{}/img/{}_table.png'.format('./sources', name)
+        png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
         plt.savefig(png_path, transparent=False)
 
     @staticmethod
@@ -227,25 +225,25 @@ class Newsletter:
     __newsletter_dict = dict(weekly_result='Основные события прошедшей недели', weekly_event='Календарь и прогнозы текущей недели')
 
     @classmethod
-    def get_newsletter_dict(cls):
+    def get_newsletter_dict(cls) -> dict[str, str]:
         return cls.__newsletter_dict
 
     @classmethod
-    def make_weekly_result(cls):
+    def make_weekly_result(cls) -> tuple[str, str, list[Path]]:
         """Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
+        img_path_list = [weekly_dir / i for i in slides_fnames]
+        newsletter = f'<b>{title}</b>\n'
         return title, newsletter, img_path_list
 
     @classmethod
-    def make_weekly_event(cls):
+    def make_weekly_event(cls) -> tuple[str, str, list[Path]]:
         """Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
+        img_path_list = [weekly_dir / i for i in slides_fnames]
+        newsletter = f'<b>{title}</b>\n'
         return title, newsletter, img_path_list

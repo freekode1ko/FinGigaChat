@@ -15,6 +15,10 @@ ENV: Environment = Environment.from_str(_env_value)
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
+PATH_TO_SOURCES = PROJECT_DIR / 'sources'
+TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice'
+TMP_VOICE_FILE_DIR.mkdir(parents=True, exist_ok=True)
+
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
@@ -38,6 +42,7 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
+meeting_web_app_url = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
 
 log_file = 'bot_runner'
 LOG_LEVEL_DEBUG = 10
@@ -54,7 +59,6 @@ giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
-path_to_source = './sources'
 api_key_gpt = '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'
 
 NEWS_LIMIT = 5
@@ -68,8 +72,8 @@ BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 
 INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 
-mail_username = 'ai-helper@mail.ru'
-mail_password = 'ExamKejCpmcpr8kM5emw'
+MAIL_RU_LOGIN: str = env.str('MAIL_RU_LOGIN', default='')
+MAIL_RU_PASSWORD: str = env.str('MAIL_RU_PASSWORD', default='')
 mail_imap_server = 'imap.mail.ru'
 mail_smpt_server = 'smtp.mail.ru'
 mail_smpt_port = 465
@@ -159,3 +163,5 @@ help_text = (
 )
 
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
+
+WHISPER_MODEL = 'small'
