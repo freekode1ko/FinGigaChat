@@ -79,6 +79,9 @@ def get_user_meetings_for_notification() -> list[dict[str, Any]]:
     min_start_time = dt.datetime(dt_utc_now.year, dt_utc_now.month,
                                  dt_utc_now.day, dt_utc_now.hour, dt_utc_now.minute + minutes)
     query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start, UserMeeting.timezone).
+             # where(UserMeeting.is_notify_first == False or
+             #       UserMeeting.is_notify_second == False or  #TODO: refactor
+             #       UserMeeting.is_notify_last == False).
              where(UserMeeting.date_start > min_start_time))
     with engine.connect() as conn:
         meetings = conn.execute(query)

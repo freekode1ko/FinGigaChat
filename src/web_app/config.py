@@ -25,7 +25,7 @@ MAIL_SMTP_PORT = 465
 
 
 # ____________________________schedular____________________________
-
+BOT_API_TOKEN: str = env.str('BOT_API_TOKEN', default='')
 REMEMBER_TIME = {  # за сколько минут нужно напомнить о встрече и каким сообщением
     'first': {
         'minutes': 24 * 60,
