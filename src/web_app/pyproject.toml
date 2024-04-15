@@ -13,7 +13,6 @@ sqlalchemy = "^2.0.28"
 fastapi = "^0.110.1"
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
 setuptools = "^69.2.0"
-dramatiq = {extras = ["redis", "watch"], version = "^1.16.0"}
 
 
 [build-system]
