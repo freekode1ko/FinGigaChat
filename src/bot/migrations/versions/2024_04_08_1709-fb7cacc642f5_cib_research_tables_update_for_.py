@@ -25,7 +25,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade_update_section_type_in_research_section(session: Session) -> None:
     stmt = (
         sa.update(ResearchSection).
-        where(ResearchSection.name == 'Экономика').
+        where(ResearchSection.name == 'Экономика РФ').
         values(section_type=enums.ResearchSectionType.economy.value)
     )
     session.execute(stmt)

@@ -211,10 +211,10 @@ def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> Inlin
     keyboard = InlineKeyboardBuilder()
 
     buttons = [
-        {
-            'name': 'Цифровая справка',
-            'callback_data': callbacks.GetINavigatorSource(research_type_id=research_type_info['id']).pack(),
-        },
+        # {
+        #     'name': 'Цифровая справка',
+        #     'callback_data': callbacks.GetINavigatorSource(research_type_id=research_type_info['id']).pack(),
+        # },
         {
             'name': 'Аналитические обзоры',
             'callback_data': callbacks.SelectClientResearchesGettingPeriod(
