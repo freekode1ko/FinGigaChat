@@ -301,17 +301,15 @@ class ArticleProcess:
         return: список ссылок сохраненных новостей
         """
 
-        links_value = [unquote(link) for link in self.df_article['link'].values.tolist()]
-        links_value = tuple(links_value)
+        links_value = tuple(self.df_article['link'].apply(unquote))
         if not links_value:
             return []
 
         query_old_article = text('SELECT link FROM article WHERE link IN :links_value')
         with self.engine.connect() as conn:
-            links_of_old_article = conn.execute(query_old_article.bindparams(links_value=links_value)).all()
+            links_of_old_article = conn.execute(query_old_article.bindparams(links_value=links_value)).scalars().all()
 
         if links_of_old_article:
-            links_of_old_article = [link[0] for link in links_of_old_article]
             self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article)]
             self._logger.warning(
                 f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
