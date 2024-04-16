@@ -945,7 +945,6 @@ class ResearchAPIParser:
             conn.commit()
         """
 
-
     async def get_fin_summary(self) -> None:
         """
         Стартовая точка для парсинга финансовых показателей по клиентам
