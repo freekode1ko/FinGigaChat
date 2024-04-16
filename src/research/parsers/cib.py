@@ -933,7 +933,7 @@ class ResearchAPIParser:
             metadata_df.columns = metadata_df.keys()
 
         self._logger.info('Очистка прошлых записей в таблице financial_summary')
-        print(metadata_df)
+
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
         metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
         tf = data_transformer.Transformer()
@@ -943,7 +943,6 @@ class ResearchAPIParser:
             for sector_id in sectors_id:
                 self._logger.info(f'Обработка сектора {sector_id} для поиска фин. показателей')
                 # выберем блок из DF по обрабатываемому сектору
-
                 sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
                 for company_id in sector_df['company_id'].values.tolist():
                     try:
@@ -951,13 +950,19 @@ class ResearchAPIParser:
                             url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
                             verify_ssl=False, cookies=self.cookies)
                         content = await sector_page.text()
-                        df_parts = pd.concat([tf.process_fin_summary_table(content, company_id, sector_df),
-                                              df_parts], ignore_index=True)
+                        part = tf.process_fin_summary_table(content, company_id, sector_df)
+                        df_parts = pd.concat([part, df_parts], ignore_index=True)
                     except HTTPNoContent as e:
                         self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                     except Exception as e:
                         self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
                 self._logger.info(f'Сектор {sector_id} с фин. показателями обработан')
+
         self._logger.info('Запись таблицы financial_summary')
-        metadata_df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        df_parts.dropna(subset=['review_table', 'pl_table', 'balance_table', 'money_table'], inplace=True)
+        df_parts.drop_duplicates(subset=['company_id', 'client_id'], inplace=True)
+        df_parts.sort_values(by=['sector_id', 'company_id'], ascending=[True, True]).reset_index(drop=True,
+                                                                                                 inplace=True)
+        # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        self._logger.info(f'\n{df_parts.shape}\n{df_parts}\n')
         self._logger.info('Таблица financial_indicators записана')
