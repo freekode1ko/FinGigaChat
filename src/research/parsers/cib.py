@@ -936,7 +936,7 @@ class ResearchAPIParser:
 
         sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
         metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
-        tf = data_transformer.Transformer()
+        tf = data_transformer.Transformer(self._logger)
         df_parts = pd.DataFrame(columns=metadata_df.columns)
 
         async with ClientSession() as session:
@@ -964,5 +964,4 @@ class ResearchAPIParser:
         df_parts.sort_values(by=['sector_id', 'company_id'], ascending=[True, True]).reset_index(drop=True,
                                                                                                  inplace=True)
         # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
-        self._logger.info(f'\n{df_parts.shape}\n{df_parts}\n')
         self._logger.info('Таблица financial_indicators записана')
