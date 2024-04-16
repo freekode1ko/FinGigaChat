@@ -15,8 +15,11 @@ ENV: Environment = Environment.from_str(_env_value)
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
+PATH_TO_SOURCES = PROJECT_DIR / 'sources'
+PATH_TO_REPORTS = PROJECT_DIR / 'sources' / 'reports'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
+PATH_TO_REPORTS.mkdir(parents=True, exist_ok=True)
 
 
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
@@ -37,6 +40,11 @@ SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
 api_token: str = env.str('BOT_API_TOKEN', default='')
+DB_USER: str = env.str('DB_USER', default='postgres')
+DB_PASS: str = env.str('DB_PASS', default='password')
+DB_HOST: str = env.str('DB_HOST', default='127.0.0.1')
+DB_PORT: str = env.str('DB_PORT', default='5432')
+DB_NAME: str = env.str('DB_NAME', default='postgres')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 
@@ -58,16 +66,22 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
-data_market_base_url = 'https://markets.tradingeconomics.com/'
-path_to_source = './sources'
 api_key_gpt = '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'
 research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
+CIB_JSESSIONID = '1111akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'
+CIB_LOGIN = '616e6e656b7261736f76407362657262616e6b2e7275'
+CIB_PASSWORD = '336e52672b5048666739497856336549336d6c5069513d3d'
+CIB_ID = '6c4b30425771657531317076614c375744757a5078413d3d'
 
 RESEARCH_GETTING_TIMES_LIST = [
     '08:00',
+    '09:00',
     '10:00',
+    '11:00',
     '12:00',
+    '13:00',
     '14:00',
+    '15:00',
     '16:00',
     '17:00',
     '17:10',
@@ -76,6 +90,8 @@ RESEARCH_GETTING_TIMES_LIST = [
     '17:40',
     '17:50',
     '18:00',
+    '19:00',
+    '20:00',
 ]
 
 QUOTES_PROCESSING_PROC_NUM = 2
@@ -166,17 +182,8 @@ help_text = (
     'обратную связь по контенту, функционалу и новым идеям команде проекта.'
 )
 
-table_link = 'https://metals-wire.com/data'
-
-charts_links = {
-    'metals_wire_link': 'https://metals-wire.com/api/v2/charts/symbol/history/name_name/?to=date_date&countBack=1825',
-    'investing_link': 'https://api.investing.com/api/financialdata/name_name/historical/chart/?period=P5Y&interval=P1M&pointscount=120',
-}
-
-dict_of_commodities: dict = read_asset_from_json('commodities_dict.json')
 dict_of_companies: dict = read_asset_from_json('companies_dict.json')
 industry_reviews: Dict[str, str] = read_asset_from_json('industry_reviews.json')
-
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 industry_base_url = (
@@ -204,3 +211,23 @@ SELENIUM_RUN_KWARGS = {
 
 # SELENIUM DRIVER PARAMS
 SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'
+
+# CIB API CONSTANTS
+ARTICLE_URL = 'https://research.sberbank-cib.com/group/guest/publication'
+MONTH_NAMES_DICT = {
+    'янв': 1,
+    'фев': 2,
+    'мар': 3,
+    'апр': 4,
+    'мая': 5,
+    'июн': 6,
+    'июл': 7,
+    'авг': 8,
+    'сен': 9,
+    'окт': 10,
+    'ноя': 11,
+    'дек': 12,
+}
+REPEAT_TRIES = 5
+CONTENT_LENGTH__HTML_WITH_ARTICLE = 10000
+HOME_PAGE = 'https://research.sberbank-cib.com'

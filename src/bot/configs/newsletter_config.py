@@ -113,3 +113,9 @@ NEWSLETTER_CONFIG = [
         ],
     },
 ]
+
+CIB_RESEARCH_NEWSLETTER_PARAMS = {
+    'trigger': 'interval',
+    'minutes': 10,
+    'max_instances': 1,
+}

@@ -1,4 +1,4 @@
-import json
+﻿import json
 import random
 import re
 
@@ -10,20 +10,25 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from aiogram.types.web_app_info import WebAppInfo
 
 from configs import config
 from log.bot_logger import user_logger
-from constants.constants import CANCEL_CALLBACK
+from constants.constants import (
+    CANCEL_CALLBACK,
+    MAX_REGISTRATION_CODE_ATTEMPTS,
+    REGISTRATION_CODE_MIN,
+    REGISTRATION_CODE_MAX,
+)
 from db.database import engine
-from module.mail_parse import SmtpSend
+from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
-from db.whitelist import update_user_email
+from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist
 
 
 # States
 class Form(StatesGroup):
-    permission_to_delete = State()
-    send_to_users = State()
+    """Конечный автомат состояний регистрации пользователя"""
     new_user_reg = State()
     continue_user_reg = State()
 
@@ -111,31 +116,36 @@ async def user_registration(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Form.new_user_reg)
 async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip().lower()
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    if (re.search('\w+@sberbank.ru', user_msg.strip())) or (re.search('\w+@sber.ru', user_msg.strip())):
-        # TODO: оставить только 1 ключ и сократить количество знаков до 4-5
-        user_reg_code_1 = str(chat_id + random.randint(1, 1000))[-4:]  # Генерация уникального кода № 1
-        # user_reg_code_2 = str(AESCrypther(user_reg_code_1).encrypt(user_reg_code_1))  # Генерация уникального кода № 2
+    if re.search(r'\w+@sber(bank)?.ru', user_msg):
+        # проверка на существования пользователя с введенной почтой
+        if not is_new_user_email(user_msg):
+            await state.clear()
+            await message.answer('Пользователь с такой почтой уже существует! '
+                                 'Нажмите /start, чтобы попробовать еще раз.')
+            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : при регистрации использовалась чужая почта')
+            return
 
-        # Отправка письма с регистрационными кодами (user_id (key1) и зашифрованный ключ (key2))
-        SS = SmtpSend()  # TODO: Вынести в with открытие, отправку и закрытия
-        SS.get_connection(config.mail_username, config.mail_password, config.mail_smpt_server, config.mail_smpt_port)
-        SS.send_msg(
-            config.mail_username,
-            user_msg.strip(),
-            config.mail_register_subject,
-            config.reg_mail_text.format(user_reg_code_1),
-        )
-        SS.close_connection()
+        reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
+
+        with SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.mail_smpt_server, config.mail_smpt_port) as smtp_email:
+
+            smtp_email.send_msg(
+                config.MAIL_RU_LOGIN,
+                user_msg,
+                config.mail_register_subject,
+                config.reg_mail_text.format(reg_code),
+            )
 
         await state.clear()
         await state.set_state(Form.continue_user_reg)
-        await state.update_data(user_email=user_msg.strip(), user_reg_code=user_reg_code_1)
-        await message.answer(
-            'Для завершения регистрации, введите код, отправленный вам на почту',
-            protect_content=False
+        await state.update_data(
+            user_email=user_msg,
+            reg_code=reg_code,
+            attempts_left=MAX_REGISTRATION_CODE_ATTEMPTS
         )
+        await message.answer('Для завершения регистрации, введите код, отправленный вам на почту.')
     else:
         keyboard = types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text='отмена')], ],
@@ -143,39 +153,24 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
             input_field_placeholder='Введите корпоративную почту',
             one_time_keyboard=True
         )
-        await message.answer(
-            'Указана не корпоративная почта',
-            protect_content=False,
-            reply_markup=keyboard
-        )
+        await message.answer('Указана не корпоративная почта', reply_markup=keyboard)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(Form.continue_user_reg)
 async def validate_user_reg_code(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
-    user_reg_info = await state.get_data()
-    # try:
-    #     user_reg_code = AESCrypther(str(user_reg_info['user_reg_code'])).decrypt(user_msg.encode('utf-8'))
-    #     user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : {user_reg_code}')
-    # except ValueError:
-    #     '''
-    #     Я забыл что с коп. почты на телефоне нельзя скопировать текст письма, так что добавим
-    #     проверку user_msg на схожесть с chat_id и отправим его вместе с закодированным
-    #     '''
-    #     user_reg_code = 'ERROR_USER_CODE'
-    #     if user_msg == str(user_reg_info['user_reg_code']):
-    #         user_reg_code = user_msg
-    user_reg_code = user_msg
-    if str(user_reg_info['user_reg_code']) == str(user_reg_code):
+    reg_info = await state.get_data()
+    reg_code: str = reg_info['reg_code']
 
+    if reg_code == user_msg:
         user_raw = json.loads(message.from_user.model_dump_json())
         if 'username' in user_raw:
             user_username = user_raw['username']
         else:
             user_username = 'Empty_username'
         user_id = user_raw['id']
-        user_email = user_reg_info['user_email']
+        user_email = reg_info['user_email']
         user = pd.DataFrame(
             [[user_id, user_username, full_name, 'user', 'active', None, user_email]],
             columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'])
@@ -189,6 +184,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
             await help_handler(message, state)
 
         except IntegrityError as e:
+            # если пользователь уже есть в системе, обновляем ему почту
             if isinstance(e.orig, UniqueViolation):
                 update_user_email(user_id, user_email)
                 await message.answer(welcome_msg)
@@ -205,5 +201,32 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
             await state.clear()
 
     else:
-        await message.answer('Введен некорректный регистрационный код', protect_content=False)
-        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. Обработчик кода ответил: {user_reg_code}')
+        attempts_left = reg_info['attempts_left'] - 1
+        if not attempts_left:
+            await state.clear()
+            await message.answer('Вы истратили все попытки. Попробуйте заново, используя команду /start.')
+            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : неуспешная регистрация')
+            return
+
+        await state.update_data(attempts_left=attempts_left)
+        await message.answer(f'Вы ввели некорректный регистрационный код. Осталось {attempts_left} попытки.')
+        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : пользователь ввел некорректный код, '
+                            f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
+
+
+@router.message(Command('meeting'))
+async def open_meeting_app(message: types.Message) -> None:
+    """Открытие веб приложения со встречами"""
+    user_id = message.from_user.id
+    if not is_user_email_exist(user_id):
+        await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')
+        return
+
+    markup = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=config.meeting_web_app_url))],
+        ],
+        resize_keyboard=True
+    )
+    await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+

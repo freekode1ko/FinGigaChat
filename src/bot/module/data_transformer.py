@@ -1,9 +1,7 @@
-import copy
 import datetime
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
 import six
@@ -157,7 +155,7 @@ class Transformer:
                 clip_on=False,
             )
 
-            sample_of_img_title_view = 'Sber Analytical Research. Данные на {}*'
+            sample_of_img_title_view = 'SberCIB Investment Research. Данные на {}*'
             sample_of_img_title_view = sample_of_img_title_view.format(read_curdatetime().split()[0])
             title_loc = 'left'
             ax.text(
@@ -195,102 +193,7 @@ class Transformer:
                     cell.get_text().set_color('white')
 
         # save png and return it to user
-        png_path = '{}/img/{}_table.png'.format('./sources', name)
-        plt.savefig(png_path, transparent=False)
-
-    @staticmethod
-    def __draw_plot(df, name):
-        labels = []
-        xticks = []
-        for i, date in enumerate(df['date']):
-            date_obj_year = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S').year
-            if date_obj_year not in labels:
-                labels.append(date_obj_year)
-                xticks.append(df.iloc[i]['x'])
-
-        while len(labels) > 5:
-            del labels[0]
-            del xticks[0]
-
-        first = df.loc[df['x'] == xticks[0], 'x'].index[0]
-        fig, ax = plt.subplots()
-        fig.canvas.draw()
-
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-
-        labels_new = []
-        for i, label in enumerate(labels):
-            if i != len(labels) - 1:
-                labels_new.append(label)
-                labels_new.append('')
-            else:
-                labels_new.append(label)
-                labels_new.append('')
-
-        xticks_new = []
-        for i, xtick in enumerate(xticks):
-            if i != len(labels) - 1:
-                xticks_new.append(xtick)
-                xticks_new.append((xticks[i + 1] - xticks[i]) / 2 + xtick)
-            else:
-                xticks_new.append(xtick)
-                xticks_new.append((xticks[i] - xticks[i - 1]) / 2 + xtick)
-
-        minor_locator = ticker.AutoMinorLocator(n=2)
-        plt.gca().yaxis.set_minor_locator(minor_locator)
-        plt.gca().tick_params(which='minor', length=4, color='black', width=1)
-
-        def format_yticks(value, pos):
-            return '{:,.0f}'.format(value).replace(',', ' ')
-
-        formatter = ticker.FuncFormatter(format_yticks)
-        ax.yaxis.set_major_formatter(formatter)
-
-        plt.xticks(xticks_new)
-        ax.set_xticklabels(labels_new)
-        ax.yaxis.set_tick_params(length=0)
-
-        color = (30 / 255, 212 / 255, 132 / 255)
-        ax.plot(df['x'][first:], df['y'][first:], color=color)
-        ax.yaxis.tick_right()
-
-        plt.xlim(df['x'].iloc[first], df['x'].iloc[-1])
-
-        y = df['y'].iloc[-1]
-        ax.axhline(y=y, color=color, linestyle='dotted')
-
-        x = df['x'].iloc[-1]
-        delta_x = x / 100
-        y = round(y, 1)
-        delta_y = (y / 100) * 5
-        x_name = df['x'].iloc[first]
-        y_name = df['y'][first:].max()
-
-        ax.text(x_name, y_name, name, fontsize=12)
-        ax.text(x - delta_x, y + delta_y, y, fontsize=10, weight='bold')
-        ax.plot(x, y, 'o', markersize=6, color=color)
-
-    @staticmethod
-    def five_year_graph(data, name):
-        """
-        Plot 5Y charts
-        :param data: data to plot in Dataframe or json format
-        :param name: charts name
-        """
-
-        if isinstance(data, pd.DataFrame):
-            Transformer.__draw_plot(data, name)
-        else:
-            df = pd.DataFrame(data.json()['series'][0]['data'])
-            Transformer.__draw_plot(df, name)
-
-        name = name.replace('/', '_')
-        name = name.replace(' ', '_')
-        name = name.split(',')
-        name = f'{name[0]}_graph.png'
-        # save png and return it to user
-        png_path = '{}/img/{}'.format('./sources', name)
+        png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
         plt.savefig(png_path, transparent=False)
 
     @staticmethod
@@ -315,26 +218,6 @@ class Transformer:
         unix_timestamp = int(date_time.timestamp())
         return str(unix_timestamp)
 
-    @staticmethod
-    def url_updater():
-        """
-        Create urls to charts
-        """
-
-        unix_timestamp = Transformer.default_to_unix()
-        charts_links = copy.deepcopy(config.charts_links)
-        commodities = copy.deepcopy(config.dict_of_commodities)
-
-        for commodity in commodities:
-            if len(commodities[commodity]['links']) > 1:
-                name = commodities[commodity]['links'][0]
-                commodities[commodity]['links'][0] = charts_links['investing_link'].replace('name_name', name)
-            elif commodities[commodity]['naming'] != 'Gas':
-                name = commodities[commodity]['links'][0]
-                commodities[commodity]['links'][0] = charts_links['metals_wire_link'].replace('name_name', name)
-                commodities[commodity]['links'][0] = commodities[commodity]['links'][0].replace('date_date', unix_timestamp)
-        return commodities
-
 
 class Newsletter:
     """Создает текста для рассылок"""
@@ -342,25 +225,25 @@ class Newsletter:
     __newsletter_dict = dict(weekly_result='Основные события прошедшей недели', weekly_event='Календарь и прогнозы текущей недели')
 
     @classmethod
-    def get_newsletter_dict(cls):
+    def get_newsletter_dict(cls) -> dict[str, str]:
         return cls.__newsletter_dict
 
     @classmethod
-    def make_weekly_result(cls):
+    def make_weekly_result(cls) -> tuple[str, str, list[Path]]:
         """Создает текст для рассылки "Итоги недели" """
         title = 'Итоги недели'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
+        img_path_list = [weekly_dir / i for i in slides_fnames]
+        newsletter = f'<b>{title}</b>\n'
         return title, newsletter, img_path_list
 
     @classmethod
-    def make_weekly_event(cls):
+    def make_weekly_event(cls) -> tuple[str, str, list[Path]]:
         """Создает текст для рассылки "Что нас ждет на этой неделе?" """
         title = 'Что нас ждет на этой неделе?'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
+        img_path_list = [weekly_dir / i for i in slides_fnames]
+        newsletter = f'<b>{title}</b>\n'
         return title, newsletter, img_path_list

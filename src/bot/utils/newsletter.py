@@ -1,5 +1,7 @@
 import asyncio
 import datetime
+import os
+import time
 from typing import List
 
 import pandas as pd
@@ -8,12 +10,14 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 from configs import config
 import module.data_transformer as dt
+from constants import constants
 from log.bot_logger import logger, user_logger
 from db.database import engine
+from module import formatter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
-from db import parser_source, message
+from db import parser_source, message, subscriptions
 from db.industry import get_industry_tg_news
 
 
@@ -126,7 +130,7 @@ async def subscriptions_newsletter(
 
                 for subject in client_commodity_name_list:
                     articles = user_client_comm_df.loc[user_client_comm_df['name'] == subject]
-                    _, msg, _ = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
+                    _, msg = ArticleProcess.make_format_msg(subject, articles.values.tolist(), None)
                     msg = await bot.send_message(user_id, text=msg, parse_mode='HTML', disable_web_page_preview=True)
                     saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
@@ -202,3 +206,101 @@ async def weekly_pulse_newsletter(
             logger.error(f'ERROR *{user_id}* Пользователь не получил рассылку "{title}" : {e}')
 
     message.add_all(saved_messages)
+
+
+async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, research_df: pd.DataFrame) -> list[types.Message]:
+    """
+    Отправка отчетов пользователю с форматированием
+    :param bot: объект тг бота
+    :param user_id: телеграм id пользователя, которому отправляются отчеты
+    :param user_name: имя пользователя для логирования
+    :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    return: Список объектов отправленных сообщений
+    """
+    sent_msg_list = []
+
+    for _, research in research_df.iterrows():
+        user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
+        formatted_msg_txt = formatter.ResearchFormatter.format(research)
+        is_shorter_than_max_len = len(formatted_msg_txt) <= constants.TELEGRAM_MESSAGE_MAX_LEN
+
+        # Если отчет не влезает с одно сбщ, то не отправляем текст отчета, а только файл
+        if is_shorter_than_max_len:
+            msg = await bot.send_message(user_id, formatted_msg_txt, protect_content=True, parse_mode='HTML')
+            sent_msg_list.append(msg)
+
+        # Если есть файл - отправляем
+        if research['filepath'] and os.path.exists(research['filepath']):
+            file = types.FSInputFile(research['filepath'])
+            msg_txt = (
+                f'Полная версия отчета: <b>{research["header"]}</b>' if is_shorter_than_max_len
+                else f'<b>{research["header"]}</b>'
+            )
+            msg = await bot.send_document(
+                document=file,
+                chat_id=user_id,
+                caption=msg_txt,
+                parse_mode='HTML',
+                protect_content=True,
+            )
+            sent_msg_list.append(msg)
+
+        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
+        await asyncio.sleep(1.1)
+
+    return sent_msg_list
+
+
+async def send_new_researches_to_users(bot: Bot) -> None:
+    now = datetime.datetime.now()
+    newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
+    logger.info(f'Начинается рассылка новостей в {newsletter_dt_str} по CIB Research')
+    start_tm = time.time()
+
+    # получаем список отчетов, которые надо разослать
+    research_df = subscriptions.get_new_researches()
+    research_type_ids = research_df['research_type_id'].drop_duplicates().values.tolist()
+
+    # Получаем список пользователей, которым требуется разослать отчеты
+    user_df = subscriptions.get_users_by_research_types_df(research_type_ids)
+    # Словарь key=research_type.id, value=research_section
+    research_section_dict = subscriptions.get_research_sections_by_research_types_df(research_type_ids)
+
+    # Сохранение отправленных сообщений
+    saved_messages = []
+    newsletter_type = 'cib_research_newsletter'
+
+    research_df['research_section_name'] = research_df['research_type_id'].apply(lambda x: research_section_dict[x]['name'])
+
+    for _, user_row in user_df.iterrows():
+        user_id = user_row["user_id"]
+        user_name = user_row["username"]
+        logger.info(f'Рассылка отчетов пользователю {user_id}')
+
+        # filter by user`s subs and group research_df by research_section_name
+        research_df_group_by_section = (
+            research_df[
+                research_df['research_type_id'].isin(user_row['research_types'])
+            ]
+            .groupby('research_section_name')
+        )
+        for research_section_name, section_researches_df in research_df_group_by_section:
+            # отправка отчета пользователю
+            start_msg = f'Ваша новостная рассылка по подпискам на отчеты по разделу <b>{research_section_name}</b>:'
+            msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
+            saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+
+            sent_msg_list = await send_researches_to_user(bot, user_id, user_name, section_researches_df)
+            saved_messages.extend(
+                dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type)
+                for m in sent_msg_list
+            )
+
+    message.add_all(saved_messages)
+
+    work_time = time.time() - start_tm
+    users_cnt = len(user_df)
+    logger.info(
+        f'Рассылка в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
+        f'Переходим в ожидание следующей рассылки.'
+    )

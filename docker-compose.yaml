@@ -80,6 +80,27 @@ services:
         restart: always
 
 
+    web-app:
+        build:
+            context: ./src/web_app
+            dockerfile: Dockerfile
+        container_name: web_app_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - "443:443"
+        command: bash -c "poetry run uvicorn --ssl-keyfile data/certs/privkey.pem --ssl-certfile data/certs/fullchain.pem app:app --host 0.0.0.0 --port 443"
+        depends_on:
+            - database
+            - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
     quotes:
         build:
             context: ./src/quotes

@@ -1,0 +1,1 @@
+from handlers.subscriptions.news.telegram import telegram_subscriptions_menu
