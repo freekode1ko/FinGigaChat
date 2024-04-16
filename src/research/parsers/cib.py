@@ -920,9 +920,10 @@ class ResearchAPIParser:
         self._logger.info('CIB: Конец парсинга CIB')
 
     @staticmethod
-    async def save_fin_summary(self, df) -> None:
+    async def save_fin_summary(df) -> None:
         df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
-        '''
+        """
+        test 
         with engine.connect() as conn:
             for row in df.iterrows():
                 insert_stmt = insert(FinancialSummary).values(sector_id=row[1][0],
@@ -942,7 +943,8 @@ class ResearchAPIParser:
 
                 conn.execute(upsert_stmt)
             conn.commit()
-        '''
+        """
+
 
     async def get_fin_summary(self) -> None:
         """
