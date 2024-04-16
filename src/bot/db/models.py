@@ -15,7 +15,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    Date,
+    Date, text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
@@ -521,7 +521,7 @@ class Research(Base):
     text = Column(Text, nullable=False)
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
-    news_id = Column(String(64), nullable=False)
+    report_id = Column(String(64), nullable=False)
     is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что отчет еще не рассылался пользователям')
 
 
@@ -571,3 +571,27 @@ class CallReports(Base):
     client = Column(String(255), nullable=False, comment='Клиент')
     report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
     description = Column(Text, nullable=False, comment='Отчет по встрече')
+
+
+class UserClientSubscriptions(Base):
+    __tablename__ = 'user_client_subscription'
+    __table_args__ = {'comment': 'Справочник подписок пользователей на клиентов'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class UserCommoditySubscriptions(Base):
+    __tablename__ = 'user_commodity_subscription'
+    __table_args__ = {'comment': 'Справочник подписок пользователей на сырьевые товары'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class UserIndustrySubscriptions(Base):
+    __tablename__ = 'user_industry_subscription'
+    __table_args__ = {'comment': 'Справочник подписок пользователей на отрасли'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)

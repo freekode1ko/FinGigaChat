@@ -214,7 +214,7 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
     :param bot: объект тг бота
     :param user_id: телеграм id пользователя, которому отправляются отчеты
     :param user_name: имя пользователя для логирования
-    :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
     return: Список объектов отправленных сообщений
     """
     sent_msg_list = []
