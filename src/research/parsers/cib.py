@@ -23,6 +23,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from sqlalchemy import insert, select, func
+from sqlalchemy.dialects.postgresql import insert
 
 from configs import config
 from db import parser_source
@@ -371,9 +372,9 @@ class ResearchParser:
         soup = BeautifulSoup(page_html, 'html.parser')
         table_soup = (
             soup.find('div', attrs={'class': 'report company-summary-financials'})
-            .find('div', attrs={'class': 'grid_container grid-bottom-border'})
-            .find('div', attrs={'class': 'table-scroll'})
-            .find('table', attrs={'class': 'grid container black right'})
+                .find('div', attrs={'class': 'grid_container grid-bottom-border'})
+                .find('div', attrs={'class': 'table-scroll'})
+                .find('table', attrs={'class': 'grid container black right'})
         )
 
         self._logger.info(f'Обработка найденной таблицы для компании {company}')
@@ -709,8 +710,8 @@ class ResearchAPIParser:
                     ParserSource.before_link,
                     ParserSource.response_format.label('request_method'),
                 )
-                .select_from(ResearchType)
-                .join(ParserSource)
+                    .select_from(ResearchType)
+                    .join(ParserSource)
             )
             return [_._asdict() for _ in all_sources]
 
@@ -800,7 +801,7 @@ class ResearchAPIParser:
             self._logger.info('CIB: сохранение отчета: %s', report_id)
 
             date = self.cib_date_to_normal_date(str(report_html.find('span',
-                                                                   class_="date").text).strip())
+                                                                     class_="date").text).strip())
             report_texts = []
             for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
                 # Удаляем все ссылки
@@ -884,7 +885,8 @@ class ResearchAPIParser:
         loop = asyncio.get_event_loop()
         reports = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'],
+                          str(len(reports)))
 
         for report in reports:
             if element_with_id := report.text:
@@ -916,6 +918,31 @@ class ResearchAPIParser:
                     self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
 
         self._logger.info('CIB: Конец парсинга CIB')
+
+    @staticmethod
+    async def save_fin_summary(self, df) -> None:
+        df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        '''
+        with engine.connect() as conn:
+            for row in df.iterrows():
+                insert_stmt = insert(FinancialSummary).values(sector_id=row[1][0],
+                                                              company_id=row[1][1],
+                                                              client_id=row[1][2],
+                                                              review_table=row[1][3],
+                                                              pl_table=row[1][4],
+                                                              balance_table=row[1][5],
+                                                              money_table=row[1][6])
+                upsert_stmt = insert_stmt.on_conflict_do_update(
+                    index_elements=['sector_id', 'company_id', 'client_id'],
+                    set_={'review_table': insert_stmt.excluded.review_table,
+                          'pl_table': insert_stmt.excluded.pl_table,
+                          'balance_table': insert_stmt.excluded.balance_table,
+                          'money_table': insert_stmt.excluded.money_table}
+                )
+
+                conn.execute(upsert_stmt)
+            conn.commit()
+        '''
 
     async def get_fin_summary(self) -> None:
         """
@@ -963,5 +990,10 @@ class ResearchAPIParser:
         df_parts.drop_duplicates(subset=['company_id', 'client_id'], inplace=True)
         df_parts.sort_values(by=['sector_id', 'company_id'], ascending=[True, True]).reset_index(drop=True,
                                                                                                  inplace=True)
+        df_parts['review_table'] = df_parts['review_table'].apply(json.dumps)
+        df_parts['pl_table'] = df_parts['pl_table'].apply(json.dumps)
+        df_parts['balance_table'] = df_parts['balance_table'].apply(json.dumps)
+        df_parts['money_table'] = df_parts['money_table'].apply(json.dumps)
         # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        await self.save_fin_summary(df_parts)
         self._logger.info('Таблица financial_indicators записана')
