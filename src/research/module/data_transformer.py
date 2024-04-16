@@ -33,11 +33,12 @@ class Transformer:
         ecom_tables = pd.read_html(page_html, decimal=',', thousands='.')
         for table_num, table in enumerate(ecom_tables):
             if table_num in self.tables_handbook:
+                self._logger.debug(f'Очистка полученной таблицы: {self.tables_handbook[table_num]}')
                 cleaned_columns = self.filter_list(table.columns.values)  # очистка от ненужных колонок
                 table = table[cleaned_columns].iloc[1:, :]  # отброс наименования таблицы
                 table.rename(columns={cleaned_columns[0]: ''}, inplace=True)
                 table[cleaned_columns[1:]] = table[cleaned_columns[1:]].replace('\.', ',', regex=True)
-                # запись полученных таблиц в исходных df
+                self._logger.debug(f'Запись очищенных данных таблицы: {self.tables_handbook[table_num]}')
                 company_filter = metadata_df.company_id == company_id
                 metadata_df.loc[company_filter, self.tables_handbook[table_num]] = [table.to_dict()]
 
