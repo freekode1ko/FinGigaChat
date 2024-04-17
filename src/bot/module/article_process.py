@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import text, insert, select, func
 from sqlalchemy.exc import ProgrammingError
 
 from configs.config import (
@@ -17,6 +17,7 @@ from configs.config import (
 from constants.quotes import COMMODITY_MARKS
 from db.database import engine
 from log.logger_base import Logger
+from db.models import FinancialSummary
 
 CONDITION_TOP = (
     "{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
@@ -195,54 +196,26 @@ class ArticleProcess:
 
         return com_data
 
-    def get_client_fin_indicators(self, client_id, client_name):
+    def get_client_fin_indicators(self, client_id):
         """
-        Get company finanical indicators.
+        Get company financial indicators.
         :param client_id: id of company in client table
-        :param client_name: str of company in user's message
         :return: df financial indicators
         """
         if client_id:
-            client = pd.read_sql('client', con=self.engine)
-            client_name = client[client['id'] == client_id]['name'].iloc[0]
-        client = pd.read_sql('financial_indicators', con=self.engine)
-        client = client[client['company'] == client_name]
-        client = client.sort_values('id')
-        client_copy = client.copy()
+            self._logger.info(f'Поиск фин. показателей для клиента: {client_id}')
+            query = (select(FinancialSummary.review_table, FinancialSummary.pl_table,
+                            FinancialSummary.balance_table, FinancialSummary.money_table)
+                     .where(FinancialSummary.client_id == client_id))
 
-        if not client.empty:
-            alias_idx = client.columns.get_loc('alias')
-            new_df = client.iloc[:, :alias_idx]
-            full_nan_cols = new_df.isna().all().sum()
+            with engine.connect() as conn:
+                metadata = conn.execute(query).fetchall()
+                metadata_df = pd.DataFrame(metadata)
+                metadata_df.columns = metadata_df.keys()
 
-            if full_nan_cols > 1:
-                alias_idx = client_copy.columns.get_loc('alias')
-                left_client = client_copy.iloc[:, :alias_idx]
-                remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
-                right_client = client_copy.iloc[:, alias_idx:]
-                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
-
-                if len(selected_cols) < 5:
-                    if full_nan_cols < 5:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
-                                                 : int(remaining_cols) - 1]
-                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
-                    else:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
-                                                 : int(remaining_cols) + 1]
-                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
-
-                result = client_copy[selected_cols]
-                numeric_cols = [col for col in result.columns if all(c.isdigit() or c == 'E' for c in col)]
-                numeric_cols.sort()
-                new_cols = ['name'] + numeric_cols
-                new_df = result[new_cols]
-                if new_df.shape[1] > 6:
-                    new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
+            return metadata_df
         else:
-            return client_name, client
-
-        return client_name, new_df
+            return pd.DataFrame()
 
     @staticmethod
     def _make_place_number(mark: str | int | float | None) -> str | None:
