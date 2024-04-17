@@ -79,6 +79,7 @@ def regular_func():
 
     subject_links, tg_links = [], []
     df_article = get_article()
+
     if not df_article.empty:
         try:
             logger.info(f'Получено {len(df_article)} новостей')
