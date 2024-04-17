@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 import ssl
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
 
 import config
 from db.meeting import get_user_meetings, add_meeting, get_user_email
@@ -16,8 +18,10 @@ async def lifespan(app: FastAPI):
     utils.scheduler.start()
     yield
 
-
 app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+templates = Jinja2Templates(directory="frontend/templates")
+
 
 if not config.DEBUG:
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -25,25 +29,32 @@ if not config.DEBUG:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[config.MEETING_PAGES, 'http://localhost:63342/'],
+    allow_origins=[config.MEETING_PAGES, 'http://127.0.0.1'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.get("/meeting/show/{user_id}")
-def read_root(user_id):
-    if user_id is not None:
-        meetings = get_user_meetings(user_id)
-        meetings = utils.format_date(meetings)
-        return JSONResponse(meetings)
-    else:
-        return 'Отсутствует User ID.'
+@app.get("/meeting/show", response_class=HTMLResponse)
+async def show_meetings(request: Request, ):
+    return templates.TemplateResponse("meeting.html", {"request": request})
+
+
+@app.get("/meeting/show/{user_id}", response_class=JSONResponse)
+async def show_user_meetings(user_id: int | str):
+    meetings = get_user_meetings(user_id)
+    meetings = utils.format_date(meetings)
+    return JSONResponse(meetings)
 
 
 @app.get('/meeting/create')
-def create_meeting(user_id, theme, date_start, date_end, description, timezone):
+async def create_meeting_form(request: Request):
+    return templates.TemplateResponse("create.html", {"request": request})
+
+
+@app.get('/meeting/save')
+async def create_meeting(user_id, theme, date_start, date_end, description, timezone):
     data = {
         'user_id': user_id,
         'theme': theme,
