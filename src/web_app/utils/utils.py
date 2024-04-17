@@ -1,7 +1,7 @@
 import datetime as dt
 from typing import Any
 
-from config import BASE_DATETIME_FORMAT
+from config import BASE_DATETIME_FORMAT, SERVER_DATE_FORMAT
 
 
 def format_date(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -25,13 +25,11 @@ def reformat_data(data: dict[str: Any]) -> dict[str: Any]:
     :return: отформатированные данные
     """
     data['timezone'] = - int(data['timezone']) / 60
-    data['date_start'] = dt.datetime.strptime(data['date_start'], BASE_DATETIME_FORMAT)
-    data['date_end'] = dt.datetime.strptime(data['date_end'], BASE_DATETIME_FORMAT) \
-        if data['date_end'] \
-        else data['date_start'] + dt.timedelta(minutes=1)
 
-    # to utc
-    data['date_start'] = data['date_start'] - dt.timedelta(hours=data['timezone'])
-    data['date_end'] = data['date_end'] - dt.timedelta(hours=data['timezone'])
+    data['date_start'] = dt.datetime.strptime(data['date_start'], SERVER_DATE_FORMAT)
+    data['date_start'] = data['date_start'].replace(second=0, microsecond=0, tzinfo=None)
+
+    data['date_end'] = dt.datetime.strptime(data['date_end'], SERVER_DATE_FORMAT)
+    data['date_end'] = data['date_end'].replace(second=0, microsecond=0, tzinfo=None)
 
     return data

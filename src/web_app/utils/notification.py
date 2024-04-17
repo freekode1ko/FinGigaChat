@@ -51,4 +51,4 @@ def add_notify_job(meeting: dict[str, Any] | None = None):
                 run_date=dt_notification,
                 timezone='Europe/Moscow'
             )
-            print(meeting['theme'], '-', 'yes', meeting['theme'], 'in', dt_notification)
+            print(meeting['theme'], 'in', dt_notification)

@@ -18,6 +18,7 @@ PSQL_ENGINE: str = env.str('PSQL_ENGINE', default='')
 
 
 # _________________________date_format_________________________
+SERVER_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 BASE_TIME_FORMAT = '%H:%M'
 
