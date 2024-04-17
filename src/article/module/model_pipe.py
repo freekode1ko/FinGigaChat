@@ -10,7 +10,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from configs.config import psql_engine, summarization_prompt
+from configs.config import psql_engine, summarization_prompt, CLIENT_SYSTEM_PROMPT, CLIENT_MESSAGE_PROMPT, \
+    COMMODITY_SYSTEM_PROMPT, COMMODITY_MESSAGE_PROMPT
 from db.database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
@@ -142,6 +143,37 @@ def get_alternative_names_pattern_client(alt_names):
     return alter_names_dict
 
 
+def create_alternative_names_dict(alt_names: pd.DataFrame) -> dict:
+    """
+    Creates a dict with mapping main client name to other names string
+    :param alt_names: pd.DataFrame with client alternative names
+    :return: dict with mapping client name to other names string.
+    """
+    alter_names_dict = dict()
+    table_subject_list = alt_names.values.tolist()
+    for alt_names_list in table_subject_list:
+        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        key = clear_alt_names[0].strip().lower()
+        alter_names_dict[key] = ','.join(clear_alt_names)
+    return alter_names_dict
+
+
+def create_client_industry_dict() -> dict:
+    """
+    Creates a dict with mapping main client name to industry name
+    :return: dict with mapping client name to other names string.
+    """
+    query = '''
+    select industry.name as industry_name, client.name as client_name from client
+    join industry on client.industry_id = industry.id
+    '''
+    df = pd.read_sql(query, engine)
+    client_industry_dict = dict()
+    for i in range(len(df)):
+        client_industry_dict[df['client_name'].iloc[i].lower().strip()] = df['industry_name'].iloc[i]
+    return client_industry_dict
+
+
 morph = pymorphy2.MorphAnalyzer()
 
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
@@ -157,6 +189,9 @@ commodity_rating_system_dict = pd.read_excel(
 for group in commodity_rating_system_dict:
     group['key words'] = ','.join(
         [f' {word.strip().lower()}' for word in group['key words'].split(',')])
+
+CLIENT_NAMES_DICT = create_alternative_names_dict(client_names)
+CLIENT_INDUSTRY_DICT = create_client_industry_dict()
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
@@ -382,7 +417,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
     return labels
 
 
-def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
+def rate_client(df, rating_dict, threshold: float = 0.45) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
     :param rating_dict: dict with rating
@@ -766,3 +801,55 @@ def summarization_by_chatgpt(full_text: str):
         new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
 
     return new_text_sum
+
+
+def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str) -> str:
+    """
+    Filter article that only corresponds to the client and commodities.
+    :param names: regular search client names list.
+    :param text_sum: summarized article text.
+    :param giga_chat : Gigachat.
+    :param name_type: client or commodity.
+    :return: str with concatenated names.
+    """
+    result = []
+    for name in names:
+        if len(str(name)) > 0:
+            if name_type == "client":
+                system_prompt = CLIENT_SYSTEM_PROMPT
+                message = CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name],
+                                                       text_sum)
+            else:
+                system_prompt = COMMODITY_SYSTEM_PROMPT
+                message = COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
+            try:
+                giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)[-1]
+            except Exception as e:
+                giga_answer = '0'
+            if giga_answer == '1':
+                result.append(name)
+    return ';'.join(result)
+
+
+def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Фильтрация новостей по клиентам и комодам гигачатом
+    :param logger: logger
+    :param df: датафрейм с новостями
+    :return: датафрейм с новостями и измененными клиентами
+    """
+    logger.debug("Старт фильтрации новостей с GigaChat")
+    # инициализируем гигачат
+    giga_chat = GigaChat(logger)
+
+    # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
+    logger.debug("Фильтрация клиентов")
+    df['client'] = df.apply(lambda x: get_gigachat_filtering_list((x['client']).split(';'), x['text_sum'],
+                                                                  giga_chat, 'client'), axis=1)
+
+    # обрабатываем комоды. Для каждого найденного клиента проверяем, что он действительно подходит к новости
+    logger.debug("Фильтрация комодов")
+    df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list((x['commodity']).split(';'), x['text_sum'],
+                                                                     giga_chat, 'commodity'), axis=1)
+    logger.debug("Окончена фильтрация новостей с GigaChat")
+    return df

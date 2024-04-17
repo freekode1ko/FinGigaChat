@@ -79,7 +79,6 @@ def regular_func():
 
     subject_links, tg_links = [], []
     df_article = get_article()
-
     if not df_article.empty:
         try:
             logger.info(f'Получено {len(df_article)} новостей')
@@ -95,6 +94,7 @@ def regular_func():
                 ap_obj_online.df_article = df_article
                 ap_obj_online.drop_duplicate()
                 ap_obj_online.make_text_sum()
+                ap_obj_online.apply_gigachat_filtering()
                 subject_links = ap_obj_online.save_tables()
 
                 saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
@@ -103,6 +103,7 @@ def regular_func():
                 if not df_article.empty:
                     ap_obj_online.df_article = df_article
                     ap_obj_online.make_text_sum()
+                    ap_obj_online.apply_gigachat_filtering()
                     tg_links = ap_obj_online.save_tg_tables()
 
                 print('Окончание обработки новостей с помощью моделей')

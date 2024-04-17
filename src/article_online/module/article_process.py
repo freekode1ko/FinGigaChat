@@ -14,6 +14,7 @@ from module.model_pipe import (
     deduplicate,
     model_func,
     model_func_online,
+    gigachat_filtering,
 )
 
 TIME_LIVE_ARTICLE = 100
@@ -230,6 +231,10 @@ class ArticleProcess:
     def make_text_sum(self):
         """Call summary func"""
         self.df_article = add_text_sum_column(self._logger, self.df_article)
+
+    def apply_gigachat_filtering(self):
+        """Provides additional articles filtering with Gigachat"""
+        self.df_article = gigachat_filtering(self._logger, self.df_article)
 
     def delete_old_article(self):
         """Delete from db article if there are 10 articles for each subject"""
