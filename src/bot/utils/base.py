@@ -323,18 +323,30 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
     return await get_industries_id(handbook)
 
 
-async def __create_fin_table(message: types.Message, client_name: str, client_fin_table: pd.DataFrame) -> None:
+async def __create_fin_table(message: types.Message, client_name: str,
+                             table_type: str, client_fin_table: pd.DataFrame) -> None:
     """
     Формирование таблицы под финансовые показатели и запись его изображения
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_name: Наименование клиента финансовых показателей
+    :param table_type: Название вкладки для таблицы
     :param client_fin_table: Таблица финансовых показателей
     """
     transformer = dt.Transformer()
-    client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
+    client_fin_table = client_fin_table.rename(columns={'': 'Финансовые показатели'})
+    for row in client_fin_table.iterrows():
+        if row[1]['Финансовые показатели'] in row[1][client_fin_table.keys().to_list()[1:]].values:
+            if row[1]['Финансовые показатели'] == '':
+                client_fin_table.drop(index=row[0], inplace=True)
+            else:
+                client_fin_table.loc[row[0]] = pd.Series(
+                    {'Финансовые показатели': client_fin_table.loc[row[0]]['Финансовые показатели']})
+    client_fin_table.where(pd.notnull(client_fin_table), '')
+
     transformer.render_mpl_table(
-        client_fin_table, 'financial_indicator', header_columns=0, col_width=4, title='', alias=client_name.strip().upper(), fin=True
+        client_fin_table, 'financial_indicator', header_columns=0, col_width=4,
+        title='', alias=f'{client_name} - {table_type}'.strip().upper(), fin=True
     )
     png_path = PATH_TO_SOURCES / 'img' / 'financial_indicator_table.png'
     photo = types.FSInputFile(png_path)
