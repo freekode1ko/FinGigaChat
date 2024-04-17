@@ -1,5 +1,7 @@
 import asyncio
+import ast
 
+import pandas as pd
 from aiogram import F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -127,12 +129,34 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     :param ap_obj: экземпляр класса ArticleProcess
     return значение об успешности создания таблицы
     """
-    client_name, client_fin_table = ap_obj.get_client_fin_indicators(s_id, msg_text.strip().lower())
-    if not client_fin_table.empty:
+    client_fin_tables = ap_obj.get_client_fin_indicators(s_id)
+    client_name = msg_text.strip().lower()
+    if not client_fin_tables.empty:
         await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
-        await __create_fin_table(message, client_name, client_fin_table)
+
+        review_table = client_fin_tables['review_table'][0].replace(' NaN', '""')
+        review_table = pd.DataFrame(data=ast.literal_eval(review_table))
+        await __create_fin_table(message, client_name, 'Обзор', review_table)
+        logger.info(f'Обзорная таблица финансовых показателей для клиента: {client_name} - собрана')
+
+        pl_table = client_fin_tables['pl_table'][0].replace(' NaN', '""')
+        pl_table = pd.DataFrame(data=ast.literal_eval(pl_table))
+        await __create_fin_table(message, client_name, 'P&L', pl_table)
+        logger.info(f'P&L таблица финансовых показателей для клиента: {client_name} - собрана')
+
+        balance_table = client_fin_tables['balance_table'][0].replace(' NaN', '""')
+        balance_table = pd.DataFrame(data=ast.literal_eval(balance_table))
+        await __create_fin_table(message, client_name, 'Баланс', balance_table)
+        logger.info(f'Балансная таблица финансовых показателей для клиента: {client_name} - собрана')
+
+        money_table = client_fin_tables['money_table'][0].replace(' NaN', '""')
+        money_table = pd.DataFrame(data=ast.literal_eval(money_table))
+        await __create_fin_table(message, client_name, 'Денежный поток', money_table)
+        logger.info(f'Таблица денежного потока финансовых показателей для клиента: {client_name} - собрана')
+
         return True
     else:
+        logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
         return False
 
 
@@ -238,7 +262,7 @@ async def find_news(message: types.Message, state: FSMContext, prompt: str = '',
         for subject_id in subject_ids:
             com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject)
 
-            return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
+            return_ans = await show_client_fin_table(message, subject_id, msg_text, ap_obj)
 
             if reply_msg:
 
