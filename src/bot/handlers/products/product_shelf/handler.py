@@ -49,11 +49,11 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
     group_id = callback_data.group_id
 
     dir_path = product_shelf.PRODUCT_SHELF_DATA[group_id]['pdf_path']
-    product_shelf_item_name = product_shelf.PRODUCT_SHELF_DATA[group_id]["name"]
+    product_shelf_item = product_shelf.PRODUCT_SHELF_DATA[group_id]
     pdf_files = os.listdir(dir_path) if dir_path else []
 
     if pdf_files:
-        msg_text = f'Продуктовые предложения по полке\n"<b>{product_shelf_item_name}</b>"'
+        msg_text = product_shelf_item['message_title']
         await callback_query.message.answer(msg_text, parse_mode='HTML')
 
         for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
@@ -65,7 +65,7 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
     else:
         msg_text = (
             f'Продуктовая полка\n'
-            f'{product_shelf_item_name}\n'
+            f'{product_shelf_item["name"]}\n'
             f'Функционал появится позднее'
         )
         await callback_query.message.answer(msg_text, parse_mode='HTML')
