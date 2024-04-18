@@ -18,7 +18,7 @@ from module.article_process import ArticleProcess
 from utils.base import bot_send_msg, translate_subscriptions_to_object_id
 from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
 from db import parser_source, message, subscriptions
-from db.industry import get_industry_tg_news
+from db.api.industry import get_industry_tg_news
 
 
 async def tg_newsletter(

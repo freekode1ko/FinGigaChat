@@ -41,11 +41,18 @@ class FuzzyAlternativeNames:
 
         return names
 
-    def find_nearest_to_subjects_list(self, subjects_names: List[str]) -> List[str]:
+    def find_nearest_to_subjects_list(self, subjects_names: list[str], subject_types: list[str] = None) -> List[str]:
         """
         Поиск ближайших похожих имен субъектов
+
+        :param subjects_names: список наименований
+        :param subject_types: список из строк ['industry', 'client', 'commodity']
+                              (среди данных таблиц идет поиск ближайших названий)
         """
-        db_subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+        all_types = ['industry', 'client', 'commodity']
+        subject_types = subject_types or all_types
+        subject_types = list(filter(lambda x: x in all_types, subject_types))
+        db_subjects_names = self.get_subjects_names(subject_types)
 
         if not subjects_names:
             return []

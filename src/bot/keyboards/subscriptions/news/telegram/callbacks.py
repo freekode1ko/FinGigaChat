@@ -1,6 +1,6 @@
 from aiogram.filters.callback_data import CallbackData
 
-from constants import subscriptions as callback_prefixes
+from constants.subscriptions.news import telegram as callback_prefixes
 
 
 class IndustryTGChannels(CallbackData, prefix=callback_prefixes.INDUSTRY_TG_CHANNELS):

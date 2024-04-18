@@ -21,11 +21,15 @@ from constants.aliases import (
     web_app_aliases,
 )
 from db import parser_source
+from db.api.client import client_db
+from db.api.commodity import commodity_db
+from db.api.industry import industry_db
 from handlers import common, quotes
 from handlers.ai.gigachat import gigachat
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
 from handlers.news.handler import router
+from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
@@ -211,100 +215,145 @@ async def send_nearest_subjects(message: types.Message) -> None:
     )
 
 
+async def send_news(message: types.Message, user_msg: str, full_name: str) -> bool:
+    chat_id = message.chat.id
+
+    ap_obj = ArticleProcess(logger)
+    msg_text = user_msg.replace('«', '"').replace('»', '"')
+
+    return_ans = False
+
+    # проверка пользовательского сообщения на запрос новостей по отраслям
+    subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
+    if subject_ids:
+        industry_id = subject_ids[0]
+        not_use, reply_msg = ap_obj.process_user_alias(industry_id, subject)
+        await bot_send_msg(message.bot, chat_id, reply_msg)
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
+        return True
+
+    # проверка пользовательского сообщения на запрос новостей по клиентам/товарам
+    subject_ids, subject = ap_obj.find_subject_id(msg_text, 'client'), 'client'
+    if not subject_ids:
+        subject_ids, subject = ap_obj.find_subject_id(msg_text, 'commodity'), 'commodity'
+
+    for subject_id in subject_ids:
+        com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject)
+
+        return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
+
+        if reply_msg:
+
+            if com_price:
+                await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
+
+            if isinstance(reply_msg, str):
+                articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
+                if len(articles_all) > config.NEWS_LIMIT + 1:
+                    articles_f5 = '\n\n'.join(articles_all[: config.NEWS_LIMIT + 1])
+                    keyboard = InlineKeyboardBuilder()
+                    try:
+                        callback_meta = NextNewsCallback(
+                            subject_id=subject_id,
+                            subject=subject,
+                            user_msg=user_msg,
+                            offset=config.NEWS_LIMIT,
+                        )
+                    except ValueError:
+                        callback_meta = NextNewsCallback(
+                            subject_id=subject_id,
+                            subject=subject,
+                            user_msg='',
+                            offset=config.NEWS_LIMIT,
+                        )
+                    keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta.pack()))
+                    keyboard = keyboard.as_markup()
+                else:
+                    articles_f5 = reply_msg
+                    keyboard = None
+
+                try:
+                    await message.answer(
+                        articles_f5,
+                        parse_mode='HTML',
+                        protect_content=False,
+                        disable_web_page_preview=True,
+                        reply_markup=keyboard,
+                    )
+                except Exception as e:
+                    logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
+
+                try:
+                    if subject == 'client':
+                        name, navi_link = ap_obj.get_client_name_and_navi_link(subject_id)
+                        if navi_link is not None:
+                            await message.answer(
+                                f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
+                                parse_mode='HTML',
+                            )
+                except Exception as e:
+                    logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
+
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
+            return_ans = True
+
+    if not return_ans:
+        return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
+
+    return return_ans
+
+
+async def get_subject_news(callback_query: types.CallbackQuery, callback_data: CallbackData, subject_db_api) -> None:
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    client_id = callback_data.subject_id
+    subject = await subject_db_api.get(client_id)
+    await send_news(callback_query.message, subject['name'], full_name)
+
+
+@router.callback_query(callbacks.GetClientNews.filter())
+async def get_client_news(callback_query: types.CallbackQuery, callback_data: callbacks.GetClientNews) -> None:
+    """
+    Получение новостей по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе инфу о id клиента
+    """
+    await get_subject_news(callback_query, callback_data, client_db)
+
+
+@router.callback_query(callbacks.GetCommodityNews.filter())
+async def get_commodity_news(callback_query: types.CallbackQuery, callback_data: callbacks.GetCommodityNews) -> None:
+    """
+    Получение новостей по сырьевому товару
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе инфу о id сырья
+    """
+    await get_subject_news(callback_query, callback_data, commodity_db)
+
+
+@router.callback_query(callbacks.GetIndustryNews.filter())
+async def get_industry_news(callback_query: types.CallbackQuery, callback_data: callbacks.GetIndustryNews) -> None:
+    """
+    Получение новостей по отрасли
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе инфу о id отрасли
+    """
+    await get_subject_news(callback_query, callback_data, industry_db)
+
+
 @router.message(F.text)
 async def find_news(message: types.Message, state: FSMContext, prompt: str = '', return_ans: bool = False) -> None:
     """Обработка пользовательского сообщения"""
-
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        ap_obj = ArticleProcess(logger)
-        msg_text = message.text.replace('«', '"').replace('»', '"')
-
-        # проверка пользовательского сообщения на запрос новостей по отраслям
-        subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
-        if subject_ids:
-            industry_id = subject_ids[0]
-            not_use, reply_msg = ap_obj.process_user_alias(industry_id, subject)
-            await bot_send_msg(message.bot, chat_id, reply_msg)
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
-            return
-
-        # проверка пользовательского сообщения на запрос новостей по клиентам/товарам
-        subject_ids, subject = ap_obj.find_subject_id(msg_text, 'client'), 'client'
-        if not subject_ids:
-            subject_ids, subject = ap_obj.find_subject_id(msg_text, 'commodity'), 'commodity'
-
-        for subject_id in subject_ids:
-            com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject)
-
-            return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
-
-            if reply_msg:
-
-                if com_price:
-                    await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
-
-                if isinstance(reply_msg, str):
-                    articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
-                    if len(articles_all) > config.NEWS_LIMIT + 1:
-                        articles_f5 = '\n\n'.join(articles_all[: config.NEWS_LIMIT + 1])
-                        keyboard = InlineKeyboardBuilder()
-                        try:
-                            callback_meta = NextNewsCallback(
-                                subject_id=subject_id,
-                                subject=subject,
-                                user_msg=user_msg,
-                                offset=config.NEWS_LIMIT,
-                            )
-                        except ValueError:
-                            callback_meta = NextNewsCallback(
-                                subject_id=subject_id,
-                                subject=subject,
-                                user_msg='',
-                                offset=config.NEWS_LIMIT,
-                            )
-                        keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta.pack()))
-                        keyboard = keyboard.as_markup()
-                    else:
-                        articles_f5 = reply_msg
-                        keyboard = None
-
-                    try:
-                        await message.answer(
-                            articles_f5,
-                            parse_mode='HTML',
-                            protect_content=False,
-                            disable_web_page_preview=True,
-                            reply_markup=keyboard,
-                        )
-                    #
-                    # except MessageIsTooLong:  # FIXME 3.3.0
-                    #     articles = articles_f5.split('\n\n')
-                    #     for article in articles:
-                    #         if len(article) < 4050:
-                    #             await message.answer(article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
-                    #         else:
-                    #             logger.error(f'MessageIsTooLong ERROR: {article}')
-                    except Exception as e:
-                        logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
-
-                    try:
-                        if subject == 'client':
-                            name, navi_link = ap_obj.get_client_name_and_navi_link(subject_id)
-                            if navi_link is not None:
-                                await message.answer(
-                                    f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
-                                    parse_mode='HTML',
-                                )
-                    except Exception as e:
-                        logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
-
-                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
-                return_ans = True
-
-        if not return_ans:
-            return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
+        return_ans = await send_news(message, user_msg, full_name)
 
         if return_ans:
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')

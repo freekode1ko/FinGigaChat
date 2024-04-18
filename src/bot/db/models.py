@@ -277,7 +277,6 @@ class Whitelist(Base):
     user_type = Column(Text)
     user_status = Column(Text)
     user_email = Column(Text, server_default=sa.text("''::text"))
-    subscriptions = Column(Text)
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')

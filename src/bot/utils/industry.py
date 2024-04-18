@@ -4,7 +4,7 @@ from typing import List, Dict
 import pandas as pd
 
 from module.article_process import FormatText
-from db.industry import get_industry_name
+from db.api.industry import get_industry_name
 
 
 def group_news_by_tg_channels(news: pd.DataFrame) -> Dict[str, list]:

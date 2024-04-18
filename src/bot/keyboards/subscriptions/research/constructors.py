@@ -6,7 +6,8 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
-from constants import subscriptions as callback_prefixes
+from constants.subscriptions import const
+from constants.subscriptions import research as callback_prefixes
 from keyboards.subscriptions import constructors
 from keyboards.subscriptions.research import callbacks
 from utils.base import wrap_callback_data, unwrap_callback_data
@@ -35,7 +36,7 @@ def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_prefixes.SUBS_MENU,
+        callback_data=const.SUBS_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,

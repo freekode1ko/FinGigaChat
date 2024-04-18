@@ -4,9 +4,10 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
-from constants import subscriptions as callback_prefixes
+from constants.subscriptions import const
+from constants.subscriptions.news import telegram as callback_prefixes
 from keyboards.subscriptions import constructors
-from keyboards.subscriptions.telegram import callbacks
+from keyboards.subscriptions.news.telegram import callbacks
 from utils.base import wrap_callback_data, unwrap_callback_data
 
 
@@ -34,11 +35,11 @@ def get_tg_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_prefixes.NEWS_SUBS_MENU,
+        callback_data=const.NEWS_SUBS_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
-        callback_data=callback_prefixes.END_WRITE_SUBS,
+        callback_data=const.END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
 
@@ -90,7 +91,7 @@ def get_tg_subs_watch_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> 
                                                 callback_data='constants.STOP'))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
-        callback_data=callback_prefixes.END_WRITE_SUBS,
+        callback_data=const.END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
 
@@ -145,7 +146,7 @@ def get_tg_subs_industries_menu_kb(industry_df: pd.DataFrame) -> InlineKeyboardM
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
-        callback_data=callback_prefixes.END_WRITE_SUBS,
+        callback_data=const.END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
 
@@ -183,7 +184,7 @@ def get_industry_tg_channels_kb(industry_id: int, tg_channel_df: pd.DataFrame) -
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
-        callback_data=callback_prefixes.END_WRITE_SUBS,
+        callback_data=const.END_WRITE_SUBS,
     ))
     return keyboard.as_markup()
 

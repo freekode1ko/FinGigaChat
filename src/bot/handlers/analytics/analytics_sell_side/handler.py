@@ -11,7 +11,8 @@ from aiogram.filters.callback_data import CallbackData
 from configs import config
 from constants import enums
 from constants.analytics import analytics_sell_side
-from db import client as client_db_api, subscriptions as subscriptions_db_api, database
+from db import subscriptions as subscriptions_db_api, database
+from db.api import client as client_db_api
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
