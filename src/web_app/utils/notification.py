@@ -33,18 +33,18 @@ async def send_notification(
     """
     msg = msg.format(meeting_theme=meeting_theme, time=meeting_date_start.time().strftime(BASE_TIME_FORMAT))
     await bot.send_message(user_id, text=f'<b>Напоминание:</b>\n{msg}', parse_mode='HTML')
-    change_notify_counter(meeting_id)
-    logger.info('Пользователь %s получил напоминание о встрече в %s UTC' % (user_id, str(dt.datetime.utcnow())))
+    await change_notify_counter(meeting_id)
+    logger.info('Пользователь %s получил напоминание о встрече в %s UTC', user_id, str(dt.datetime.utcnow()))
 
 
-def add_notify_job(logger: Logger.logger, meeting: Optional[dict[str, Any]] = None):
+async def add_notify_job(logger: Logger.logger, meeting: Optional[dict[str, Any]] = None):
     """
     Добавление задач-напоминалок по только что созданной встрече или по всем предстоящим встречам из базы данных.
 
     :param logger: логгер
     :param meeting: данные о только что созданной встрече
     """
-    meetings = [meeting, ] if meeting else get_user_meetings_for_notification()
+    meetings = [meeting, ] if meeting else await get_user_meetings_for_notification()
 
     for rem_time_dict in REMEMBER_TIME.values():
         for meeting in meetings:
@@ -62,4 +62,4 @@ def add_notify_job(logger: Logger.logger, meeting: Optional[dict[str, Any]] = No
                 run_date=dt_notification,
                 timezone='Europe/Moscow'
             )
-            logger.info('Для пользователя %s добавлена задача-напоминание в %s' % (meeting['user_id'], dt_notification))
+            logger.info('Для пользователя %s добавлена задача-напоминание в %s', meeting['user_id'], dt_notification)
