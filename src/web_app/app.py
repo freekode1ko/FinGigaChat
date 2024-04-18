@@ -9,14 +9,17 @@ from fastapi.templating import Jinja2Templates
 
 import config
 from db.meeting import get_user_meetings, add_meeting, get_user_email
+from log.logger_base import selector_logger
 import utils
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    utils.add_notify_job()
+    utils.add_notify_job(logger)
     utils.scheduler.start()
     yield
+
+logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
@@ -37,7 +40,7 @@ app.add_middleware(
 
 
 @app.get("/meeting/show", response_class=HTMLResponse)
-async def show_meetings(request: Request, ):
+async def show_meetings(request: Request):
     return templates.TemplateResponse("meeting.html", {"request": request})
 
 
@@ -45,6 +48,7 @@ async def show_meetings(request: Request, ):
 async def show_user_meetings(user_id: int | str):
     meetings = get_user_meetings(user_id)
     meetings = utils.format_date(meetings)
+    logger.info('Пользователю %s показано %d встреч' % (user_id, len(meetings)))
     return JSONResponse(meetings)
 
 
@@ -54,7 +58,14 @@ async def create_meeting_form(request: Request):
 
 
 @app.get('/meeting/save')
-async def create_meeting(user_id, theme, date_start, date_end, description, timezone):
+async def create_meeting(
+        user_id: int | str,
+        theme: str,
+        date_start: str,
+        date_end: str,
+        description: str,
+        timezone: int
+):
     data = {
         'user_id': user_id,
         'theme': theme,
@@ -65,11 +76,13 @@ async def create_meeting(user_id, theme, date_start, date_end, description, time
     }
     data = utils.reformat_data(data)
     add_meeting(data)
-    utils.add_notify_job(meeting=data)
+    logger.info('Встреча %s пользователя %s сохранена в бд' % (theme, user_id))
+    utils.add_notify_job(logger=logger, meeting=data)
 
     user_email = get_user_email(user_id=user_id)
     with (utils.SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.MAIL_SMTP_SERVER, config.MAIL_SMTP_PORT)
           as smtp_email):
         smtp_email.send_meeting(user_email, data)
+    logger.info('Информация о встрече %s пользователя %s отправлена на почту' % (theme, user_id))
 
     return 'OK'

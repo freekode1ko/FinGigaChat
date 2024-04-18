@@ -10,6 +10,9 @@ STATIC_KEY_PATH = STATIC_CERTS_PATH / 'privkey.pem'
 JS_CONFIG_PATH = PROJECT_DIR / 'frontend' / 'static' / 'config.json'
 JS_CONFIG_PATH.touch(exist_ok=True)
 
+LOG_FILE = 'web_app'
+LOG_LEVEL = 20  # info
+
 
 # ______________________________env____________________________
 env = Env()
@@ -62,4 +65,3 @@ REMEMBER_TIME = {  # за сколько минут нужно напомнит�
         'msg': 'Встреча "{meeting_theme}" начнется через 15 минут'
     }
 }
-

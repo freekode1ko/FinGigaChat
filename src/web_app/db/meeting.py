@@ -29,7 +29,7 @@ def get_user_email(user_id: int | str) -> str:
         user_id = int(user_id)
 
     with engine.connect() as conn:
-        query = select(Whitelist.user_email).where(Whitelist.user_id==user_id)
+        query = select(Whitelist.user_email).where(Whitelist.user_id == user_id)
         email = conn.execute(query)
         return email.scalar()
 
