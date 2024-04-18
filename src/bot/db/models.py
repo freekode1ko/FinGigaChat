@@ -550,15 +550,11 @@ class UserMeeting(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     theme = Column(Text, nullable=False, default='Напоминание', comment='Тема встречи')
+    date_create = Column(DateTime, comment='Время создания встречи (UTC)')
     date_start = Column(DateTime, nullable=False, comment='Время начала встречи (UTC)')
     date_end = Column(DateTime, nullable=False, comment='Время окончания встречи (UTC)')
     timezone = Column(Integer, comment='Таймзона пользователя во время использования web app', nullable=False)
-    is_notify_first = Column(Boolean, server_default=sa.text('false'),
-                             comment='Указывает на отправку первого уведомления')
-    is_notify_second = Column(Boolean, server_default=sa.text('false'),
-                              comment='Указывает на отправку второго уведомления')
-    is_notify_last = Column(Boolean, server_default=sa.text('false'),
-                            comment='Указывает на отправку последнего уведомления')
+    notify_count = Column(Integer, server_default=sa.text('0'), comment='Количество отправленных напоминаний')
     description = Column(Text, comment='Описание встречи')
 
 

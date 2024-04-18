@@ -65,7 +65,6 @@ let timeStartRoll = new Rolldate({
                                         let defaultTime = moment(dateStart).add(30, 'm').toDate();
                                         let defaultHour = defaultTime.getHours().toString().padStart(2, '0');
                                         let defaultMinutes = defaultTime.getMinutes().toString().padStart(2, '0');
-                                        console.log(`${defaultHour}:${defaultMinutes}`);
                                         timeEndField.value = `${defaultHour}:${defaultMinutes}`;
                                     }
                                     });
@@ -111,7 +110,7 @@ $('#back').click(function(event) {
 
 $('#create').click(function(event) {
     event.preventDefault();
-    console.log('create button click')
+
     let [day, month, year] = dateEndField.value.split('-');
     dateEnd.setFullYear(parseInt(year, 10));
     dateEnd.setMonth(parseInt(month, 10) - 1);

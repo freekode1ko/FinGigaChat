@@ -75,8 +75,10 @@ async def create_meeting(
         'timezone': timezone
     }
     data = utils.reformat_data(data)
-    add_meeting(data)
+    meeting_id = add_meeting(data)
     logger.info('Встреча %s пользователя %s сохранена в бд' % (theme, user_id))
+
+    data['meeting_id'] = meeting_id
     utils.add_notify_job(logger=logger, meeting=data)
 
     user_email = get_user_email(user_id=user_id)

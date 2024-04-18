@@ -34,11 +34,12 @@ def get_user_email(user_id: int | str) -> str:
         return email.scalar()
 
 
-def add_meeting(data: dict[str, Any]) -> None:
+def add_meeting(data: dict[str, Any]) -> int:
     """
     Добавление новой встречи пользователя в бд.
 
     :param data: данные о встрече
+    return: id добавленной встречи
     """
     user_timezone = data['timezone']
 
@@ -46,13 +47,15 @@ def add_meeting(data: dict[str, Any]) -> None:
         user_id=int(data['user_id']),
         theme=data['theme'],
         description=data['description'],
+        date_create=dt.datetime.utcnow().replace(second=0, microsecond=0),
         date_start=data['date_start'],
         date_end=data['date_end'],
         timezone=user_timezone
     )
     with engine.connect() as conn:
-        conn.execute(query)
+        result = conn.execute(query)
         conn.commit()
+        return result.inserted_primary_key[0]
 
 
 def get_user_meetings(user_id: int | str) -> list[dict[str, Any]]:
@@ -83,38 +86,26 @@ def get_user_meetings_for_notification() -> list[dict[str, Any]]:
     min_start_time = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=minutes)
     min_start_time = dt.datetime(min_start_time.year, min_start_time.month,
                                  min_start_time.day, min_start_time.hour, min_start_time.minute)
-    query = (select(UserMeeting.user_id, UserMeeting.theme, UserMeeting.date_start, UserMeeting.timezone).
-             # where(UserMeeting.is_notify_first == False or
-             #       UserMeeting.is_notify_second == False or  #TODO: refactor, нужно ли вообще?
-             #       UserMeeting.is_notify_last == False).
-             where(UserMeeting.date_start > min_start_time))
+    query = (
+        select(UserMeeting.id.label('meeting_id'), UserMeeting.user_id, UserMeeting.theme,
+               UserMeeting.date_start, UserMeeting.timezone).
+        where(UserMeeting.date_start > min_start_time)
+    )
     with engine.connect() as conn:
         meetings = conn.execute(query)
         return data_as_dict(meetings)
 
 
-def change_notify_flag(user_id: int, col_key: str):
+def change_notify_counter(meeting_id: int):
     """
-    Изменение флага отправки напоминания.
+    Изменение значения счетчика напоминаний.
 
-    :param user_id: id пользователя
-    :param col_key: ключ, по которому находится нужный атрибут
+    :param meeting_id: id встречи
     """
-
-    match col_key:  # FIXME: мб как то по умнее ?
-        case 'first':
-            col_name = UserMeeting.is_notify_first.name
-        case 'second':
-            col_name = UserMeeting.is_notify_second.name
-        case 'last':
-            col_name = UserMeeting.is_notify_last.name
-        case _:
-            raise KeyError('Неизвестный ключ')
-
     stmt = (
         update(UserMeeting).
-        where(UserMeeting.user_id == user_id).
-        values({col_name: True})
+        where(UserMeeting.id == meeting_id).
+        values(notify_count=UserMeeting.notify_count + 1)
     )
 
     with engine.connect() as conn:
