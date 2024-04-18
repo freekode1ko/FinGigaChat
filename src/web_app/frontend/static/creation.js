@@ -1,3 +1,6 @@
+import data from './config.json' with { type: 'json' };
+let url = data.WEB_APP_URL;
+
 let tg = window.Telegram.WebApp;
 
 //if (tg.initDataUnsafe == '') {
@@ -6,7 +9,7 @@ let tg = window.Telegram.WebApp;
 
 //let user_id = tg?.initDataUnsafe?.user?.id;
 let user_id = 342297636;
-let backPageHref = `http://localhost/meeting/show`;
+let backPageHref = `${url}/meeting/show`;
 
 const curDate = new Date();
 const curYear = curDate.getFullYear();
@@ -68,7 +71,7 @@ let timeStartRoll = new Rolldate({
                                     });
 
 
-timeEndRoll = new Rolldate({
+let timeEndRoll = new Rolldate({
                             el: timeEndField,
                             format: 'hh:mm',
                             lang: { title: "Выбор времени"},
@@ -85,8 +88,7 @@ function postData(user_data) {
                     `date_start=${user_data.date_start}&date_end=${user_data.date_end}&` +
                     `description=${user_data.description}&timezone=${user_data.timezone}`;
 
-//        fetch(`https://ai-bankir-helper.ru/meeting/create${query}`)
-        fetch(`http://localhost/meeting/save${query}`)
+        fetch(`${url}/meeting/save${query}`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Ошибка при отправке данных на сервер: ' + response.statusText);

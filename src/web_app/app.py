@@ -29,7 +29,7 @@ if not config.DEBUG:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[config.MEETING_PAGES, 'http://127.0.0.1'],
+    allow_origins=['http://127.0.0.1'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

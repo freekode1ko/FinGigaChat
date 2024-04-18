@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from environs import Env
@@ -6,8 +7,9 @@ PROJECT_DIR = Path(__file__).parent
 STATIC_CERTS_PATH = PROJECT_DIR / 'data' / 'certs'
 STATIC_CHAIN_PATH = STATIC_CERTS_PATH / 'fullchain.pem'
 STATIC_KEY_PATH = STATIC_CERTS_PATH / 'privkey.pem'
+JS_CONFIG_PATH = PROJECT_DIR / 'frontend' / 'static' / 'config.json'
+JS_CONFIG_PATH.touch(exist_ok=True)
 
-MEETING_PAGES = 'https://alinlpkv.github.io'
 
 # ______________________________env____________________________
 env = Env()
@@ -15,6 +17,20 @@ env.read_env()
 
 DEBUG: bool = env.bool('DEBUG', default=False)
 PSQL_ENGINE: str = env.str('PSQL_ENGINE', default='')
+DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
+
+
+# ___________________________config_js_________________________
+match DOMAIN_NAME:
+    case 'ai-bankir-helper.ru':
+        WEB_APP_URL = 'https://ai-bankir-helper.ru'
+    case 'ai-bankir-helper-dev.ru':
+        WEB_APP_URL = 'https://ai-bankir-helper-dev.ru'
+    case _:
+        WEB_APP_URL = 'http://localhost'
+
+with open(JS_CONFIG_PATH, 'w') as file:
+    json.dump({"WEB_APP_URL": WEB_APP_URL}, file)
 
 
 # _________________________date_format_________________________

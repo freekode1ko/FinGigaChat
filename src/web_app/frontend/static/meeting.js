@@ -1,3 +1,6 @@
+import data from './config.json' with { type: 'json' };;
+let url = data.WEB_APP_URL;
+
 let tg = window.Telegram.WebApp;
 tg.expand();
 
@@ -14,7 +17,7 @@ fetchData(user_id);
 async function fetchData(user_id) {
 
     try {
-        const response = await fetch(`http://localhost/meeting/show/${user_id}`);
+        const response = await fetch(`${url}/meeting/show/${user_id}`);
         const responseData = await response.json();
 
         if (responseData.length == 0) {
