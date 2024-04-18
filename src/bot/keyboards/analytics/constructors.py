@@ -36,14 +36,14 @@ def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [ Аналитика sell-side ]
+    [ Аналитика публичных рынков ]
     [ Отраслевая аналитика ]
     [ MacroView ]
     [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
-        text='Аналитика sell-side',
+        text='Аналитика публичных рынков',
         callback_data=analytics_sell_side.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(

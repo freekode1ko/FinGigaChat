@@ -36,7 +36,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
 
     group_df = subscriptions_db_api.get_research_groups_df()  # id, name
     msg_text = (
-        'Аналитика sell-side\n'
+        'Аналитика публичных рынков\n'
         'Выберите раздел'
     )
 
@@ -112,7 +112,7 @@ async def get_section_research_types_menu(
     )
 
     msg_text = (
-        f'Аналитика sell-side\n'
+        f'Аналитика публичных рынков\n'
         f'Раздел "{section_info["name"]}":'  # FIXME text
     )
     keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)
