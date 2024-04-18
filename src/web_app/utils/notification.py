@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Any
+from typing import Any, Optional
 
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -20,7 +20,7 @@ async def send_notification(
         meeting_theme: str,
         meeting_date_start: dt.datetime,
         msg: str
-):
+) -> None:
     """
     Отправка напоминания о встрече.
 
@@ -37,7 +37,7 @@ async def send_notification(
     logger.info('Пользователь %s получил напоминание о встрече в %s UTC' % (user_id, str(dt.datetime.utcnow())))
 
 
-def add_notify_job(logger: Logger.logger, meeting: dict[str, Any] | None = None):
+def add_notify_job(logger: Logger.logger, meeting: Optional[dict[str, Any]] = None):
     """
     Добавление задач-напоминалок по только что созданной встрече или по всем предстоящим встречам из базы данных.
 

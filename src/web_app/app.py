@@ -65,7 +65,7 @@ async def create_meeting(
         date_end: str,
         description: str,
         timezone: int
-):
+) -> str:
     data = {
         'user_id': user_id,
         'theme': theme,

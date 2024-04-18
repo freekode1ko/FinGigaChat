@@ -96,7 +96,7 @@ def get_user_meetings_for_notification() -> list[dict[str, Any]]:
         return data_as_dict(meetings)
 
 
-def change_notify_counter(meeting_id: int):
+def change_notify_counter(meeting_id: int) -> None:
     """
     Изменение значения счетчика напоминаний.
 

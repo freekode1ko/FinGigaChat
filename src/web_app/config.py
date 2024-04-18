@@ -26,11 +26,11 @@ DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
 # ___________________________config_js_________________________
 match DOMAIN_NAME:
     case 'ai-bankir-helper.ru':
-        WEB_APP_URL = 'https://ai-bankir-helper.ru'
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
     case 'ai-bankir-helper-dev.ru':
-        WEB_APP_URL = 'https://ai-bankir-helper-dev.ru'
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
     case _:
-        WEB_APP_URL = 'http://localhost'
+        WEB_APP_URL = f'http://{DOMAIN_NAME}'
 
 with open(JS_CONFIG_PATH, 'w') as file:
     json.dump({"WEB_APP_URL": WEB_APP_URL}, file)
