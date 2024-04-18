@@ -29,6 +29,7 @@ class Transformer:
         :param company_id: id компании(клиента) на research
         :param metadata_df: DataFrame содержащий в себе основные данные по отчетам. [id сектора на research,
         id клиента на research, id клиента в нашей БД, отчет PL, балансовый отчет, отчет денежных движений]
+        :return: обновленный DataFrame без лишних колонок и заполненные колонки с отчетами в формате dict
         """
         ecom_tables = pd.read_html(page_html, decimal=',', thousands='.')
         for table_num, table in enumerate(ecom_tables):

@@ -529,10 +529,10 @@ class FinancialSummary(Base):
     __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
 
     id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    sector_id = Column(Text, nullable=False)
-    company_id = Column(Text, nullable=False)
-    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    review_table = Column(Text, nullable=True)
-    pl_table = Column(Text, nullable=True)
-    balance_table = Column(Text, nullable=True)
-    money_table = Column(Text, nullable=True)
+    sector_id = Column(Text, nullable=False, comment='ID сектора на cib research')
+    company_id = Column(Text, nullable=False, comment='ID клиента на cib research')
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False, comment='ID клиента у нас в БД')
+    review_table = Column(Text, nullable=True, comment='Таблица с обзорной таблицей в формате dict')
+    pl_table = Column(Text, nullable=True, comment='Таблица с P&L таблицей в формате dict')
+    balance_table = Column(Text, nullable=True, comment='Таблица с балансной таблицей в формате dict')
+    money_table = Column(Text, nullable=True, comment='Таблица с таблицей денежных потоков в формате dict')

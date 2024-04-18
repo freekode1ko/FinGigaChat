@@ -23,17 +23,14 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from sqlalchemy import insert, select, func
-from sqlalchemy.dialects.postgresql import insert
+# from sqlalchemy.dialects.postgresql import insert
 
 from configs import config
 from db import parser_source
-from db.database import async_session
-from db.models import Research, ResearchType, ParserSource
+from db.database import async_session, engine
+from db.models import Research, ResearchType, ParserSource, FinancialSummary
 from log.logger_base import Logger
-from module import weekly_pulse_parse
-from module import data_transformer
-from db.database import engine
-from db.models import FinancialSummary
+from module import weekly_pulse_parse, data_transformer
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
@@ -921,7 +918,12 @@ class ResearchAPIParser:
 
     @staticmethod
     async def save_fin_summary(df) -> None:
+        """
+        Сохранение финансовых показателей по клиентам в БД
+        :param df: pandas.DataFrame() с таблицей для записи в бд
+        """
         df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        # TODO: переписать под ORM
         """
         test 
         with engine.connect() as conn:
