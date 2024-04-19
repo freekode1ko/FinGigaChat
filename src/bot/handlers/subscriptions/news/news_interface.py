@@ -11,7 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from configs import config
 from constants import constants
 from constants.subscriptions import const
-from db.api import industry as industry_db
+from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
@@ -189,8 +189,8 @@ class NewsHandler:
                 else:
                     await self.subscription_db.delete_subscription(user_id, subject_id)
 
-            client_df = await self.subscription_db.get_client_df(user_id)
-            page_data, page_info, max_pages = get_page_data_and_info(client_df, page)
+            subject_df = await self.subscription_db.get_subject_df(user_id)
+            page_data, page_info, max_pages = get_page_data_and_info(subject_df, page)
             msg_text = (
                 f'{title}\n<b>{page_info}</b>\n\n'
                 f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно'
@@ -238,7 +238,7 @@ class NewsHandler:
             chat_id, user_first_name = from_user.id, from_user.first_name
 
             industry_id = callback_data.industry_id
-            ref_book = industry_db.get_industry_name(industry_id)
+            ref_book = industry_db.get(industry_id)['name']
 
             user_logger.info(f'Пользователь *{chat_id}* {user_first_name} смотрит список по {ref_book}')
             objects = await self.subject_db.get_by_industry_id(industry_id)
@@ -277,13 +277,13 @@ class NewsHandler:
             user_id = message.from_user.id
 
             user_subscription_df = await self.subscription_db.get_subscription_df(user_id)
-            client_other_name_df = await self.subject_db.get_other_names()
+            subject_other_name_df = await self.subject_db.get_other_names()
 
             for quote in quotes:
                 message_text = message_text.replace(quote, '')
 
             user_request = [i.strip().lower() for i in message_text.split('\n')]
-            subscriptions = client_other_name_df[client_other_name_df['other_name'].isin(user_request)]
+            subscriptions = subject_other_name_df[subject_other_name_df['other_name'].isin(user_request)]
 
             continue_keyboard = InlineKeyboardBuilder()
             continue_keyboard.add(types.InlineKeyboardButton(text='Завершить', callback_data=const.END_WRITE_SUBS))
@@ -370,7 +370,7 @@ class NewsHandler:
             Получение сообщением информации о своих подписках для их удаления
 
             :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-            :param callback_data: номер страницы для отображения, client_id для удаления подписки
+            :param callback_data: номер страницы для отображения, subject_id для удаления подписки
             """
             chat_id = callback_query.message.chat.id
             user_msg = callback_data.pack()
@@ -451,7 +451,7 @@ class NewsHandler:
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
         @self.router.callback_query(self.callbacks.Menu.filter())
-        async def client_subscriptions_menu_callback(
+        async def subject_subscriptions_menu_callback(
                 callback_query: types.CallbackQuery,
                 callback_data: CallbacksModule.Menu,
         ) -> None:

@@ -15,7 +15,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
-    Date, text,
+    Date,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship

@@ -70,14 +70,6 @@ def get_industry_tg_news(
     return data_df
 
 
-async def get_all() -> pd.DataFrame:
-    async with database.async_session() as session:
-        stmt = select(Industry.id, Industry.name)
-        result = await session.execute(stmt)
-        data = result.fetchall()
-        return pd.DataFrame(data, columns=['id', 'name'])
-
-
 async def get_by_name(name: str) -> dict[str, Any]:
     async with database.async_session() as session:
         stmt = select(Industry).where(Industry.name == name)

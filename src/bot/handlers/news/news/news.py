@@ -216,6 +216,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
 
 
 async def send_news(message: types.Message, user_msg: str, full_name: str) -> bool:
+    """Отправка новостей по клиенту/сырьевому товару/отрасли"""
     chat_id = message.chat.id
 
     ap_obj = ArticleProcess(logger)
@@ -304,6 +305,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
 
 
 async def get_subject_news(callback_query: types.CallbackQuery, callback_data: CallbackData, subject_db_api) -> None:
+    """Получение имени subject и отправка новостей по нему"""
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
@@ -348,7 +350,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
 
 
 @router.message(F.text)
-async def find_news(message: types.Message, state: FSMContext, prompt: str = '', return_ans: bool = False) -> None:
+async def find_news(message: types.Message, state: FSMContext) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 

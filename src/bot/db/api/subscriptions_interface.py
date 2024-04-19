@@ -1,19 +1,22 @@
+from typing import Type
+
 import pandas as pd
 from sqlalchemy import insert, delete, select, case, or_
 
 from db import database
+from db.models import Base
 
 
 class SubscriptionInterface:
 
-    def __init__(self, table, subject_id_field: str, subject_table) -> None:
+    def __init__(self, table: Type[Base], subject_id_field: str, subject_table: Type[Base]) -> None:
         self.table = table
         self.subject_table = subject_table
         self.subject_id_field = subject_id_field
 
     async def add_subscription(self, user_id: int, subject_id: int) -> None:
         """
-        Добавляет подписку на клиента
+        Добавляет подписку на элемент из subject_table
         :param user_id: whitelist.user_id
         :param subject_id: subject.id
         """
@@ -28,7 +31,7 @@ class SubscriptionInterface:
 
     async def delete_subscription(self, user_id: int, subject_id: int) -> None:
         """
-        Удаляет подписку на клиента
+        Удаляет подписку на элемент из subject_table
         :param user_id: whitelist.user_id
         :param subject_id: subject.id
         """
@@ -44,7 +47,7 @@ class SubscriptionInterface:
 
     async def delete_all(self, user_id: int) -> None:
         """
-        Удаляет все подписки пользователя на клиентов
+        Удаляет все подписки пользователя на элементы из subject_table
         :param user_id: whitelist.user_id
         """
         async with database.async_session() as session:
@@ -58,7 +61,7 @@ class SubscriptionInterface:
 
     async def get_subscription_df(self, user_id: int) -> pd.DataFrame:
         """
-        Возвращает список подписок пользователя на клиентов
+        Возвращает список подписок пользователя на элементы из subject_table
 
         :param user_id: whitelist.user_id
         return: DataFrame[id, name]
@@ -73,9 +76,9 @@ class SubscriptionInterface:
             data = result.all()
             return pd.DataFrame(data, columns=['id', 'name'])
 
-    async def get_client_df(self, user_id: int) -> pd.DataFrame:
+    async def get_subject_df(self, user_id: int) -> pd.DataFrame:
         """
-        Список клиентов с флагом is_subscribed
+        Список элементов с флагом is_subscribed
         :return DataFrame[id, name, is_subscribed]
         """
         async with database.async_session() as session:

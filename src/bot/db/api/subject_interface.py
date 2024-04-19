@@ -1,14 +1,16 @@
-from typing import Any
+from typing import Any, Type
 
 import pandas as pd
 from sqlalchemy import select, func
+from sqlalchemy.orm import InstrumentedAttribute
 
 from db import database
+from db.models import Base
 
 
 class SubjectInterface:
 
-    def __init__(self, table, table_alternative, relation) -> None:
+    def __init__(self, table: Type[Base], table_alternative: Type[Base], relation: InstrumentedAttribute) -> None:
         self.table = table
         self.table_alternative = table_alternative
         self.relation = relation
