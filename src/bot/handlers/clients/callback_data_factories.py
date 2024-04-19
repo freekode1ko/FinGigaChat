@@ -1,73 +1,47 @@
+from enum import IntEnum, auto
+
 from aiogram.filters.callback_data import CallbackData
 
 
 MENU = 'clients_menu'
 
 
-class Menu(CallbackData, prefix=MENU):
-    """
-    Клиенты из списка подписок
-    Другие клиенты
-    """
-    pass
+class ClientsMenusEnum(IntEnum):
+    """Уровни меню клиенты"""
+    main_menu = auto()
+    end_menu = auto()
+
+    # переход из main_menu
+    clients_list = auto()
+
+    # переход из клиента в clients_list
+    client_menu = auto()
+
+    # переходы из client_menu
+    client_news_menu = auto()  # Меню получения новостей по клиенту
+    analytic_indicators = auto()  # (FROM ANOTHER MENU) аналитические данные по клиенту, если есть research_type_id
+    industry_analytics = auto()  # (FROM ANOTHER MENU) выдача файлов отрасли (отраслевая аналитика), к которой принадлежит клиент
+    products = auto()  # Меню продуктовых предложений по клиенту
+    inavigator = auto()  # выдача inavigator
+    meetings_data = auto()  # материалы для встреч
+    call_reports = auto()  # (FROM ANOTHER MENU) call reports по клиенту
+
+    # переходы из client_news_menu
+    top_news = auto()  # Выдача топ новостей
+    select_period = auto()  # Меню выбора периода для выгрузки новостей
+
+    # переходы из products
+    hot_offers = auto()  # Выдача hot offers
+
+    # Новости за период (переход из news_by_period)
+    news_by_period = auto()
 
 
-class EndMenu(CallbackData, prefix='end_clients_menu'):
-    """завершить """
-    pass
-
-
-class SubscribedClients(CallbackData, prefix='subscribed_clients'):
-    """Список клиентов из списка подписок"""
-    pass
-
-
-class UnsubscribedClients(CallbackData, prefix='unsubscribed_clients'):
-    """Список других клиентов"""
-    pass
-
-
-class ClientMenu(CallbackData, prefix='client_menu'):
-    """
-    Новости
-    Аналитика sell-side [если публичный]  (
-        callbacks.GetCIBResearchData.summary_type=enums.ResearchSummaryType.analytical_indicators.value
-    )
-    Отраслевая аналитика
-    Продуктовые предложения
-    Цифровая справка
-    Сформировать материалы для встречи
-    Call-reports
-    """
-    client_id: int
-
-
-class ClientNewsMenu(CallbackData, prefix='client_news_menu'):
-    """
-    Топ новости
-    Выбрать период 1, 3, 7, 30 дней
-    """
-    client_id: int
-
-
-class IndustryAnalytics(CallbackData, prefix='industry_analytics'):
-    """
-    Выдача файлов аналитики из раздела отраслевая аналитика той отрасли,
-    к которой принадлежит клиент (industry_id)
-    """
-    industry_id: int
-
-
-class ClientProducts(CallbackData, prefix='client_products'):
-    """Продуктовые предложения по клиенту"""
-    client_id: int
-
-
-class ClientInavigatorLink(CallbackData, prefix='client_inavigator_link'):
-    """Цифровая справка"""
-    client_id: int
-
-
-class ClientCallReports(CallbackData, prefix='client_call_reports'):
-    """Меню кол-репортов по клиенту"""
-    client_id: int
+class ClientsMenuData(CallbackData, prefix=MENU):
+    """Меню клиенты"""
+    menu: ClientsMenusEnum
+    subscribed: bool = True
+    client_id: int = 0
+    research_type_id: int = 0
+    days_count: int = 1
+    page: int = 0

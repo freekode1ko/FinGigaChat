@@ -3,45 +3,53 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
+from db.api.client import client_db, get_research_type_id_by_name
+from db.api.user_client_subscription import user_client_subscription_db
 from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from log.bot_logger import user_logger
-from utils.base import send_or_edit, user_in_whitelist
+from utils.base import send_or_edit, user_in_whitelist, get_page_data_and_info
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
 
 
-@router.callback_query(callback_data_factories.EndMenu.filter())
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.end_menu
+))
 async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> None:
     """
-    Завершает работу с меню аналитики
+    Завершает работу с меню клиенты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Состояние FSM
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр аналитики завершен')
+    await callback_query.message.edit_text(text='Просмотр клиентов завершен')  # FIXME text
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
-    Формирует меню аналитики
+    Формирует меню клиенты
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
     msg_text = (
-        'В этом разделе вы можете получить, всесторонний анализ российского финансового рынка '
-        'от SberCIB Investment Research'
+        'Клиенты'  # FIXME text
     )
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(callback_data_factories.Menu.filter())
-async def main_menu_callback(callback_query: types.CallbackQuery, callback_data: callback_data_factories.Menu) -> None:
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.main_menu
+))
+async def main_menu_callback(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
     """
-    Получение меню для просмотра аналитики
+    Получение меню клиенты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
@@ -55,10 +63,10 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(Command(callback_data_factories.Menu.__prefix__))
+@router.message(Command(callback_data_factories.ClientsMenuData.__prefix__))
 async def main_menu_command(message: types.Message) -> None:
     """
-    Получение меню для просмотра аналитики
+    Получение меню клиенты
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
@@ -69,3 +77,382 @@ async def main_menu_command(message: types.Message) -> None:
         await main_menu(message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.clients_list
+))
+async def clients_list(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение списка клиентов
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_id = from_user.id
+
+    subscribed = callback_data.subscribed
+    page = callback_data.page
+    clients = await client_db.get_all()
+    client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
+    clients = (
+        clients[clients['id'].isin(client_subscriptions['id'])] if subscribed
+        else clients[~clients['id'].isin(client_subscriptions['id'])]
+    )
+
+    page_data, page_info, max_pages = get_page_data_and_info(clients, page)
+    keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
+    msg_text = (
+        f'Выберите клиента\n<b>{page_info}</b>\n\n'  # FIXME text
+    )
+
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.client_menu
+))
+async def get_client_menu(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Меню разделов по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_id = callback_data.client_id
+    client_info = await client_db.get(client_id)
+    research_type_id = await get_research_type_id_by_name(client_info['name'])
+
+    keyboard = keyboards.get_client_menu_kb(
+        client_id,
+        current_page=callback_data.page,
+        subscribed=callback_data.subscribed,
+        research_type_id=research_type_id,
+    )
+    msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_info["name"]}</b>'
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.client_news_menu
+))
+async def get_client_news_menu(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Меню получения новостей по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_id = callback_data.client_id
+    client_info = await client_db.get(client_id)
+    keyboard = keyboards.get_news_menu_kb(
+        client_id,
+        current_page=callback_data.page,
+        subscribed=callback_data.subscribed,
+    )
+    msg_text = f'Какие новости вы хотите получить по клиенту <b>{client_info["name"]}</b>'
+
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.analytic_indicators
+))
+async def get_client_analytic_indicators(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Меню аналитических показателей по клиенту, если есть research_type_id
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.industry_analytics
+))
+async def get_client_industry_analytics(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение файлов по отраслевой аналитике, к которой принадлежит клиент
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_info = await client_db.get(callback_data.client_id)
+
+    msg_text = (
+        f'Отраслевая аналитика по клиенту <b>{client_info["name"]}</b>'
+        f'Функциональность будет реализована позднее'
+    )
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.products
+))
+async def get_client_products_menu(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение продуктовых предложений по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_info = await client_db.get(callback_data.client_id)
+    keyboard = keyboards.get_products_menu_kb(
+        callback_data.client_id,
+        current_page=callback_data.page,
+        subscribed=callback_data.subscribed,
+    )
+
+    msg_text = f'Продуктовые предложения по клиенту <b>{client_info["name"]}</b>'
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.inavigator
+))
+async def get_client_inavigator(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение ссылки на inavigator клиента
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_info = await client_db.get(callback_data.client_id)
+    if client_info['navi_link']:
+        msg_text = f'<a href="{str(client_info["navi_link"])}">Цифровая справка клиента: "{client_info["name"]}"</a>'
+    else:
+        msg_text = f'Цифровая справка по клиенту "{client_info["name"]}" отсутствует'
+
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.meetings_data
+))
+async def get_client_meetings_data(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Сформировать материалы для встречи
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_info = await client_db.get(callback_data.client_id)
+
+    msg_text = (
+        f'Материалы для встречи по клиенту <b>{client_info["name"]}</b>'
+        f'Функциональность будет реализована позднее'
+    )
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.call_reports
+))
+async def get_client_call_reports_menu(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение меню call reports клиента
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+
+    client_info = await client_db.get(callback_data.client_id)
+
+    msg_text = (
+        f'Call reports по клиенту <b>{client_info["name"]}</b>'
+        f'Функциональность будет реализована позднее'
+    )
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.top_news
+))
+async def get_client_top_news(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение топ новостей по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.select_period
+))
+async def get_client_select_period_menu(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Меню выбора периода для выгрузки новостей по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_info = await client_db.get(callback_data.client_id)
+    periods = [   # FIXME стоит ли унести в константы уже?
+        {
+            'text': 'За 1 день',
+            'days': 1,
+        },
+        {
+            'text': 'За 3 дня',
+            'days': 3,
+        },
+        {
+            'text': 'За неделю',
+            'days': 7,
+        },
+        {
+            'text': 'За месяц',
+            'days': 30,  # average
+        },
+    ]
+
+    keyboard = keyboards.get_periods_kb(
+        callback_data.client_id,
+        current_page=callback_data.page,
+        subscribed=callback_data.subscribed,
+        periods=periods,
+    )
+    msg_text = f'Выберите период для получения новостей по клиенту <b>{client_info["name"]}</b>'
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.hot_offers
+))
+async def get_client_hot_offers(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Выдача файлов продуктовых предложений по клиенту
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.news_by_period
+))
+async def get_client_news_by_period(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Получение новостей по клиенту за выбранный период
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
