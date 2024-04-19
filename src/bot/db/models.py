@@ -572,6 +572,7 @@ class CallReports(Base):
     report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
     description = Column(Text, nullable=False, comment='Отчет по встрече')
 
+
 class FinancialSummary(Base):
     __tablename__ = 'financial_summary'
     __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
