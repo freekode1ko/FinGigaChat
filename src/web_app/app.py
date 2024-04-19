@@ -32,7 +32,7 @@ if not config.DEBUG:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['http://127.0.0.1', config.WEB_APP_URL],
+    allow_origins=[config.WEB_APP_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
