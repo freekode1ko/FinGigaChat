@@ -7,8 +7,8 @@ let tg = window.Telegram.WebApp;
 //    $('body').empty();
 //}
 
-//let user_id = tg?.initDataUnsafe?.user?.id;
-let user_id = 342297636;
+let user_id = tg?.initDataUnsafe?.user?.id;
+
 let backPageHref = `${url}/meeting/show`;
 
 const curDate = new Date();

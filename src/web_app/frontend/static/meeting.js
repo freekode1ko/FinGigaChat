@@ -8,9 +8,7 @@ tg.expand();
 //    $('body').empty();
 //}
 
-
-//let user_id = tg.initDataUnsafe.user?.id;
-let user_id = 342297636;
+let user_id = tg.initDataUnsafe.user?.id;
 fetchData(user_id);
 
 
