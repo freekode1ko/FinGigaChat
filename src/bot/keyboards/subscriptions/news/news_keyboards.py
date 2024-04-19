@@ -8,6 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
 from constants.subscriptions import const
+from keyboards.base import get_pagination_kb
 from keyboards.subscriptions import constructors
 
 
@@ -139,12 +140,14 @@ class BaseKeyboard:
             lambda x: self.callbacks.DeleteUserSub(page=current_page, subject_id=x).pack()
         )
         page_data['item_callback'] = 'None'
-        return constructors.get_pagination_kb(
+        return get_pagination_kb(
             page_data,
             current_page,
             max_pages,
-            page_callback_factory=self.callbacks.DeleteUserSub,
+            next_page_callback=self.callbacks.DeleteUserSub(page=current_page + 1).pack(),
+            prev_page_callback=self.callbacks.DeleteUserSub(page=current_page - 1).pack(),
             back_callback=self.callbacks.Menu().pack(),
+            end_callback=const.END_WRITE_SUBS,
             reverse=True,
         )
 
@@ -167,12 +170,14 @@ class BaseKeyboard:
         page_data['item_callback'] = page_data['id'].apply(
             lambda x: self.watch_subject_news_callback_factory(subject_id=x).pack()
         )
-        return constructors.get_pagination_kb(
+        return get_pagination_kb(
             page_data,
             current_page,
             max_pages,
-            page_callback_factory=self.callbacks.DeleteUserSub,
+            next_page_callback=self.callbacks.GetUserSubs(page=current_page + 1).pack(),
+            prev_page_callback=self.callbacks.GetUserSubs(page=current_page - 1).pack(),
             back_callback=self.callbacks.Menu().pack(),
+            end_callback=const.END_WRITE_SUBS,
         )
 
     def get_subjects_kb(self, page_data: pd.DataFrame, current_page: int, max_pages: int) -> InlineKeyboardMarkup:
@@ -196,10 +201,12 @@ class BaseKeyboard:
             axis=1,
         )
         page_data['item_callback'] = 'None'
-        return constructors.get_pagination_kb(
+        return get_pagination_kb(
             page_data,
             current_page,
             max_pages,
-            page_callback_factory=self.callbacks.SelectSubs,
+            next_page_callback=self.callbacks.SelectSubs(page=current_page + 1).pack(),
+            prev_page_callback=self.callbacks.SelectSubs(page=current_page - 1).pack(),
             back_callback=self.callbacks.ChangeUserSubs().pack(),
+            end_callback=const.END_WRITE_SUBS,
         )

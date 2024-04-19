@@ -14,7 +14,7 @@ from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
 from handlers import (
-    admin, ai, analytics, common, industry, news, quotes, referencebook, subscriptions, products, call_reports
+    admin, ai, analytics, common, industry, news, quotes, referencebook, subscriptions, products, call_reports, clients
 )
 from log.bot_logger import logger
 from log.sentry import init_sentry
@@ -98,6 +98,7 @@ async def start_bot():
         industry.router,
         analytics.router,
         products.router,
+        clients.router,
         news.router,
     )
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен

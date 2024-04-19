@@ -10,6 +10,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Аналитика',
     },
     {
+        'command': 'clients_menu',
+        'description': 'Клиенты',
+    },
+    {
         'command': 'products_menu',
         'description': 'Продукты',
     },
