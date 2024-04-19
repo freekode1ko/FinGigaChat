@@ -54,12 +54,15 @@ async def add_notify_job(logger: Logger.logger, meeting: Optional[dict[str, Any]
             if dt_notification < dt.datetime.now():
                 continue
 
-            scheduler.add_job(
-                send_notification,
-                args=(logger, meeting['meeting_id'], meeting['user_id'], meeting['theme'],
-                      meeting['date_start'], rem_time_dict['msg']),
-                trigger='date',
-                run_date=dt_notification,
-                timezone='Europe/Moscow'
-            )
-            logger.info('Для пользователя %s добавлена задача-напоминание в %s', meeting['user_id'], dt_notification)
+            try:
+                scheduler.add_job(
+                    send_notification,
+                    args=(logger, meeting['meeting_id'], meeting['user_id'], meeting['theme'],
+                          meeting['date_start'], rem_time_dict['msg']),
+                    trigger='date',
+                    run_date=dt_notification,
+                    timezone='Europe/Moscow'
+                )
+                logger.info('Для встречи %s добавлена задача-напоминание в %s', meeting['meeting_id'], dt_notification)
+            except Exception as e:
+                logger.error('При добавлении задачи-напоминание по встрече %s возникла ошибка: %s', meeting['meeting_id'], e)
