@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.15.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/locale/ru.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', path='/favicon.ico') }}">
+    <title>Meeting</title>
+</head>
+<body>
+<div class="first-line">
+    <div class="first-line title">
+        <h3>Мои встречи</h3>
+    </div>
+    <div class="first-line button">
+    <a href="{{ url_for('create_meeting_form') }}">
+            <button class="create-main">Создать</button></a>
+    </div>
+</div>
+<hr/>
+<div class="meeting-table" id="container">
+    <table class="table table-bordered" id="meetingTable">
+   <thead>
+    <tr>
+      <th scope="col">Тема</th>
+      <th scope="col">Дата</th>
+  </thead>
+    <tbody>
+
+    </tbody>
+     </table>
+</div>
+<h6 id="noMeeting">Загрузка...</h6>
+<script type="module" src="../static/meeting.js"></script>
+</body>
+</html>

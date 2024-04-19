@@ -112,5 +112,3 @@ class SmtpSend:
             raise ConnectionError('Сервер не определен')
 
         self.server.sendmail(self.EMAIL_FROM, email_to, msg.as_string())
-
-
