@@ -28,8 +28,11 @@ let dateStartRoll = new Rolldate({
                                     beginYear: curYear,
                                     endYear: curYear + 1,
                                     lang: { title: "Выбор даты" },
+                                    init: function() {
+                                        document.activeElement.blur();
+                                    },
                                     confirm: function(date) {
-                                        $('#errorMessageDateStart').text("")
+                                        $('#errorMessageDateStart').text("");
                                         let [day, month, year] = date.split('-');
                                         dateStart.setFullYear(parseInt(year, 10));
                                         dateStart.setMonth(parseInt(month, 10) - 1);
@@ -45,8 +48,11 @@ let dateEndRoll = new Rolldate({
                                 beginYear: curYear,
                                 endYear: curYear + 1,
                                 lang: { title: "Выбор даты"},
+                                init: function() {
+                                     document.activeElement.blur();
+                                },
                                 confirm: function(date) {
-                                    $('#errorMessageDateStart').text("")
+                                    $('#errorMessageDateStart').text("");
                                 }
                                 });
 
@@ -55,8 +61,11 @@ let timeStartRoll = new Rolldate({
                                     el: timeStartField,
                                     format: 'hh:mm',
                                     lang: { title: "Выбор времени"},
+                                    init: function() {
+                                        document.activeElement.blur();
+                                    },
                                     confirm: function(time) {
-                                        $('#errorMessageDateStart').text("")
+                                        $('#errorMessageDateStart').text("");
                                         timeEndField.disabled = false;
                                         let [hours, minutes] = time.split(':');
                                         dateStart.setHours(parseInt(hours, 10));
@@ -71,13 +80,16 @@ let timeStartRoll = new Rolldate({
 
 
 let timeEndRoll = new Rolldate({
-                            el: timeEndField,
-                            format: 'hh:mm',
-                            lang: { title: "Выбор времени"},
-                            confirm: function(date) {
-                                    $('#errorMessageDateStart').text("")
+                                el: timeEndField,
+                                format: 'hh:mm',
+                                lang: { title: "Выбор времени"},
+                                init: function() {
+                                      document.activeElement.blur();
+                                },
+                                confirm: function(date) {
+                                    $('#errorMessageDateStart').text("");
                                 }
-                           });
+                               });
 
 
 function postData(user_data) {
