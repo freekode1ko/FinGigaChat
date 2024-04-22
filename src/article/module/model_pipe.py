@@ -2,7 +2,7 @@ import json
 import pickle
 import re
 from re import search
-from typing import Dict
+from typing import Dict, Optional, Any
 
 import pandas as pd
 import pymorphy2
@@ -85,6 +85,7 @@ STOCK_WORDS = [
     ' село ',
 ]
 
+TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
 
 def get_alternative_names_pattern_commodity(alt_names):
     """Создает регулярные выражения для коммодов"""
@@ -416,6 +417,19 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
                     labels += f';{label}'
 
     return labels
+
+
+def search_top_sources(link: Optional[str or Any], score: int) -> int:
+    """
+    Raise score for article if found top sources
+    :param link: link of article
+    :param score: current score of article
+    :return: new score of article
+    """
+    if link and isinstance(link, str):
+        if search(TOP_SOURCES, link):
+            return score + 5
+    return score
 
 
 def rate_client(df, rating_dict, threshold: float = 0.45) -> pd.DataFrame:
@@ -829,13 +843,14 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
                 giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
                 giga_label = giga_answer[-1]
             except Exception as e:
-                logger.debug("Не удалось получить ответ от Gigachat. Суммаризация: {}".format(text_sum))
-                giga_answer = ''
-                giga_label = '-1'
+                logger.error("Не удалось получить ответ от Gigachat. Наименование:{}; "
+                             "Суммаризация: {}".format(name, text_sum))
+                giga_label = '1'
             if giga_label == '1':
                 result.append(name)
+                continue
             if giga_label != '0' and giga_label != '1':
-                logger.debug("Не удалось получить ответ от Gigachat в нужном формате. Наименование: {}; "
+                logger.error("Не удалось получить ответ от Gigachat в нужном формате. Наименование: {}; "
                              "Суммаризация: {}; Ответ: {}".format(name, text_sum, giga_answer))
     return ';'.join(result)
 
