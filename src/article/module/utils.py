@@ -80,7 +80,7 @@ def create_alternative_names_dict(alt_names: pd.DataFrame) -> dict:
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for alt_names_list in table_subject_list:
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        clear_alt_names = [_ for _ in alt_names_list if not pd.isna(_)]
         key = clear_alt_names[0].strip().lower()
         alter_names_dict[key] = ','.join(clear_alt_names)
     return alter_names_dict
