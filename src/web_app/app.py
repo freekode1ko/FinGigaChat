@@ -1,48 +1,71 @@
+from contextlib import asynccontextmanager
 import ssl
 
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
 
-from config import (
-    MAIL_RU_LOGIN,
-    MAIL_RU_PASSWORD,
-    MAIL_SMTP_PORT,
-    MAIL_SMTP_SERVER,
-    MEETING_PAGES
-)
-from utils.email_send import SmtpSend
-from db.meeting import *
-from utils.utils import format_date, reformat_data
-from config import STATIC_CHAIN_PATH, STATIC_KEY_PATH
-# from schedular import send_schedular_new_data
+import config
+from db.meeting import get_user_meetings, add_meeting, get_user_email
+from log.logger_base import selector_logger
+import utils
 
 
-app = FastAPI()
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain(STATIC_CHAIN_PATH, keyfile=STATIC_KEY_PATH)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await utils.add_notify_job(logger)
+    utils.scheduler.start()
+    yield
+
+logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+templates = Jinja2Templates(directory="frontend/templates")
+
+
+if not config.DEBUG:
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain(config.STATIC_CHAIN_PATH, keyfile=config.STATIC_KEY_PATH)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[MEETING_PAGES],
+    allow_origins=[config.WEB_APP_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-@app.get("/meeting/show/{user_id}")
-def read_root(user_id):
-    if user_id is not None:
-        meetings = get_user_meetings(user_id)
-        meetings = format_date(meetings)
-        return JSONResponse(meetings)
-    else:
-        return 'Отсутствует User ID.'
+@app.get("/meeting/show", response_class=HTMLResponse)
+async def show_meetings(request: Request):
+    return templates.TemplateResponse("meeting.html", {"request": request})
+
+
+@app.get("/meeting/show/{user_id}", response_class=JSONResponse)
+async def show_user_meetings(user_id: int | str):
+    meetings = await get_user_meetings(user_id)
+    meetings = utils.format_date(meetings)
+    logger.info('Пользователю %s показано %d встреч', user_id, len(meetings))
+    return JSONResponse(meetings)
 
 
 @app.get('/meeting/create')
-def create_meeting(user_id, theme, date_start, date_end, description, timezone):
+async def create_meeting_form(request: Request):
+    return templates.TemplateResponse("create.html", {"request": request})
+
+
+@app.get('/meeting/save')
+async def create_meeting(
+        user_id: int | str,
+        theme: str,
+        date_start: str,
+        date_end: str,
+        description: str,
+        timezone: int
+) -> str:
     data = {
         'user_id': user_id,
         'theme': theme,
@@ -51,12 +74,17 @@ def create_meeting(user_id, theme, date_start, date_end, description, timezone):
         'description': description,
         'timezone': timezone
     }
-    data = reformat_data(data)
-    add_meeting(data)
-    # send_schedular_new_data(data)  # напоминания
+    data = utils.reformat_data(data)
+    meeting_id = await add_meeting(data)
+    logger.info('Встреча %s пользователя %s сохранена в бд', theme, user_id)
 
-    user_email = get_user_email(user_id=user_id)
-    with SmtpSend(MAIL_RU_LOGIN, MAIL_RU_PASSWORD, MAIL_SMTP_SERVER, MAIL_SMTP_PORT) as smtp_email:
+    data['meeting_id'] = meeting_id
+    await utils.add_notify_job(logger=logger, meeting=data)
+
+    user_email = await get_user_email(user_id=user_id)
+    with (utils.SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.MAIL_SMTP_SERVER, config.MAIL_SMTP_PORT)
+          as smtp_email):
         smtp_email.send_meeting(user_email, data)
+    logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'

@@ -23,7 +23,6 @@ from module.utils import get_alternative_names_pattern_commodity, add_endings, g
 import datetime as dt
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
-CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'data/model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
@@ -89,7 +88,6 @@ STOCK_WORDS = [
 ]
 
 TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
-
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -326,8 +324,10 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
             keywords_pattern = group['key words'].replace(',', '|')
             if search(keywords_pattern, clean_text):
                 label = str(group['label'])
-                if label not in labels:
-                    labels += f';{label}'
+                labels += f';{label}'
+        # after deranking labels score should still be positive
+        if len(labels) > 1:
+            labels = str(max(1, sum(map(int, labels.split(';')))))
 
     return labels
 
@@ -357,10 +357,6 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
         binary_model = pickle.load(f)
 
-    # read multiclass classification model
-    with open(CLIENT_MULTY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-        multiclass_model = pickle.load(f)
-
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
     df['relevance'] = [
@@ -368,8 +364,12 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
         for index, pair in enumerate(probs)
     ]
 
-    # predict label from multiclass classification
-    df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
+    # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
+    df['client_labels'] = df.apply(lambda x:
+                                   5 if max((json.loads(x['client_impact'])).values(), default=0) > 2 else 2, axis=1)
+
+    # search top sources in links
+    df['client_labels'] = df.apply(lambda x: search_top_sources(x['link'], x['client_labels']), axis=1)
 
     # using relevance label condition
     df['client_labels'] = df.apply(

@@ -42,7 +42,17 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
-meeting_web_app_url = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
+
+DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
+
+match DOMAIN_NAME:
+    case 'ai-bankir-helper.ru':
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
+    case 'ai-bankir-helper-dev.ru':
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
+    case _:
+        WEB_APP_URL = f'http://{DOMAIN_NAME}'
+
 
 log_file = 'bot_runner'
 LOG_LEVEL_DEBUG = 10
