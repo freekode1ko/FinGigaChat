@@ -1,9 +1,8 @@
 import pandas as pd
 from db.database import engine
-from typing import Dict, List
 
 
-def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> Dict[str, str]:
+def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str, str]:
     """
     Создает регулярные выражения для коммодов.
     :param: alt_names: таблица с комодами и их альтернативными названиями.
@@ -20,7 +19,7 @@ def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> Dict[str
     return alter_names_dict
 
 
-def add_endings(clear_names_list: List[str]) -> List[str]:
+def add_endings(clear_names_list: list[str]) -> list[str]:
     """
     Добавляет окончания к именам клиента в списке альтернативных имен
     :param: clear_names_list: список имен клиентов.
@@ -46,7 +45,7 @@ def add_endings(clear_names_list: List[str]) -> List[str]:
     return clear_names_list
 
 
-def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> Dict[str, str]:
+def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> dict[str, str]:
     """
     Создает регулярные выражения для клиентов.
     :param: alt_names: таблица с клиентами и их альтернативными названиями.
