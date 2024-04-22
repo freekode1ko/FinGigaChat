@@ -17,6 +17,8 @@ from db.database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from log.logger_base import Logger
+from module.utils import get_alternative_names_pattern_commodity, add_endings, get_alternative_names_pattern_client, \
+    create_alternative_names_dict, create_client_industry_dict, modify_commodity_rating_system_dict
 
 import datetime as dt
 
@@ -34,6 +36,7 @@ BAD_GIGA_ANSWERS = [
     'Не люблю менять тему разговора, но вот сейчас тот самый случай.',
     'Спасибо за информацию! Я передам ее дальше.',
 ]
+
 STOCK_WORDS = [
     'индекс мосбиржа',
     'индекс мб',
@@ -88,95 +91,6 @@ STOCK_WORDS = [
 TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
 
 
-def get_alternative_names_pattern_commodity(alt_names):
-    """Создает регулярные выражения для коммодов"""
-    alter_names_dict = dict()
-    table_subject_list = alt_names.values.tolist()
-    for i, alt_names_list in enumerate(table_subject_list):
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        names_pattern_base = '|'.join(clear_alt_names)
-        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
-        key = clear_alt_names[0]
-        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
-    return alter_names_dict
-
-
-def add_endings(clear_names_list):
-    """Добавляет окончания к именам клиента в списке альтернативных имен"""
-    vowels = 'ауоыэяюиеь'
-    english_vowels = 'aeiouy'
-    ending_v = '|а|я|ы|и|е|у|ю|ой|ей'
-    ending_c = '|о|е|а|я|у|ю|и|ом|ем'
-
-    for i, name in enumerate(clear_names_list):
-        name_strip = name.strip()
-        if ' ' not in name_strip:
-
-            last_mark = name_strip[-1]
-            last_mark_lower = last_mark.lower()
-
-            if last_mark_lower in vowels and len(name_strip) > 3:
-                clear_names_list[i] = f'{name[:-1]}({last_mark}{ending_v})'
-            elif last_mark.isalpha() and last_mark_lower not in english_vowels and last_mark != 'ъ':
-                clear_names_list[i] = f'{name}({ending_c})'
-
-    return clear_names_list
-
-
-def get_alternative_names_pattern_client(alt_names):
-    """Создает регулярные выражения для клиентов"""
-    alter_names_dict = dict()
-    table_subject_list = alt_names.values.tolist()
-    for alt_names_list in table_subject_list:
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        key = clear_alt_names[0]
-
-        clear_alt_names = add_endings(clear_alt_names)
-        clear_alt_names_upper = add_endings(
-            [el.upper() for el in clear_alt_names])
-
-        names_pattern_base = '( |\. |, |\) )|'.join(clear_alt_names)
-        names_pattern_base += '( |\. |, |\) )'
-        names_patter_upper = '( |\. |, |\) )|'.join(clear_alt_names_upper)
-        names_patter_upper += '( |\. |, |\) )'
-        alter_names_dict[
-            key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+',
-                                                                          '\+')
-
-    return alter_names_dict
-
-
-def create_alternative_names_dict(alt_names: pd.DataFrame) -> dict:
-    """
-    Создает словарь с альтернативными названиями клиентов.
-    :param alt_names: pd.DataFrame с альтернативными названиями клиентов.
-    :return: словарь с названиями клиентов.
-    """
-    alter_names_dict = dict()
-    table_subject_list = alt_names.values.tolist()
-    for alt_names_list in table_subject_list:
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        key = clear_alt_names[0].strip().lower()
-        alter_names_dict[key] = ','.join(clear_alt_names)
-    return alter_names_dict
-
-
-def create_client_industry_dict() -> dict:
-    """
-    Создает словарь с названиями индустрий клиента.
-    :return: Словарь индустрий клиентов.
-    """
-    query = '''
-    select industry.name as industry_name, client.name as client_name from client
-    join industry on client.industry_id = industry.id
-    '''
-    df = pd.read_sql(query, engine)
-    client_industry_dict = dict()
-    df.index = df['client_name'].str.lower().str.strip()
-    client_industry_dict = df['industry_name'].to_dict()
-    return client_industry_dict
-
-
 morph = pymorphy2.MorphAnalyzer()
 
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
@@ -189,9 +103,7 @@ client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict(
     'records')
 commodity_rating_system_dict = pd.read_excel(
     COMMODITY_RATING_FILE_PATH).to_dict('records')
-for group in commodity_rating_system_dict:
-    group['key words'] = ','.join(
-        [f' {word.strip().lower()}' for word in group['key words'].split(',')])
+commodity_rating_system_dict = modify_commodity_rating_system_dict(commodity_rating_system_dict)
 
 CLIENT_NAMES_DICT = create_alternative_names_dict(client_names)
 CLIENT_INDUSTRY_DICT = create_client_industry_dict()
