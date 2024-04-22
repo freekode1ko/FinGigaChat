@@ -87,6 +87,7 @@ STOCK_WORDS = [
 
 TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
 
+
 def get_alternative_names_pattern_commodity(alt_names):
     """Создает регулярные выражения для коммодов"""
     alter_names_dict = dict()
@@ -432,7 +433,7 @@ def search_top_sources(link: Optional[str or Any], score: int) -> int:
     return score
 
 
-def rate_client(df, rating_dict, threshold: float = 0.45) -> pd.DataFrame:
+def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
     :param rating_dict: dict with rating
