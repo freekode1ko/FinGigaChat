@@ -11,7 +11,7 @@ def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for i, alt_names_list in enumerate(table_subject_list):
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        clear_alt_names = [_ for _ in alt_names_list if not pd.isna(_)]
         names_pattern_base = '|'.join(clear_alt_names)
         names_patter_upper = '|'.join(el.upper() for el in clear_alt_names)
         key = clear_alt_names[0]
