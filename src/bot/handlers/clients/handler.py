@@ -1,14 +1,19 @@
+import datetime
+
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
+import utils.base
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.user_client_subscription import user_client_subscription_db
+from db.models import Article
 from handlers import products
 from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
-from log.bot_logger import user_logger
+from log.bot_logger import user_logger, logger
+from module.article_process import FormatText
 from utils.base import send_or_edit, user_in_whitelist, get_page_data_and_info
 
 router = Router()
@@ -27,7 +32,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр клиентов завершен')  # FIXME text
+    await callback_query.message.edit_text(text='Просмотр клиентов завершен')  # FIXME text Уточнить у Никиты текстовку
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
@@ -37,7 +42,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     keyboard = keyboards.get_menu_kb()
     msg_text = (
-        'Клиенты'  # FIXME text
+        'Клиенты'  # FIXME text Уточнить у Никиты текстовку
     )
     await send_or_edit(message, msg_text, keyboard)
 
@@ -111,7 +116,7 @@ async def clients_list(
     page_data, page_info, max_pages = get_page_data_and_info(clients, page)
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
     msg_text = (
-        f'Выберите клиента\n<b>{page_info}</b>\n\n'  # FIXME text
+        f'Выберите клиента\n<b>{page_info}</b>\n\n'  # FIXME text Уточнить у Никиты текстовку
     )
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -200,7 +205,7 @@ async def get_client_analytic_indicators(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    # FIXME
+    # FIXME Придумать эту хрень
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -221,11 +226,12 @@ async def get_client_industry_analytics(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    # FIXME Реализовать после того, как в меню аналитики будет переработана отраслевая аналитика
 
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Отраслевая аналитика по клиенту <b>{client_info["name"]}</b>'
+        f'Отраслевая аналитика по клиенту <b>{client_info["name"]}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -250,7 +256,7 @@ async def get_client_products_menu(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    # FIXME
+    # FIXME Узнать у Никиты, надо ли добавить остальные кнопки меню или пока нет
     client_info = await client_db.get(callback_data.client_id)
     keyboard = keyboards.get_products_menu_kb(
         callback_data.client_id,
@@ -312,7 +318,7 @@ async def get_client_meetings_data(
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Материалы для встречи по клиенту <b>{client_info["name"]}</b>'
+        f'Материалы для встречи по клиенту <b>{client_info["name"]}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -336,11 +342,12 @@ async def get_client_call_reports_menu(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    # FIXME Саша Г сделает меню, надо будет его переиспользовать
 
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Call reports по клиенту <b>{client_info["name"]}</b>'
+        f'Call reports по клиенту <b>{client_info["name"]}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -364,7 +371,15 @@ async def get_client_top_news(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    # FIXME
+    # FIXME Никита узнает у Саши С и скажет, что отправлять тут
+
+    client_info = await client_db.get(callback_data.client_id)
+
+    msg_text = (
+        f'Топ новости по клиенту <b>{client_info["name"]}</b>\n'
+        f'Функциональность будет реализована позднее'
+    )
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -457,6 +472,31 @@ async def get_client_news_by_period(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     # FIXME
+
+    client_id = callback_data.client_id
+    days = callback_data.days_count
+    client_info = await client_db.get(client_id)
+
+    to_date = datetime.date.today()
+    from_date = to_date - datetime.timedelta(days=days)
+
+    msg_text = f'Новости по клиенту <b>{client_info["name"]}</b> за {days} дней\n'
+    articles = await client_db.get_articles_by_subject_id(client_id, from_date, to_date, order_by=Article.date.desc())
+    if not articles:
+        msg_text += 'отсутствуют'
+        await callback_query.message.answer(msg_text, parse_mode='HTML')
+    else:
+        frmt_msg = f'<b>{client_info["name"].capitalize()}</b>'
+
+        all_articles = '\n\n'.join(
+            FormatText(
+                title=article.title, date=article.date, link=article.link, text_sum=article.text_sum
+            ).make_subject_text()
+            for article in articles
+        )
+        frmt_msg += f'\n\n{all_articles}'
+        await callback_query.message.answer(msg_text, parse_mode='HTML')
+        await utils.base.bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
