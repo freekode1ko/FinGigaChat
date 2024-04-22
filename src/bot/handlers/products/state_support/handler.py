@@ -1,13 +1,11 @@
 import os
 
 from aiogram import types
-from aiogram.utils.media_group import MediaGroupBuilder
-
-from constants import constants
 from constants.products import state_support
 from handlers.products.handler import router
 from keyboards.products.state_support import callbacks
 from log.bot_logger import user_logger
+from utils.base import send_pdf
 
 
 @router.callback_query(callbacks.GetStateSupportPDF.filter())
@@ -23,15 +21,7 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    pdf_files = os.listdir(state_support.DATA_ROOT_PATH)
-    if pdf_files:
-        msg_text = 'Господдержка'
-        await callback_query.message.answer(msg_text, parse_mode='HTML')
-
-        for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
-            media_group = MediaGroupBuilder()
-            for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
-                media_group.add_document(media=types.FSInputFile(state_support.DATA_ROOT_PATH / fpath))
-
-            await callback_query.message.answer_media_group(media_group.build())
+    msg_text = 'Господдержка'
+    pdf_files = [state_support.DATA_ROOT_PATH / i for i in os.listdir(state_support.DATA_ROOT_PATH)]
+    await send_pdf(callback_query, pdf_files, msg_text)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
