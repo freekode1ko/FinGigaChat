@@ -17,8 +17,7 @@ from db.database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from log.logger_base import Logger
-from module.utils import get_alternative_names_pattern_commodity, add_endings, get_alternative_names_pattern_client, \
-    create_alternative_names_dict, create_client_industry_dict, modify_commodity_rating_system_dict
+from module.utils import *
 
 import datetime as dt
 

@@ -1,22 +1,31 @@
 import pandas as pd
 from db.database import engine
+from typing import Dict, List
 
 
-def get_alternative_names_pattern_commodity(alt_names):
-    """Создает регулярные выражения для коммодов"""
+def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> Dict[str, str]:
+    """
+    Создает регулярные выражения для коммодов.
+    :param: alt_names: таблица с комодами и их альтернативными названиями.
+    :return: dict с названиями для поиска регуляркой.
+    """
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for i, alt_names_list in enumerate(table_subject_list):
         clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
         names_pattern_base = '|'.join(clear_alt_names)
-        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
+        names_patter_upper = '|'.join(el.upper() for el in clear_alt_names)
         key = clear_alt_names[0]
         alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
     return alter_names_dict
 
 
-def add_endings(clear_names_list):
-    """Добавляет окончания к именам клиента в списке альтернативных имен"""
+def add_endings(clear_names_list: List[str]) -> List[str]:
+    """
+    Добавляет окончания к именам клиента в списке альтернативных имен
+    :param: clear_names_list: список имен клиентов.
+    :return: Измененный список имен клиентов.
+    """
     vowels = 'ауоыэяюиеь'
     english_vowels = 'aeiouy'
     ending_v = '|а|я|ы|и|е|у|ю|ой|ей'
@@ -37,17 +46,20 @@ def add_endings(clear_names_list):
     return clear_names_list
 
 
-def get_alternative_names_pattern_client(alt_names):
-    """Создает регулярные выражения для клиентов"""
+def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> Dict[str, str]:
+    """
+    Создает регулярные выражения для клиентов.
+    :param: alt_names: таблица с клиентами и их альтернативными названиями.
+    :return: dict с названиями для поиска регуляркой.
+    """
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
     for alt_names_list in table_subject_list:
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
+        clear_alt_names = [_ for _ in alt_names_list if not pd.isna(_)]
         key = clear_alt_names[0]
 
         clear_alt_names = add_endings(clear_alt_names)
-        clear_alt_names_upper = add_endings(
-            [el.upper() for el in clear_alt_names])
+        clear_alt_names_upper = add_endings([el.upper() for el in clear_alt_names])
 
         names_pattern_base = '( |\. |, |\) )|'.join(clear_alt_names)
         names_pattern_base += '( |\. |, |\) )'
@@ -98,6 +110,5 @@ def modify_commodity_rating_system_dict(commodity_rating_system_dict: dict) -> d
     :return: измененный словарь с названиями коммодов.
     """
     for group in commodity_rating_system_dict:
-        group['key words'] = ','.join(
-            [f' {word.strip().lower()}' for word in group['key words'].split(',')])
+        group['key words'] = ','.join(f' {word.strip().lower()}' for word in group['key words'].split(','))
     return commodity_rating_system_dict
