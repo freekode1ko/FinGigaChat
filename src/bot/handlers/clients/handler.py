@@ -199,6 +199,7 @@ async def get_client_analytic_indicators(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
+    # FIXME
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -248,6 +249,7 @@ async def get_client_products_menu(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
+    # FIXME
     client_info = await client_db.get(callback_data.client_id)
     keyboard = keyboards.get_products_menu_kb(
         callback_data.client_id,
@@ -334,7 +336,6 @@ async def get_client_call_reports_menu(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
@@ -362,7 +363,7 @@ async def get_client_top_news(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-
+    # FIXME
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -432,6 +433,7 @@ async def get_client_hot_offers(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    # FIXME
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -453,6 +455,7 @@ async def get_client_news_by_period(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    # FIXME
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
