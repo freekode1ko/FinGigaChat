@@ -1,7 +1,7 @@
-from sqlalchemy import text, select
+from sqlalchemy import text, select, func
 
+from db import models, database
 from db.database import engine
-from db.models import Whitelist
 
 
 def update_user_email(user_id: int, user_email: str):
@@ -21,6 +21,25 @@ def is_new_user_email(user_email: str) -> bool:
 
 def is_user_email_exist(user_id: int) -> bool:
     """Проверка наличия почты у пользователя"""
-    query = select(Whitelist.user_email).where(Whitelist.user_id==user_id)
+    query = select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id)
     with engine.connect() as conn:
-        return conn.execute(query).scalar()
+        return conn.execute(query).all()
+
+
+async def get_users_subscriptions() -> list[tuple[int, str, list[int], list[int], list[int]]]:
+    async with database.async_session() as session:
+        stmt = select(
+            models.Whitelist.user_id,
+            models.Whitelist.username,
+            func.array_agg(models.UserIndustrySubscriptions.industry_id.distinct()).label('industry_ids'),
+            func.array_agg(models.UserClientSubscriptions.client_id.distinct()).label('client_ids'),
+            func.array_agg(models.UserCommoditySubscriptions.commodity_id.distinct()).label('commodity_ids'),
+        ).join(
+            models.UserIndustrySubscriptions
+        ).join(
+            models.UserClientSubscriptions
+        ).join(
+            models.UserCommoditySubscriptions
+        ).group_by(models.Whitelist.user_id)
+        result = await session.execute(stmt)
+        return list(result.all())
