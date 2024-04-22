@@ -5,6 +5,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.user_client_subscription import user_client_subscription_db
+from handlers import products
 from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from log.bot_logger import user_logger
@@ -433,8 +434,8 @@ async def get_client_hot_offers(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    # FIXME
 
+    await products.hot_offers.get_hot_offers_pdf(callback_query, callback_data)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
