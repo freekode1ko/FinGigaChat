@@ -1,6 +1,4 @@
-import asyncio
-
-from aiogram import F, types
+from aiogram import F, types, Bot
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
@@ -8,22 +6,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 
+import utils.base
 from configs import config
-from constants.aliases import (
-    bonds_aliases,
-    eco_aliases,
-    exchange_aliases,
-    metal_aliases,
-    view_aliases,
-    help_aliases,
-    gigachat_aliases,
-    rag_aliases,
-    web_app_aliases,
-)
+from constants import aliases
 from db import parser_source
 from db.api.client import client_db
 from db.api.commodity import commodity_db
 from db.api.industry import industry_db
+from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
 from handlers.ai.gigachat import gigachat
 from handlers.ai.rag import rag
@@ -40,8 +30,46 @@ from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
 class NextNewsCallback(CallbackData, prefix='next_news'):
     subject: str
     subject_id: int
-    user_msg: str
     offset: int
+
+
+async def send_news_with_next_button(
+        bot: Bot,
+        chat_id: int,
+        reply_msg: str,
+        subject_id: int,
+        subject: str,
+        next_news_offset: int,
+        articles_limit: int,
+) -> None:
+    """
+    Отправка новостей по клиенту/сырью/отрасли (reply_msg).
+
+    :param bot: Объект телеграм бота aiogram.Bot
+    :param chat_id: Чат, в который нужно отправить новости
+    :param reply_msg: Новости, разделенные \n\n
+    :param subject_id: id клиента или сырья, или отрасли
+    :param subject: название таблицы объекта (client, commodity, industry)  FIXME Enum
+    :param next_news_offset: Данные для формирование кнопки Еще новости
+    :param articles_limit: Кол-во новостей, которые надо отправить
+    """
+    articles_all = reply_msg.split('\n\n', articles_limit)
+    if len(articles_all) > articles_limit:
+        articles_upto_limit = '\n\n'.join(articles_all[:articles_limit])
+        keyboard = InlineKeyboardBuilder()
+        callback_meta = NextNewsCallback(
+            subject_id=subject_id,
+            subject=subject,
+            offset=next_news_offset,
+        )
+        keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta.pack()))
+        keyboard = keyboard.as_markup()
+    else:
+        articles_upto_limit = reply_msg
+        keyboard = None
+
+    sent_messages = await utils.base.bot_send_msg(bot, chat_id, articles_upto_limit)
+    await bot.edit_message_reply_markup(chat_id, message_id=sent_messages[-1].message_id, reply_markup=keyboard)
 
 
 @router.callback_query(NextNewsCallback.filter())
@@ -49,9 +77,10 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
     """Отправляет пользователю еще новостей по client или commodity"""
     subject_id = callback_data.subject_id
     subject = callback_data.subject
-    limit_all = config.NEWS_LIMIT * 2 + 1
+    limit_all = config.NEWS_LIMIT + 1
     offset_all = callback_data.offset
-    user_msg = callback_data.user_msg
+    user_msg = callback_data.pack()
+
     callback_values = call.from_user
     full_name = f"{callback_values.first_name} {callback_values.last_name or ''}"
     chat_id = call.message.chat.id
@@ -59,61 +88,13 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
     if not subject_id or not subject:
         return
 
-    try:
-        limit_all = int(limit_all)
-        offset_all = int(offset_all)
-    except (ValueError, TypeError):
-        return
-
     ap_obj = ArticleProcess(logger)
 
-    com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
-    new_offset = offset_all + config.NEWS_LIMIT * 2
+    _, reply_msg = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    new_offset = offset_all + config.NEWS_LIMIT
 
     if reply_msg and isinstance(reply_msg, str):
-        articles_all = reply_msg.split('\n\n', limit_all)
-        if len(articles_all) > limit_all:
-            articles_f5 = '\n\n'.join(articles_all[:limit_all])
-            keyboard = InlineKeyboardBuilder()
-            try:
-                callback_meta = NextNewsCallback(
-                    subject_id=subject_id,
-                    subject=subject,
-                    user_msg=user_msg,
-                    offset=new_offset,
-                )
-            except ValueError:
-                callback_meta = NextNewsCallback(
-                    subject_id=subject_id,
-                    subject=subject,
-                    user_msg='',
-                    offset=new_offset,
-                )
-            keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta.pack()))
-            keyboard = keyboard.as_markup()
-        else:
-            articles_f5 = reply_msg
-            keyboard = None
-
-        if len(articles_f5.encode()) < 4050:
-            await call.message.answer(
-                articles_f5, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard
-            )
-        else:
-            articles = articles_f5.split('\n\n')
-            articles_len = len(articles)
-            callback_markup = None
-            for i, article in enumerate(articles, 1):
-                if len(article.encode()) < 4050:
-                    if i == articles_len:
-                        callback_markup = keyboard
-                    await call.message.answer(
-                        article, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=callback_markup
-                    )
-                    await asyncio.sleep(1.1)  # otherwise flood control return us 429 error
-                else:
-                    logger.error(f'MessageIsTooLong ERROR: {article}')
-
+        await send_news_with_next_button(call.bot, chat_id, reply_msg, subject_id, subject, new_offset, limit_all)
         await call.message.edit_reply_markup()
 
         user_logger.info(
@@ -215,6 +196,24 @@ async def send_nearest_subjects(message: types.Message) -> None:
     )
 
 
+async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: ArticleProcess) -> None:
+    """
+    Отправляет сообщение с ссылкой на invaigator клиента
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_id: id клиента (client.id)
+    :param ap_obj: Объект, который ищет и форматирует новости
+    """
+    try:
+        name, navi_link = ap_obj.get_client_name_and_navi_link(client_id)
+        if navi_link is not None:
+            await message.answer(
+                f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
+                parse_mode='HTML',
+            )
+    except Exception as e:
+        logger.error(f'ERROR *{message.chat.id}* {message.text} - {e}')
+
+
 async def send_news(message: types.Message, user_msg: str, full_name: str) -> bool:
     """Отправка новостей по клиенту/сырьевому товару/отрасли"""
     chat_id = message.chat.id
@@ -228,7 +227,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
     if subject_ids:
         industry_id = subject_ids[0]
-        not_use, reply_msg = ap_obj.process_user_alias(industry_id, subject)
+        _, reply_msg = ap_obj.process_user_alias(industry_id, subject)
         await bot_send_msg(message.bot, chat_id, reply_msg)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
         return True
@@ -243,60 +242,21 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
 
         return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
 
-        if reply_msg:
+        if not reply_msg:
+            continue
 
-            if com_price:
-                await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
+        if com_price:
+            await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
 
-            if isinstance(reply_msg, str):
-                articles_all = reply_msg.split('\n\n', config.NEWS_LIMIT + 1)
-                if len(articles_all) > config.NEWS_LIMIT + 1:
-                    articles_f5 = '\n\n'.join(articles_all[: config.NEWS_LIMIT + 1])
-                    keyboard = InlineKeyboardBuilder()
-                    try:
-                        callback_meta = NextNewsCallback(
-                            subject_id=subject_id,
-                            subject=subject,
-                            user_msg=user_msg,
-                            offset=config.NEWS_LIMIT,
-                        )
-                    except ValueError:
-                        callback_meta = NextNewsCallback(
-                            subject_id=subject_id,
-                            subject=subject,
-                            user_msg='',
-                            offset=config.NEWS_LIMIT,
-                        )
-                    keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta.pack()))
-                    keyboard = keyboard.as_markup()
-                else:
-                    articles_f5 = reply_msg
-                    keyboard = None
+        if isinstance(reply_msg, str):
+            await send_news_with_next_button(message.bot, chat_id, reply_msg, subject_id, subject,
+                                             config.NEWS_LIMIT, config.NEWS_LIMIT + 1)
 
-                try:
-                    await message.answer(
-                        articles_f5,
-                        parse_mode='HTML',
-                        protect_content=False,
-                        disable_web_page_preview=True,
-                        reply_markup=keyboard,
-                    )
-                except Exception as e:
-                    logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
+            if subject == 'client':
+                await send_client_navi_link(message, subject_id, ap_obj)
 
-                try:
-                    if subject == 'client':
-                        name, navi_link = ap_obj.get_client_name_and_navi_link(subject_id)
-                        if navi_link is not None:
-                            await message.answer(
-                                f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
-                                parse_mode='HTML',
-                            )
-                except Exception as e:
-                    logger.error(f'ERROR *{chat_id}* {msg_text} - {e}')
-
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
-            return_ans = True
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
+        return_ans = True
 
     if not return_ans:
         return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
@@ -304,8 +264,17 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     return return_ans
 
 
-async def get_subject_news(callback_query: types.CallbackQuery, callback_data: CallbackData, subject_db_api) -> None:
-    """Получение имени subject и отправка новостей по нему"""
+async def get_subject_news(
+        callback_query: types.CallbackQuery,
+        callback_data: CallbackData,
+        subject_db_api: SubjectInterface,
+) -> None:
+    """
+    Получение имени subject и отправка новостей по нему
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Хранит id объекта, по которому вынимаются новости
+    :param subject_db_api: Интерфейс взаимодействия с таблицами клиентов/сырья/отраслей
+    """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
@@ -361,15 +330,15 @@ async def find_news(message: types.Message, state: FSMContext) -> None:
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
         else:
             aliases_dict = {
-                **{alias: (common.help_handler, {}) for alias in help_aliases},
-                **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in gigachat_aliases},
-                **{alias: (rag.set_rag_mode, {'state': state}) for alias in rag_aliases},
-                **{alias: (common.open_meeting_app, {}) for alias in web_app_aliases},
-                **{alias: (quotes.bonds_info, {}) for alias in bonds_aliases},
-                **{alias: (quotes.economy_info, {}) for alias in eco_aliases},
-                **{alias: (quotes.metal_info, {}) for alias in metal_aliases},
-                **{alias: (quotes.exchange_info, {}) for alias in exchange_aliases},
-                **{alias: (analytics_sell_side.data_mart_body, {}) for alias in view_aliases},
+                **{alias: (common.help_handler, {}) for alias in aliases.help_aliases},
+                **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in aliases.gigachat_aliases},
+                **{alias: (rag.set_rag_mode, {'state': state}) for alias in aliases.rag_aliases},
+                **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
+                **{alias: (quotes.bonds_info, {}) for alias in aliases.bonds_aliases},
+                **{alias: (quotes.economy_info, {}) for alias in aliases.eco_aliases},
+                **{alias: (quotes.metal_info, {}) for alias in aliases.metal_aliases},
+                **{alias: (quotes.exchange_info, {}) for alias in aliases.exchange_aliases},
+                **{alias: (analytics_sell_side.data_mart_body, {}) for alias in aliases.view_aliases},
             }
             message_text = message.text.lower().strip()
             function_to_call, kwargs = aliases_dict.get(message_text, (None, None))

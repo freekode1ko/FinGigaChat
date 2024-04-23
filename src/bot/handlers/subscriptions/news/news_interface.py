@@ -204,8 +204,9 @@ class NewsHandler:
         async def showmeindustry(
                 callback_query: types.CallbackQuery,
                 callback_data: CallbacksModule.ShowIndustry,
-        ) -> None:  # FIXME show only industries with related data
+        ) -> None:
             """
+            Сообщение с кнопками для получения готовых сборок подписок по отраслям
             :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
             :param callback_data: Действие пользователя
             """
@@ -215,6 +216,9 @@ class NewsHandler:
 
             keyboard = InlineKeyboardBuilder()
             industries = await industry_db.get_all()
+            subjects = await self.subject_db.get_all()
+            industries = industries[industries['id'].isin(subjects['industry_id'])]
+
             for _, industry in industries.iterrows():
                 keyboard.row(
                     types.InlineKeyboardButton(
@@ -231,6 +235,7 @@ class NewsHandler:
                 callback_data: CallbacksModule.WhatInThisIndustry,
         ) -> None:
             """
+            Отображение связанных с отраслью объектов (клиентов или сырья)
             :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
             :param callback_data: Содержит id отрасли
             """
@@ -238,7 +243,8 @@ class NewsHandler:
             chat_id, user_first_name = from_user.id, from_user.first_name
 
             industry_id = callback_data.industry_id
-            ref_book = industry_db.get(industry_id)['name']
+            ref_book = await industry_db.get(industry_id)
+            ref_book = ref_book['name']
 
             user_logger.info(f'Пользователь *{chat_id}* {user_first_name} смотрит список по {ref_book}')
             objects = await self.subject_db.get_by_industry_id(industry_id)

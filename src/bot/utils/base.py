@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta, date
 from math import ceil
 from pathlib import Path
-from typing import List, Union, Tuple, Optional
+from typing import Optional
 
 import pandas as pd
 from aiogram import Bot, types
@@ -19,7 +19,7 @@ from db.database import engine
 from log.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> List[types.Message]:
+async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = '\n\n', prefix: str = '') -> list[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -28,12 +28,12 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
-    return: List[aiogram.types.Message] Список объетов отправленных сообщений
+    return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
     current_batch = prefix
     max_batch_length = 4096
-    messages: List[types.Message] = []
+    messages: list[types.Message] = []
 
     for paragraph in msg.split(delimiter):
         if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
@@ -166,7 +166,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 async def __sent_photo_and_msg(
     message: types.Message,
-    photo: Union[types.InputFile, str],
+    photo: types.InputFile | str,
     day: list[list] = None,
     month: list[list] = None,
     title: str = '',
@@ -348,7 +348,7 @@ def get_page_data_and_info(
         all_data_df: pd.DataFrame,
         page: int,
         page_elements: int = PAGE_ELEMENTS_COUNT,
-) -> Tuple[pd.DataFrame, str, int]:
+) -> tuple[pd.DataFrame, str, int]:
     """
     1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
     2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
@@ -378,7 +378,7 @@ def unwrap_callback_data(data: str) -> str:
     return data.replace(';', ':')
 
 
-def next_weekday(d: Union[date, datetime], weekday: int) -> Union[date, datetime]:
+def next_weekday(d: date | datetime, weekday: int) -> date | datetime:
     """
     Вычисляет дату/дату_время следующего дня недели относительно переданной даты/даты_времени
 
@@ -415,7 +415,7 @@ async def wait_until(to_dt: datetime) -> None:
 
 
 async def send_or_edit(
-        message: Union[types.CallbackQuery, types.Message],
+        message: types.CallbackQuery | types.Message,
         msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
 ) -> None:
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
