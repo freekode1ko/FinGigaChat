@@ -254,7 +254,10 @@ def get_periods_kb(
         client_id: int,
         current_page: int,
         subscribed: bool,
+        research_type_id: int,
         periods: list[dict[str, Any]],
+        select_period_menu: callback_data_factories.ClientsMenusEnum,
+        back_menu: callback_data_factories.ClientsMenusEnum,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура с выбором периода, за который выгружаются новости по клиенту
@@ -262,7 +265,10 @@ def get_periods_kb(
     :param client_id: client.id
     :param current_page: ClientsMenuData.page
     :param subscribed: ClientsMenuData.subscribed
+    :param research_type_id: ClientsMenuData.research_type_id
     :param periods: list[dict[text: str, days: int]]
+    :param select_period_menu: callback_data_factories.ClientsMenusEnum пункт меню, в который ведет выбор периода
+    :param back_menu: callback_data_factories.ClientsMenusEnum пункт меню, в который ведет кнопка Назад
     return:
     [ period.text ]
     ...
@@ -275,8 +281,9 @@ def get_periods_kb(
         keyboard.row(types.InlineKeyboardButton(
             text=period['text'],
             callback_data=callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.news_by_period,
+                menu=select_period_menu,
                 client_id=client_id,
+                research_type_id=research_type_id,
                 days_count=period['days'],
                 page=current_page,
                 subscribed=subscribed,
@@ -286,8 +293,9 @@ def get_periods_kb(
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_data_factories.ClientsMenuData(
-            menu=callback_data_factories.ClientsMenusEnum.client_news_menu,
+            menu=back_menu,
             client_id=client_id,
+            research_type_id=research_type_id,
             page=current_page,
             subscribed=subscribed,
         ).pack(),
@@ -331,6 +339,91 @@ def get_products_menu_kb(
         callback_data=callback_data_factories.ClientsMenuData(
             menu=callback_data_factories.ClientsMenusEnum.client_menu,
             client_id=client_id,
+            page=current_page,
+            subscribed=subscribed,
+        ).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.end_menu,
+        ).pack(),
+    ))
+    return keyboard.as_markup()
+
+
+def client_analytical_indicators_kb(
+        client_id: int,
+        current_page: int,
+        subscribed: bool,
+        research_type_id: int,
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида:
+    [ Аналитические обзоры ]
+    [ P&L модель ]
+    [ Модель баланса ]
+    [ Модель CF ]
+    [ Коэффициенты ]
+    [  назад  ]
+    [   Завершить   ]
+
+    :param client_id: client.id
+    :param current_page: ClientsMenuData.page
+    :param subscribed: ClientsMenuData.subscribed
+    :param research_type_id: ClientsMenuData.research_type_id
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    buttons = [
+        {
+            'name': 'Аналитические обзоры',
+            'callback_data': callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.analytic_reports,
+                client_id=client_id,
+                research_type_id=research_type_id,
+                page=current_page,
+                subscribed=subscribed,
+            ).pack(),
+        },
+        {
+            'name': 'P&L модель',
+            'callback_data': callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+            ).pack(),
+        },
+        {
+            'name': 'Модель баланса',
+            'callback_data': callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+            ).pack(),
+        },
+        {
+            'name': 'Модель CF',
+            'callback_data': callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+            ).pack(),
+        },
+        {
+            'name': 'Коэффициенты',
+            'callback_data': callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+            ).pack(),
+        },
+    ]
+
+    for item in buttons:
+        keyboard.row(types.InlineKeyboardButton(
+            text=item['name'],
+            callback_data=item['callback_data'],
+        ))
+
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.BACK_BUTTON_TXT,
+        callback_data=callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.client_menu,
+            client_id=client_id,
+            research_type_id=research_type_id,
             page=current_page,
             subscribed=subscribed,
         ).pack(),

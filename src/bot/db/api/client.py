@@ -18,7 +18,7 @@ def get_client_navi_link_by_name(client_name: str) -> Optional[str]:
 async def get_research_type_id_by_name(client_name: str) -> Optional[dict[str, Any]]:
     async with database.async_session() as session:
         stmt = sa.select(models.ResearchType.id).where(
-            models.ResearchType.name == client_name
+            sa.func.lower(models.ResearchType.name) == client_name.lower()
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()

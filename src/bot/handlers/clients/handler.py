@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from aiogram import F, Router, types
 from aiogram.filters import Command
@@ -6,13 +7,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
+from db import subscriptions as subscriptions_db_api
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
 from handlers import products
+from handlers.analytics.analytics_sell_side.handler import get_researches_over_period
 from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
-from log.bot_logger import user_logger, logger
+from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
+from log.bot_logger import user_logger
 from module.article_process import FormatText
 from utils.base import send_or_edit, user_in_whitelist, get_page_data_and_info
 
@@ -151,7 +155,7 @@ async def get_client_menu(
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
     )
-    msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_info["name"]}</b>'
+    msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_info["name"].capitalize()}</b>'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -181,7 +185,7 @@ async def get_client_news_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
     )
-    msg_text = f'Какие новости вы хотите получить по клиенту <b>{client_info["name"]}</b>'
+    msg_text = f'Какие новости вы хотите получить по клиенту <b>{client_info["name"].capitalize()}</b>'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -205,7 +209,21 @@ async def get_client_analytic_indicators(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    # FIXME Придумать эту хрень
+    callback_data.menu = callback_data_factories.ClientsMenusEnum.client_menu
+
+    research_type_id = callback_data.research_type_id
+
+    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
+
+    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info["name"]}</b>?'
+    keyboard = keyboards.client_analytical_indicators_kb(
+        client_id=callback_data.client_id,
+        current_page=callback_data.page,
+        subscribed=callback_data.subscribed,
+        research_type_id=research_type_id,
+    )
+
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -231,7 +249,7 @@ async def get_client_industry_analytics(
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Отраслевая аналитика по клиенту <b>{client_info["name"]}</b>\n'
+        f'Отраслевая аналитика по клиенту <b>{client_info["name"].capitalize()}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -264,7 +282,7 @@ async def get_client_products_menu(
         subscribed=callback_data.subscribed,
     )
 
-    msg_text = f'Продуктовые предложения по клиенту <b>{client_info["name"]}</b>'
+    msg_text = f'Продуктовые предложения по клиенту <b>{client_info["name"].capitalize()}</b>'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -289,9 +307,9 @@ async def get_client_inavigator(
 
     client_info = await client_db.get(callback_data.client_id)
     if client_info['navi_link']:
-        msg_text = f'<a href="{str(client_info["navi_link"])}">Цифровая справка клиента: "{client_info["name"]}"</a>'
+        msg_text = f'<a href="{str(client_info["navi_link"])}">Цифровая справка клиента: "{client_info["name"].capitalize()}"</a>'
     else:
-        msg_text = f'Цифровая справка по клиенту "{client_info["name"]}" отсутствует'
+        msg_text = f'Цифровая справка по клиенту "{client_info["name"].capitalize()}" отсутствует'
 
     await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -318,7 +336,7 @@ async def get_client_meetings_data(
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Материалы для встречи по клиенту <b>{client_info["name"]}</b>\n'
+        f'Материалы для встречи по клиенту <b>{client_info["name"].capitalize()}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -347,7 +365,7 @@ async def get_client_call_reports_menu(
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Call reports по клиенту <b>{client_info["name"]}</b>\n'
+        f'Call reports по клиенту <b>{client_info["name"].capitalize()}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -376,7 +394,7 @@ async def get_client_top_news(
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
-        f'Топ новости по клиенту <b>{client_info["name"]}</b>\n'
+        f'Топ новости по клиенту <b>{client_info["name"].capitalize()}</b>\n'
         f'Функциональность будет реализована позднее'
     )
     await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -389,12 +407,16 @@ async def get_client_top_news(
 async def get_client_select_period_menu(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
+        select_period_menu: Optional[callback_data_factories.ClientsMenusEnum] = None,
+        back_menu: Optional[callback_data_factories.ClientsMenusEnum] = None,
 ) -> None:
     """
     Меню выбора периода для выгрузки новостей по клиенту
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param select_period_menu: callback_data_factories.ClientsMenusEnum пункт меню, в который ведет выбор периода
+    :param back_menu: callback_data_factories.ClientsMenusEnum пункт меню, в который ведет кнопка Назад
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -420,14 +442,19 @@ async def get_client_select_period_menu(
             'days': 30,  # average
         },
     ]
+    select_period_menu = select_period_menu or callback_data_factories.ClientsMenusEnum.news_by_period
+    back_menu = back_menu or callback_data_factories.ClientsMenusEnum.client_news_menu
 
     keyboard = keyboards.get_periods_kb(
         callback_data.client_id,
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
+        research_type_id=callback_data.research_type_id,
         periods=periods,
+        select_period_menu=select_period_menu,
+        back_menu=back_menu,
     )
-    msg_text = f'Выберите период для получения новостей по клиенту <b>{client_info["name"]}</b>'
+    msg_text = f'Выберите период для получения новостей по клиенту <b>{client_info["name"].capitalize()}</b>'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -471,7 +498,6 @@ async def get_client_news_by_period(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    # FIXME
 
     client_id = callback_data.client_id
     days = callback_data.days_count
@@ -480,7 +506,7 @@ async def get_client_news_by_period(
     to_date = datetime.date.today()
     from_date = to_date - datetime.timedelta(days=days)
 
-    msg_text = f'Новости по клиенту <b>{client_info["name"]}</b> за {days} дней\n'
+    msg_text = f'Новости по клиенту <b>{client_info["name"].capitalize()}</b> за {days} дней\n'
     articles = await client_db.get_articles_by_subject_id(client_id, from_date, to_date, order_by=Article.date.desc())
     if not articles:
         msg_text += 'отсутствуют'
@@ -499,4 +525,71 @@ async def get_client_news_by_period(
         await utils.base.bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.analytic_reports
+))
+async def analytic_reports(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Меню выбора периода для отправки отчетов за указанный период
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Хранит research_type_id
+    """
+    await get_client_select_period_menu(
+        callback_query,
+        callback_data,
+        select_period_menu=callback_data_factories.ClientsMenusEnum.get_anal_reports,
+        back_menu=callback_data_factories.ClientsMenusEnum.analytic_indicators,
+    )
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.not_implemented
+))
+async def not_implemented(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Вывод сообщения, что функция еще не готова
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    msg_text = 'Функционал появится позднее'
+
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.get_anal_reports
+))
+async def get_anal_reports(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Отправка отчетов за указанный период
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Хранит research_type_id
+    """
+    await get_researches_over_period(
+        callback_query,
+        analytics_callbacks.GetResearchesOverDays(
+            research_type_id=callback_data.research_type_id,
+            days_count=callback_data.days_count,
+        ),
+    )
 
