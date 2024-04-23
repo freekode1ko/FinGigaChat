@@ -7,7 +7,7 @@ from db import database, models
 from db.api.subject_interface import SubjectInterface
 
 
-def get_client_navi_link_by_name(client_name: str) -> Optional[str]:
+def get_client_navi_link_by_name(client_name: str) -> str | None:
     with database.engine.connect() as conn:
         query = text('SELECT navi_link FROM client WHERE LOWER(name)=:client_name LIMIT 1')
         navi_link = conn.execute(query.bindparams(client_name=client_name.lower())).scalar_one_or_none()
@@ -15,7 +15,7 @@ def get_client_navi_link_by_name(client_name: str) -> Optional[str]:
     return navi_link
 
 
-async def get_research_type_id_by_name(client_name: str) -> Optional[dict[str, Any]]:
+async def get_research_type_id_by_name(client_name: str) -> int | None:
     async with database.async_session() as session:
         stmt = sa.select(models.ResearchType.id).where(
             sa.func.lower(models.ResearchType.name) == client_name.lower()
