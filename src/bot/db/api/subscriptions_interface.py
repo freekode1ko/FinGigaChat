@@ -10,6 +10,13 @@ from db.models import Base
 class SubscriptionInterface:
 
     def __init__(self, table: Type[Base], subject_id_field: str, subject_table: Type[Base]) -> None:
+        """
+        Инициализация объекта, предоставляющего интерфейс для взаимодействия с подписками с таблицей table
+
+        :param table: Таблица sqlalchemy.orm с подписками
+        :param subject_table: Таблица sqlalchemy.orm, которая содержит элементы, на которые подписывается пользователь
+        :param subject_id_field: Название столбца ссылки на элемент subject_table
+        """
         self.table = table
         self.subject_table = subject_table
         self.subject_id_field = subject_id_field

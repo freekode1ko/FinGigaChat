@@ -1,4 +1,4 @@
-from typing import List
+from typing import Optional
 
 import pandas as pd
 from fuzzywuzzy import process
@@ -12,7 +12,7 @@ class FuzzyAlternativeNames:
         self._logger = logger
         self.engine = engine
 
-    def get_subjects_names(self, subjects: List[str]) -> List[str]:
+    def get_subjects_names(self, subjects: list[str]) -> list[str]:
         """
         Получение всех альтернативных имен по списку из industry, client, commodity
         """
@@ -25,7 +25,7 @@ class FuzzyAlternativeNames:
                 subjects_names.extend(names)
         return subjects_names
 
-    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> List[str]:
+    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
         """
@@ -41,7 +41,11 @@ class FuzzyAlternativeNames:
 
         return names
 
-    def find_nearest_to_subjects_list(self, subjects_names: list[str], subject_types: list[str] = None) -> List[str]:
+    def find_nearest_to_subjects_list(
+            self,
+            subjects_names: list[str],
+            subject_types: Optional[list[str]] = None,
+    ) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
 
@@ -64,4 +68,3 @@ class FuzzyAlternativeNames:
             near_subjects.append(process.extractOne(subject_name, db_subjects_names)[0])
 
         return near_subjects
-

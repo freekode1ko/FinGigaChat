@@ -93,15 +93,15 @@ async def subscriptions_newsletter(
     saved_messages: list[dict] = []
     newsletter_type = 'subscriptions_news'
 
-    users = await get_users_subscriptions()
+    user_df = await get_users_subscriptions()
 
     row_number = 0
-    for user in users:
-        user_id = user[0]
-        user_name = user[1]
-        industry_ids = user[2]
-        client_ids = user[3]
-        commodity_ids = user[4]
+    for _, user in user_df.iterrows():
+        user_id = user['user_id']
+        user_name = user['username']
+        industry_ids = user['industry_ids']
+        client_ids = user['client_ids']
+        commodity_ids = user['commodity_ids']
 
         if not industry_ids and not client_ids and not commodity_ids:
             continue

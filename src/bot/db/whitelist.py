@@ -1,3 +1,4 @@
+import pandas as pd
 from sqlalchemy import text, select, func
 
 from db import models, database
@@ -26,7 +27,7 @@ def is_user_email_exist(user_id: int) -> bool:
         return conn.execute(query).all()
 
 
-async def get_users_subscriptions() -> list[tuple[int, str, list[int], list[int], list[int]]]:
+async def get_users_subscriptions() -> pd.DataFrame:
     async with database.async_session() as session:
         stmt = select(
             models.Whitelist.user_id,
@@ -42,4 +43,4 @@ async def get_users_subscriptions() -> list[tuple[int, str, list[int], list[int]
             models.UserCommoditySubscriptions
         ).group_by(models.Whitelist.user_id)
         result = await session.execute(stmt)
-        return list(result.all())
+        return pd.DataFrame(result.all(), columns=['user_id', 'username', 'industry_ids', 'client_ids', 'commodity_ids'])
