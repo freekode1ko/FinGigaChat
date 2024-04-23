@@ -17,7 +17,7 @@ from db.models import Whitelist, IndustryAlternative, ClientAlternative, Commodi
 
 # revision identifiers, used by Alembic.
 revision: str = 'cb0c129f1d44'
-down_revision: Union[str, None] = 'f4b27e7052d3'
+down_revision: Union[str, None] = '36063d53d301'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
