@@ -36,7 +36,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр клиентов завершен')  # FIXME text Уточнить у Никиты текстовку
+    await callback_query.message.edit_text(text='Просмотр клиентов завершен')
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
@@ -45,9 +45,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
-    msg_text = (
-        'Клиенты'  # FIXME text Уточнить у Никиты текстовку
-    )
+    msg_text = 'Клиенты'
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -112,16 +110,16 @@ async def clients_list(
     page = callback_data.page
     clients = await client_db.get_all()
     client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
-    clients = (
-        clients[clients['id'].isin(client_subscriptions['id'])] if subscribed
-        else clients[~clients['id'].isin(client_subscriptions['id'])]
-    )
+    if subscribed:
+        msg_text = 'Выберите клиента из списка ваших подписок'
+        clients = clients[clients['id'].isin(client_subscriptions['id'])]
+    else:
+        msg_text = 'Выберите клиента из общего списка'
+        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
 
     page_data, page_info, max_pages = get_page_data_and_info(clients, page)
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
-    msg_text = (
-        f'Выберите клиента\n<b>{page_info}</b>\n\n'  # FIXME text Уточнить у Никиты текстовку
-    )
+    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\n'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
