@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from environs import Env
@@ -7,8 +6,6 @@ PROJECT_DIR = Path(__file__).parent
 STATIC_CERTS_PATH = PROJECT_DIR / 'data' / 'certs'
 STATIC_CHAIN_PATH = STATIC_CERTS_PATH / 'fullchain.pem'
 STATIC_KEY_PATH = STATIC_CERTS_PATH / 'privkey.pem'
-JS_CONFIG_PATH = PROJECT_DIR / 'frontend' / 'static' / 'config.json'
-JS_CONFIG_PATH.touch(exist_ok=True)
 
 LOG_FILE = 'web_app'
 LOG_LEVEL = 20  # info
@@ -31,9 +28,6 @@ match DOMAIN_NAME:
         WEB_APP_URL = f'https://{DOMAIN_NAME}'
     case _:
         WEB_APP_URL = f'http://{DOMAIN_NAME}'
-
-with open(JS_CONFIG_PATH, 'w') as file:
-    json.dump({"WEB_APP_URL": WEB_APP_URL}, file)
 
 
 # _________________________date_format_________________________

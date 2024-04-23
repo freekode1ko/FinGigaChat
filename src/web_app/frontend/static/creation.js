@@ -1,5 +1,6 @@
-import data from './config.json' with { type: 'json' };
-let url = data.WEB_APP_URL;
+let currentUrl = window.location.href;
+let regex = /\/meeting.*/;
+let url = currentUrl.replace(regex, "");
 
 let tg = window.Telegram.WebApp;
 
