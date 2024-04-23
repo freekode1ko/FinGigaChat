@@ -36,6 +36,15 @@ class ClientsMenusEnum(IntEnum):
     # Новости за период (переход из news_by_period)
     news_by_period = auto()
 
+    # Вывод сообщения, то функционал не готов
+    not_implemented = auto()
+
+    # Меню периодов для получения отчетов CIB Research по клиенту
+    analytic_reports = auto()
+
+    # Выгрузка отчетов за период
+    get_anal_reports = auto()
+
 
 class ClientsMenuData(CallbackData, prefix=MENU):
     """Меню клиенты"""
