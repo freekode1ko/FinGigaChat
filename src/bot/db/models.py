@@ -590,3 +590,17 @@ class UserIndustrySubscriptions(Base):
 
     user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class IndustryDocuments(Base):
+    __tablename__ = 'bot_industry_documents'
+    __table_args__ = {'comment': 'Справочник файлов отраслевой аналитики'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    file_name = Column(String(255), nullable=False, comment='Имя файла')
+    file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'),
+                         primary_key=False, nullable=True, comment='id отрасли')
+    industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
+                           comment='тип отрасли')

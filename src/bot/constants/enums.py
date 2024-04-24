@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, IntEnum, auto
 
 
 class Environment(str, Enum):
@@ -64,3 +64,9 @@ class FIGroupType(Enum):
     @property
     def title(self):
         return self._title_
+
+
+class IndustryTypes(IntEnum):
+    default = auto()            # Все стандартные отрасли
+    other = auto()              # Пункт прочее
+    general_comments = auto()   # Пункт общий комментарий
