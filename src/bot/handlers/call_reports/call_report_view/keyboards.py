@@ -42,7 +42,7 @@ def get_keyboard_for_view_call_report(
     )
     keyboard.row(
         InlineKeyboardButton(
-            text=f'Редактировать',
+            text='Редактировать',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.edit_report,
                 report_id=report_id,
@@ -95,7 +95,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text=f'Изменить клиента',
+            text='Изменить клиента',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.edit_report_name,
                 report_id=report_id,
@@ -105,7 +105,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
     )
     keyboard.row(
         InlineKeyboardButton(
-            text=f'Изменить дату',
+            text='Изменить дату',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.edit_report_date,
                 report_id=report_id,
@@ -115,7 +115,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
     )
     keyboard.row(
         InlineKeyboardButton(
-            text=f'Изменить описание',
+            text='Изменить описание',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.edit_report_description,
                 report_id=report_id,
@@ -125,7 +125,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
     )
     keyboard.row(
         InlineKeyboardButton(
-            text=f'Назад',
+            text='Назад',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.report_view,
                 report_id=report_id,

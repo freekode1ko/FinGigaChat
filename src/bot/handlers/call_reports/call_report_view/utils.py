@@ -82,24 +82,15 @@ async def call_report_edit_answer(
     :param return_menu: Меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
     :param edit_message: Параметр для указания нужно ли редактировать сообщение или отправить новое
     """
+    message_text = (
+        'Протокол встречи:\n'
+        f'Клиент: {report.client}\n'
+        f'Дата: {report.date()}\n'
+        f'Запись встречи: {report.description}\n'
+    )
+    reply_markup = get_keyboard_for_edit_call_report(report._id, return_menu).as_markup()
 
     if edit_message:
-        await message.edit_text(
-            (
-                'Протокол встречи:\n'
-                f'Клиент: {report.client}\n'
-                f'Дата: {report.date()}\n'
-                f'Запись встречи: {report.description}\n'
-            ),
-            reply_markup=get_keyboard_for_edit_call_report(report._id, return_menu).as_markup(),
-        )
+        await message.edit_text(message_text, reply_markup=reply_markup)
     else:
-        await message.answer(
-            (
-                'Протокол встречи:\n'
-                f'Клиент: {report.client}\n'
-                f'Дата: {report.date()}\n'
-                f'Запись встречи: {report.description}\n'
-            ),
-            reply_markup=get_keyboard_for_edit_call_report(report._id, return_menu).as_markup(),
-        )
+        await message.answer(message_text, reply_markup=reply_markup)
