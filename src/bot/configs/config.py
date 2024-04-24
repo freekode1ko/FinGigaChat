@@ -94,6 +94,11 @@ BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
 QUERY_STATE_SUPPORT_URL = 'http://89.223.65.160:8031/api/v1/question'
 POST_TO_SERVICE_TIMEOUT = 90
 
+ECO_INAVIGATOR_URL = (
+    'https://upd.mobile.sbrf.ru:10443/ios/dl/gdash/9845/1964'
+    '#ewogICJ3aWRnZXRzIiA6IHsKICAgICIyODM2NDEiIDogewoKICAgIH0KICB9Cn0='
+)
+
 reg_mail_text = (
     'Добрый день!\n\nВы получили данное письмо, потому что указали данный адрес в AI-помощнике Банкира.\n\n'
     'Код для завершения регистрации:\n\n{}\n'

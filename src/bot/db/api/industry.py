@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from sqlalchemy import text, select
 
+from constants import enums
 from db import database
 from db.api.subject_interface import SubjectInterface
-from db.models import Industry, IndustryAlternative
+from db.models import Industry, IndustryAlternative, IndustryDocuments
 
 
 def get_industries_with_tg_channels() -> pd.DataFrame:
@@ -80,6 +81,28 @@ async def get_by_name(name: str) -> dict[str, Any]:
             'name': data[1],
         }
         return data
+
+
+async def get_industry_analytic_files(
+        industry_id: Optional[int] = None,
+        industry_type: Optional[enums.IndustryTypes] = None,
+) -> list[IndustryDocuments]:
+    if industry_id is None and industry_type is None:
+        return []
+
+    async with database.async_session() as session:
+        stmt = select(IndustryDocuments)
+
+        if industry_id is not None:
+            stmt = stmt.where(
+                IndustryDocuments.industry_id == industry_id,
+            )
+        if industry_type is not None:
+            stmt = stmt.where(
+                IndustryDocuments.industry_type == industry_type.value,
+            )
+        result = await session.execute(stmt)
+        return list(result.scalars())
 
 
 industry_db = SubjectInterface(Industry, IndustryAlternative, Industry.industry_alternative)

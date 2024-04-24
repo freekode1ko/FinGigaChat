@@ -21,7 +21,7 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    msg_text = 'Господдержка'
+    msg_text = state_support.TITLE
     pdf_files = [state_support.DATA_ROOT_PATH / i for i in os.listdir(state_support.DATA_ROOT_PATH)]
     await send_pdf(callback_query, pdf_files, msg_text)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
