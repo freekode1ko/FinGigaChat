@@ -1,3 +1,6 @@
+"""
+Вспомогательные функции при создании call report'ов
+"""
 import os
 import subprocess
 from datetime import datetime
@@ -5,7 +8,7 @@ from typing import Optional
 
 import requests
 import speech_recognition as sr
-from aiogram import types
+from aiogram.types import Message
 
 from configs import config
 from log.bot_logger import logger
@@ -14,7 +17,9 @@ from log.bot_logger import logger
 def validate_and_parse_date(date_str: str) -> Optional[datetime.date]:
     """
     Валидация строки с датой и возвращение ее в datetime object
+
     :param date_str: date str
+    :return: Возвращает время в питоновском формате
     """
     try:
         date_obj = datetime.strptime(date_str, config.BASE_DATE_FORMAT)
@@ -23,7 +28,7 @@ def validate_and_parse_date(date_str: str) -> Optional[datetime.date]:
         return
 
 
-async def audio_to_text(message: types.Message, ) -> str:
+async def audio_to_text(message: Message) -> str:
     """
     Превращает аудио сообщение в текст
 

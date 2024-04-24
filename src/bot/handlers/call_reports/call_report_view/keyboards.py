@@ -1,3 +1,6 @@
+"""
+Набор функций для создания кнопок при просмотре call report'ов
+"""
 import copy
 
 from aiogram.types import InlineKeyboardButton
@@ -9,9 +12,16 @@ from handlers.call_reports.callbackdata import CRMenusEnum, CRViewAndEdit, CRMai
 emoji = copy.deepcopy(config.dict_of_emoji)
 
 
-def get_keyboard_for_view_call_report(report_id: int, return_menu: CRMenusEnum, custom_send_main_button):
+def get_keyboard_for_view_call_report(report_id: int, return_menu: CRMenusEnum, custom_send_mail_button: bool = False):
+    """
+    Клавиатура появляющаяся при просмотре call report'ов
+
+    :param report_id: айди в базе call report'а
+    :param return_menu: меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
+    :param custom_send_mail_button: Параметр отвечающий за название кнопки отправки call report'а на почту
+    """
     keyboard = InlineKeyboardBuilder()
-    if custom_send_main_button:
+    if custom_send_mail_button:
         send_mail_text = 'Протокол на почту отправлен'
     else:
         send_mail_text = 'Отправить на почту'
@@ -71,6 +81,13 @@ def get_keyboard_for_view_call_report(report_id: int, return_menu: CRMenusEnum, 
 
 
 def get_keyboard_for_edit_call_report(report_id, return_menu):
+    """
+    Клавиатура появляющаяся при редактировании call report'ов
+
+    :param report_id: айди в базе call report'а
+    :param return_menu: меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
+    """
+
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(

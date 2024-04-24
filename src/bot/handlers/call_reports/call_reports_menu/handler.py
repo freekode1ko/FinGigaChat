@@ -1,6 +1,10 @@
+"""
+Handlers для выбора call report'ов
+"""
 import copy
 
 from aiogram import F, Router, types
+from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from configs import config
@@ -14,13 +18,13 @@ emoji = copy.deepcopy(config.dict_of_emoji)
 
 @router.callback_query(CRChoiceReportView.filter(F.menu == CRMenusEnum.client_choice))
 async def call_reports_handler_my_reports(
-        callback_query: types.CallbackQuery,
+        callback_query: CallbackQuery,
         callback_data: CRChoiceReportView,
 ) -> None:
     """
-    Базовое меню просмотров кол репортов
+    Базовое меню просмотров всех клиентов у пользователя
 
-    :param callback_query: # FIXME
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     clients = await get_all_sorted_clients_for_user(callback_query.message.chat.id)
@@ -95,9 +99,15 @@ async def call_reports_handler_my_reports(
 
 @router.callback_query(CRChoiceReportView.filter(F.menu == CRMenusEnum.date_choice))
 async def call_reports_handler_my_reports_date(
-        callback_query: types.CallbackQuery,
+        callback_query: CallbackQuery,
         callback_data: CRChoiceReportView,
 ) -> None:
+    """
+    Меню для просмотров дат call report'ов определенного клиента
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     client_call_reports_dates = await get_all_dates_for_client_report(callback_query.message.chat.id,
                                                                       callback_data.client)
 
@@ -168,9 +178,15 @@ async def call_reports_handler_my_reports_date(
 
 @router.callback_query(CRViewAndEdit.filter(F.menu == CRMenusEnum.return_to_date_choice))
 async def return_to_date_page(
-        callback_query: types.CallbackQuery,
+        callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
 ) -> None:
+    """
+    Функция для возврата в меню дат call report'ов определенного клиента
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     report = CallReport()
     await report.setup(callback_data.report_id)
     client_page, date_page = await report.get_pages()

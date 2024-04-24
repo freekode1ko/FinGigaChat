@@ -1,3 +1,6 @@
+"""
+Handlers для создания call report'ов
+"""
 from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -13,10 +16,13 @@ router = Router()
 
 
 class CallReportsStates(StatesGroup):
+    """
+    Состояния при создании call report'ов
+    enter_clint_name -> enter_date -> enter_text_message
+    """
     enter_clint_name = State()
     enter_date = State()
-    enter_text_message = State()
-    final_check = State()
+    enter_description = State()
 
 
 @router.callback_query(CRCreateNew.filter(F.menu == CRMenusEnum.create_new))
@@ -72,7 +78,7 @@ async def enter_date(message: Message, state: FSMContext) -> None:
         await message.answer(
             'Запишите основные моменты встречи(Голосом или текстом)',
         )
-        await state.set_state(CallReportsStates.enter_text_message)
+        await state.set_state(CallReportsStates.enter_description)
         await state.update_data(
             date=date,
         )
@@ -83,8 +89,8 @@ async def enter_date(message: Message, state: FSMContext) -> None:
     logger.info(f'Call Report: Конец сохранения даты в call report для {message.chat.id}')
 
 
-@router.message(CallReportsStates.enter_text_message, F.content_type.in_({'voice', 'text'}), )
-async def enter_text_message(message: Message, state: FSMContext) -> None:
+@router.message(CallReportsStates.enter_description, F.content_type.in_({'voice', 'text'}), )
+async def enter_description(message: Message, state: FSMContext) -> None:
     """
       Обработка текста/аудио, который ввел пользователь для создания кол репорта
 
@@ -125,4 +131,5 @@ async def enter_text_message(message: Message, state: FSMContext) -> None:
         CRMenusEnum.main,
         edit=False
     )
+    await state.clear()
     logger.info(f'Call Report: Конец сохранения текста/аудио в call report для {message.chat.id}')
