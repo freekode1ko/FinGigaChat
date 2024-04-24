@@ -224,7 +224,7 @@ async def open_meeting_app(message: types.Message) -> None:
 
     markup = types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=config.meeting_web_app_url))],
+            [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/meeting/show'))],
         ],
         resize_keyboard=True
     )

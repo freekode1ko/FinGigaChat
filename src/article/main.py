@@ -130,6 +130,7 @@ def daily_func():
             ap_obj.merge_client_commodity_article(df_client, df_commodity)
             ap_obj.drop_duplicate()
             ap_obj.make_text_sum()
+            ap_obj.apply_gigachat_filtering()
             ap_obj.save_tables()
         else:
             logger.warning('Таблицы с новостями пустые')

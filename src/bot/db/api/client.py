@@ -1,5 +1,3 @@
-from typing import Optional, Any
-
 import sqlalchemy as sa
 from sqlalchemy import text
 
