@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import text
 
+from configs import config
 from configs.config import PATH_TO_SOURCES
 from constants.constants import sample_of_img_title
 from constants import quotes as callback_prefixes, enums
@@ -54,7 +55,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
         'FI - долговой рынок.\n\n'
         'Equity - рынок акций.\n\n'
         'Commodities - товарный рынок. Узнайте последние цены на сырьевые товары (нефть, золото, медь и пр.)\n\n'
-        'Ставки\n\n'
+        'Ставки - актуальные процентные ставки\n\n'
     )
     await send_or_edit(message, msg_text, keyboard)
 
@@ -432,4 +433,6 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
     await callback_query.message.answer(rates_message, parse_mode='HTML', protect_content=False)
     await weekly_pulse.key_rate_dynamics_table(callback_query.bot, chat_id)
+    msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
+    await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=False)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
