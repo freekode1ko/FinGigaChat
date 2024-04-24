@@ -6,12 +6,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
+from db.call_reports import get_user_email_async
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
 from handlers.call_reports.call_report_view.utils import call_report_view_answer, send_to_mail, call_report_edit_answer
 from handlers.call_reports.call_reports import CallReport
 from handlers.call_reports.callbackdata import CRViewAndEdit, CRMenusEnum
 from log.bot_logger import logger
-from src.web_app.db.meeting import get_user_email_async
 
 router = Router()
 

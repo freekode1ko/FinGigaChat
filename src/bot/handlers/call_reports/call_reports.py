@@ -177,7 +177,7 @@ class CallReport:
         """
         return self.report_date.strftime(config.BASE_DATE_FORMAT)
 
-    async def update_clint(self, client: str):
+    async def update_clint(self, client: str) -> None:
         """
         Функция для обновления имени клиента
 

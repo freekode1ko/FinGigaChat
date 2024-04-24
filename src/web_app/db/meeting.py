@@ -29,21 +29,6 @@ def get_user_email(user_id: int | str) -> str:
         return email.scalar()
 
 
-async def get_user_email_async(user_id: int | str) -> str:
-    """
-    Асинхронное получение почты пользователя по его id
-
-    :param user_id: id пользователя
-    :return: почта пользователя
-    """
-    if isinstance(user_id, str):
-        user_id = int(user_id)
-
-    async with async_session() as session:
-        email = await session.execute(select(Whitelist.user_email).where(Whitelist.user_id == user_id))
-        return email.scalar()
-
-
 def add_meeting(data: dict[str, Any]) -> None:
     """
     Добавление новой встречи пользователя в бд.

@@ -11,7 +11,7 @@ from handlers.call_reports.callbackdata import CRMenusEnum
 from module.email_send import SmtpSend
 
 
-async def send_to_mail(user_email, client, date, description) -> None:
+async def send_to_mail(user_email: str, client: str, date: str, description: str) -> None:
     """
     Отправка по почте call report'ов
 
@@ -42,8 +42,8 @@ async def call_report_view_answer(
         message: Message,
         report: CallReport,
         return_menu: CRMenusEnum,
-        edit_message=True,
-        custom_send_mail_button=False,
+        edit_message: bool = True,
+        custom_send_mail_button: bool = False,
 ) -> None:
     """
     Основное меню просмотра call report'ов
@@ -72,7 +72,7 @@ async def call_report_edit_answer(
         message: Message,
         report: CallReport,
         return_menu: CRMenusEnum.main | CRMenusEnum.date_choice,
-        edit_message=True,
+        edit_message: bool = True,
 ) -> None:
     """
     Меню редактирования call report'ов

@@ -92,11 +92,11 @@ async def enter_date(message: Message, state: FSMContext) -> None:
 @router.message(CallReportsStates.enter_description, F.content_type.in_({'voice', 'text'}), )
 async def enter_description(message: Message, state: FSMContext) -> None:
     """
-      Обработка текста/аудио, который ввел пользователь для создания кол репорта
+    Обработка текста/аудио, который ввел пользователь для создания кол репорта
 
-      :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-      :param state: Объект, который хранит состояние FSM для пользователя
-      """
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
     logger.info(f'Call Report: Сохранения текста/аудио в call report для {message.chat.id}')
 
     if message.voice:

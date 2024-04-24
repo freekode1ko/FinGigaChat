@@ -12,7 +12,11 @@ from handlers.call_reports.callbackdata import CRMenusEnum, CRViewAndEdit, CRMai
 emoji = copy.deepcopy(config.dict_of_emoji)
 
 
-def get_keyboard_for_view_call_report(report_id: int, return_menu: CRMenusEnum, custom_send_mail_button: bool = False):
+def get_keyboard_for_view_call_report(
+        report_id: int,
+        return_menu: CRMenusEnum,
+        custom_send_mail_button: bool = False
+) -> InlineKeyboardBuilder:
     """
     Клавиатура появляющаяся при просмотре call report'ов
 
@@ -80,7 +84,7 @@ def get_keyboard_for_view_call_report(report_id: int, return_menu: CRMenusEnum, 
     return keyboard
 
 
-def get_keyboard_for_edit_call_report(report_id, return_menu):
+def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
     """
     Клавиатура появляющаяся при редактировании call report'ов
 
