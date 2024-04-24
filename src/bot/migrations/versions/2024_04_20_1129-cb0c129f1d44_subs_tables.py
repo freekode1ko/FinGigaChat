@@ -25,7 +25,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def get_user_subscriptions_df(session: Session) -> pd.DataFrame:
     user_subs = select(
         Whitelist.user_id,
-        func.unnest(func.string_to_array(Whitelist.subscriptions, ', ')).label('subscription')
+        func.unnest(func.string_to_array('whitelist.subscriptions', ', ')).label('subscription')
     ).cte('user_subs')
 
     client_name = select(
