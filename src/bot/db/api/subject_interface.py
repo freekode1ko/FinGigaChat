@@ -35,7 +35,10 @@ class SubjectInterface:
         self.fields = [getattr(self.table, c) for c in self.columns]
 
     async def get_all(self) -> pd.DataFrame:
-        """Выгрузка всех subject"""
+        """
+        Выгрузка всех subject
+        :returns: DataFrame[все столбцы таблицы self.table] со всеми subject
+        """
         async with database.async_session() as session:
             stmt = select(
                 *self.fields
@@ -45,7 +48,10 @@ class SubjectInterface:
             return pd.DataFrame(data, columns=self.columns)
 
     async def get_by_industry_id(self, industry_id: int) -> pd.DataFrame:
-        """Выгружает все subject, у которых industry_id == :industry_id"""
+        """
+        Выгружает все subject, у которых industry_id == :industry_id
+        :returns: DataFrame[все столбцы таблицы self.table] со всеми subject
+        """
         async with database.async_session() as session:
             stmt = select(
                 *self.fields
@@ -55,7 +61,10 @@ class SubjectInterface:
             return pd.DataFrame(data, columns=self.columns)
 
     async def get_other_names(self) -> pd.DataFrame:
-        """Возвращает датафрейм с альтернативными именами для каждого subject"""
+        """
+        Возвращает датафрейм с альтернативными именами для каждого subject
+        :returns: DataFrame['id', 'name', 'other_name']  (subject.id, subject.name, unnest(subject_alternative.other_names))
+        """
         async with database.async_session() as session:
             stmt = select(
                 self.table.id,
@@ -67,7 +76,10 @@ class SubjectInterface:
             return pd.DataFrame(data, columns=['id', 'name', 'other_name'])
 
     async def get(self, _id: int) -> dict[str, Any]:
-        """Возвращает словарь с данными по subject с id==_id"""
+        """
+        Возвращает словарь с данными по subject с id==_id
+        :returns: dict[все столбцы таблицы self.table]
+        """
         async with database.async_session() as session:
             stmt = select(self.table).where(self.table.id == _id)
             result = await session.execute(stmt)
@@ -87,6 +99,7 @@ class SubjectInterface:
         :param from_date: Ограничение снизу по дате
         :param to_date: Ограничение сверху по дате в запросе
         :param order_by: Параметр сортировки в запросе
+        :returns: list[Article]
         """
         async with database.async_session() as session:
             stmt = select(Article).join(self.relation_article).join(self.table).where(self.table.id == subject_id)
