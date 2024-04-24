@@ -1,11 +1,11 @@
 import datetime as dt
 from typing import Any
 
+# from .config import REMEMBER_TIME
 from sqlalchemy import select, insert, CursorResult
 
+from db.database import engine, async_session
 from db.models import UserMeeting, Whitelist
-from db.database import engine
-from config import REMEMBER_TIME
 
 
 def data_as_dict(data: CursorResult) -> list[dict[str, Any]]:
@@ -24,8 +24,23 @@ def get_user_email(user_id: int | str) -> str:
         user_id = int(user_id)
 
     with engine.connect() as conn:
-        query = select(Whitelist.user_email).where(Whitelist.user_id==user_id)
+        query = select(Whitelist.user_email).where(Whitelist.user_id == user_id)
         email = conn.execute(query)
+        return email.scalar()
+
+
+async def get_user_email_async(user_id: int | str) -> str:
+    """
+    Асинхронное получение почты пользователя по его id
+
+    :param user_id: id пользователя
+    :return: почта пользователя
+    """
+    if isinstance(user_id, str):
+        user_id = int(user_id)
+
+    async with async_session() as session:
+        email = await session.execute(select(Whitelist.user_email).where(Whitelist.user_id == user_id))
         return email.scalar()
 
 
