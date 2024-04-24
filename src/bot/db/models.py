@@ -134,6 +134,7 @@ class Industry(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения отраслей')
 
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')

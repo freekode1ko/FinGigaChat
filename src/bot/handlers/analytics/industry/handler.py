@@ -27,23 +27,25 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     industry_df = await industry_db.get_all()
+    industry_files = await get_industry_analytic_files(industry_type=callbacks.IndustryTypes.default)
     industry_df['type'] = callbacks.IndustryTypes.default
     industry_df['name'] = industry_df['name'].str.capitalize()
+    industry_df = industry_df[industry_df['id'].isin(i.industry_id for i in industry_files)]
     other_buttons = pd.DataFrame(
         [
             {
-                'id': 0,
+                'id': None,
                 'name': 'Прочие',
                 'type': callbacks.IndustryTypes.other,
             },
             {
-                'id': 0,
+                'id': None,
                 'name': 'Общий комментарий по отраслям',
                 'type': callbacks.IndustryTypes.general_comments,
             },
         ],
     )
-    industry_df = pd.concat([industry_df, other_buttons])
+    industry_df = pd.concat([industry_df.sort_values('display_order'), other_buttons])
 
     keyboard = keyboards.get_menu_kb(industry_df)
     msg_text = 'Отраслевая аналитика'
