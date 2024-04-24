@@ -47,9 +47,11 @@ def get_sub_menu_kb(item_df: pd.DataFrame, callback_factory: Type[CallbackData])
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [ Hot offers ]
-    [ Продуктовая полка ]
-    [ Господдержка ]
+    [ FX ]
+    [ FI ]
+    [ Equity ]
+    [ Commodities ]
+    [ Ставки ]
     [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
@@ -68,6 +70,10 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     keyboard.row(types.InlineKeyboardButton(
         text='Commodities',
         callback_data=quotes.COMMODITIES,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Ставки',
+        callback_data=quotes.ECO,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,

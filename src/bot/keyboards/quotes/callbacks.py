@@ -23,6 +23,10 @@ class Commodities(CallbackData, prefix=callback_prefixes.COMMODITIES):
     pass
 
 
+class Eco(CallbackData, prefix=callback_prefixes.ECO):
+    pass
+
+
 class GetFIItemData(CallbackData, prefix=callback_prefixes.GET_FI_ITEM_DATA):
     item_id: int
     type: int

@@ -1,6 +1,5 @@
 import os
 
-import pandas as pd
 from aiogram import types
 from aiogram.utils.media_group import MediaGroupBuilder
 
@@ -35,13 +34,5 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
                 media_group.add_document(media=types.FSInputFile(industry.DATA_ROOT_PATH / fpath))
 
             await callback_query.message.answer_media_group(media_group.build(), protect_content=True)
-    else:
-        item_df = pd.DataFrame()
-        keyboard = keyboards.get_menu_kb(item_df)
-        msg_text = (
-            'Отраслевая аналитика\n\n'
-            'Функционал появится позднее'
-        )
-        await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
