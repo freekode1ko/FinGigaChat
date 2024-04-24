@@ -96,7 +96,7 @@ async def get_industry_analytic_files(
             IndustryDocuments.industry_type == industry_type.value,
         )
         result = await session.execute(stmt)
-        return result.all()
+        return list(result.scalars())
 
 
 industry_db = SubjectInterface(Industry, IndustryAlternative, Industry.industry_alternative)

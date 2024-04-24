@@ -75,7 +75,7 @@ async def get_industry_analytics(callback_query: types.CallbackQuery, callback_d
             msg_text += '<b>Общий комментарии по отраслям</b>\n'
         case _:
             industry_info = await industry_db.get(callback_data.industry_id)
-            msg_text += f'<b>{industry_info["name"]}</b>\n'
+            msg_text += f'<b>{industry_info["name"].capitalize()}</b>\n'
 
     files = await get_industry_analytic_files(callback_data.industry_id, callback_data.industry_type)
     files = [Path(f.file_path) for f in files]
