@@ -6,7 +6,7 @@ from aiogram.filters import Command
 
 from constants.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
     BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
-from db.industry import get_industry_name, get_industries_with_tg_channels, get_industry_tg_news
+from db.api.industry import get_industry_name, get_industries_with_tg_channels, get_industry_tg_news
 from handlers.industry.handler import router
 from keyboards.industry import callbacks
 from keyboards.industry import constructors as keyboards

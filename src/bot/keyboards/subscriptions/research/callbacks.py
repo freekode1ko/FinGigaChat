@@ -1,6 +1,6 @@
 from aiogram.filters.callback_data import CallbackData
 
-from constants import subscriptions as callback_prefixes
+from constants.subscriptions import research as callback_prefixes
 
 
 class GetUserCIBResearchSubs(CallbackData, prefix=callback_prefixes.USER_CIB_RESEARCH_SUBS):

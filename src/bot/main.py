@@ -58,7 +58,7 @@ async def passive_newsletter(
 
         start_tm = time.time()
         # получим справочник пользователей (в цикле, потому что справочник может пополняться)
-        user_df = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist', con=engine)
+        user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist', con=engine)
 
         kwargs['next_newsletter_datetime'] = next_newsletter_datetime
         await newsletter_executor(bot, user_df, **kwargs)

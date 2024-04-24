@@ -745,7 +745,7 @@ class ResearchAPIParser:
         """
         async with self.postgres_conn.acquire() as connection:
             count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{report_id}'"
+                f"SELECT COUNT(id) AS count_news FROM research WHERE report_id = '{report_id}'"
             )
             return bool(count_news['count_news'])
 
@@ -764,7 +764,7 @@ class ResearchAPIParser:
             publication_date = report['publication_date']
             await connection.execute(
                 (
-                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, report_id)'
                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{report_id}')"
                 )
             )

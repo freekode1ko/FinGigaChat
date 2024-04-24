@@ -71,7 +71,7 @@ research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
 api_key_gpt = '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'
 
-NEWS_LIMIT = 5
+NEWS_LIMIT = 10
 PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 USER_SUBSCRIPTIONS_LIMIT = 70

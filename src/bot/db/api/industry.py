@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import text, select
 
 from db import database
+from db.api.subject_interface import SubjectInterface
+from db.models import Industry, IndustryAlternative
 
 
 def get_industries_with_tg_channels() -> pd.DataFrame:
@@ -65,3 +68,18 @@ def get_industry_tg_news(
         data_df = pd.DataFrame(data, columns=['telegram_channel_name', 'telegram_article_link', 'title', 'date'])
 
     return data_df
+
+
+async def get_by_name(name: str) -> dict[str, Any]:
+    async with database.async_session() as session:
+        stmt = select(Industry).where(Industry.name == name)
+        result = await session.execute(stmt)
+        data = result.fetchone()
+        data = {
+            'id': data[0],
+            'name': data[1],
+        }
+        return data
+
+
+industry_db = SubjectInterface(Industry, IndustryAlternative, Industry.industry_alternative)
