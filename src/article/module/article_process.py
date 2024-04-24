@@ -12,6 +12,7 @@ from module.model_pipe import (
     deduplicate,
     model_func,
     model_func_online,
+    gigachat_filtering,
 )
 
 
@@ -135,6 +136,10 @@ class ArticleProcess:
     def make_text_sum(self):
         """Call summary func"""
         self.df_article = add_text_sum_column(self._logger, self.df_article)
+    
+    def apply_gigachat_filtering(self):
+        """Применяем фильтрацию новостей с помощью gigachat"""
+        self.df_article = gigachat_filtering(self._logger, self.df_article)
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
