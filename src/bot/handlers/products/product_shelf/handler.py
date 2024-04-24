@@ -1,15 +1,12 @@
-import math
 import os
 
 import pandas as pd
 from aiogram import types
-from aiogram.utils.media_group import MediaGroupBuilder
-
-from constants import constants
 from constants.products import product_shelf
 from handlers.products.handler import router
 from keyboards.products.product_shelf import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
+from utils.base import send_pdf
 
 
 @router.callback_query(callbacks.Menu.filter())
@@ -50,19 +47,10 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
 
     dir_path = product_shelf.PRODUCT_SHELF_DATA[group_id]['pdf_path']
     product_shelf_item = product_shelf.PRODUCT_SHELF_DATA[group_id]
-    pdf_files = os.listdir(dir_path) if dir_path else []
+    pdf_files = [dir_path / i for i in os.listdir(dir_path)] if dir_path else []
 
-    if pdf_files:
-        msg_text = product_shelf_item['message_title']
-        await callback_query.message.answer(msg_text, parse_mode='HTML')
-
-        for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
-            media_group = MediaGroupBuilder()
-            for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
-                media_group.add_document(media=types.FSInputFile(dir_path / fpath))
-
-            await callback_query.message.answer_media_group(media_group.build())
-    else:
+    msg_text = product_shelf_item['message_title']
+    if not await send_pdf(callback_query, pdf_files, msg_text):
         msg_text = (
             f'{product_shelf.TITLE}\n'
             f'{product_shelf_item["name"]}\n'

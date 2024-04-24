@@ -1,1 +1,1 @@
-from handlers.products.hot_offers import handler
+from handlers.products.hot_offers.handler import *

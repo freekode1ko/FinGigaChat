@@ -1,16 +1,13 @@
-import math
 import os
 
 import pandas as pd
 from aiogram import types
-from aiogram.utils.media_group import MediaGroupBuilder
-
-from constants import constants
 from constants.products import hot_offers
 from handlers.products.handler import router
 from keyboards.products.hot_offers import callbacks
 from keyboards.products.hot_offers import constructors as keyboards
 from log.bot_logger import user_logger
+from utils.base import send_pdf
 
 
 @router.callback_query(callbacks.Menu.filter())
@@ -35,7 +32,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.callback_query(callbacks.GetHotOffersPDF.filter())
-async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_data: callbacks.GetHotOffersPDF) -> None:
+async def get_hot_offers_pdf(callback_query: types.CallbackQuery, callback_data: callbacks.CallbackData) -> None:
     """
     Получение pdf файлов по hot offers
 
@@ -52,18 +49,9 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
     dir_path = hot_offers.TABLE_DATA[group_id]['pdf_path']
     item = hot_offers.TABLE_DATA[group_id]
     pdf_files = [dir_path / f for f in os.listdir(dir_path)] if dir_path else []
-
-    if pdf_files:
-        msg_text = item['message_title']
-        await callback_query.message.answer(msg_text, parse_mode='HTML')
-
-        for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
-            media_group = MediaGroupBuilder()
-            for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
-                media_group.add_document(media=types.FSInputFile(fpath))
-
-            await callback_query.message.answer_media_group(media_group.build())
-    else:
+    msg_text = item['message_title']
+    
+    if not await send_pdf(callback_query, pdf_files, msg_text):
         msg_text = (
             f'{hot_offers.TITLE}\n'
             f'{item["name"]}\n'

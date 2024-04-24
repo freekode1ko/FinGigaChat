@@ -4,13 +4,16 @@ import logging
 import os
 from datetime import datetime, timedelta, date
 from math import ceil
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
 from aiogram import Bot, types
+from aiogram.utils.media_group import MediaGroupBuilder
 
 import module.data_transformer as dt
 from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
+from constants import constants
 from constants.constants import research_footer
 from db.database import engine
 from log.logger_base import Logger
@@ -423,3 +426,35 @@ async def send_or_edit(
     else:
         call = message
         await call.message.edit_text(msg_text, reply_markup=keyboard)
+
+
+async def send_pdf(
+        callback_query: types.CallbackQuery,
+        pdf_files: list[str | Path],
+        caption: str,
+        protect_content: bool = False,
+) -> bool:
+    """
+    Отправка сообщения перед файлами
+    Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
+
+    Если файлов нет, то return False и ничего не отправляет
+    :param callback_query: Объект, содержащий информацию о пользователе и сообщении
+    :param pdf_files: Список файлов для отправки пользователю
+    :param caption: Текст сообщения, которое отправляется перед отправкой файлов (если файлы есть)
+    :param protect_content: Защищает отправляемый контент от перессылки и сохранения
+    return: Если были отправлены файлы, то True, иначе False
+    """
+    if not pdf_files:
+        return False
+
+    await callback_query.message.answer(caption, parse_mode='HTML', protect_content=protect_content)
+
+    for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
+        media_group = MediaGroupBuilder()
+        for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
+            media_group.add_document(media=types.FSInputFile(fpath))
+
+        await callback_query.message.answer_media_group(media_group.build(), protect_content=protect_content)
+
+    return True
