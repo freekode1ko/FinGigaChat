@@ -67,6 +67,7 @@ class FIGroupType(Enum):
 
 
 class IndustryTypes(IntEnum):
+    """Типы отраслей. Используется для меню отраслевой аналитики и для таблицы bot_industry_documents"""
     default = auto()            # Все стандартные отрасли
     other = auto()              # Пункт прочее
     general_comments = auto()   # Пункт общий комментарий
