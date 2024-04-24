@@ -25,7 +25,7 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
 
     pdf_files = os.listdir(state_support.DATA_ROOT_PATH)
     if pdf_files:
-        msg_text = 'Господдержка'
+        msg_text = state_support.TITLE
         await callback_query.message.answer(msg_text, parse_mode='HTML')
 
         for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):

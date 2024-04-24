@@ -1,6 +1,8 @@
 from configs import config
 
 
+TITLE = 'Продуктовая полка'
+
 MENU = 'product_shelf_menu'
 
 GET_PRODUCT_PDF = 'get_product_pdf'
@@ -30,18 +32,13 @@ PRODUCT_SHELF_DATA = [
         'pdf_path': DATA_ROOT_PATH / 'foreign_trade_activities',
     },
     {
-        'name': 'IB',
-        'message_title': 'Продукты IB',
-        'pdf_path': None,
-    },
-    {
         'name': 'Экосистема',
         'message_title': 'Продукты экосистемы',
         'pdf_path': DATA_ROOT_PATH / 'ecosystem',
     },
     {
-        'name': 'НКД',
-        'message_title': 'Продукты НКД',
+        'name': 'Прочий НКД',
+        'message_title': 'Прочие продукты НКД',
         'pdf_path': DATA_ROOT_PATH / 'accumulated_coupon_income',
     },
 ]

@@ -28,7 +28,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     item_df = pd.DataFrame(product_shelf.PRODUCT_SHELF_DATA)
     item_df['id'] = item_df.index
     keyboard = keyboards.get_menu_kb(item_df)
-    msg_text = 'Продуктовая полка'
+    msg_text = product_shelf.TITLE
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -64,7 +64,7 @@ async def get_group_files(callback_query: types.CallbackQuery, callback_data: ca
             await callback_query.message.answer_media_group(media_group.build())
     else:
         msg_text = (
-            f'Продуктовая полка\n'
+            f'{product_shelf.TITLE}\n'
             f'{product_shelf_item["name"]}\n'
             f'Функционал появится позднее'
         )

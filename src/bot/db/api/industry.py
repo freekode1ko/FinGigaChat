@@ -85,18 +85,21 @@ async def get_by_name(name: str) -> dict[str, Any]:
 
 async def get_industry_analytic_files(
         industry_id: Optional[int] = None,
-        industry_type: Optional[enums.IndustryTypes] = enums.IndustryTypes.default,
+        industry_type: Optional[enums.IndustryTypes] = None,
 ) -> list[IndustryDocuments]:
     if industry_id is None and industry_type is None:
         return []
 
     async with database.async_session() as session:
-        stmt = select(IndustryDocuments).where(
-            IndustryDocuments.industry_type == industry_type.value,
-        )
+        stmt = select(IndustryDocuments)
+
         if industry_id is not None:
             stmt = stmt.where(
                 IndustryDocuments.industry_id == industry_id,
+            )
+        if industry_type is not None:
+            stmt = stmt.where(
+                IndustryDocuments.industry_type == industry_type.value,
             )
         result = await session.execute(stmt)
         return list(result.scalars())
