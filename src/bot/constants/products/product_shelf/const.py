@@ -17,7 +17,7 @@ PRODUCT_SHELF_DATA = [
     {
         'name': 'Пассивы',
         'message_title': 'Продукты пассивов',
-        'pdf_path': None,
+        'pdf_path': DATA_ROOT_PATH / 'liabilities',
     },
     {
         'name': 'GM',
@@ -27,7 +27,7 @@ PRODUCT_SHELF_DATA = [
     {
         'name': 'ВЭД',
         'message_title': 'Продукты ВЭД',
-        'pdf_path': None,
+        'pdf_path': DATA_ROOT_PATH / 'foreign_trade_activities',
     },
     {
         'name': 'IB',
@@ -37,11 +37,11 @@ PRODUCT_SHELF_DATA = [
     {
         'name': 'Экосистема',
         'message_title': 'Продукты экосистемы',
-        'pdf_path': None,
+        'pdf_path': DATA_ROOT_PATH / 'ecosystem',
     },
     {
         'name': 'НКД',
         'message_title': 'Продукты НКД',
-        'pdf_path': None,
+        'pdf_path': DATA_ROOT_PATH / 'accumulated_coupon_income',
     },
 ]
