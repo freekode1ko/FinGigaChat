@@ -95,7 +95,10 @@ def regular_func():
                 ap_obj_online.df_article = df_article
                 ap_obj_online.drop_duplicate()
                 ap_obj_online.make_text_sum()
-                ap_obj_online.apply_gigachat_filtering()
+                try:
+                    ap_obj_online.apply_gigachat_filtering()
+                except Exception as e:
+                    logger.error('Ошибка при фильтрации новостей с помощью ГигаЧата: %s', e)
                 subject_links = ap_obj_online.save_tables()
 
                 logger.info('Старт обработки телеграм новостей')
