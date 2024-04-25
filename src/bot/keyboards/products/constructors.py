@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Optional
 
 import pandas as pd
 from aiogram import types
@@ -12,7 +12,11 @@ from constants.products import product_shelf
 from constants.products import state_support
 
 
-def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
+def get_sub_menu_kb(
+        group_df: pd.DataFrame,
+        callback_factory: Type[CallbackData],
+        back_callback_data: Optional[str] = None,
+) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
     [ Группа 1 ]
@@ -22,6 +26,7 @@ def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]
 
     :param group_df: DataFrame[id, name] инфа о группах CIB Research
     :param callback_factory: Объект, который создает данные для callback
+    :param back_callback_data: callback_data для кнопки назад
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -37,7 +42,7 @@ def get_sub_menu_kb(group_df: pd.DataFrame, callback_factory: Type[CallbackData]
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=products.MENU,
+        callback_data=back_callback_data or products.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,

@@ -470,13 +470,8 @@ async def get_client_hot_offers(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-
-    await products.hot_offers.get_hot_offers_pdf(callback_query, callback_data)
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    callback_data.menu = callback_data_factories.ClientsMenusEnum.products
+    await products.hot_offers.main_menu_callback(callback_query, callback_data, callback_data.pack())
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
