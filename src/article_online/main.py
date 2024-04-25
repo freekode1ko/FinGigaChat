@@ -104,7 +104,6 @@ def regular_func():
                 if not df_article.empty:
                     ap_obj_online.df_article = df_article
                     ap_obj_online.make_text_sum()
-                    ap_obj_online.apply_gigachat_filtering()
                     tg_links = ap_obj_online.save_tg_tables()
 
                 print('Окончание обработки новостей с помощью моделей')
