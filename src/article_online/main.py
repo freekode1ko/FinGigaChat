@@ -98,6 +98,9 @@ def regular_func():
                 ap_obj_online.apply_gigachat_filtering()
                 subject_links = ap_obj_online.save_tables()
 
+                logger.info('Старт обработки телеграм новостей')
+                print('Старт обработки телеграм новостей')
+                # сохраняем все тг новости без фильтраций
                 saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
                 df_article = ap_obj_online.update_tg_articles(saved_tg_df, all_tg_articles_df)
 

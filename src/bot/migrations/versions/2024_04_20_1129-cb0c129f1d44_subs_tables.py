@@ -23,10 +23,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def get_user_subscriptions_df(session: Session) -> pd.DataFrame:
-    user_subs = select(
-        Whitelist.user_id,
-        func.unnest(func.string_to_array('whitelist.subscriptions', ', ')).label('subscription')
-    ).cte('user_subs')
+    user_subs = sa.text(
+        "SELECT whitelist.user_id, unnest(string_to_array(whitelist.subscriptions, ', ')) AS subscription "
+        "FROM whitelist"
+    ).columns(sa.Column('user_id', sa.Integer()), sa.Column('subscription', sa.Text())).cte('user_subs')
 
     client_name = select(
         ClientAlternative.client_id,
@@ -72,7 +72,12 @@ def upgrade_add_user_subscriptions_to_new_tables(
         subject_name: str,
 ) -> None:
     user_df = user_df[user_df['subject'] == subject_name]
-    data = user_df[['user_id', 'subject_id']].rename(columns={"subject_id": f"{subject_name}_id"}).to_dict('records')
+    data = (
+        user_df[['user_id', 'subject_id']]
+        .drop_duplicates()
+        .rename(columns={"subject_id": f"{subject_name}_id"})
+        .to_dict('records')
+    )
     op.bulk_insert(subscription_table, data)
 
 

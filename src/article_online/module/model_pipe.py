@@ -780,12 +780,12 @@ def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
     logger.debug("Фильтрация клиентов")
-    df['client'] = df.apply(lambda x: get_gigachat_filtering_list((x['client']).split(';'), x['text_sum'],
+    df['client'] = df.apply(lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'],
                                                                   giga_chat, 'client', logger), axis=1)
 
     # обрабатываем комоды. Для каждого найденного коммода проверяем, что он действительно подходит к новости
     logger.debug("Фильтрация комодов")
-    df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list((x['commodity']).split(';'), x['text_sum'],
+    df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list(x['commodity'].split(';'), x['text_sum'],
                                                                      giga_chat, 'commodity', logger), axis=1)
     logger.debug("Окончена фильтрация новостей с GigaChat")
     return df
