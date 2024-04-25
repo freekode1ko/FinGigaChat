@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import pandas as pd
 from aiogram import types
@@ -11,12 +12,17 @@ from utils.base import send_pdf
 
 
 @router.callback_query(callbacks.Menu.filter())
-async def main_menu_callback(callback_query: types.CallbackQuery, callback_data: callbacks.Menu) -> None:
+async def main_menu_callback(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.Menu,
+        back_callback_data: Optional[str] = None,
+) -> None:
     """
     Получение меню продуктовой полки
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
+    :param back_callback_data: callback_data для кнопки назад
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -25,7 +31,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
     item_df = pd.DataFrame(hot_offers.TABLE_DATA)
     item_df['id'] = item_df.index
-    keyboard = keyboards.get_menu_kb(item_df)
+    keyboard = keyboards.get_menu_kb(item_df, back_callback_data)
     msg_text = hot_offers.TITLE
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
