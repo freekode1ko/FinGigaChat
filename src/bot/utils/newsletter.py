@@ -41,7 +41,7 @@ async def tg_newsletter(
 
     for index, user in user_df.iterrows():
         user_id, user_name = user['user_id'], user['username']
-        logger.debug(
+        logger.info(
             f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
 
         for industry_id, industry_name in industry_dict.items():
@@ -106,7 +106,7 @@ async def subscriptions_newsletter(
         if not industry_ids and not client_ids and not commodity_ids:
             continue
 
-        logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
+        logger.info(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
         # получим новости по подпискам пользователя
         user_industry_df, user_client_comm_df = ArticleProcess.get_user_article(
             clients_news, commodity_news, industry_ids, client_ids, commodity_ids, industry_name
