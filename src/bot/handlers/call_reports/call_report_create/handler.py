@@ -129,7 +129,7 @@ async def enter_description(message: Message, state: FSMContext) -> None:
         message,
         report,
         CRMenusEnum.main,
-        edit=False
+        edit_message=False
     )
     await state.clear()
     logger.info(f'Call Report: Конец сохранения текста/аудио в call report для {message.chat.id}')
