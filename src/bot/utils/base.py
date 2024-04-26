@@ -430,7 +430,7 @@ async def send_or_edit(
 
 async def send_pdf(
         callback_query: types.CallbackQuery,
-        pdf_files: list[str | Path],
+        pdf_files: list[Path],
         caption: str,
         protect_content: bool = False,
 ) -> bool:
@@ -445,6 +445,7 @@ async def send_pdf(
     :param protect_content: Защищает отправляемый контент от перессылки и сохранения
     return: Если были отправлены файлы, то True, иначе False
     """
+    pdf_files = [f for f in pdf_files if f.exists()]
     if not pdf_files:
         return False
 
