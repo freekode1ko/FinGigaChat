@@ -9,12 +9,14 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 import utils.base
 from db import subscriptions as subscriptions_db_api
 from db.api.client import client_db, get_research_type_id_by_name
+from db.api.product_group import product_group_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
 from handlers import products
 from handlers.analytics.analytics_sell_side.handler import get_researches_over_period
 from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
+from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import user_logger
 from module.article_process import FormatText
@@ -470,8 +472,14 @@ async def get_client_hot_offers(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
+    group = await product_group_db.get_by_latin_name('hot_offers')
+    products_callback_data = products_callbacks.ProductsMenuData(
+        menu=products_callbacks.ProductsMenusEnum.group_products,
+        group_id=group.id,
+        format_type=products_callbacks.FormatType.individual_messages,
+    )
     callback_data.menu = callback_data_factories.ClientsMenusEnum.products
-    await products.hot_offers.main_menu_callback(callback_query, callback_data, callback_data.pack())
+    await products.get_group_products(callback_query, products_callback_data, callback_data.pack())
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
