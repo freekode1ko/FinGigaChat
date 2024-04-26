@@ -605,3 +605,46 @@ class IndustryDocuments(Base):
                          primary_key=False, nullable=True, comment='id отрасли')
     industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
                            comment='тип отрасли')
+
+
+class ProductGroup(Base):
+    __tablename__ = 'bot_product_group'
+    __table_args__ = (
+        sa.UniqueConstraint('name', name='group_name'),
+        {'comment': 'Справочник групп продуктов (продуктовая полка, hot offers)'},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    name = Column(String(255), nullable=False, comment='Имя группы')
+    name_latin = Column(String(255), nullable=False, comment='Имя группы eng')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
+                         comment='Описание группы (текст меню тг)')
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+
+
+class Product(Base):
+    __tablename__ = 'bot_product'
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'group_id', name='product_name_in_group'),
+        {'comment': 'Справочник продуктов (кредит, GM, ...)'},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
+                           comment='Текст сообщения, которое выдается при нажатии на продукт')
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    group_id = Column(ForeignKey('bot_product_group.id', ondelete='CASCADE', onupdate='CASCADE'),
+                      primary_key=False, nullable=False, comment='id группы продукта')
+
+
+class ProductDocument(Base):
+    __tablename__ = 'bot_product_document'
+    __table_args__ = {'comment': 'Справочник файлов продуктов'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
+    name = Column(String(255), nullable=False, comment='Наименование документа или продуктового предложения')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
+                         primary_key=False, nullable=False, comment='id категории продукта')
