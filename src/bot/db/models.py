@@ -644,6 +644,7 @@ class ProductDocument(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
     file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
+    name = Column(String(255), nullable=False, comment='Наименование документа или продуктового предложения')
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
     product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
                          primary_key=False, nullable=False, comment='id категории продукта')

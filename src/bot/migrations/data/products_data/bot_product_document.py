@@ -83,19 +83,21 @@ for product in HOT_OFFERS_DATA:
         ).scalar_subquery(),
     ).limit(1)
 
-    files = [HOT_OFFERS_DATA_PATH / i for i in os.listdir(product['pdf_path'])]
+    files = [HOT_OFFERS_DATA_PATH / product['pdf_path'].stem / i for i in os.listdir(product['pdf_path'])]
     if files:
         for f in files:
             data.append({
                 'product_id': select_product_id,
                 'file_path': str(f),
                 'description': '',
+                'name': '',
             })
     else:
         data.append({
             'product_id': select_product_id,
             'file_path': '',
             'description': '',
+            'name': '',
         })
 
 # по имени продукта добавляем все файлы
@@ -109,10 +111,11 @@ for product in PRODUCT_SHELF_DATA:
         ).scalar_subquery(),
     ).limit(1)
 
-    files = [PRODUCTS_DATA_PATH / i for i in os.listdir(product['pdf_path'])]
+    files = [PRODUCTS_DATA_PATH / product['pdf_path'].stem / i for i in os.listdir(product['pdf_path'])]
     for f in files:
         data.append({
             'product_id': select_product_id,
             'file_path': str(f),
             'description': '',
+            'name': '',
         })

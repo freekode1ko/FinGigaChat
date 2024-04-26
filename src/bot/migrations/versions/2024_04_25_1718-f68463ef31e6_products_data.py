@@ -68,6 +68,8 @@ def upgrade() -> None:
     op.create_table('bot_product_document',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False, comment='id файла в базе'),
     sa.Column('file_path', sa.Text(), nullable=False, comment='Путь к файлу в системе'),
+    sa.Column('name', sa.String(length=255), nullable=False,
+              comment='Наименование документа или продуктового предложения'),
     sa.Column('description', sa.Text(), server_default=sa.text("''::text"), nullable=True, comment='Описание'),
     sa.Column('product_id', sa.Integer(), nullable=False, comment='id категории продукта'),
     sa.ForeignKeyConstraint(['product_id'], ['bot_product.id'], onupdate='CASCADE', ondelete='CASCADE'),
