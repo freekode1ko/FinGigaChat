@@ -2,12 +2,12 @@ from typing import List
 
 PUBLIC_COMMANDS: List[dict] = [
     {
-        'command': 'help',
-        'description': 'Информация о боте',
-    },
-    {
         'command': 'analytics_menu',
         'description': 'Аналитика',
+    },
+    {
+        'command': 'quotes_menu',
+        'description': 'Котировки',
     },
     {
         'command': 'clients_menu',
@@ -15,28 +15,37 @@ PUBLIC_COMMANDS: List[dict] = [
     },
     {
         'command': 'products_menu',
-        'description': 'Продукты',
-    },
-    {
-        'command': 'quotes_menu',
-        'description': 'Котировки',
+        'description': 'Продукты (Beta)',
     },
     {
         'command': 'subscriptions_menu',
         'description': 'Меню подписок',
     },
-    # {
-    #     'command': 'gigachat',
-    #     'description': 'Переход в режим общения с GigaChat',
-    # },
+    {
+        'command': 'call_reports',
+        'description': 'Call reports (Beta)',
+    },
+    {
+        'command': 'meeting',
+        'description': 'Встречи (Beta)',
+    },
     {
         'command': 'knowledgebase',
         'description': 'Спросить у Базы Знаний',
     },
     {
-        'command': 'meeting',
-        'description': 'Мои встречи',
+        'command': 'help',
+        'description': 'Информация о боте',
     },
+    {
+        'command': 'industry_tgnews',
+        'description': 'Сводка новостей из telegram каналов по отраслям',
+    },
+
+    # {
+    #     'command': 'gigachat',
+    #     'description': 'Переход в режим общения с GigaChat',
+    # },
     # {
     #     'command': 'referencebook',
     #     'description': 'Справочник',
@@ -49,18 +58,11 @@ PUBLIC_COMMANDS: List[dict] = [
     #     'command': 'eco',
     #     'description': 'Экономика',
     # },
-    {
-        'command': 'industry_tgnews',
-        'description': 'Сводка новостей из telegram каналов по отраслям',
-    },
     # {
     #     'command': 'delete_article',
     #     'description': 'Удалить новость',
     # },
-    {
-        'command': 'call_reports',
-        'description': 'Call reports',
-    },
+
 ]
 
 SECRET_COMMANDS: List[dict] = [
