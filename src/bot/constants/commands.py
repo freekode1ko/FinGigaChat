@@ -34,14 +34,13 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Спросить у Базы Знаний',
     },
     {
-        'command': 'help',
-        'description': 'Информация о боте',
-    },
-    {
         'command': 'industry_tgnews',
         'description': 'Сводка новостей из telegram каналов по отраслям',
     },
-
+    {
+        'command': 'help',
+        'description': 'Информация о боте',
+    },
     # {
     #     'command': 'gigachat',
     #     'description': 'Переход в режим общения с GigaChat',
