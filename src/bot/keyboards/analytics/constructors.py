@@ -34,7 +34,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     Формирует Inline клавиатуру вида:
     [ Аналитика публичных рынков ]
     [ Отраслевая аналитика ]
-    [ MacroView ]
+    [ macro_view.TITLE ]
     [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
@@ -47,7 +47,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
         callback_data=industry_callbacks.Menu().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='MacroView',
+        text=macro_view.TITLE,
         callback_data=macro_view.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(

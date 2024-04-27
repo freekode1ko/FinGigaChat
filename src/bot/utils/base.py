@@ -409,6 +409,17 @@ def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: in
     return datetime(ndt.year, ndt.month, ndt.day, hour, minute)
 
 
+def previous_weekday_date(from_date: date, weekday: int) -> date:
+    """
+    Вычисляет дату последнего прошедшего или текущего дня недели weekday
+
+    :param from_date: переданная дата
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    """
+    days_ahead = (-1 * (weekday - from_date.weekday())) % 7
+    return from_date - timedelta(days=days_ahead)
+
+
 async def wait_until(to_dt: datetime) -> None:
     """Спит до переданного datetime"""
     await asyncio.sleep((to_dt - datetime.now()).total_seconds())
