@@ -15,7 +15,8 @@ emoji = copy.deepcopy(config.dict_of_emoji)
 def get_keyboard_for_view_call_report(
         report_id: int,
         return_menu: CRMenusEnum,
-        custom_send_mail_button: bool = False
+        custom_send_mail_button: bool = False,
+        sub_menu: str | None = None,
 ) -> InlineKeyboardBuilder:
     """
     Клавиатура появляющаяся при просмотре call report'ов
@@ -23,6 +24,7 @@ def get_keyboard_for_view_call_report(
     :param report_id: айди в базе call report'а
     :param return_menu: меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
     :param custom_send_mail_button: Параметр отвечающий за название кнопки отправки call report'а на почту
+    :param sub_menu: Меню возврата в clients menu
     """
     keyboard = InlineKeyboardBuilder()
     if custom_send_mail_button:
@@ -37,6 +39,7 @@ def get_keyboard_for_view_call_report(
                 menu=CRMenusEnum.send_to_mail,
                 report_id=report_id,
                 return_menu=return_menu,
+                sub_menu=sub_menu
             ).pack()
         )
     )
@@ -47,6 +50,7 @@ def get_keyboard_for_view_call_report(
                 menu=CRMenusEnum.edit_report,
                 report_id=report_id,
                 return_menu=return_menu,
+                sub_menu=sub_menu
             ).pack()
         )
     )
@@ -67,6 +71,7 @@ def get_keyboard_for_view_call_report(
                     callback_data=CRViewAndEdit(
                         menu=CRMenusEnum.return_to_date_choice,
                         report_id=report_id,
+                        sub_menu=sub_menu,
                     ).pack()
                 )
             )
@@ -84,12 +89,14 @@ def get_keyboard_for_view_call_report(
     return keyboard
 
 
-def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
+def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum, sub_menu=None) -> InlineKeyboardBuilder:
     """
     Клавиатура появляющаяся при редактировании call report'ов
 
     :param report_id: айди в базе call report'а
     :param return_menu: меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
+    :param sub_menu: Меню возврата в clients menu
+    :return: Клавиатура
     """
 
     keyboard = InlineKeyboardBuilder()
@@ -100,6 +107,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
                 menu=CRMenusEnum.edit_report_name,
                 report_id=report_id,
                 return_menu=return_menu,
+                sub_menu=sub_menu,
             ).pack()
         )
     )
@@ -110,6 +118,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
                 menu=CRMenusEnum.edit_report_date,
                 report_id=report_id,
                 return_menu=return_menu,
+                sub_menu=sub_menu,
             ).pack()
         )
     )
@@ -120,6 +129,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
                 menu=CRMenusEnum.edit_report_description,
                 report_id=report_id,
                 return_menu=return_menu,
+                sub_menu=sub_menu,
             ).pack()
         )
     )
@@ -130,6 +140,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum):
                 menu=CRMenusEnum.report_view,
                 report_id=report_id,
                 return_menu=return_menu,
+                sub_menu=sub_menu,
             ).pack()
         )
     )

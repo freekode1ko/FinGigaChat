@@ -1,7 +1,7 @@
 """
 Функции в БД для рабы с call report'ами
 """
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from db.database import async_session
 from db.models import CallReports, Whitelist
@@ -33,7 +33,7 @@ async def get_all_dates_for_client_report(user_id: int, client_name: str) -> lis
         client_call_reports_dates = await session.execute(
             select(CallReports.id, CallReports.report_date).filter(
                 CallReports.user_id == user_id,
-                CallReports.client == client_name,
+                func.lower(CallReports.client) == client_name.lower(),
             )
             .distinct()
         )

@@ -8,9 +8,11 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from configs import config
+from db.api.client import client_db
 from db.call_reports import get_all_sorted_clients_for_user, get_all_dates_for_client_report
 from handlers.call_reports.call_reports import CallReport
 from handlers.call_reports.callbackdata import CRChoiceReportView, CRMenusEnum, CRMainMenu, CRCreateNew, CRViewAndEdit
+from handlers.clients import callback_data_factories
 
 router = Router()
 emoji = copy.deepcopy(config.dict_of_emoji)
@@ -100,7 +102,7 @@ async def call_reports_handler_my_reports(
 @router.callback_query(CRChoiceReportView.filter(F.menu == CRMenusEnum.date_choice))
 async def call_reports_handler_my_reports_date(
         callback_query: CallbackQuery,
-        callback_data: CRChoiceReportView,
+        callback_data: CRChoiceReportView | callback_data_factories.ClientsMenuData,
 ) -> None:
     """
     Меню для просмотров дат call report'ов определенного клиента
@@ -108,6 +110,18 @@ async def call_reports_handler_my_reports_date(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
+    sub_menu = None
+    if isinstance(callback_data, callback_data_factories.ClientsMenuData):
+        client_info = await client_db.get(callback_data.client_id)
+        client_name = client_info["name"]
+        sub_menu = callback_data.pack()
+        callback_data = CRChoiceReportView(
+            menu=CRMenusEnum.date_choice,
+            client=client_name,
+            client_page=0,
+            date_page=0,
+            sub_menu=sub_menu,
+        )
     client_call_reports_dates = await get_all_dates_for_client_report(callback_query.message.chat.id,
                                                                       callback_data.client)
 
@@ -123,6 +137,7 @@ async def call_reports_handler_my_reports_date(
                     menu=CRMenusEnum.report_view,
                     return_menu=CRMenusEnum.date_choice,
                     report_id=call_report_id,
+                    sub_menu=sub_menu,
                 ).pack()
             )
         )
@@ -137,16 +152,25 @@ async def call_reports_handler_my_reports_date(
                     client=callback_data.client,
                     client_page=callback_data.client_page,
                     date_page=callback_data.date_page - 1,
+                    sub_menu=sub_menu,
                 ).pack()
             )
         )
+
+    if callback_data.sub_menu is not None:
+        cb_data = callback_data_factories.ClientsMenuData.unpack(callback_data.sub_menu)
+        cb_data.menu = callback_data_factories.ClientsMenusEnum.client_menu
+    else:
+        cb_data = CRChoiceReportView(
+            menu=CRMenusEnum.client_choice,
+            client=callback_data.client,
+            client_page=callback_data.client_page,
+        )
+
     keyboard_footer.append(
         types.InlineKeyboardButton(
             text='Назад',
-            callback_data=CRChoiceReportView(
-                menu=CRMenusEnum.client_choice,
-                page=callback_data.client_page,
-            ).pack()
+            callback_data=cb_data.pack(),
         )
     )
     if len(client_call_reports_dates) > (callback_data.date_page + 1) * config.PAGE_ELEMENTS_COUNT:
@@ -158,6 +182,7 @@ async def call_reports_handler_my_reports_date(
                     client=callback_data.client,
                     client_page=callback_data.client_page,
                     date_page=callback_data.date_page + 1,
+                    sub_menu=sub_menu,
                 ).pack()
             )
         )
@@ -198,5 +223,6 @@ async def return_to_date_page(
             client=report.client,
             client_page=client_page,
             date_page=date_page,
+            sub_menu=callback_data.sub_menu,
         )
     )
