@@ -1,9 +1,14 @@
-import pandas as pd
+import calendar
+import datetime
+
 from aiogram import types
 
+from configs import config
+from constants.analytics import macro_view
 from handlers.analytics.handler import router
-from keyboards.analytics.macro_view import callbacks, constructors as keyboards
+from keyboards.analytics.macro_view import callbacks
 from log.bot_logger import user_logger
+from utils.base import send_pdf, previous_weekday_date
 
 
 @router.callback_query(callbacks.Menu.filter())
@@ -19,11 +24,10 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    item_df = pd.DataFrame()
-    keyboard = keyboards.get_menu_kb(item_df)
-    msg_text = (
-        'MacroView\n\n'
-        'Функционал появится позднее'
-    )
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
+    monday_date = previous_weekday_date(datetime.date.today(), calendar.MONDAY)
+    msg_text = macro_view.MESSAGE_TEXT_FORMAT.format(monday_date.strftime(config.BASE_DATE_FORMAT))
+    files = [f for f in macro_view.FILES_PATH.iterdir() if f.exists()] if macro_view.FILES_PATH.exists() else []
+    if not await send_pdf(callback_query, files, msg_text, protect_content=True):
+        msg_text += '\nФункционал появится позднее'
+        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

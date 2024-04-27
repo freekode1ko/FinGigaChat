@@ -9,6 +9,7 @@ from db.api.industry import industry_db, get_industry_analytic_files
 from handlers.analytics.handler import router
 from keyboards.analytics.industry import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
+from utils.base import send_pdf
 
 
 @router.callback_query(callbacks.Menu.filter(
@@ -31,13 +32,8 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     industry_df['type'] = callbacks.IndustryTypes.default
     industry_df['name'] = industry_df['name'].str.capitalize()
     industry_df = industry_df[industry_df['id'].isin(i.industry_id for i in industry_files)]
-    other_buttons = pd.DataFrame(
+    first_buttons = pd.DataFrame(
         [
-            {
-                'id': None,
-                'name': 'Прочие',
-                'type': callbacks.IndustryTypes.other,
-            },
             {
                 'id': None,
                 'name': 'Общий комментарий по отраслям',
@@ -45,7 +41,16 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
             },
         ],
     )
-    industry_df = pd.concat([industry_df.sort_values('display_order'), other_buttons])
+    last_buttons = pd.DataFrame(
+        [
+            {
+                'id': None,
+                'name': 'Прочие',
+                'type': callbacks.IndustryTypes.other,
+            },
+        ],
+    )
+    industry_df = pd.concat([first_buttons, industry_df.sort_values('display_order'), last_buttons])
 
     keyboard = keyboards.get_menu_kb(industry_df)
     msg_text = 'Отраслевая аналитика'
@@ -80,18 +85,8 @@ async def get_industry_analytics(callback_query: types.CallbackQuery, callback_d
             msg_text += f'<b>{industry_info["name"].capitalize()}</b>\n'
 
     files = await get_industry_analytic_files(callback_data.industry_id, callback_data.industry_type)
-    files = [Path(f.file_path) for f in files]
-    if files:
-        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
-
-        for i in range(0, len(files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
-            media_group = MediaGroupBuilder()
-            for fpath in files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
-                if fpath.exists():
-                    media_group.add_document(media=types.FSInputFile(fpath))
-
-            await callback_query.message.answer_media_group(media_group.build(), protect_content=True)
-    else:
-        msg_text += 'Функционал появится позднее'
+    files = [p for f in files if (p := Path(f.file_path)).exists()]
+    if not await send_pdf(callback_query, files, msg_text, protect_content=True):
+        msg_text += '\nФункционал появится позднее'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
