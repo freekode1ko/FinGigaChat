@@ -3,6 +3,7 @@ from enum import IntEnum, auto
 from aiogram.filters.callback_data import CallbackData
 
 prefix = 'CR'
+separator = ';'
 
 
 class CRMenusEnum(IntEnum):
@@ -26,22 +27,24 @@ class CRMenusEnum(IntEnum):
     send_to_mail = auto()
 
 
-class CRMainMenu(CallbackData, prefix=prefix):
+class CRMainMenu(CallbackData, prefix=prefix, sep=separator):
     menu: CRMenusEnum = CRMenusEnum.main
 
 
-class CRCreateNew(CallbackData, prefix=prefix):
+class CRCreateNew(CallbackData, prefix=prefix, sep=separator):
     menu: CRMenusEnum = CRMenusEnum.create_new
 
 
-class CRChoiceReportView(CallbackData, prefix=prefix):
+class CRChoiceReportView(CallbackData, prefix=prefix, sep=separator):
     menu: CRMenusEnum = CRMenusEnum.client_choice
     client: str | None = None
     client_page: int = 0
     date_page: int = 0
+    sub_menu: str | None = None
 
 
-class CRViewAndEdit(CallbackData, prefix=prefix):
+class CRViewAndEdit(CallbackData, prefix=prefix, sep=separator):
     menu: CRMenusEnum | None = None
     return_menu: CRMenusEnum = CRMenusEnum.main
     report_id: int | None = None
+    sub_menu: str | None = None

@@ -42,6 +42,7 @@ async def call_report_view_answer(
         message: Message,
         report: CallReport,
         return_menu: CRMenusEnum,
+        sub_menu: str | None = None,
         edit_message: bool = True,
         custom_send_mail_button: bool = False,
 ) -> None:
@@ -51,6 +52,7 @@ async def call_report_view_answer(
     :param message: Сообщение
     :param report: Call report
     :param return_menu: Меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
+    :param sub_menu: Меню возврата в clients menu
     :param edit_message: Параметр для указания нужно ли редактировать сообщение или отправить новое
     :param custom_send_mail_button: Параметр отвечающий за название кнопки отправки call report'а на почту
     """
@@ -61,7 +63,7 @@ async def call_report_view_answer(
         f'Дата: {report.date()}\n'
         f'Запись встречи: {report.description}\n'
     )
-    keyboard = get_keyboard_for_view_call_report(report._id, return_menu, custom_send_mail_button).as_markup()
+    keyboard = get_keyboard_for_view_call_report(report._id, return_menu, custom_send_mail_button, sub_menu=sub_menu).as_markup()
     if edit_message:
         await message.edit_text(text, reply_markup=keyboard)
     else:
@@ -72,6 +74,7 @@ async def call_report_edit_answer(
         message: Message,
         report: CallReport,
         return_menu: CRMenusEnum.main | CRMenusEnum.date_choice,
+        sub_menu: str | None = None,
         edit_message: bool = True,
 ) -> None:
     """
@@ -80,6 +83,7 @@ async def call_report_edit_answer(
     :param message: Сообщение
     :param report: Call report
     :param return_menu: Меню для возвращения, т.к. в данное меню можно перейти из нескольких мест
+    :param sub_menu: Меню возврата в clients menu
     :param edit_message: Параметр для указания нужно ли редактировать сообщение или отправить новое
     """
     message_text = (
@@ -88,7 +92,7 @@ async def call_report_edit_answer(
         f'Дата: {report.date()}\n'
         f'Запись встречи: {report.description}\n'
     )
-    reply_markup = get_keyboard_for_edit_call_report(report._id, return_menu).as_markup()
+    reply_markup = get_keyboard_for_edit_call_report(report._id, return_menu, sub_menu=sub_menu).as_markup()
 
     if edit_message:
         await message.edit_text(message_text, reply_markup=reply_markup)

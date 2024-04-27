@@ -356,20 +356,9 @@ async def get_client_call_reports_menu(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    # FIXME Саша Г сделает меню, надо будет его переиспользовать
+    from handlers.call_reports.call_reports_menu.handler import call_reports_handler_my_reports_date
 
-    client_info = await client_db.get(callback_data.client_id)
-
-    msg_text = (
-        f'Call reports по клиенту <b>{client_info["name"].capitalize()}</b>\n'
-        f'Функциональность будет реализована позднее'
-    )
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await call_reports_handler_my_reports_date(callback_query, callback_data)
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(

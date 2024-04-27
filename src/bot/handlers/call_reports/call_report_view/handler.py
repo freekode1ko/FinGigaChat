@@ -39,7 +39,7 @@ async def show_report(
     report = CallReport()
     await report.setup(callback_data.report_id)
 
-    await call_report_view_answer(callback_query.message, report, callback_data.return_menu)
+    await call_report_view_answer(callback_query.message, report, callback_data.return_menu, sub_menu=callback_data.sub_menu)
 
 
 @router.callback_query(CRViewAndEdit.filter(F.menu == CRMenusEnum.send_to_mail))
@@ -68,6 +68,7 @@ async def call_reports_handler_send_to_mail(
             callback_query.message,
             report,
             callback_data.return_menu,
+            sub_menu=callback_data.sub_menu,
             custom_send_mail_button=True
         )
     except Exception as e:
@@ -91,7 +92,7 @@ async def edit_report(
     report = CallReport()
     await report.setup(callback_data.report_id)
 
-    await call_report_edit_answer(callback_query.message, report, callback_data.return_menu)
+    await call_report_edit_answer(callback_query.message, report, callback_data.return_menu, sub_menu=callback_data.sub_menu)
 
 
 @router.callback_query(CRViewAndEdit.filter(F.menu == CRMenusEnum.edit_report_name))
@@ -136,7 +137,7 @@ async def call_reports_edit_name_from_state(message: Message, state: FSMContext)
     await report.setup(data['report_id'])
     await report.update_clint(message.text)
 
-    await call_report_edit_answer(message, report, data['return_menu'], edit_message=False)
+    await call_report_edit_answer(message, report, data['return_menu'], edit_message=False, sub_menu=data['sub_menu'])
     await state.clear()
 
 
@@ -181,7 +182,7 @@ async def call_reports_edit_report_date_from_state(message: Message, state: FSMC
         report = CallReport()
         await report.setup(data['report_id'])
         await report.update_date(date)
-        await call_report_edit_answer(message, report, data['return_menu'], edit_message=False)
+        await call_report_edit_answer(message, report, data['return_menu'], edit_message=False, sub_menu=data['sub_menu'])
         await state.clear()
     else:
         await message.answer(
@@ -231,5 +232,5 @@ async def call_reports_edit_description_from_state(message: Message, state: FSMC
     await report.setup(data['report_id'])
     await report.update_description(message.text)
 
-    await call_report_edit_answer(message, report, data['return_menu'], edit_message=False)
+    await call_report_edit_answer(message, report, data['return_menu'], edit_message=False, sub_menu=data['sub_menu'])
     await state.clear()
