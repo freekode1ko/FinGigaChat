@@ -32,14 +32,29 @@ async def get_users_subscriptions() -> pd.DataFrame:
         stmt = select(
             models.Whitelist.user_id,
             models.Whitelist.username,
-            func.array_agg(models.UserIndustrySubscriptions.industry_id.distinct()).label('industry_ids'),
-            func.array_agg(models.UserClientSubscriptions.client_id.distinct()).label('client_ids'),
-            func.array_agg(models.UserCommoditySubscriptions.commodity_id.distinct()).label('commodity_ids'),
-        ).join(
+            func.coalesce(
+                func.array_agg(
+                    models.UserIndustrySubscriptions.industry_id.distinct()
+                ).filter(models.UserIndustrySubscriptions.industry_id != None),
+                [],
+            ).label('industry_ids'),
+            func.coalesce(
+                func.array_agg(
+                    models.UserClientSubscriptions.client_id.distinct()
+                ).filter(models.UserClientSubscriptions.client_id != None),
+                [],
+            ).label('client_ids'),
+            func.coalesce(
+                func.array_agg(
+                    models.UserCommoditySubscriptions.commodity_id.distinct()
+                ).filter(models.UserCommoditySubscriptions.commodity_id != None),
+                [],
+            ).label('commodity_ids'),
+        ).outerjoin(
             models.UserIndustrySubscriptions
-        ).join(
+        ).outerjoin(
             models.UserClientSubscriptions
-        ).join(
+        ).outerjoin(
             models.UserCommoditySubscriptions
         ).group_by(models.Whitelist.user_id)
         result = await session.execute(stmt)
