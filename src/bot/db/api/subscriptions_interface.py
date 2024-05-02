@@ -94,11 +94,14 @@ class SubscriptionInterface:
                     self.subject_table.id,
                     self.subject_table.name,
                     case(
-                        (self.table.user_id != None, True),
-                        else_=False,
+                        (self.table.user_id.is_(None), False),
+                        else_=True,
                     ).label('is_subscribed'),
-                ).outerjoin(self.table, getattr(self.table, self.subject_id_field) == self.subject_table.id)
-                .where(or_(self.table.user_id == user_id, self.table.user_id == None))
+                ).outerjoin(self.table,
+                            ((getattr(self.table, self.subject_id_field) == self.subject_table.id) &
+                             (self.table.user_id == user_id))
+                            )
+                .where(or_(self.table.user_id == user_id, self.table.user_id.is_(None)))
                 .order_by(self.subject_table.name)
             )
             data = result.all()
