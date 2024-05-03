@@ -669,7 +669,7 @@ class ResearchAPIParser:
             session: ClientSession,
             params: dict[str, int | str | dict | None],
             save_report: bool = True,
-    ) -> dict[str, int | str | datetime.datetime | datetime.date | Path | None] | None:
+    ) -> dict[str, int | str | datetime.datetime | datetime.date | Path | None]:
         """
         Метод для выгрузки новости по айди из разделов
         :param report_id: айди отчета
@@ -690,51 +690,51 @@ class ResearchAPIParser:
             report_html = BeautifulSoup(await req.text(), 'html.parser')
 
         header = str(report_html.find('h1', class_='popupTitle').text).strip()
-        if self.is_suitable_report(header, params['starts_with']):
-            self._logger.info('CIB: сохранение отчета: %s', report_id)
 
-            date = self.cib_date_to_normal_date(str(report_html.find('span', class_="date").text).strip())
-            report_texts = []
-            for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
-                # Удаляем все ссылки
-                if paragraph_tag.find('a'):
-                    continue
-                # Удаление пустых paragraph
-                if text := str(paragraph_tag.text).strip():
-                    report_texts.append(text)
-            report_text = '\n\n'.join(report_texts).replace('>', '-')
+        self._logger.info('CIB: сохранение отчета: %s', report_id)
 
-            if file_element_with_href := report_html.find('a', class_='file', href=True):
-                async with session.get(
-                        url=file_element_with_href['href'].strip(),
-                        cookies=self.cookies,
-                        verify_ssl=False,
-                ) as req:
-                    if req.status == 200:
+        date = self.cib_date_to_normal_date(str(report_html.find('span', class_="date").text).strip())
+        report_texts = []
+        for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
+            # Удаляем все ссылки
+            if paragraph_tag.find('a'):
+                continue
+            # Удаление пустых paragraph
+            if text := str(paragraph_tag.text).strip():
+                report_texts.append(text)
+        report_text = '\n\n'.join(report_texts).replace('>', '-')
 
-                        file_path = config.PATH_TO_REPORTS / f'{report_id}.pdf'
-                        with open(file_path, "wb") as f:
-                            while True:
-                                chunk = await req.content.readany()
-                                if not chunk:
-                                    break
-                                f.write(chunk)
-                self._logger.info('CIB: успешное сохранение файла: %s', report_id)
-            else:
-                file_path = None
+        if file_element_with_href := report_html.find('a', class_='file', href=True):
+            async with session.get(
+                    url=file_element_with_href['href'].strip(),
+                    cookies=self.cookies,
+                    verify_ssl=False,
+            ) as req:
+                if req.status == 200:
 
-            data = {
-                'research_type_id': params['research_type_id'],
-                'filepath': file_path,
-                'header': header,
-                'text': report_text,
-                'parse_datetime': datetime.datetime.utcnow(),
-                'publication_date': date,
-                'report_id': report_id,
-            }
-            if save_report:
-                await self.save_report_to_db(data)
-            return data
+                    file_path = config.PATH_TO_REPORTS / f'{report_id}.pdf'
+                    with open(file_path, "wb") as f:
+                        while True:
+                            chunk = await req.content.readany()
+                            if not chunk:
+                                break
+                            f.write(chunk)
+            self._logger.info('CIB: успешное сохранение файла: %s', report_id)
+        else:
+            file_path = None
+
+        data = {
+            'research_type_id': params['research_type_id'],
+            'filepath': file_path,
+            'header': header,
+            'text': report_text,
+            'parse_datetime': datetime.datetime.utcnow(),
+            'publication_date': date,
+            'report_id': report_id,
+        }
+        if save_report:
+            await self.save_report_to_db(data)
+        return data
 
     async def get_report_ids_from_page(
             self,
@@ -742,13 +742,13 @@ class ResearchAPIParser:
             session: ClientSession,
             check_existing: bool = True,
             **kwargs,
-    ) -> dict[str, int | str | datetime.datetime | datetime.date | Path | None] | None:
+    ) -> list[dict[str, int | str | datetime.datetime | datetime.date | Path | None]]:
         """
         Метод для получений айди новостей из разделов
         :param params: Параметры для выгрузки отчетов
         :param session: сессия aiohttp
         :param check_existing: Делать ли проверку на то, что report_id есть в БД
-        :returns: dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]
+        :returns: list[dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]]
         """
         self._logger.info('CIB: Начат парсинг страницы %s', params['url'])
         for i in range(self.REPEAT_TRIES):
@@ -788,6 +788,7 @@ class ResearchAPIParser:
 
         self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
 
+        new_reports = []
         for report in reports:
             report_name = str(report[1].find_next("div", class_="title").text).strip()
             if not self.is_suitable_report(report_name, params['starts_with']):
@@ -801,7 +802,8 @@ class ResearchAPIParser:
                 self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
                 data = await self.parse_reports_by_id(element_with_id, session, params, **kwargs)
                 self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
-                return data
+                new_reports.append(data)
+        return new_reports
 
     async def parse_weekly_pulse(self, session) -> None:
         """
@@ -821,9 +823,10 @@ class ResearchAPIParser:
             self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
             return
 
-        if not report_data or not report_data['filepath']:
+        if not report_data or not report_data[0]['filepath']:
             self._logger.info('CIB: Не удалось получить отчет Weekly Pulse')
             return
+        report_data = report_data[0]
 
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
 
