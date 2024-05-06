@@ -1,0 +1,126 @@
+body {
+    text-align: center;
+    align-items: center;
+    font-family: sans-serif;
+    color: black;
+}
+
+
+button {
+    padding: 10px 20px;
+    background: #4682B4;
+    border-radius: 5px;
+    border: 2px solid #4682B4;
+}
+
+button:hover {
+    background-color: white;
+    color: #4682B4;
+}
+
+.create-main, .event-button {
+    color: white;
+    font-size: 14px;
+}
+
+.form-input {
+    margin-bottom: 10px;
+}
+
+input {
+    width: 80%;
+    outline: none;
+    border: 1px solid silver;
+    border-radius: 3px;
+    padding: 10px;
+}
+
+textarea {
+    min-width:80vw;
+    max-width:80vw;
+    border: 1px solid silver;
+    border-radius: 3px;
+}
+
+#description {
+    min-height: 20vh;
+    max-height: 20vh;
+}
+
+#theme {
+    min-height: 5vh;
+    max-height: 10vh;
+}
+
+input:hover, textarea:hover, input:focus, textarea:focus {
+    border: 1px solid #4682B4;
+    outline: none;
+}
+
+.input-group.date {
+    width: 80%;
+    margin: 0 auto;
+    margin-bottom: 10px;
+}
+
+.input-group.date .form-control { width: 100%;}
+
+
+.first-line, .end-line, .line {
+    display: flex;
+    align-items: center;
+}
+
+
+.first-line.title {
+    width: 80%;
+    padding-left: 10vw;
+    padding-top: 10px;
+}
+
+.first-line.button {
+    padding-right: 10px;
+    padding-top: 10px;
+}
+
+.meeting-table {
+    width: 98%;
+    align-items: center;
+    padding-left: 2%;
+}
+
+th {
+    text-align: center;
+}
+
+#noMeeting {
+    font-size: 14px;
+}
+
+.el-line-date {
+    padding-right:4px;
+    width: 90%;
+}
+
+.line {
+    margin-bottom: 10px;
+}
+
+#main {
+    width: 80vw;
+    margin-left:10vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.el-line-button {
+    padding-right:4px;
+    width: 90%;
+}
+
+.el-line-button button {
+    width: 90%;
+}
+

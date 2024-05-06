@@ -7,14 +7,33 @@ STATIC_CERTS_PATH = PROJECT_DIR / 'data' / 'certs'
 STATIC_CHAIN_PATH = STATIC_CERTS_PATH / 'fullchain.pem'
 STATIC_KEY_PATH = STATIC_CERTS_PATH / 'privkey.pem'
 
+LOG_FILE = 'web_app'
+LOG_LEVEL = 20  # info
+
+
+# ______________________________env____________________________
 env = Env()
 env.read_env()
 
+DEBUG: bool = env.bool('DEBUG', default=False)
 PSQL_ENGINE: str = env.str('PSQL_ENGINE', default='')
+DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
 
-MEETING_PAGES = 'https://alinlpkv.github.io'
 
+# ___________________________config_js_________________________
+match DOMAIN_NAME:
+    case 'ai-bankir-helper.ru':
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
+    case 'ai-bankir-helper-dev.ru':
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
+    case _:
+        WEB_APP_URL = f'http://{DOMAIN_NAME}'
+
+
+# _________________________date_format_________________________
+SERVER_DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
+BASE_TIME_FORMAT = '%H:%M'
 
 
 # ____________________________email____________________________
@@ -25,11 +44,11 @@ MAIL_SMTP_PORT = 465
 
 
 # ____________________________schedular____________________________
-
+BOT_API_TOKEN: str = env.str('BOT_API_TOKEN', default='')
 REMEMBER_TIME = {  # за сколько минут нужно напомнить о встрече и каким сообщением
     'first': {
         'minutes': 24 * 60,
-        'msg': 'Встреча "{meeting_theme}" назначена на завтра'
+        'msg': 'Встреча "{meeting_theme}" назначена на завтра в {time}'
     },
     'second': {
         'minutes': 60,
@@ -40,4 +59,3 @@ REMEMBER_TIME = {  # за сколько минут нужно напомнит�
         'msg': 'Встреча "{meeting_theme}" начнется через 15 минут'
     }
 }
-

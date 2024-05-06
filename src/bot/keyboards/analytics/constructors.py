@@ -1,15 +1,11 @@
-from typing import Type
-
-import pandas as pd
 from aiogram import types
-from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import analytics, constants
 from constants.analytics import analytics_sell_side
-from constants.analytics import industry
 from constants.analytics import macro_view
+from keyboards.analytics.industry import callbacks as industry_callbacks
 
 
 def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
@@ -36,22 +32,22 @@ def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [ Аналитика sell-side ]
+    [ Аналитика публичных рынков ]
     [ Отраслевая аналитика ]
-    [ MacroView ]
+    [ macro_view.TITLE ]
     [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
-        text='Аналитика sell-side',
+        text='Аналитика публичных рынков',
         callback_data=analytics_sell_side.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Отраслевая аналитика',
-        callback_data=industry.MENU,
+        callback_data=industry_callbacks.Menu().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='MacroView',
+        text=macro_view.TITLE,
         callback_data=macro_view.MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(

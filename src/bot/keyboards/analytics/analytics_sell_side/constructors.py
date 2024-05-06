@@ -222,22 +222,22 @@ def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> Inlin
                 summary_type=research_type_info['summary_type'],
             ).pack(),
         },
-        {
-            'name': 'P&L модель',
-            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        },
-        {
-            'name': 'Модель баланса',
-            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        },
-        {
-            'name': 'Модель CF',
-            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        },
-        {
-            'name': 'Коэффициенты',
-            'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        },
+        # {
+        #     'name': 'P&L модель',
+        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        # },
+        # {
+        #     'name': 'Модель баланса',
+        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        # },
+        # {
+        #     'name': 'Модель CF',
+        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        # },
+        # {
+        #     'name': 'Коэффициенты',
+        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        # },
     ]
 
     for item in buttons:

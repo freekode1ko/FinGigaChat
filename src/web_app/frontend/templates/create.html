@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.15.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/locale/ru.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', path='/favicon.ico') }}">
+    <title>Создание встречи</title>
+</head>
+<body>
+<div id="main">
+
+    <form id="meeting_info">
+        <div><h3>Создание встречи</h3></div>
+        <p id="errorMessageDateStart" style="color: red;"></p>
+        <div class="line">
+            <div class="el-line-date">
+                <input class="form-control start" id="date-start" placeholder="Дата начала" >
+            </div>
+            <div class="el-line">
+                <input class="form-control start" id="time-start" placeholder="Время" >
+            </div>
+        </div>
+        <div class="line">
+            <div class="el-line-date">
+                <input class="form-control end" id="date-end" placeholder="Дата окончания">
+            </div>
+            <div class="el-line">
+                <input class="form-control end" id="time-end" placeholder="Время">
+            </div>
+        </div>
+        <div>
+            <p id="errorMessageTheme" style="color: red;"></p>
+            <textarea class="form-input" placeholder="Тема" id="theme" name="theme"></textarea>
+        </div>
+        <div>
+            <textarea class="form-input" placeholder="Описание" id="description" name="description"></textarea>
+        </div>
+        <input type="hidden" id="timezoneOffset" name="timezoneOffset" value="">
+
+        <div class="line">
+            <div class="el-line-button">
+                    <button id="back" class="event-button back" type="button">Назад</button>
+            </div>
+            <div class="el-line-button">
+                <button id="create" class="event-button create">Создать</button>
+            </div>
+        </div>
+    </form>
+</div>
+ <script src="{{ url_for('static', path='/roller_date.js') }}"></script>
+<script type="module" src="{{ url_for('static', path='/creation.js') }}"></script>
+</body>
+</html>

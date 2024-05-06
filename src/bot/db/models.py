@@ -134,6 +134,7 @@ class Industry(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения отраслей')
 
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
@@ -277,7 +278,6 @@ class Whitelist(Base):
     user_type = Column(Text)
     user_status = Column(Text)
     user_email = Column(Text, server_default=sa.text("''::text"))
-    subscriptions = Column(Text)
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
@@ -521,7 +521,7 @@ class Research(Base):
     text = Column(Text, nullable=False)
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
-    news_id = Column(String(64), nullable=False)
+    report_id = Column(String(64), nullable=False)
     is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что отчет еще не рассылался пользователям')
 
 
@@ -550,15 +550,11 @@ class UserMeeting(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     theme = Column(Text, nullable=False, default='Напоминание', comment='Тема встречи')
+    date_create = Column(DateTime, comment='Время создания встречи (UTC)')
     date_start = Column(DateTime, nullable=False, comment='Время начала встречи (UTC)')
     date_end = Column(DateTime, nullable=False, comment='Время окончания встречи (UTC)')
     timezone = Column(Integer, comment='Таймзона пользователя во время использования web app', nullable=False)
-    is_notify_first = Column(Boolean, server_default=sa.text('false'),
-                             comment='Указывает на отправку первого уведомления')
-    is_notify_second = Column(Boolean, server_default=sa.text('false'),
-                              comment='Указывает на отправку второго уведомления')
-    is_notify_last = Column(Boolean, server_default=sa.text('false'),
-                            comment='Указывает на отправку последнего уведомления')
+    notify_count = Column(Integer, server_default=sa.text('0'), comment='Количество отправленных напоминаний')
     description = Column(Text, comment='Описание встречи')
 
 
@@ -585,3 +581,84 @@ class FinancialSummary(Base):
     pl_table = Column(Text, nullable=True, comment='Таблица с P&L таблицей в формате dict')
     balance_table = Column(Text, nullable=True, comment='Таблица с балансной таблицей в формате dict')
     money_table = Column(Text, nullable=True, comment='Таблица с таблицей денежных потоков в формате dict')
+
+
+class UserClientSubscriptions(Base):
+    __tablename__ = 'user_client_subscription'
+    __table_args__ = {'comment': 'Справочник подписок пользователей на клиентов'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class UserCommoditySubscriptions(Base):
+    __tablename__ = 'user_commodity_subscription'
+    __table_args__ = {'comment': 'Справочник подписок пользователей на сырьевые товары'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class UserIndustrySubscriptions(Base):
+    __tablename__ = 'user_industry_subscription'
+    __table_args__ = {'comment': 'Справочник подписок пользователей на отрасли'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class IndustryDocuments(Base):
+    __tablename__ = 'bot_industry_documents'
+    __table_args__ = {'comment': 'Справочник файлов отраслевой аналитики'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    file_name = Column(String(255), nullable=False, comment='Имя файла')
+    file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'),
+                         primary_key=False, nullable=True, comment='id отрасли')
+    industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
+                           comment='тип отрасли')
+
+
+class ProductGroup(Base):
+    __tablename__ = 'bot_product_group'
+    __table_args__ = (
+        sa.UniqueConstraint('name', name='group_name'),
+        {'comment': 'Справочник групп продуктов (продуктовая полка, hot offers)'},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    name = Column(String(255), nullable=False, comment='Имя группы')
+    name_latin = Column(String(255), nullable=False, comment='Имя группы eng')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
+                         comment='Описание группы (текст меню тг)')
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+
+
+class Product(Base):
+    __tablename__ = 'bot_product'
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'group_id', name='product_name_in_group'),
+        {'comment': 'Справочник продуктов (кредит, GM, ...)'},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
+                           comment='Текст сообщения, которое выдается при нажатии на продукт')
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    group_id = Column(ForeignKey('bot_product_group.id', ondelete='CASCADE', onupdate='CASCADE'),
+                      primary_key=False, nullable=False, comment='id группы продукта')
+
+
+class ProductDocument(Base):
+    __tablename__ = 'bot_product_document'
+    __table_args__ = {'comment': 'Справочник файлов продуктов'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
+    name = Column(String(255), nullable=False, comment='Наименование документа или продуктового предложения')
+    description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
+                         primary_key=False, nullable=False, comment='id категории продукта')
