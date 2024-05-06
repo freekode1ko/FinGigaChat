@@ -43,7 +43,8 @@ async def get_my_tg_subscriptions(callback_query: types.CallbackQuery, callback_
     user_tg_subs_df = get_user_tg_subscriptions_df(user_id)
     page_data, page_info, max_pages = get_page_data_and_info(user_tg_subs_df, page)
     msg_text = (
-        f'Ваш список подписок на telegram каналы\n<b>{page_info}</b>\n'
+        f'Ваш список подписок на {telegram_group_info["name"].lower()}\n'
+        f'<b>{page_info}</b>\n'
         f'Для получения более детальной информации о канале - нажмите на него\n\n'
         f'Для удаления канала из подписок - нажмите на "{DELETE_CROSS}" рядом с каналом'
     )
@@ -67,7 +68,7 @@ async def show_tg_channel_more_info(
         f'Название: <b>{telegram_channel_info["name"]}</b>\n'
         # f'Description: {}\n'
         f'Ссылка: {telegram_channel_info["link"]}\n'
-        f'Отрасль: <b>{telegram_channel_info["industry_name"]}</b>\n'
+        f'Раздел: <b>{telegram_channel_info["industry_name"]}</b>\n'
     )
     keyboard = keyboards.get_tg_info_kb(telegram_id, is_subscribed, back)
 
@@ -143,7 +144,7 @@ async def get_industry_tg_channels(callback_query: types.CallbackQuery, callback
     industry_name = get_industry_name(industry_id)
     tg_channel_df = get_industry_tg_channels_df(industry_id, user_id)
     msg_text = (
-        f'Подборка telegram каналов по отрасли "{industry_name}"\n\n'
+        f'{telegram_group_info["name"]} по разделу "{industry_name}"\n\n'
         f'Для добавления/удаления подписки на telegram канала нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
         f'Для получения более детальной информации о канале - нажмите на него'
     )
@@ -187,7 +188,7 @@ async def delete_all_tg_subs_done(callback_query: types.CallbackQuery) -> None:
     user_id = callback_query.from_user.id
     delete_all_user_telegram_subscriptions(user_id)
 
-    msg_text = 'Ваши подписки на telegram каналы были удалены'
+    msg_text = f'Ваши подписки на {telegram_group_info["name"].lower()} были удалены'
     keyboard = keyboards.get_back_to_tg_subs_menu_kb()
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -212,7 +213,7 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
         msg_text = 'У вас отсутствуют подписки'
         keyboard = keyboards.get_back_to_tg_subs_menu_kb()
     else:
-        msg_text = 'Вы уверены, что хотите удалить все подписки на telegram каналы?'
+        msg_text = f'Вы уверены, что хотите удалить все подписки на {telegram_group_info["name"].lower()}?'
         keyboard = keyboards.get_prepare_tg_subs_delete_all_kb()
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
@@ -221,10 +222,7 @@ async def delete_all_tg_subs(callback_query: types.CallbackQuery) -> None:
 
 async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
     keyboard = keyboards.get_tg_subscriptions_menu_kb()
-    msg_text = (
-        'Меню управления подписками на telegram каналы\n\n'
-        'На основе ваших подписок формируется сводка новостей по отрасли, с которой связаны telegram каналы'
-    )
+    msg_text = f'Меню управления подписками на {telegram_group_info["name"].lower()}\n\n'
     await send_or_edit(message, msg_text, keyboard)
 
 
