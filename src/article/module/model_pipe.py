@@ -764,6 +764,7 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
             if giga_label != '0' and giga_label != '1':
                 logger.error("Не удалось получить ответ от Gigachat в нужном формате. Наименование: {}; "
                              "Суммаризация: {}; Ответ: {}".format(name, text_sum, giga_answer))
+                result.append(name)
     return ';'.join(result)
 
 
