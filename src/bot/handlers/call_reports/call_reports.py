@@ -38,12 +38,12 @@ async def main_menu(message: Message, edit: bool = False) -> None:
             callback_data=CRCreateNew(menu=CRMenusEnum.create_new).pack()
         )
     )
-    keyboard.row(
-        InlineKeyboardButton(
-            text='Посмотреть мои протоколы',
-            callback_data=CRChoiceReportView(menu=CRMenusEnum.client_choice).pack(),
-        )
-    )
+    # keyboard.row(
+    #     InlineKeyboardButton(
+    #         text='Посмотреть мои протоколы',
+    #         callback_data=CRChoiceReportView(menu=CRMenusEnum.client_choice).pack(),
+    #     )
+    # )
     keyboard.row(
         InlineKeyboardButton(
             text='Закрыть',
