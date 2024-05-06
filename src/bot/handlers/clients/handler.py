@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 from typing import Optional
 
 from aiogram import F, Router, types
@@ -9,6 +10,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 import utils.base
 from db import subscriptions as subscriptions_db_api
 from db.api.client import client_db, get_research_type_id_by_name
+from db.api.industry import get_industry_analytic_files
 from db.api.product_group import product_group_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
@@ -20,7 +22,7 @@ from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import user_logger
 from module.article_process import FormatText
-from utils.base import send_or_edit, user_in_whitelist, get_page_data_and_info
+from utils.base import send_or_edit, send_pdf, user_in_whitelist, get_page_data_and_info
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -244,15 +246,19 @@ async def get_client_industry_analytics(
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    # FIXME Реализовать после того, как в меню аналитики будет переработана отраслевая аналитика
 
     client_info = await client_db.get(callback_data.client_id)
 
     msg_text = (
         f'Отраслевая аналитика по клиенту <b>{client_info["name"].capitalize()}</b>\n'
-        f'Функциональность будет реализована позднее'
     )
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
+
+    files = await get_industry_analytic_files(industry_id=client_info['industry_id'])
+    files = [p for f in files if (p := Path(f.file_path)).exists()]
+    if not await send_pdf(callback_query, files, msg_text, protect_content=True):
+        msg_text += '\nФункционал появится позднее'
+        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -582,4 +588,3 @@ async def get_anal_reports(
             days_count=callback_data.days_count,
         ),
     )
-
