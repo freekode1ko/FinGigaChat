@@ -162,15 +162,15 @@ def get_client_menu_kb(
             subscribed=subscribed,
         ).pack(),
     ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Сформировать материалы для встречи',
-        callback_data=callback_data_factories.ClientsMenuData(
-            menu=callback_data_factories.ClientsMenusEnum.meetings_data,
-            client_id=client_id,
-            page=current_page,
-            subscribed=subscribed,
-        ).pack(),
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Сформировать материалы для встречи',
+    #     callback_data=callback_data_factories.ClientsMenuData(
+    #         menu=callback_data_factories.ClientsMenusEnum.meetings_data,
+    #         client_id=client_id,
+    #         page=current_page,
+    #         subscribed=subscribed,
+    #     ).pack(),
+    # ))
     # keyboard.row(types.InlineKeyboardButton(
     #     text='Call reports',
     #     callback_data=callback_data_factories.ClientsMenuData(
@@ -212,15 +212,15 @@ def get_news_menu_kb(
     :param subscribed: ClientsMenuData.subscribed
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(
-        text='Топ новости',
-        callback_data=callback_data_factories.ClientsMenuData(
-            menu=callback_data_factories.ClientsMenusEnum.top_news,
-            client_id=client_id,
-            page=current_page,
-            subscribed=subscribed,
-        ).pack(),
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Топ новости',
+    #     callback_data=callback_data_factories.ClientsMenuData(
+    #         menu=callback_data_factories.ClientsMenusEnum.top_news,
+    #         client_id=client_id,
+    #         page=current_page,
+    #         subscribed=subscribed,
+    #     ).pack(),
+    # ))
     keyboard.row(types.InlineKeyboardButton(
         text='Получить новости за период',
         callback_data=callback_data_factories.ClientsMenuData(
@@ -385,30 +385,30 @@ def client_analytical_indicators_kb(
                 subscribed=subscribed,
             ).pack(),
         },
-        {
-            'name': 'P&L модель',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-            ).pack(),
-        },
-        {
-            'name': 'Модель баланса',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-            ).pack(),
-        },
-        {
-            'name': 'Модель CF',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-            ).pack(),
-        },
-        {
-            'name': 'Коэффициенты',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-            ).pack(),
-        },
+        # {
+        #     'name': 'P&L модель',
+        #     'callback_data': callback_data_factories.ClientsMenuData(
+        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+        #     ).pack(),
+        # },
+        # {
+        #     'name': 'Модель баланса',
+        #     'callback_data': callback_data_factories.ClientsMenuData(
+        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+        #     ).pack(),
+        # },
+        # {
+        #     'name': 'Модель CF',
+        #     'callback_data': callback_data_factories.ClientsMenuData(
+        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+        #     ).pack(),
+        # },
+        # {
+        #     'name': 'Коэффициенты',
+        #     'callback_data': callback_data_factories.ClientsMenuData(
+        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
+        #     ).pack(),
+        # },
     ]
 
     for item in buttons:
