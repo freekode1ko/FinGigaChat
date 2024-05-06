@@ -753,7 +753,10 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
                 message = COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
             try:
                 giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
-                giga_label = giga_answer[-1]
+                if giga_answer[-2:-1] == '0' or giga_answer[-2:-1] == '1':
+                    giga_label = giga_answer[-2:-1]
+                else:
+                    giga_label = giga_answer[-3:-2]
             except Exception as e:
                 logger.error("Не удалось получить ответ от Gigachat. Наименование:{}; "
                              "Суммаризация: {}".format(name, text_sum))
