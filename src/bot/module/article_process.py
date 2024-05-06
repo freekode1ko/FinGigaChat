@@ -196,17 +196,17 @@ class ArticleProcess:
 
         return com_data
 
-    def get_client_fin_indicators(self, client_id) -> pd.DataFrame:
+    def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
         """
-        Get company financial indicators.
-        :param client_id: id of company in client table
-        :return: df financial indicators
+        Получение финансовых показателей для клиента.
+        :param client_id: id компании в таблице client
+        :return: DF таблица финансовых показателей для клиента
         """
         if client_id:
             self._logger.info(f'Поиск фин. показателей для клиента: {client_id}')
-            query = (select(FinancialSummary.review_table, FinancialSummary.pl_table,
-                            FinancialSummary.balance_table, FinancialSummary.money_table)
-                     .where(FinancialSummary.client_id == client_id))
+            query = select(FinancialSummary.review_table, FinancialSummary.pl_table,
+                           FinancialSummary.balance_table, FinancialSummary.money_table)\
+                .where(FinancialSummary.client_id == client_id)
 
             with engine.connect() as conn:
                 metadata = conn.execute(query).fetchall()

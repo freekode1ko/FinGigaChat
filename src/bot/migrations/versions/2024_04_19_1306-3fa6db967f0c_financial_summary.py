@@ -53,10 +53,7 @@ def upgrade() -> None:
     comment='Справочник таблиц с финансовыми показателями клиентов из CIB Research'
     )
     # ### end Alembic commands ###
-    bind = op.get_bind()
-    session = Session(bind=bind)
-    add_new_sources(session)
-    session.commit()
+
     op.bulk_insert(financial_summary_table, financial_summary.financial_summary)
 
 def downgrade() -> None:

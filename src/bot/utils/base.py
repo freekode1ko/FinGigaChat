@@ -338,13 +338,13 @@ async def __create_fin_table(message: types.Message, client_name: str,
     """
     transformer = dt.Transformer()
     client_fin_table = client_fin_table.rename(columns={'': 'Финансовые показатели'})
-    for row in client_fin_table.iterrows():
-        if row[1]['Финансовые показатели'] in row[1][client_fin_table.keys().to_list()[1:]].values:
-            if row[1]['Финансовые показатели'] == '':
-                client_fin_table.drop(index=row[0], inplace=True)
+    for i, row in client_fin_table.iterrows():
+        if row['Финансовые показатели'] in row[client_fin_table.keys().to_list()[1:]].values:
+            if not row['Финансовые показатели']:
+                client_fin_table.drop(index=i, inplace=True)
             else:
-                client_fin_table.loc[row[0]] = pd.Series(
-                    {'Финансовые показатели': client_fin_table.loc[row[0]]['Финансовые показатели']})
+                client_fin_table.loc[row[i]] = pd.Series(
+                    {'Финансовые показатели': client_fin_table.loc[i]['Финансовые показатели']})
     client_fin_table.where(pd.notnull(client_fin_table), '')
 
     transformer.render_mpl_table(

@@ -16,8 +16,8 @@ class Transformer:
 
         :param lst: List[] или numpy.ndarray с наименованиями колонок
         """
-        for i in range(len(lst)):
-            if lst[i].isdigit():
+        for i, element in enumerate(lst):
+            if element.isdigit():
                 return lst[i - 1:]
         return lst
 

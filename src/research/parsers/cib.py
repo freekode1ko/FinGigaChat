@@ -955,11 +955,11 @@ class ResearchAPIParser:
         self._logger.info('Чтение таблицы financial_summary')
         # columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
         # metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
-        query = (select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
-                        FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
-                        FinancialSummary.balance_table, FinancialSummary.money_table))
-        with engine.connect() as conn:
-            metadata = conn.execute(query).fetchall()
+        query = select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
+                       FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
+                       FinancialSummary.balance_table, FinancialSummary.money_table)
+        with async_session() as session:
+            metadata = session.execute(query).fetchall()
             metadata_df = pd.DataFrame(metadata)
             metadata_df.columns = metadata_df.keys()
 
