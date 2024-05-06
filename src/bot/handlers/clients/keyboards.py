@@ -171,16 +171,15 @@ def get_client_menu_kb(
             subscribed=subscribed,
         ).pack(),
     ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Call reports',
-        callback_data=callback_data_factories.ClientsMenuData(
-            menu=callback_data_factories.ClientsMenusEnum.call_reports,
-            client_id=client_id,
-            page=current_page,
-            subscribed=subscribed,
-        ).pack(),
-    ))
-
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Call reports',
+    #     callback_data=callback_data_factories.ClientsMenuData(
+    #         menu=callback_data_factories.ClientsMenusEnum.call_reports,
+    #         client_id=client_id,
+    #         page=current_page,
+    #         subscribed=subscribed,
+    #     ).pack(),
+    # ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_data_factories.ClientsMenuData(
