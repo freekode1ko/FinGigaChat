@@ -22,7 +22,7 @@ from constants.constants import (
 )
 from db.database import engine, async_session
 from db.models import Whitelist
-from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist
+from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist, update_user_email_after_register
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
@@ -177,19 +177,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         welcome_msg = f'Добро пожаловать, {full_name}!'
         exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.'
         try:
-            async with async_session() as session:
-                await session.execute(
-                    insert(Whitelist)
-                    .values(
-                        user_id=user_id,
-                        username=user_username,
-                        full_name=full_name,
-                        user_type='user',
-                        user_status='active',
-                        user_email=user_email,
-                    )
-                )
-                await session.commit()
+            await update_user_email_after_register(user_id, user_username, full_name, user_email)
 
             await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')

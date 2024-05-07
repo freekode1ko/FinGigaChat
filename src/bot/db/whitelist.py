@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import text, select, func
+from sqlalchemy import text, select, func, insert, update
 
 from db import models, database
 from db.database import engine
@@ -59,3 +59,31 @@ async def get_users_subscriptions() -> pd.DataFrame:
         ).group_by(models.Whitelist.user_id)
         result = await session.execute(stmt)
         return pd.DataFrame(result.all(), columns=['user_id', 'username', 'industry_ids', 'client_ids', 'commodity_ids'])
+
+
+async def update_user_email_after_register(
+        user_id: int,
+        user_username: str,
+        user_full_name: str,
+        user_email: str) -> None:
+    """
+    Сохранение почты после регистрации
+
+    :param user_id: ID пользователя
+    :param user_username: Username пользователя
+    :param user_full_name: Имя пользователя
+    :param user_email: Email пользователя
+    """
+    async with database.async_session() as session:
+        await session.execute(
+            update(models.Whitelist)
+            .where(models.Whitelist.user_id == user_id)
+            .values(
+                username=user_username,
+                full_name=user_full_name,
+                user_type='user',
+                user_status='active',
+                user_email=user_email,
+            )
+        )
+        await session.commit()
