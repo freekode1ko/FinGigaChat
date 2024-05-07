@@ -20,9 +20,7 @@ from pdf2image import convert_from_path
 from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from sqlalchemy import insert, select, func
+from sqlalchemy import select
 # from sqlalchemy.dialects.postgresql import insert
 
 from configs import config
@@ -918,7 +916,7 @@ class ResearchAPIParser:
         self._logger.info('CIB: Конец парсинга CIB')
 
     @staticmethod
-    async def save_fin_summary(df) -> None:
+    async def save_fin_summary(df: pd.DataFrame) -> None:
         """
         Сохранение финансовых показателей по клиентам в БД
         :param df: pandas.DataFrame() с таблицей для записи в бд
@@ -958,10 +956,11 @@ class ResearchAPIParser:
         query = select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
                        FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
                        FinancialSummary.balance_table, FinancialSummary.money_table)
-        with async_session() as session:
-            metadata = session.execute(query).fetchall()
-            metadata_df = pd.DataFrame(metadata)
-            metadata_df.columns = metadata_df.keys()
+        async with async_session() as session:
+            metadata = await session.execute(query)
+            metadata = metadata.fetchall()
+        metadata_df = pd.DataFrame(metadata)
+        metadata_df.columns = metadata_df.keys()
 
         self._logger.info('Очистка прошлых записей в таблице financial_summary')
 
@@ -977,9 +976,15 @@ class ResearchAPIParser:
                 sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
                 for company_id in sector_df['company_id'].values.tolist():
                     try:
-                        sector_page = await session.post(
-                            url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
-                            verify_ssl=False, cookies=self.cookies)
+                        for i in range(3):
+                            sector_page = await session.post(
+                                url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
+                                verify_ssl=False, cookies=self.cookies)
+                            if sector_page.ok:
+                                break
+                            else:
+                                time.sleep(1)
+
                         content = await sector_page.text()
                         part = tf.process_fin_summary_table(content, company_id, sector_df)
                         df_parts = pd.concat([part, df_parts], ignore_index=True)

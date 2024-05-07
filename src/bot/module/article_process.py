@@ -4,9 +4,8 @@ import re
 from typing import Dict, List, Union
 from urllib.parse import urlparse
 
-import numpy as np
 import pandas as pd
-from sqlalchemy import text, insert, select, func
+from sqlalchemy import text, select
 from sqlalchemy.exc import ProgrammingError
 
 from configs.config import (
@@ -15,7 +14,7 @@ from configs.config import (
     NEWS_LIMIT,
 )
 from constants.quotes import COMMODITY_MARKS
-from db.database import engine
+from db.database import async_session, engine
 from log.logger_base import Logger
 from db.models import FinancialSummary
 
@@ -208,10 +207,11 @@ class ArticleProcess:
                            FinancialSummary.balance_table, FinancialSummary.money_table)\
                 .where(FinancialSummary.client_id == client_id)
 
-            with engine.connect() as conn:
-                metadata = conn.execute(query).fetchall()
-                metadata_df = pd.DataFrame(metadata)
-                metadata_df.columns = metadata_df.keys()
+            async with async_session() as session:
+                metadata = await session.execute(query)
+                metadata = metadata.fetchall()
+            metadata_df = pd.DataFrame(metadata)
+            metadata_df.columns = metadata_df.keys()
 
             return metadata_df
         else:
