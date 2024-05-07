@@ -378,13 +378,11 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 
 @router.message(Command('dailynews'))
 async def dailynews(message: types.Message) -> None:
-    user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await is_admin_user(user)
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if admin_flag:
+    if await is_admin_user(message.from_user.model_dump_json()):
         await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
+        user_logger.warning('Завершена рассылка от админа')
     else:
+        chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
 
 
