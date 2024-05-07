@@ -383,8 +383,7 @@ async def dailynews(message: types.Message) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if admin_flag:
-        user_df = pd.read_sql_table('whitelist', con=database.engine, columns=['user_id', 'username', 'subscriptions'])
-        await subscriptions_newsletter(message.bot, user_df, client_hours=20, commodity_hours=20)
+        await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
     else:
         user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
 
