@@ -173,9 +173,6 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
             user_username = 'Empty_username'
         user_id = user_raw['id']
         user_email = reg_info['user_email']
-        user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None, user_email]],
-            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'])
 
         welcome_msg = f'Добро пожаловать, {full_name}!'
         exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.'
@@ -194,7 +191,6 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
                 )
                 await session.commit()
 
-            user.to_sql('whitelist', if_exists='append', index=False, con=engine)
             await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await help_handler(message, state)
