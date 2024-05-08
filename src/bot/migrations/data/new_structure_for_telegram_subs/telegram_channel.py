@@ -78,13 +78,6 @@ data = [
         ).limit(1),
     },
     {
-        'name': 'Санкции в РФ',
-        'link': 'https://t.me/RUSanctions',
-        'section_id': sa.select(models.TelegramSection.id).where(
-            models.TelegramSection.name == bot_telegram_section.data[1]['name'],
-        ).limit(1),
-    },
-    {
         'name': 'Forbes Russia',
         'link': 'https://t.me/forbesrussia',
         'section_id': sa.select(models.TelegramSection.id).where(
