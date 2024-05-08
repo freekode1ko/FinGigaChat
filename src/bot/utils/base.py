@@ -433,16 +433,27 @@ async def wait_until(to_dt: datetime) -> None:
 
 async def send_or_edit(
         message: types.CallbackQuery | types.Message,
-        msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
+        msg_text: str,
+        keyboard: Optional[types.InlineKeyboardMarkup] = None,
+        parse_mode: Optional[str] = 'HTML'
 ) -> None:
+    """
+    Отправляет новое сообщение, если message это types.Message
+    Изменяет текущее сообщение, если message это types.CallbackQuery
+
+    :param message: Объект сообщения или callback
+    :param msg_text: Текст сообщения, длина 1-4096
+    :param keyboard: Inline клавиатура
+    :param parse_mode: Режим парсинга текста для его форматирования
+    """
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
     if isinstance(message, types.Message):
-        await message.answer(msg_text, reply_markup=keyboard)
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
 
     # Если CallbackQuery - изменяем это сообщение
     else:
         call = message
-        await call.message.edit_text(msg_text, reply_markup=keyboard)
+        await call.message.edit_text(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
 
 
 async def send_pdf(
