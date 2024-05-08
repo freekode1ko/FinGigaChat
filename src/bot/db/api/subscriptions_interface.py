@@ -1,7 +1,7 @@
 from typing import Type
 
 import pandas as pd
-from sqlalchemy import insert, delete, select, case, or_
+from sqlalchemy import insert, delete, select, case
 
 from db import database
 from db.models import Base

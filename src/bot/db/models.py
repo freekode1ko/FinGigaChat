@@ -24,6 +24,7 @@ from constants import enums
 
 Base = declarative_base()
 metadata = Base.metadata
+mapper_registry = sa.orm.registry(metadata=metadata)
 
 
 class Article(Base):
@@ -451,6 +452,13 @@ t_user_telegram_subscription = Table(
     Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
     Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
+
+
+class UserTelegramSubscriptions:
+    pass
+
+
+mapper_registry.map_imperatively(UserTelegramSubscriptions, t_user_telegram_subscription)
 
 
 class RAGUserFeedback(Base):
