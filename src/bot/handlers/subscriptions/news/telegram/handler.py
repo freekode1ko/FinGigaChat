@@ -199,7 +199,7 @@ async def __show_telegram_channels_by_group(
 
     msg_text = (
         f'{telegram_group_info.name}\n\n'
-        f'Для добавления/удаления подписки на telegram канала нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
+        f'Для добавления/удаления подписки на telegram канал нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
         f'Для получения более детальной информации о канале - нажмите на него'
     )
     keyboard = keyboards.get_change_subscriptions_kb(telegram_channels, callback_data)
@@ -263,7 +263,7 @@ async def telegram_channels_by_section(
     keyboard = keyboards.get_change_subscriptions_kb(telegram_channels, callback_data)
     msg_text = (
         f'{telegram_group_info.name} по отрасли "{telegram_section_info.name}"\n\n'
-        f'Для добавления/удаления подписки на telegram канала нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
+        f'Для добавления/удаления подписки на telegram канал нажмите на {UNSELECTED}/{SELECTED} соответственно\n\n'
         f'Для получения более детальной информации о канале - нажмите на него'
     )
     await send_or_edit(callback_query, msg_text, keyboard)
