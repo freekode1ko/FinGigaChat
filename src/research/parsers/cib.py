@@ -21,7 +21,6 @@ from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from sqlalchemy import select
-# from sqlalchemy.dialects.postgresql import insert
 
 from configs import config
 from db import parser_source
@@ -569,9 +568,15 @@ class ResearchAPIParser:
         """
         self._logger.info('Начало обновления куков')
         with requests.get(
-                url=f'{self.home_page}/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_'
-                    f'cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode='
-                    f'view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
+                url=f'{self.home_page}/group/guest/strat',
+                params={
+                    'p_p_id': 'cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                },
                 cookies=self.cookies,
                 verify=False,
         ) as req:
@@ -976,7 +981,7 @@ class ResearchAPIParser:
                 sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
                 for company_id in sector_df['company_id'].values.tolist():
                     try:
-                        for i in range(3):
+                        for i in range(config.POST_TO_SERVICE_ATTEMPTS):
                             sector_page = await session.post(
                                 url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
                                 verify_ssl=False, cookies=self.cookies)
