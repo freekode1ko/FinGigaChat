@@ -102,8 +102,26 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
         await call.message.edit_reply_markup()
 
         user_logger.info(
-            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} ' f'(всего {new_offset})'
+            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} (всего {new_offset})'
         )
+
+
+async def process_fin_table(message: types.Message, client_name: str, table_type: str, table_data: pd.DataFrame) -> None:
+    """
+    Создание и отправка таблицы как изображения
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_name: Наименование клиента
+    :param table_type: Название темы таблицы
+    :param table_data: Таблица финансовых показателей
+    return None
+    """
+    if table_data:
+        df = pd.DataFrame(data=ast.literal_eval(table_data.replace(' NaN', '""')))
+        await __create_fin_table(message, client_name, table_type, df)
+        logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
+    else:
+        logger.info(f'Не найдены данные для {table_type} таблицы клиента: {client_name}')
 
 
 async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
@@ -121,27 +139,13 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     if not client_fin_tables.empty:
         await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
 
-        review_table = client_fin_tables['review_table'][0].replace(' NaN', '""')
-        review_table = pd.DataFrame(data=ast.literal_eval(review_table))
-        await __create_fin_table(message, client_name, 'Обзор', review_table)
-        logger.info(f'Обзорная таблица финансовых показателей для клиента: {client_name} - собрана')
+        # Создание и отправка таблиц
+        await process_fin_table(message, client_name, 'Обзор', client_fin_tables['review_table'][0])
+        await process_fin_table(message, client_name, 'P&L', client_fin_tables['pl_table'][0])
+        await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0])
+        await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0])
 
-        pl_table = client_fin_tables['pl_table'][0].replace(' NaN', '""')
-        pl_table = pd.DataFrame(data=ast.literal_eval(pl_table))
-        await __create_fin_table(message, client_name, 'P&L', pl_table)
-        logger.info(f'P&L таблица финансовых показателей для клиента: {client_name} - собрана')
-
-        balance_table = client_fin_tables['balance_table'][0].replace(' NaN', '""')
-        balance_table = pd.DataFrame(data=ast.literal_eval(balance_table))
-        await __create_fin_table(message, client_name, 'Баланс', balance_table)
-        logger.info(f'Балансная таблица финансовых показателей для клиента: {client_name} - собрана')
-
-        money_table = client_fin_tables['money_table'][0].replace(' NaN', '""')
-        money_table = pd.DataFrame(data=ast.literal_eval(money_table))
-        await __create_fin_table(message, client_name, 'Денежный поток', money_table)
-        logger.info(f'Таблица денежного потока финансовых показателей для клиента: {client_name} - собрана')
-
-        return True
+        return True # Создание таблицы успешно
     else:
         logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
         return False
