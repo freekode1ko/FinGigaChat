@@ -11,6 +11,7 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.utils.media_group import MediaGroupBuilder
 from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
 from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
@@ -88,7 +89,6 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     user_id = json.loads(user)['id']
     async with async_session() as session:
         result = await session.execute(select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id))
-        from sqlalchemy.exc import NoResultFound
         try:
             user_email = result.scalar_one()
             if not check_email:
