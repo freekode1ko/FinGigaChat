@@ -755,11 +755,8 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
                 giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
                 # пытаемся получить метку от гигачата с учетом разных форматов его ответа.
                 # случай ответа по формату
-                if (mark := giga_answer[-2:-1]) in ['1', '0']:
-                    giga_label = mark
-                # случай ответа по формату, но с лишней точкой в конце
-                elif (mark := giga_answer[-3:-2]) in ['1', '0']:
-                    giga_label = mark
+                if mark := search(r'<(0|1)>', giga_answer):
+                    giga_label = mark[0][-2]
                 # случай ответа не по формату, но с указанием принадлежности
                 elif mark := search('(новость относится)|(новость не относится)', giga_answer):
                     giga_label = '1' if mark[0] == 'новость относится' else '0'
