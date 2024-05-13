@@ -356,6 +356,25 @@ async def __create_fin_table(message: types.Message, client_name: str,
     await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
 
 
+async def process_fin_table(message: types.Message, client_name: str,
+                            table_type: str, table_data: pd.DataFrame) -> None:
+    """
+    Создание и отправка таблицы как изображения
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_name: Наименование клиента
+    :param table_type: Название темы таблицы
+    :param table_data: Таблица финансовых показателей
+    return None
+    """
+    if not table_data.epty:
+        df = pd.DataFrame(data=ast.literal_eval(table_data.replace(' NaN', '""')))
+        await __create_fin_table(message, client_name, table_type, df)
+        logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
+    else:
+        logger.info(f'Не найдены данные для {table_type} таблицы клиента: {client_name}')
+
+
 def get_page_data_and_info(
         all_data_df: pd.DataFrame,
         page: int,
