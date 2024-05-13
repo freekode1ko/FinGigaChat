@@ -2,7 +2,6 @@
 import random
 import re
 
-import pandas as pd
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -10,7 +9,6 @@ from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types.web_app_info import WebAppInfo
 from psycopg2.errors import UniqueViolation
-from sqlalchemy import insert
 from sqlalchemy.exc import IntegrityError
 
 from configs import config
@@ -20,9 +18,7 @@ from constants.constants import (
     REGISTRATION_CODE_MIN,
     REGISTRATION_CODE_MAX,
 )
-from db.database import engine, async_session
-from db.models import Whitelist
-from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist, update_user_email_after_register
+from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist, insert_user_email_after_register
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
@@ -177,7 +173,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         welcome_msg = f'Добро пожаловать, {full_name}!'
         exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.'
         try:
-            await update_user_email_after_register(user_id, user_username, full_name, user_email)
+            await insert_user_email_after_register(user_id, user_username, full_name, user_email)
 
             await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')

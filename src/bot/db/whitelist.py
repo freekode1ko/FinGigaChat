@@ -62,7 +62,7 @@ async def get_users_subscriptions() -> pd.DataFrame:
                             columns=['user_id', 'username', 'industry_ids', 'client_ids', 'commodity_ids'])
 
 
-async def update_user_email_after_register(
+async def insert_user_email_after_register(
         user_id: int,
         user_username: str,
         user_full_name: str,
