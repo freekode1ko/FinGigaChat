@@ -755,23 +755,17 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
                 giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
                 # пытаемся получить метку от гигачата с учетом разных форматов его ответа.
                 # случай ответа по формату
-                if giga_answer[-2:-1] == '0' or giga_answer[-2:-1] == '1':
-                    giga_label = giga_answer[-2:-1]
+                if (mark := giga_answer[-2:-1]) in ['1', '0']:
+                    giga_label = mark
                 # случай ответа по формату, но с лишней точкой в конце
-                elif giga_answer[-3:-2] == '0' or giga_answer[-3:-2] == '1':
-                    giga_label = giga_answer[-3:-2]
+                elif (mark := giga_answer[-3:-2]) in ['1', '0']:
+                    giga_label = mark
                 # случай ответа не по формату, но с указанием принадлежности
-                elif search('(новость относится)|(новость не относится)', giga_answer):
-                    if search('(новость относится)|(новость не относится)', giga_answer)[0] == 'новость относится':
-                        giga_label = '1'
-                    else:
-                        giga_label = '0'
+                elif mark := search('(новость относится)|(новость не относится)', giga_answer):
+                    giga_label = '1' if mark[0] == 'новость относится' else '0'
                 # случай ответа не по формату, но с цифрой классификации в последней части ответа
-                elif search('(1)|(0)', giga_answer[-5:]):
-                    if search('(1)|(0)', giga_answer[-5:])[0] == '1':
-                        giga_label = '1'
-                    else:
-                        giga_label = '0'
+                elif mark := search('(1)|(0)', giga_answer[-5:]):
+                    giga_label = '1' if mark[0] == '1' else '0'
                 # совсем не по формату, обрабатываем этот случай дальше
                 else:
                     giga_label = '-1'
