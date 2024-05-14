@@ -1,0 +1,23 @@
+name: CD
+
+on:
+  push:
+    branches: [create_ci]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: /root/deploy
+      - name: test
+        run: |
+          ls -la
+          pwd
+          tree -L 3 /root/deploy
+#      - name: Run containers
+#        run: |
+#          docker compose .
+
+
