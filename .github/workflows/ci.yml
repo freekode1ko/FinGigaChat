@@ -39,7 +39,7 @@ jobs:
           poetry install
       - name: Run flake8
         run: |
-          poetry run python -m pylint ${{ matrix.dir }}
+          poetry run python -m flake8 ${{ matrix.dir }}
       - name: Run pylint
         run: |
           poetry run python -m pylint ${{ matrix.dir }}
