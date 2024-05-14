@@ -54,7 +54,7 @@ def get_article() -> pd.DataFrame:
     """Получение новостей"""
     df_article = pd.DataFrame()
     try:
-        url = BASE_GIGAPARSER_URL.format('get_articles/all')
+        url = BASE_GIGAPARSER_URL.format(f'get_articles/all?stand={config.STAND}')
         req = try_post_n_times(config.POST_TO_SERVICE_ATTEMPTS, url=url, timeout=config.POST_TO_GIGAPARSER_TIMEOUT)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
@@ -183,8 +183,8 @@ if __name__ == '__main__':
             print(start_msg)
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
+            post_ids(gotten_ids)  # отправка giga parsers полученных айди
             if not config.DEBUG:
-                post_ids(gotten_ids)  # отправка giga parsers полученных айди
                 post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
