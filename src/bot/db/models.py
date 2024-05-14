@@ -369,9 +369,10 @@ class TelegramChannel(Base):
     __table_args__ = {'comment': 'Справочник telegram каналов, из которых вынимаются новости'}
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(128), nullable=False)
-    link = Column(String(255), nullable=False)
-    section_id = Column(ForeignKey('bot_telegram_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    name = Column(String(128), nullable=False, comment='Название телеграм канала')
+    link = Column(String(255), nullable=False, comment='Ссылка на телеграм канал')
+    section_id = Column(ForeignKey('bot_telegram_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False,
+                        comment='Связь телеграм канала с разделом (например, отрасль "Недвижимость")')
 
     section = relationship('TelegramSection', back_populates='telegram_channel')
     user = relationship('Whitelist', secondary='user_telegram_subscription', back_populates='telegram')
