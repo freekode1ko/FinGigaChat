@@ -8,8 +8,6 @@ from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types.web_app_info import WebAppInfo
-from psycopg2.errors import UniqueViolation
-from sqlalchemy.exc import IntegrityError
 
 from configs import config
 from constants.constants import (
@@ -18,7 +16,7 @@ from constants.constants import (
     REGISTRATION_CODE_MIN,
     REGISTRATION_CODE_MAX,
 )
-from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist, insert_user_email_after_register
+from db.whitelist import is_new_user_email, is_user_email_exist, insert_user_email_after_register
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
@@ -174,25 +172,12 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.'
         try:
             await insert_user_email_after_register(user_id, user_username, full_name, user_email)
-
             await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await help_handler(message, state)
-
-        except IntegrityError as e:
-            # если пользователь уже есть в системе, обновляем ему почту
-            if isinstance(e.orig, UniqueViolation):
-                update_user_email(user_id, user_email)
-                await message.answer(welcome_msg)
-                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : пользователь обновил почту')
-            else:
-                await message.answer(exc_msg)
-                user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
-
         except Exception as e:
             await message.answer(exc_msg)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
-
         finally:
             await state.clear()
 
