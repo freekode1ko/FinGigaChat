@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import text, select, func, insert
+from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from db import models, database
 from db.database import engine
@@ -76,15 +77,24 @@ async def insert_user_email_after_register(
     :param user_email: Email пользователя
     """
     async with database.async_session() as session:
-        await session.execute(
-            insert(models.Whitelist)
-            .values(
-                user_id=user_id,
-                username=user_username,
-                full_name=user_full_name,
-                user_type='user',
-                user_status='active',
-                user_email=user_email,
-            )
+        ins = insert_pg(models.Whitelist).values(
+            user_id=user_id,
+            username=user_username,
+            full_name=user_full_name,
+            user_type='user',
+            user_status='active',
+            user_email=user_email,
         )
+        ins = ins.on_conflict_do_update(
+            constraint="whitelist_pkey",
+            set_={
+                "user_id": ins.excluded.user_id,
+                "username": ins.excluded.username,
+                "full_name": ins.excluded.full_name,
+                "user_type": 'user',
+                "user_status": 'active',
+                "user_email": ins.excluded.user_email,
+            }
+        )
+        await session.execute(ins)
         await session.commit()
