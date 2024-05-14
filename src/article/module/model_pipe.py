@@ -2,7 +2,7 @@ import json
 import pickle
 import re
 from re import search
-from typing import Dict
+from typing import Dict, Optional, Any
 
 import pandas as pd
 import pymorphy2
@@ -10,16 +10,18 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from configs.config import psql_engine, summarization_prompt
+from configs.config import psql_engine
+from configs.prompts import summarization_prompt, CLIENT_SYSTEM_PROMPT, CLIENT_MESSAGE_PROMPT, \
+    COMMODITY_SYSTEM_PROMPT, COMMODITY_MESSAGE_PROMPT
 from db.database import engine
 from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 from log.logger_base import Logger
+from module.utils import *
 
 import datetime as dt
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
-CLIENT_MULTY_CLASSIFICATION_MODEL_PATH = 'data/model/multiclass_classification_best.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
 STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
@@ -32,6 +34,7 @@ BAD_GIGA_ANSWERS = [
     'Не люблю менять тему разговора, но вот сейчас тот самый случай.',
     'Спасибо за информацию! Я передам ее дальше.',
 ]
+
 STOCK_WORDS = [
     'индекс мосбиржа',
     'индекс мб',
@@ -83,64 +86,7 @@ STOCK_WORDS = [
     ' село ',
 ]
 
-
-def get_alternative_names_pattern_commodity(alt_names):
-    """Создает регулярные выражения для коммодов"""
-    alter_names_dict = dict()
-    table_subject_list = alt_names.values.tolist()
-    for i, alt_names_list in enumerate(table_subject_list):
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        names_pattern_base = '|'.join(clear_alt_names)
-        names_patter_upper = '|'.join([el.upper() for el in clear_alt_names])
-        key = clear_alt_names[0]
-        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'
-    return alter_names_dict
-
-
-def add_endings(clear_names_list):
-    """Добавляет окончания к именам клиента в списке альтернативных имен"""
-    vowels = 'ауоыэяюиеь'
-    english_vowels = 'aeiouy'
-    ending_v = '|а|я|ы|и|е|у|ю|ой|ей'
-    ending_c = '|о|е|а|я|у|ю|и|ом|ем'
-
-    for i, name in enumerate(clear_names_list):
-        name_strip = name.strip()
-        if ' ' not in name_strip:
-
-            last_mark = name_strip[-1]
-            last_mark_lower = last_mark.lower()
-
-            if last_mark_lower in vowels and len(name_strip) > 3:
-                clear_names_list[i] = f'{name[:-1]}({last_mark}{ending_v})'
-            elif last_mark.isalpha() and last_mark_lower not in english_vowels and last_mark != 'ъ':
-                clear_names_list[i] = f'{name}({ending_c})'
-
-    return clear_names_list
-
-
-def get_alternative_names_pattern_client(alt_names):
-    """Создает регулярные выражения для клиентов"""
-    alter_names_dict = dict()
-    table_subject_list = alt_names.values.tolist()
-    for alt_names_list in table_subject_list:
-        clear_alt_names = list(filter(lambda x: not pd.isna(x), alt_names_list))
-        key = clear_alt_names[0]
-
-        clear_alt_names = add_endings(clear_alt_names)
-        clear_alt_names_upper = add_endings(
-            [el.upper() for el in clear_alt_names])
-
-        names_pattern_base = '( |\. |, |\) )|'.join(clear_alt_names)
-        names_pattern_base += '( |\. |, |\) )'
-        names_patter_upper = '( |\. |, |\) )|'.join(clear_alt_names_upper)
-        names_patter_upper += '( |\. |, |\) )'
-        alter_names_dict[
-            key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+',
-                                                                          '\+')
-
-    return alter_names_dict
-
+TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -154,9 +100,10 @@ client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict(
     'records')
 commodity_rating_system_dict = pd.read_excel(
     COMMODITY_RATING_FILE_PATH).to_dict('records')
-for group in commodity_rating_system_dict:
-    group['key words'] = ','.join(
-        [f' {word.strip().lower()}' for word in group['key words'].split(',')])
+commodity_rating_system_dict = modify_commodity_rating_system_dict(commodity_rating_system_dict)
+
+CLIENT_NAMES_DICT = create_alternative_names_dict(client_names)
+CLIENT_INDUSTRY_DICT = create_client_industry_dict()
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
@@ -376,10 +323,25 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
             keywords_pattern = group['key words'].replace(',', '|')
             if search(keywords_pattern, clean_text):
                 label = str(group['label'])
-                if label not in labels:
-                    labels += f';{label}'
+                labels += f';{label}'
+        # after deranking labels score should still be positive
+        if len(labels) > 1:
+            labels = str(max(1, sum(map(int, labels.split(';')))))
 
     return labels
+
+
+def search_top_sources(link: Optional[str or Any], score: int) -> int:
+    """
+    Raise score for article if found top sources
+    :param link: link of article
+    :param score: current score of article
+    :return: new score of article
+    """
+    if link and isinstance(link, str):
+        if search(TOP_SOURCES, link):
+            return score + 5
+    return score
 
 
 def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
@@ -394,10 +356,6 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
     with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
         binary_model = pickle.load(f)
 
-    # read multiclass classification model
-    with open(CLIENT_MULTY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-        multiclass_model = pickle.load(f)
-
     # predict relevance and adding a column with relevance label (1 or 0)
     probs = binary_model.predict_proba(df['cleaned_data'])
     df['relevance'] = [
@@ -405,8 +363,12 @@ def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
         for index, pair in enumerate(probs)
     ]
 
-    # predict label from multiclass classification
-    df['client_labels'] = multiclass_model.predict(df['cleaned_data'])
+    # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
+    df['client_labels'] = df.apply(lambda x:
+                                   5 if max((json.loads(x['client_impact'])).values(), default=0) > 2 else 2, axis=1)
+
+    # search top sources in links
+    df['client_labels'] = df.apply(lambda x: search_top_sources(x['link'], x['client_labels']), axis=1)
 
     # using relevance label condition
     df['client_labels'] = df.apply(
@@ -655,10 +617,10 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame,
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
     df['count_client'] = df['client'].map(
-        lambda x: len(list(x.split(sep=';'))) if (
+        lambda x: len(x.split(sep=';')) if (
                     isinstance(x, str) and x) else 0)
     df['count_commodity'] = df['commodity'].map(
-        lambda x: len(list(x.split(sep=';'))) if (
+        lambda x: len(x.split(sep=';')) if (
                     isinstance(x, str) and x) else 0)
     df = df.sort_values(
         by=['count_client', 'count_commodity', 'client_score',
@@ -766,3 +728,77 @@ def summarization_by_chatgpt(full_text: str):
         new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
 
     return new_text_sum
+
+
+def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str,
+                                logger: Logger.logger) -> str:
+    """
+    Фильтрует новости по клиентам и комодам с помощью Gigachat.
+    :param names: Список клиентов или комодов полученных с помощью регулярки.
+    :param text_sum: Суммаризованный текст новости.
+    :param giga_chat : Gigachat.
+    :param name_type: client or commodity.
+    :param logger: логгер.
+    :return: строка с конкатенированными названиями клиентов или комодов.
+    """
+    result = []
+    for name in names:
+        if str(name):
+            if name_type == "client":
+                system_prompt = CLIENT_SYSTEM_PROMPT
+                message = CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name],
+                                                       text_sum)
+            else:
+                system_prompt = COMMODITY_SYSTEM_PROMPT
+                message = COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
+            try:
+                giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
+                # пытаемся получить метку от гигачата с учетом разных форматов его ответа.
+                # случай ответа по формату
+                if mark := search(r'<(0|1)>', giga_answer):
+                    giga_label = mark[0][-2]
+                # случай ответа не по формату, но с указанием принадлежности
+                elif mark := search('(новость относится)|(новость не относится)', giga_answer):
+                    giga_label = '1' if mark[0] == 'новость относится' else '0'
+                # случай ответа не по формату, но с цифрой классификации в последней части ответа
+                elif mark := search('(1)|(0)', giga_answer[-5:]):
+                    giga_label = '1' if mark[0] == '1' else '0'
+                # совсем не по формату, обрабатываем этот случай дальше
+                else:
+                    giga_label = '-1'
+            except Exception as e:
+                logger.error("Не удалось получить ответ от Gigachat. Наименование:{}; "
+                             "Суммаризация: {}".format(name, text_sum))
+                giga_label = '1'
+            if giga_label == '1':
+                result.append(name)
+                continue
+            if giga_label != '0' and giga_label != '1':
+                logger.error("Не удалось получить ответ от Gigachat в нужном формате. Наименование: {}; "
+                             "Суммаризация: {}; Ответ: {}".format(name, text_sum, giga_answer))
+                result.append(name)
+    return ';'.join(result)
+
+
+def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Фильтрация новостей по клиентам и комодам гигачатом
+    :param logger: logger
+    :param df: датафрейм с новостями
+    :return: датафрейм с новостями и измененными клиентами
+    """
+    logger.debug("Старт фильтрации новостей с GigaChat")
+    # инициализируем гигачат
+    giga_chat = GigaChat(logger)
+
+    # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
+    logger.debug("Фильтрация клиентов")
+    df['client'] = df.apply(lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'],
+                                                                  giga_chat, 'client', logger), axis=1)
+
+    # обрабатываем комоды. Для каждого найденного коммода проверяем, что он действительно подходит к новости
+    logger.debug("Фильтрация комодов")
+    df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list(x['commodity'].split(';'), x['text_sum'],
+                                                                     giga_chat, 'commodity', logger), axis=1)
+    logger.debug("Окончена фильтрация новостей с GigaChat")
+    return df

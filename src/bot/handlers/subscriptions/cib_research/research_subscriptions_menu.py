@@ -3,7 +3,7 @@ from typing import Union
 from aiogram import F, types
 from aiogram.filters import Command
 
-from constants import subscriptions as callback_prefixes
+from constants.subscriptions import research as callback_prefixes
 from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
 from db import subscriptions as subscriptions_db_api
 from handlers.subscriptions.handler import router

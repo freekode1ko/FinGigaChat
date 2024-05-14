@@ -362,7 +362,7 @@ def delete_all_user_research_subscriptions(user_id: int) -> None:
 def get_new_researches() -> pd.DataFrame:
     """
     Вынимает новые отчеты из таблицы research
-    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
     """
     with database.engine.connect() as conn:
         columns = [
@@ -373,12 +373,12 @@ def get_new_researches() -> pd.DataFrame:
             'text',
             'parse_datetime',
             'publication_date',
-            'news_id',
+            'report_id',
         ]
         query = text(
             'UPDATE research SET is_new=false '
             'WHERE is_new=true '
-            'RETURNING id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id '
+            'RETURNING id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id '
         )
         data = conn.execute(query).all()
         conn.commit()
@@ -399,10 +399,10 @@ def get_researches_over_period(
     :param from_date: от какой даты_времени вынимаются
     :param to_date: до какой даты_времени вынимаются
     :param research_type_ids: ID типов отчетов, по которым выгружаются отчеты (по умолчанию все отчеты)
-    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
     """
     query = (
-        'SELECT id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id '
+        'SELECT id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id '
         'FROM research '
         'WHERE publication_date BETWEEN :from_date AND :to_date '
         '{dop_condition} '
@@ -430,7 +430,7 @@ def get_researches_over_period(
             'text',
             'parse_datetime',
             'publication_date',
-            'news_id',
+            'report_id',
         ]
         data = conn.execute(query).all()
         data_df = pd.DataFrame(data, columns=columns)
@@ -442,7 +442,7 @@ def get_researches_by_type(research_type_id: int) -> pd.DataFrame:
     """
     Вынимает отчеты из таблицы research
     :param research_type_id: id типа отчета, который вынимается (по умолчанию все)
-    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    return: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
     """
     with database.engine.connect() as conn:
         columns = [
@@ -453,7 +453,7 @@ def get_researches_by_type(research_type_id: int) -> pd.DataFrame:
             'text',
             'parse_datetime',
             'publication_date',
-            'news_id',
+            'report_id',
         ]
         query = text(
             f'SELECT {", ".join(columns)} '

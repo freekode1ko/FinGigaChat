@@ -22,7 +22,11 @@ def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
     for _, item in item_df.iterrows():
         keyboard.row(types.InlineKeyboardButton(
             text=item['name'],
-            callback_data=callbacks.GetGroupSections(group_id=item['id']).pack()),
+            callback_data=callbacks.Menu(
+                menu=callbacks.MenuEnum.get_industry_anal,
+                industry_id=item['id'],
+                industry_type=item['type'],
+            ).pack()),
         )
 
     return constructors.get_sub_menu_kb(keyboard)

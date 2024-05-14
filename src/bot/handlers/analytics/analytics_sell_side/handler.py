@@ -11,7 +11,8 @@ from aiogram.filters.callback_data import CallbackData
 from configs import config
 from constants import enums
 from constants.analytics import analytics_sell_side
-from db import client as client_db_api, subscriptions as subscriptions_db_api, database
+from db import subscriptions as subscriptions_db_api, database
+from db.api import client as client_db_api
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
@@ -35,7 +36,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
 
     group_df = subscriptions_db_api.get_research_groups_df()  # id, name
     msg_text = (
-        'Аналитика sell-side\n'
+        'Аналитика публичных рынков\n'
         'Выберите раздел'
     )
 
@@ -111,7 +112,7 @@ async def get_section_research_types_menu(
     )
 
     msg_text = (
-        f'Аналитика sell-side\n'
+        f'Аналитика публичных рынков\n'
         f'Раздел "{section_info["name"]}":'  # FIXME text
     )
     keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)

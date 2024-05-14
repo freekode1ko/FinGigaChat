@@ -54,7 +54,7 @@ def get_article() -> pd.DataFrame:
     """Получение новостей"""
     df_article = pd.DataFrame()
     try:
-        url = BASE_GIGAPARSER_URL.format('get_articles/all')
+        url = BASE_GIGAPARSER_URL.format(f'get_articles/all?stand={config.STAND}')
         req = try_post_n_times(config.POST_TO_SERVICE_ATTEMPTS, url=url, timeout=config.POST_TO_GIGAPARSER_TIMEOUT)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
@@ -95,8 +95,15 @@ def regular_func():
                 ap_obj_online.df_article = df_article
                 ap_obj_online.drop_duplicate()
                 ap_obj_online.make_text_sum()
+                try:
+                    ap_obj_online.apply_gigachat_filtering()
+                except Exception as e:
+                    logger.error('Ошибка при фильтрации новостей с помощью ГигаЧата: %s', e)
                 subject_links = ap_obj_online.save_tables()
 
+                logger.info('Старт обработки телеграм новостей')
+                print('Старт обработки телеграм новостей')
+                # сохраняем все тг новости без фильтраций
                 saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
                 df_article = ap_obj_online.update_tg_articles(saved_tg_df, all_tg_articles_df)
 
@@ -176,8 +183,8 @@ if __name__ == '__main__':
             print(start_msg)
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
+            post_ids(gotten_ids)  # отправка giga parsers полученных айди
             if not config.DEBUG:
-                post_ids(gotten_ids)  # отправка giga parsers полученных айди
                 post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)

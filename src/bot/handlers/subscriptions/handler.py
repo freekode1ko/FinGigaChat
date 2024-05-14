@@ -60,7 +60,7 @@ async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> No
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_prefixes.CLIENT_SUBS_MENU
+    user_msg = callback_prefixes.SUBS_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 

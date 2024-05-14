@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import text
 
+from configs import config
 from configs.config import PATH_TO_SOURCES
 from constants.constants import sample_of_img_title
 from constants import quotes as callback_prefixes, enums
@@ -54,6 +55,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
         'FI - долговой рынок.\n\n'
         'Equity - рынок акций.\n\n'
         'Commodities - товарный рынок. Узнайте последние цены на сырьевые товары (нефть, золото, медь и пр.)\n\n'
+        'Ставки - актуальные процентные ставки\n\n'
     )
     await send_or_edit(message, msg_text, keyboard)
 
@@ -67,7 +69,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     :param callback_data: содержит дополнительную информацию
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -101,7 +103,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     :param callback_data: содержит дополнительную информацию
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -161,7 +163,7 @@ async def fin_indicators(callback_query: types.CallbackQuery, callback_data: cal
     :param callback_data: содержит дополнительную информацию
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -188,7 +190,7 @@ async def equity(callback_query: types.CallbackQuery, callback_data: callbacks.E
     :param callback_data: содержит дополнительную информацию
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -224,7 +226,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     :param callback_data: содержит дополнительную информацию
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -295,7 +297,7 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     :param callback_data: содержит дополнительную информацию
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -329,104 +331,108 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
-@router.message(Command('eco'))
-async def economy_info(message: types.Message) -> None:
+@router.callback_query(callbacks.Eco.filter())
+async def economy_info(callback_query: types.CallbackQuery, callback_data: callbacks.Eco) -> None:
     """
     Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
 
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: содержит дополнительную информацию
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
-        world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
-        rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
-        rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
-        world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
-        countries = {
-            'Japan': 'Япония',
-            'Switzerland': 'Швейцария',
-            'South Korea': 'Южная Корея',
-            'Singapore': 'Сингапур',
-            'China': 'Китай',
-            'Euro Area': 'Еврозона',
-            'Australia': 'Австралия',
-            'Canada': 'Канада',
-            'United Kingdom': 'Великобритания',
-            'United States': 'США',
-            'Indonesia': 'Индонезия',
-            'Saudi Arabia': 'Саудовская Аравия',
-            'India': 'Индия',
-            'Russia': 'Россия',
-            'South Africa': 'ЮАР',
-            'Mexico': 'Мексика',
-            'Brazil': 'Бразилия',
-            'Turkey': 'Турция',
-            'Argentina': 'Аргентина',
-        }
-        world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
-        for num, country in enumerate(world_bet['Страна'].values):
-            world_bet.Страна[world_bet.Страна == country] = countries[country]
-        transformer = dt.Transformer()
-        png_path = PATH_TO_SOURCES / 'img' / 'world_bet_table.png'
-        world_bet = world_bet.round(2)
-        transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2, title='Ключевые ставки ЦБ мира.')
-        photo = types.FSInputFile(png_path)
-        day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
-        month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
-        title = 'Ключевые ставки ЦБ мира'
-        data_source = 'ЦБ стран мира'
-        curdatetime = read_curdatetime()
-        await __sent_photo_and_msg(
-            message, photo, day, month, protect_content=False, title=sample_of_img_title.format(title, data_source, curdatetime)
-        )
+    world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
+    rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
+    rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
+    world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
+    countries = {
+        'Japan': 'Япония',
+        'Switzerland': 'Швейцария',
+        'South Korea': 'Южная Корея',
+        'Singapore': 'Сингапур',
+        'China': 'Китай',
+        'Euro Area': 'Еврозона',
+        'Australia': 'Австралия',
+        'Canada': 'Канада',
+        'United Kingdom': 'Великобритания',
+        'United States': 'США',
+        'Indonesia': 'Индонезия',
+        'Saudi Arabia': 'Саудовская Аравия',
+        'India': 'Индия',
+        'Russia': 'Россия',
+        'South Africa': 'ЮАР',
+        'Mexico': 'Мексика',
+        'Brazil': 'Бразилия',
+        'Turkey': 'Турция',
+        'Argentina': 'Аргентина',
+    }
+    world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
+    for num, country in enumerate(world_bet['Страна'].values):
+        world_bet.Страна[world_bet.Страна == country] = countries[country]
+    transformer = dt.Transformer()
+    png_path = PATH_TO_SOURCES / 'img' / 'world_bet_table.png'
+    world_bet = world_bet.round(2)
+    transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2, title='Ключевые ставки ЦБ мира.')
+    photo = types.FSInputFile(png_path)
+    day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
+    month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
+    title = 'Ключевые ставки ЦБ мира'
+    data_source = 'ЦБ стран мира'
+    curdatetime = read_curdatetime()
+    await __sent_photo_and_msg(
+        callback_query.message, photo, day, month, protect_content=False,
+        title=sample_of_img_title.format(title, data_source, curdatetime)
+    )
 
-        month_dict = {
-            1: 'Январь',
-            2: 'Февраль',
-            3: 'Март',
-            4: 'Апрель',
-            5: 'Май',
-            6: 'Июнь',
-            7: 'Июль',
-            8: 'Август',
-            9: 'Сентябрь',
-            10: 'Октябрь',
-            11: 'Ноябрь',
-            12: 'Декабрь',
-        }
-        for num, date in enumerate(rus_infl['Дата'].values):
-            cell = str(date).split('.')
-            rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
-        transformer.render_mpl_table(
-            rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2, title='Ежемесячная инфляция в России.'
-        )
-        png_path = PATH_TO_SOURCES / 'img' / 'rus_infl_table.png'
-        photo = types.FSInputFile(png_path)
-        title = 'Инфляция в России'
-        data_source = 'ЦБ РФ'
-        await message.answer_photo(
-            photo,
-            caption=sample_of_img_title.format(title, data_source, curdatetime),
-            parse_mode='HTML',
-            protect_content=False,
-        )
-        # сообщение с текущими ставками
-        stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
+    month_dict = {
+        1: 'Январь',
+        2: 'Февраль',
+        3: 'Март',
+        4: 'Апрель',
+        5: 'Май',
+        6: 'Июнь',
+        7: 'Июль',
+        8: 'Август',
+        9: 'Сентябрь',
+        10: 'Октябрь',
+        11: 'Ноябрь',
+        12: 'Декабрь',
+    }
+    for num, date in enumerate(rus_infl['Дата'].values):
+        cell = str(date).split('.')
+        rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
+    transformer.render_mpl_table(
+        rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2, title='Ежемесячная инфляция в России.'
+    )
+    png_path = PATH_TO_SOURCES / 'img' / 'rus_infl_table.png'
+    photo = types.FSInputFile(png_path)
+    title = 'Инфляция в России'
+    data_source = 'ЦБ РФ'
+    await callback_query.message.answer_photo(
+        photo,
+        caption=sample_of_img_title.format(title, data_source, curdatetime),
+        parse_mode='HTML',
+        protect_content=False,
+    )
+    # сообщение с текущими ставками
+    stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
 
-        stat_order = {
-            'Текущая ключевая ставка Банка России': 0,
-            'Текущая ставка RUONIA': 1,
-            'LPR Китай': 2,
-        }
+    stat_order = {
+        'Текущая ключевая ставка Банка России': 0,
+        'Текущая ставка RUONIA': 1,
+        'LPR Китай': 2,
+    }
 
-        stat['order'] = stat['0'].apply(lambda x: stat_order.get(x, np.inf))
-        stat = stat.set_index('order', drop=True).sort_index().reset_index(drop=True)
+    stat['order'] = stat['0'].apply(lambda x: stat_order.get(x, np.inf))
+    stat = stat.set_index('order', drop=True).sort_index().reset_index(drop=True)
 
-        rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
-        rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
-        await message.answer(rates_message, parse_mode='HTML', protect_content=False)
-        await weekly_pulse.key_rate_dynamics_table(message.bot, message.chat.id)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
+    rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
+    await callback_query.message.answer(rates_message, parse_mode='HTML', protect_content=False)
+    await weekly_pulse.key_rate_dynamics_table(callback_query.bot, chat_id)
+    msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
+    await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=False)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

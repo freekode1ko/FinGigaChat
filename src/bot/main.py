@@ -14,7 +14,7 @@ from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
 from handlers import (
-    admin, ai, analytics, common, industry, news, quotes, referencebook, subscriptions, products, call_reports
+    admin, ai, analytics, common, industry, news, quotes, referencebook, subscriptions, products, call_reports, clients
 )
 from log.bot_logger import logger
 from log.sentry import init_sentry
@@ -58,7 +58,7 @@ async def passive_newsletter(
 
         start_tm = time.time()
         # получим справочник пользователей (в цикле, потому что справочник может пополняться)
-        user_df = pd.read_sql_query('SELECT user_id, username, subscriptions FROM whitelist', con=engine)
+        user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist', con=engine)
 
         kwargs['next_newsletter_datetime'] = next_newsletter_datetime
         await newsletter_executor(bot, user_df, **kwargs)
@@ -98,6 +98,7 @@ async def start_bot():
         industry.router,
         analytics.router,
         products.router,
+        clients.router,
         news.router,
     )
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен

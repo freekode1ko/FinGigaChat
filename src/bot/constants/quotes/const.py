@@ -7,6 +7,7 @@ FX = 'fx'
 FI = 'fi'
 EQUITY = 'equity'
 COMMODITIES = 'commodities'
+ECO = 'eco'
 
 GET_FI_ITEM_DATA = 'get_fi_item_data'
 
