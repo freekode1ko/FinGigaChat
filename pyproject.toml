@@ -43,6 +43,7 @@ speechrecognition = "^3.10.3"
 sqlalchemy = "^2.0.28"
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
 xgboost = "^2.0.3"
+#dramatiq = {extras = ["redis", "watch"], version = "^1.16.0"}
 
 
 [tool.poetry.group.dev.dependencies]
