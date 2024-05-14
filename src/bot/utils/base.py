@@ -367,7 +367,7 @@ async def process_fin_table(message: types.Message, client_name: str,
     :param table_data: Таблица финансовых показателей
     return None
     """
-    if not table_data.epty:
+    if not table_data.empty:
         df = pd.DataFrame(data=ast.literal_eval(table_data.replace(' NaN', '""')))
         await __create_fin_table(message, client_name, table_type, df)
         logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
