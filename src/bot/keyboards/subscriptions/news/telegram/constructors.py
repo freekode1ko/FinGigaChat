@@ -253,9 +253,9 @@ def get_change_subscriptions_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
-    [ section.name ]
-    [ ... ]
-    [ section.name ]
+    [✅/🟩][ telegram_channel['name'] ]
+    [✅/🟩][ ... ]
+    [✅/🟩][ telegram_channel['name'] ]
     [ Назад ]
     [ Завершить ]
     :param telegram_channels: Список телеграмм каналов, на которые можно подписаться (telegram_channel)
