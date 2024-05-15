@@ -22,7 +22,9 @@ class FuzzyAlternativeNames:
     @staticmethod
     async def get_subjects_names(subjects: list[models.Base]) -> list[str]:
         """
-        Получение всех альтернативных имен по списку из industry, client, commodity
+        Получение всех альтернативных имен из таблиц
+        :param subjects: список таблиц, из которых выгружает альт имена
+        :returns: Все альт имена таблиц subjects
         """
         subjects_names = []
 
@@ -35,6 +37,10 @@ class FuzzyAlternativeNames:
     async def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
+        :param subject_name: Наименование субъекта
+        :param criteria: отклонение от значения схожести максимально близкого слова к имени субъекта,
+                         в пределах отклонения выдается выборка
+        :returns: Список имен, похожих на наименование субъекта
         """
         subject_name = subject_name.lower().strip().replace('"', '')
         subjects_names = await self.get_subjects_names(self.tables_with_alternative_names)

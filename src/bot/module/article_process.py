@@ -411,22 +411,6 @@ class ArticleProcess:
             con=self.engine,
         )
 
-    def get_industry_client_com_dict(self) -> List[Dict]:
-        """
-        Составление словарей для новостных объектов и их альтернативных названий
-        return: список со словарями клиентов, товаров и отраслей dict(id=List[other_names])
-        """
-        icc_dict = []
-        subjects = ('industry', 'client', 'commodity')
-        query = 'SELECT {subject}_id, array_agg(other_names) FROM {subject}_alternative GROUP BY {subject}_id'
-
-        for subject in subjects:
-            subject_df = pd.read_sql_query(query.format(subject=subject), con=self.engine)
-            subject_dict = subject_df.set_index('{}_id'.format(subject))['other_names'].to_dict()
-            icc_dict.append(subject_dict)
-
-        return icc_dict
-
     @staticmethod
     def get_user_article(client_article, commodity_article, industry_ids, client_ids, commodity_ids, industry_name):
         """
