@@ -65,14 +65,6 @@ t_bonds = Table(
 )
 
 
-class Chat(Base):
-    __tablename__ = 'chat'
-
-    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    name = Column(Text, nullable=False)
-    type = Column(Text, nullable=False)
-
-
 t_date_of_last_build = Table(
     'date_of_last_build', metadata,
     Column('date_time', Text)
@@ -236,15 +228,6 @@ t_report_exc_mon = Table(
     Column('0', Text),
     Column('1', Text),
     Column('2', Text)
-)
-
-
-t_report_industry = Table(
-    'report_industry', metadata,
-    Column('title', Text),
-    Column('text', Text),
-    Column('date', Text),
-    Column('send_flag', Boolean)
 )
 
 
