@@ -1,8 +1,8 @@
 from aiogram.fsm.state import StatesGroup, State
 
+from db import models
 from db.api.commodity import commodity_db
 from db.api.user_commodity_subscription import user_commodity_subscription_db
-from db.models import CommodityAlternative
 from handlers.subscriptions.handler import router
 from handlers.subscriptions.news.news_interface import NewsHandler
 from keyboards.subscriptions.news.commodity import callbacks
@@ -20,7 +20,7 @@ handler = NewsHandler(
     callbacks,
     keyboard,
     CommoditySubscriptionsStates.commodity_user_subscriptions,
-    [CommodityAlternative],
+    [models.CommodityAlternative],
     'сырьевые товары',
     'сырьевых товаров',
     'сырьевые товары',

@@ -1,8 +1,8 @@
 from aiogram.fsm.state import StatesGroup, State
 
+from db import models
 from db.api.industry import industry_db
 from db.api.user_industry_subscription import user_industry_subscription_db
-from db.models import IndustryAlternative
 from handlers.subscriptions.handler import router
 from handlers.subscriptions.news.news_interface import NewsHandler
 from keyboards.subscriptions.news.industry import callbacks
@@ -20,7 +20,7 @@ handler = NewsHandler(
     callbacks,
     keyboard,
     IndustrySubscriptionsStates.industry_user_subscriptions,
-    [IndustryAlternative],
+    [models.IndustryAlternative],
     'отрасли',
     'отраслей',
     'отрасли',

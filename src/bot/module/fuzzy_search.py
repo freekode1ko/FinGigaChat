@@ -59,9 +59,10 @@ class FuzzyAlternativeNames:
         :param subjects_names: список наименований
         :param subject_types: список из строк ['industry', 'client', 'commodity']
                               (среди данных таблиц идет поиск ближайших названий)
+        :returns: Список ближайших похожих имен субъектов
         """
         subject_types = subject_types or self.tables_with_alternative_names
-        subject_types = list(filter(lambda x: x in self.tables_with_alternative_names, subject_types))
+        subject_types = [x for x in subject_types if x in self.tables_with_alternative_names]
         db_subjects_names = await self.get_subjects_names(subject_types)
 
         if not subjects_names:
