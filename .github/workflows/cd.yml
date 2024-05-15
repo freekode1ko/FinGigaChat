@@ -26,19 +26,20 @@ jobs:
         run: |
           sleep 15
           RUNNING_CONTAINERS=$(docker ps --filter "status=running" --format "{{.Names}}")
-          EXPECTED_CONTAINERS=( "article_container" "article_online_container" "bot_container" "bot_container" "parser_monitoring_container" "quotes_container" "research_container" "users_statistics_container" "web_app_container" )
+          EXPECTED_CONTAINERS=( "article_container" "article_online_container" "bot_container" "parser_monitoring_container" "quotes_container" "research_container" "users_statistics_container" "web_app_container" )
           for container in "${EXPECTED_CONTAINERS[@]}"; do
             if ! echo "$RUNNING_CONTAINERS" | grep -q "$container"; then
               echo "Error: Container $container is not running."
               exit 1
             fi
           done
+          echo "Ok: Containers is running."
         continue-on-error: false
 
       - name: Check container restart status
         run: |
           sleep 15
-          EXPECTED_CONTAINERS=("container1" "container2" "container3") # Замените на имена ваших контейнеров
+          EXPECTED_CONTAINERS=( "article_container" "article_online_container" "bot_container" "parser_monitoring_container" "quotes_container" "research_container" "users_statistics_container" "web_app_container" )
           for container in "${EXPECTED_CONTAINERS[@]}"; do
             RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' $container)
             if [ "$RESTART_COUNT" -ne 0 ]; then
@@ -46,6 +47,7 @@ jobs:
               exit 1
             fi
           done
+          echo "Ok: Containers has not restarted."
         continue-on-error: false
 
 
