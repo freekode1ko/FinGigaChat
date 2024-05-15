@@ -323,7 +323,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
         )
     else:
         handbook = pd.read_sql_query(
-            "SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+            "SELECT client_alternative.other_name AS object, "
             'client.industry_id, industry.name AS industry_name FROM client_alternative '
             'INNER JOIN client ON client_alternative.client_id = client.id '
             'INNER JOIN industry ON client.industry_id = industry.id',
