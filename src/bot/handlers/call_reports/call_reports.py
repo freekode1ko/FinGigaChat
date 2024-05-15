@@ -111,7 +111,8 @@ class CallReport:
     Класс для создания, изменения и получения call report'ов
     """
 
-    def __init__(self):
+    def __init__(self, session):
+        self.session = session
         self.client = None
         self.report_date = None
         self.description = None
@@ -127,19 +128,18 @@ class CallReport:
         """
         self._id = call_report_id
         if with_other_fields:
-            async with async_session() as session:
-                client_call_reports_dates = await session.execute(
-                    select(
-                        CallReports.client,
-                        CallReports.report_date,
-                        CallReports.description,
-                        CallReports.user_id
-                    )
-                    .filter(
-                        CallReports.id == self._id,
-                    )
+            client_call_reports_dates = await self.session.execute(
+                select(
+                    CallReports.client,
+                    CallReports.report_date,
+                    CallReports.description,
+                    CallReports.user_id
                 )
-                self.client, self.report_date, self.description, self.user_id = client_call_reports_dates.fetchone()
+                .filter(
+                    CallReports.id == self._id,
+                )
+            )
+            self.client, self.report_date, self.description, self.user_id = client_call_reports_dates.fetchone()
 
     async def create(self, user_id: str, client: int, report_date: datetime.date, description: str) -> None:
         """
@@ -155,19 +155,18 @@ class CallReport:
         self.report_date = report_date
         self.description = description
 
-        async with async_session() as session:
-            _id = await session.execute(
-                insert(CallReports)
-                .values(
-                    user_id=user_id,
-                    client=client,
-                    report_date=report_date,
-                    description=description
-                )
-                .returning(CallReports.id)
+        _id = await self.session.execute(
+            insert(CallReports)
+            .values(
+                user_id=user_id,
+                client=client,
+                report_date=report_date,
+                description=description
             )
-            self._id = _id.first()[0]
-            await session.commit()
+            .returning(CallReports.id)
+        )
+        self._id = _id.first()[0]
+        await self.session.commit()
 
     def date(self) -> str:
         """
@@ -183,13 +182,12 @@ class CallReport:
 
         :param client: Имя клиента
         """
-        async with async_session() as session:
-            await session.execute(
-                update(CallReports).values(client=client).where(
-                    CallReports.id == self._id
-                )
+        await self.session.execute(
+            update(CallReports).values(client=client).where(
+                CallReports.id == self._id
             )
-            await session.commit()
+        )
+        await self.session.commit()
         self.client = client
 
     async def update_date(self, date: datetime.date | str) -> None:
@@ -202,13 +200,12 @@ class CallReport:
             date = validate_and_parse_date(date)
 
         if date:
-            async with async_session() as session:
-                await session.execute(
-                    update(CallReports).values(report_date=date).where(
-                        CallReports.id == self._id
-                    )
+            await self.session.execute(
+                update(CallReports).values(report_date=date).where(
+                    CallReports.id == self._id
                 )
-                await session.commit()
+            )
+            await self.session.commit()
             self.report_date = date
 
     async def update_description(self, description: str) -> None:
@@ -217,13 +214,12 @@ class CallReport:
 
         :param description: Описание
         """
-        async with async_session() as session:
-            await session.execute(
-                update(CallReports).values(description=description).where(
-                    CallReports.id == self._id
-                )
+        await self.session.execute(
+            update(CallReports).values(description=description).where(
+                CallReports.id == self._id
             )
-            await session.commit()
+        )
+        await self.session.commit()
         self.description = description
 
     async def get_pages(self) -> None:

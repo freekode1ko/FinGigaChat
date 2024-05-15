@@ -5,6 +5,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.call_reports import get_user_email_async
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
@@ -29,14 +30,16 @@ class CallReportsEditStates(StatesGroup):
 async def show_report(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
+        session: AsyncSession,
 ) -> None:
     """
     Функция дял просмотра call report'ов
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
+    :param session: Сессия для взаимодействия с БД
     """
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
 
     await call_report_view_answer(callback_query.message, report, callback_data.return_menu, sub_menu=callback_data.sub_menu)
@@ -46,16 +49,18 @@ async def show_report(
 async def call_reports_handler_send_to_mail(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
+        session: AsyncSession
 ) -> None:
     """
     Обработка кнопок отправки на почту call report'ов
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
+    :param session: Сессия для взаимодействия с БД
     """
     logger.info(f'Call Report: Нажали на кнопку отправки на почту report для {callback_query.message.chat.id}')
 
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
     user_email = await get_user_email_async(user_id=report.user_id)
 
@@ -82,14 +87,16 @@ async def call_reports_handler_send_to_mail(
 async def edit_report(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
+        session: AsyncSession
 ) -> None:
     """
     Обработка кнопки для перехода в меню редактирования call report'ов
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
+    :param session: Сессия для взаимодействия с БД
     """
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
 
     await call_report_edit_answer(callback_query.message, report, callback_data.return_menu, sub_menu=callback_data.sub_menu)
@@ -100,6 +107,7 @@ async def call_reports_edit_report_name(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
         state: FSMContext,
+        session: AsyncSession
 ) -> None:
     """
     Обработка кнопки для изменения имени клиента в call report'е
@@ -107,8 +115,9 @@ async def call_reports_edit_report_name(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия для взаимодействия с БД
     """
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
 
     await state.set_state(CallReportsEditStates.edit_clint_name)
@@ -124,16 +133,21 @@ async def call_reports_edit_report_name(
 
 
 @router.message(CallReportsEditStates.edit_clint_name)
-async def call_reports_edit_name_from_state(message: Message, state: FSMContext) -> None:
+async def call_reports_edit_name_from_state(
+        message: Message,
+        state: FSMContext,
+        session: AsyncSession
+) -> None:
     """
     Обработка состояния при изменении имени клиента в call report'е
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия для взаимодействия с БД
     """
     data = await state.get_data()
 
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(data['report_id'])
     await report.update_clint(message.text)
 
@@ -146,6 +160,7 @@ async def call_reports_edit_report_date(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
         state: FSMContext,
+        session: AsyncSession,
 ) -> None:
     """
     Обработка кнопки для изменения даты в call report'е
@@ -153,8 +168,9 @@ async def call_reports_edit_report_date(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия для взаимодействия с БД
     """
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
 
     await state.set_state(CallReportsEditStates.edit_date)
@@ -170,16 +186,21 @@ async def call_reports_edit_report_date(
 
 
 @router.message(CallReportsEditStates.edit_date)
-async def call_reports_edit_report_date_from_state(message: Message, state: FSMContext) -> None:
+async def call_reports_edit_report_date_from_state(
+        message: Message,
+        state: FSMContext,
+        session: AsyncSession,
+) -> None:
     """
     Обработка состояния при изменении даты в call report'е
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия для взаимодействия с БД
     """
     data = await state.get_data()
     if date := validate_and_parse_date(message.text):
-        report = CallReport()
+        report = CallReport(session)
         await report.setup(data['report_id'])
         await report.update_date(date)
         await call_report_edit_answer(message, report, data['return_menu'], edit_message=False, sub_menu=data['sub_menu'])
@@ -195,6 +216,7 @@ async def call_reports_edit_report_description(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
         state: FSMContext,
+        session: AsyncSession,
 ) -> None:
     """
     Обработка кнопки для изменения описания в call report'е
@@ -202,8 +224,9 @@ async def call_reports_edit_report_description(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия для взаимодействия с БД
     """
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
 
     await state.set_state(CallReportsEditStates.edit_text_message)
@@ -219,7 +242,11 @@ async def call_reports_edit_report_description(
 
 
 @router.message(CallReportsEditStates.edit_text_message)
-async def call_reports_edit_description_from_state(message: Message, state: FSMContext) -> None:
+async def call_reports_edit_description_from_state(
+        message: Message,
+        state: FSMContext,
+        session: AsyncSession,
+) -> None:
     """
     Обработка состояния при изменении имени клиента в call report'е
 
@@ -228,7 +255,7 @@ async def call_reports_edit_description_from_state(message: Message, state: FSMC
     """
     data = await state.get_data()
 
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(data['report_id'])
     await report.update_description(message.text)
 
