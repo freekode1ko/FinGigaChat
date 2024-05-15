@@ -7,16 +7,19 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Copy to prj dir
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy project to deployment directory
         run: |
-          cp -r /root/actions-runner/code/FinGigaChat/FinGigaChat /root/deploy/FinGigaChat
-      - name: test
+          cp -r /root/actions-runner/code/FinGigaChat/FinGigaChat/* /root/deploy/FinGigaChat
+        continue-on-error: false
+
+      - name: Deploy with Docker Compose
         run: |
           docker compose --file /root/deploy/FinGigaChat/docker-compose.yaml up --force-recreate --build --detach
-#      - name: Run containers
-#        run: |
-#          docker compose .
+        continue-on-error: false
 
 
