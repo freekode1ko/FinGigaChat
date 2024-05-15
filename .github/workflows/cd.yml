@@ -21,5 +21,31 @@ jobs:
         run: |
           docker compose --file /root/deploy/FinGigaChat/docker-compose.yaml up --force-recreate --build --detach
         continue-on-error: false
+      
+      - name: Check container status
+        run: |
+          sleep 15
+          RUNNING_CONTAINERS=$(docker ps --filter "status=running" --format "{{.Names}}")
+          EXPECTED_CONTAINERS=( "article_container" "article_online_container" "bot_container" "bot_container" "parser_monitoring_container" "quotes_container" "research_container" "users_statistics_container" "web_app_container" )
+          for container in "${EXPECTED_CONTAINERS[@]}"; do
+            if ! echo "$RUNNING_CONTAINERS" | grep -q "$container"; then
+              echo "Error: Container $container is not running."
+              exit 1
+            fi
+          done
+        continue-on-error: false
+
+      - name: Check container restart status
+        run: |
+          sleep 15
+          EXPECTED_CONTAINERS=("container1" "container2" "container3") # Замените на имена ваших контейнеров
+          for container in "${EXPECTED_CONTAINERS[@]}"; do
+            RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' $container)
+            if [ "$RESTART_COUNT" -ne 0 ]; then
+              echo "Error: Container $container has restarted $RESTART_COUNT times."
+              exit 1
+            fi
+          done
+        continue-on-error: false
 
 
