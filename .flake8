@@ -6,3 +6,7 @@ exclude =
     logs
     .env
     .env.example
+
+inline-quotes = '
+application-import-names = src
+import-order-style = google

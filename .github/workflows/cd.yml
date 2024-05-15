@@ -1,8 +1,8 @@
-name: CD
+name: CD_load_to_dev_server
 
 on:
   push:
-    branches: [create_ci]
+    branches: [Develop]
 
 jobs:
   deploy:
@@ -49,5 +49,3 @@ jobs:
           done
           echo "Ok: Containers has not restarted."
         continue-on-error: false
-
-
