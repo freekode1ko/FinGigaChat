@@ -24,6 +24,7 @@ from constants import enums
 
 Base = declarative_base()
 metadata = Base.metadata
+mapper_registry = sa.orm.registry(metadata=metadata)
 
 
 class Article(Base):
@@ -62,14 +63,6 @@ t_bonds = Table(
     Column('5', Float(53)),
     Column('6', Float(53))
 )
-
-
-class Chat(Base):
-    __tablename__ = 'chat'
-
-    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    name = Column(Text, nullable=False)
-    type = Column(Text, nullable=False)
 
 
 t_date_of_last_build = Table(
@@ -139,7 +132,6 @@ class Industry(Base):
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
     industry_alternative = relationship('IndustryAlternative', back_populates='industry')
-    telegram_channel = relationship('TelegramChannel', back_populates='industry')
 
 
 t_key_eco = Table(
@@ -239,15 +231,6 @@ t_report_exc_mon = Table(
 )
 
 
-t_report_industry = Table(
-    'report_industry', metadata,
-    Column('title', Text),
-    Column('text', Text),
-    Column('date', Text),
-    Column('send_flag', Boolean)
-)
-
-
 t_report_met_day = Table(
     'report_met_day', metadata,
     Column('0', Text),
@@ -326,7 +309,7 @@ class IndustryAlternative(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_names = Column(Text)
+    other_name = Column(Text)
 
     industry = relationship('Industry', back_populates='industry_alternative')
 
@@ -369,11 +352,12 @@ class TelegramChannel(Base):
     __table_args__ = {'comment': 'Справочник telegram каналов, из которых вынимаются новости'}
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(128), nullable=False)
-    link = Column(String(255), nullable=False)
-    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    name = Column(String(128), nullable=False, comment='Название телеграм канала')
+    link = Column(String(255), nullable=False, comment='Ссылка на телеграм канал')
+    section_id = Column(ForeignKey('bot_telegram_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False,
+                        comment='Связь телеграм канала с разделом (например, отрасль "Недвижимость")')
 
-    industry = relationship('Industry', back_populates='telegram_channel')
+    section = relationship('TelegramSection', back_populates='telegram_channel')
     user = relationship('Whitelist', secondary='user_telegram_subscription', back_populates='telegram')
     relation_telegram_article = relationship('RelationTelegramArticle', back_populates='telegram')
 
@@ -383,7 +367,7 @@ class ClientAlternative(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_names = Column(Text)
+    other_name = Column(Text)
 
     client = relationship('Client', back_populates='client_alternative')
 
@@ -393,7 +377,7 @@ class CommodityAlternative(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_names = Column(Text)
+    other_name = Column(Text)
 
     commodity = relationship('Commodity', back_populates='commodity_alternative')
 
@@ -452,6 +436,13 @@ t_user_telegram_subscription = Table(
     Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
     Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
 )
+
+
+class UserTelegramSubscriptions:
+    pass
+
+
+mapper_registry.map_imperatively(UserTelegramSubscriptions, t_user_telegram_subscription)
 
 
 class RAGUserFeedback(Base):
@@ -662,3 +653,31 @@ class ProductDocument(Base):
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
     product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
                          primary_key=False, nullable=False, comment='id категории продукта')
+
+
+class TelegramGroup(Base):
+    __tablename__ = 'bot_telegram_group'
+    __table_args__ = {'comment': 'Справочник групп, выделенных среди разделов по телеграм каналам'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id группы в базе')
+    name = Column(String(255), nullable=False, comment='Наименование группы')
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    is_show_all_channels = Column(Boolean(), nullable=False, server_default=sa.text("'false'::boolean"),
+                                  comment='Указывает, показывать ли сразу все тг каналы, '
+                                          'которые косвено связаны с данной группой')
+
+    telegram_section = relationship('TelegramSection', back_populates='telegram_group')
+
+
+class TelegramSection(Base):
+    __tablename__ = 'bot_telegram_section'
+    __table_args__ = {'comment': 'Справочник разделов, выделенных среди телеграм каналов'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='id раздела в базе')
+    name = Column(String(255), nullable=False, comment='Наименование раздела')
+    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    group_id = Column(ForeignKey('bot_telegram_group.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=False,
+                      nullable=False, comment='id группы, к которой принадлежит раздел')
+
+    telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
+    telegram_channel = relationship('TelegramChannel', back_populates='section')

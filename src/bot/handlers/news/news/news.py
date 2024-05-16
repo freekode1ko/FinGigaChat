@@ -185,7 +185,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
-    nearest_subjects = fuzzy_searcher.find_nearest_to_subject(user_msg)
+    nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
 
     cancel_command = 'отмена'
     buttons = [
