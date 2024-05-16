@@ -14,7 +14,7 @@ from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import engine
 from handlers import (
-    admin, ai, analytics, common, industry, news, quotes, referencebook, subscriptions, products, call_reports, clients
+    admin, ai, analytics, common, telegram_sections, news, quotes, referencebook, subscriptions, products, call_reports, clients
 )
 from log.bot_logger import logger
 from log.sentry import init_sentry
@@ -95,7 +95,7 @@ async def start_bot():
         ai.router,
         call_reports.router,
         referencebook.router,
-        industry.router,
+        telegram_sections.router,
         analytics.router,
         products.router,
         clients.router,

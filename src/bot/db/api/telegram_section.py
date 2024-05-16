@@ -26,10 +26,10 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
             to_datetime: datetime.datetime = None,
     ) -> pd.DataFrame:
         """
-        Возвращает все тг-новости по отрасли за {days} дней с текущего числа
+        Возвращает все тг-новости по разделу за {days} дней с текущего числа
         Если my_subscriptions == True, то новости вынимаются только из каналов, на которые подписан пользователь
 
-        :param section_id: ID отрасли, по которой формируется сводка
+        :param section_id: ID раздела, по которой формируется сводка
         :param by_user_subscriptions: Флаг указания, что сводка по подпискам или по всем тг каналам отрасли
         :param user_id: telegram ID пользователя, для которого формируется сводка
         :param tmdelta: Промежуток, за который формируется сводка новостей до to_datetime

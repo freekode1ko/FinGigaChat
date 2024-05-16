@@ -1,4 +1,3 @@
-import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -6,12 +5,12 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants import industry as callback_prefixes
 from db import models
-from keyboards.industry import callbacks
+from keyboards.telegram_news import callbacks
 
 
 def get_section_kb(sections: list[models.TelegramSection]) -> InlineKeyboardMarkup:
     """
-    Создает клавиатуру для выбора отрасли, по которой пользователь хочет получить сводку новостей
+    Создает клавиатуру для выбора раздела, по которому пользователь хочет получить сводку новостей
 
     :param sections: список разделов тг каналов
     return: Клавиатура с выбором раздела

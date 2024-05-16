@@ -7,9 +7,9 @@ from aiogram.filters import Command
 from constants.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
     BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
 from db.api.telegram_section import telegram_section_db
-from handlers.industry.handler import router
-from keyboards.industry import callbacks
-from keyboards.industry import constructors as keyboards
+from handlers.telegram_sections.handler import router
+from keyboards.telegram_news import callbacks
+from keyboards.telegram_news import constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import user_in_whitelist, bot_send_msg
 from utils.telegram_news import get_msg_text_for_tg_newsletter
