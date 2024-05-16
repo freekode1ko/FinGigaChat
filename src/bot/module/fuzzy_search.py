@@ -1,9 +1,10 @@
 from typing import Optional
 
-import pandas as pd
+import sqlalchemy as sa
 from fuzzywuzzy import process
 
-from db.database import engine
+from db.database import engine, async_session
+from db import models
 from log.logger_base import Logger
 
 
@@ -12,25 +13,37 @@ class FuzzyAlternativeNames:
         self._logger = logger
         self.engine = engine
 
-    def get_subjects_names(self, subjects: list[str]) -> list[str]:
+        self.tables_with_alternative_names = [
+            models.IndustryAlternative,
+            models.CommodityAlternative,
+            models.ClientAlternative,
+        ]
+
+    @staticmethod
+    async def get_subjects_names(subjects: list[models.Base]) -> list[str]:
         """
-        Получение всех альтернативных имен по списку из industry, client, commodity
+        Получение всех альтернативных имен из таблиц
+        :param subjects: список таблиц, из которых выгружает альт имена
+        :returns: Все альт имена таблиц subjects
         """
         subjects_names = []
 
-        for subject in subjects:
-            df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
-            df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
-            for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
-                subjects_names.extend(names)
+        async with async_session() as session:
+            for subject in subjects:
+                data = await session.execute(sa.select(subject.other_name))
+                subjects_names.extend(data.scalars())
         return subjects_names
 
-    def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> list[str]:
+    async def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
+        :param subject_name: Наименование субъекта
+        :param criteria: отклонение от значения схожести максимально близкого слова к имени субъекта,
+                         в пределах отклонения выдается выборка
+        :returns: Список имен, похожих на наименование субъекта
         """
         subject_name = subject_name.lower().strip().replace('"', '')
-        subjects_names = self.get_subjects_names(['industry', 'client', 'commodity'])
+        subjects_names = await self.get_subjects_names(self.tables_with_alternative_names)
 
         if not subjects_names:
             return []
@@ -41,10 +54,10 @@ class FuzzyAlternativeNames:
 
         return names
 
-    def find_nearest_to_subjects_list(
+    async def find_nearest_to_subjects_list(
             self,
             subjects_names: list[str],
-            subject_types: Optional[list[str]] = None,
+            subject_types: Optional[list[models.Base]] = None,
     ) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
@@ -52,11 +65,11 @@ class FuzzyAlternativeNames:
         :param subjects_names: список наименований
         :param subject_types: список из строк ['industry', 'client', 'commodity']
                               (среди данных таблиц идет поиск ближайших названий)
+        :returns: Список ближайших похожих имен субъектов
         """
-        all_types = ['industry', 'client', 'commodity']
-        subject_types = subject_types or all_types
-        subject_types = list(filter(lambda x: x in all_types, subject_types))
-        db_subjects_names = self.get_subjects_names(subject_types)
+        subject_types = subject_types or self.tables_with_alternative_names
+        subject_types = [x for x in subject_types if x in self.tables_with_alternative_names]
+        db_subjects_names = await self.get_subjects_names(subject_types)
 
         if not subjects_names:
             return []

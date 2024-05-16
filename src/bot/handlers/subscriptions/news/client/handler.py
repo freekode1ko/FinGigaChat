@@ -1,5 +1,6 @@
 from aiogram.fsm.state import StatesGroup, State
 
+from db import models
 from db.api.client import client_db
 from db.api.user_client_subscription import user_client_subscription_db
 from handlers.subscriptions.handler import router
@@ -19,7 +20,7 @@ handler = NewsHandler(
     callbacks,
     keyboard,
     ClientSubscriptionsStates.client_user_subscriptions,
-    ['client'],
+    [models.ClientAlternative],
     'клиенты',
     'клиентов',
     'клиентов',

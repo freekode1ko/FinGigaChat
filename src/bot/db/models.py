@@ -65,14 +65,6 @@ t_bonds = Table(
 )
 
 
-class Chat(Base):
-    __tablename__ = 'chat'
-
-    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    name = Column(Text, nullable=False)
-    type = Column(Text, nullable=False)
-
-
 t_date_of_last_build = Table(
     'date_of_last_build', metadata,
     Column('date_time', Text)
@@ -239,15 +231,6 @@ t_report_exc_mon = Table(
 )
 
 
-t_report_industry = Table(
-    'report_industry', metadata,
-    Column('title', Text),
-    Column('text', Text),
-    Column('date', Text),
-    Column('send_flag', Boolean)
-)
-
-
 t_report_met_day = Table(
     'report_met_day', metadata,
     Column('0', Text),
@@ -326,7 +309,7 @@ class IndustryAlternative(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_names = Column(Text)
+    other_name = Column(Text)
 
     industry = relationship('Industry', back_populates='industry_alternative')
 
@@ -384,7 +367,7 @@ class ClientAlternative(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_names = Column(Text)
+    other_name = Column(Text)
 
     client = relationship('Client', back_populates='client_alternative')
 
@@ -394,7 +377,7 @@ class CommodityAlternative(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_names = Column(Text)
+    other_name = Column(Text)
 
     commodity = relationship('Commodity', back_populates='commodity_alternative')
 

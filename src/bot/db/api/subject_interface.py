@@ -63,13 +63,13 @@ class SubjectInterface:
     async def get_other_names(self) -> pd.DataFrame:
         """
         Возвращает датафрейм с альтернативными именами для каждого subject
-        :returns: DataFrame['id', 'name', 'other_name']  (subject.id, subject.name, unnest(subject_alternative.other_names))
+        :returns: DataFrame['id', 'name', 'other_name']  (subject.id, subject.name,subject_alternative.other_name)
         """
         async with database.async_session() as session:
             stmt = select(
                 self.table.id,
                 self.table.name,
-                func.unnest(func.string_to_array(self.table_alternative.other_names, ';')).label('other_name'),
+                self.table_alternative.other_name,
             ).outerjoin(self.relation_alternative)
             result = await session.execute(stmt)
             data = result.fetchall()
