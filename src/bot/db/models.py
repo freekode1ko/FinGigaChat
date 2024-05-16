@@ -17,7 +17,7 @@ from sqlalchemy import (
     Text,
     Date,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import declarative_base, relationship
 
 from constants import enums
@@ -667,3 +667,11 @@ class TelegramSection(Base):
 
     telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
     telegram_channel = relationship('TelegramChannel', back_populates='section')
+
+
+class UserDialogHistory(Base):
+    __tablename__ = 'user_dialog_history'
+    __table_args__ = {'comment': 'Истории диалогов между пользователями и ИИ'}
+
+    user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    knowledge_memory = Column(JSONB, comment='сообщения между Базой Знаний и пользователем')
