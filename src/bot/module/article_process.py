@@ -195,7 +195,7 @@ class ArticleProcess:
 
         return com_data
 
-    def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
+    async def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
         """
         Получение финансовых показателей для клиента.
         :param client_id: id компании в таблице client
