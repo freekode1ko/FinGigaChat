@@ -2,7 +2,6 @@ import datetime
 import json
 import time
 import warnings
-from pathlib import Path
 
 import pandas as pd
 import requests
@@ -13,7 +12,9 @@ from module.article_process import ArticleProcess
 from log.logger_base import selector_logger
 from log import sentry
 
-PERIOD = 1
+MAX_NEWS_BATCH_SIZE = 1000
+MINUTE = 60
+MINUTES_TO_SLEEP = 10
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
@@ -79,6 +80,8 @@ def regular_func():
 
     subject_links, tg_links = [], []
     df_article = get_article()
+    # Берем последнюю тысячу еовостей для обработки
+    df_article = df_article[-MAX_NEWS_BATCH_SIZE:]
 
     if not df_article.empty:
         try:
@@ -137,7 +140,7 @@ def post_ids(ids):
         # ids = {'id': [1,2,3...]}
         try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
-            url=BASE_GIGAPARSER_URL.format('success_request'),
+            url=BASE_GIGAPARSER_URL.format(f'success_request/all?stand={config.STAND}'),
             json=ids,
             timeout=config.POST_TO_GIGAPARSER_TIMEOUT
         )
@@ -192,10 +195,10 @@ if __name__ == '__main__':
             end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
             print(end_msg + '\nОжидайте\n')
             logger.info(end_msg)
-            for i in range(PERIOD):
-                time.sleep(3600)
-                logger.debug('Ожидание: {}/{} часов'.format(i + 1, PERIOD))
-                print('Ожидание: {}/{} часов'.format(i + 1, PERIOD))
+            for i in range(MINUTES_TO_SLEEP):
+                time.sleep(MINUTE)
+                logger.debug('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
+                print('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
     except KeyboardInterrupt:
         pass
     except Exception as e:
