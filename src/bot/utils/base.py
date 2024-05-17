@@ -364,7 +364,7 @@ async def __create_fin_table(message: types.Message, client_name: str,
 
 
 async def process_fin_table(message: types.Message, client_name: str,
-                            table_type: str, table_data: pd.DataFrame,
+                            table_type: str, table_data: str,
                             logger: Logger.logger = None) -> None:
     """
     Создание и отправка таблицы как изображения
@@ -372,13 +372,18 @@ async def process_fin_table(message: types.Message, client_name: str,
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_name: Наименование клиента
     :param table_type: Название темы таблицы
-    :param table_data: Таблица финансовых показателей
+    :param table_data: Таблица финансовых показателей в формате str
     :param logger: Логгер
     return None
     """
     logger = logger or logging.getLogger('bot_runner')
-    df = pd.DataFrame(data=ast.literal_eval(table_data.replace(' NaN', '""')))
-    if not df.empty:
+    table_data = table_data.replace(' NaN', '""')
+    if table_data:
+        try:
+            df = pd.DataFrame(data=ast.literal_eval(table_data))
+        except ValueError:
+            logger.error(f'Ошибка при создании таблицы финансовых показателей для {client_name}, не верный данных')
+            return None
         await __create_fin_table(message, client_name, table_type, df)
         logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
     else:
