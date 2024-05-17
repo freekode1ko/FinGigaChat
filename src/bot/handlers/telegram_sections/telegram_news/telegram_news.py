@@ -20,7 +20,7 @@ async def list_industries(message: Union[types.CallbackQuery, types.Message]) ->
     Отправка пользователю меню с выбором раздела в разрезе тг каналов
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    msg_text = 'Выберите раздел для получения краткой сводки новостей из telegram каналов по нему'
+    msg_text = 'Выберите раздел для получения краткой сводки новостей из telegram каналов'
     sections = await telegram_section_db.get_all()
     keyboard = keyboards.get_section_kb(sections)
 
