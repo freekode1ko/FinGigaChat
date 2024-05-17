@@ -6,6 +6,7 @@ import copy
 from aiogram import F, Router, types
 from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs import config
 from db.api.client import client_db
@@ -205,14 +206,16 @@ async def call_reports_handler_my_reports_date(
 async def return_to_date_page(
         callback_query: CallbackQuery,
         callback_data: CRViewAndEdit,
+        session: AsyncSession,
 ) -> None:
     """
     Функция для возврата в меню дат call report'ов определенного клиента
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param session: Сессия для взаимодействия с БД
     """
-    report = CallReport()
+    report = CallReport(session)
     await report.setup(callback_data.report_id)
     client_page, date_page = await report.get_pages()
 

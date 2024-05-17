@@ -5,6 +5,7 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date, audio_to_text
 from handlers.call_reports.call_report_view.utils import call_report_view_answer
@@ -90,7 +91,10 @@ async def enter_date(message: Message, state: FSMContext) -> None:
 
 
 @router.message(CallReportsStates.enter_description, F.content_type.in_({'voice', 'text'}), )
-async def enter_description(message: Message, state: FSMContext) -> None:
+async def enter_description(
+        message: Message,
+        state: FSMContext,
+        session: AsyncSession) -> None:
     """
     Обработка текста/аудио, который ввел пользователь для создания кол репорта
 
@@ -109,7 +113,7 @@ async def enter_description(message: Message, state: FSMContext) -> None:
     )
     data = await state.get_data()
 
-    report = CallReport()
+    report = CallReport(session)
     await report.create(
         user_id=message.from_user.id,
         client=data['client'],
