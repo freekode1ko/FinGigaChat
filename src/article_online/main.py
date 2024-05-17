@@ -137,7 +137,7 @@ def post_ids(ids):
         # ids = {'id': [1,2,3...]}
         try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
-            url=BASE_GIGAPARSER_URL.format('success_request'),
+            url=BASE_GIGAPARSER_URL.format(f'success_request/all?stand={config.STAND}'),
             json=ids,
             timeout=config.POST_TO_GIGAPARSER_TIMEOUT
         )
