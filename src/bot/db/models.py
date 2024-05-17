@@ -664,6 +664,8 @@ class TelegramSection(Base):
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
     group_id = Column(ForeignKey('bot_telegram_group.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=False,
                       nullable=False, comment='id группы, к которой принадлежит раздел')
+    name_for_rag = Column(String(100), nullable=False, server_default='',
+                          comment='Название секции для создания документов в RAG-сервисе')
 
     telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
     telegram_channel = relationship('TelegramChannel', back_populates='section')
