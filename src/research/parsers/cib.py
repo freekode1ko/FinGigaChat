@@ -25,7 +25,7 @@ from sqlalchemy import select
 from configs import config
 from db import parser_source
 from db.database import async_session, engine
-from db.models import Research, ResearchType, ParserSource, FinancialSummary
+from db.models import ResearchType, ParserSource, FinancialSummary
 from log.logger_base import Logger
 from module import weekly_pulse_parse, data_transformer
 from parsers.exceptions import ResearchError
