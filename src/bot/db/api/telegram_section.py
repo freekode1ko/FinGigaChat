@@ -47,11 +47,11 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
         ).select_from(
             models.Article
         ).join(
-            models.RelationTelegramArticle
+            models.RelationTelegramArticle, models.RelationTelegramArticle.article_id == models.Article.id
         ).join(
-            models.TelegramChannel
+            models.TelegramChannel, models.RelationTelegramArticle.telegram_id == models.TelegramChannel.id
         ).where(
-            models.TelegramSection.id == section_id,
+            models.TelegramChannel.section_id == section_id,
             models.Article.date >= from_datetime,
             to_datetime >= models.Article.date,
         )
