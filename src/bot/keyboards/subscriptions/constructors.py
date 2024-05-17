@@ -5,10 +5,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants.subscriptions import const
 from constants.subscriptions import research
-from constants.subscriptions.news import telegram
 from constants.subscriptions.news import client
 from constants.subscriptions.news import commodity
 from constants.subscriptions.news import industry
+from keyboards.subscriptions.news.telegram import callbacks as telegram_callback_factory
 
 
 def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: str) -> InlineKeyboardMarkup:
@@ -61,7 +61,9 @@ def get_news_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Подписки на телеграм-каналы',
-        callback_data=telegram.TG_MENU,
+        callback_data=telegram_callback_factory.TelegramSubsMenuData(
+            menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+        ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(text=constants.BACK_BUTTON_TXT, callback_data=const.SUBS_MENU))
     keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))

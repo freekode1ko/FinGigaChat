@@ -2,9 +2,6 @@
 import random
 import re
 
-import pandas as pd
-from psycopg2.errors import UniqueViolation
-from sqlalchemy.exc import IntegrityError
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -13,17 +10,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types.web_app_info import WebAppInfo
 
 from configs import config
-from log.bot_logger import user_logger
 from constants.constants import (
     CANCEL_CALLBACK,
     MAX_REGISTRATION_CODE_ATTEMPTS,
     REGISTRATION_CODE_MIN,
     REGISTRATION_CODE_MAX,
 )
-from db.database import engine
+from db.whitelist import is_new_user_email, is_user_email_exist, insert_user_email_after_register
+from log.bot_logger import user_logger
 from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
-from db.whitelist import update_user_email, is_new_user_email, is_user_email_exist
 
 
 # States
@@ -171,32 +167,17 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
             user_username = 'Empty_username'
         user_id = user_raw['id']
         user_email = reg_info['user_email']
-        user = pd.DataFrame(
-            [[user_id, user_username, full_name, 'user', 'active', None, user_email]],
-            columns=['user_id', 'username', 'full_name', 'user_type', 'user_status', 'subscriptions', 'user_email'])
 
         welcome_msg = f'Добро пожаловать, {full_name}!'
-        exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.\n\n{exc}'
+        exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.'
         try:
-            user.to_sql('whitelist', if_exists='append', index=False, con=engine)
+            await insert_user_email_after_register(user_id, user_username, full_name, user_email)
             await message.answer(welcome_msg)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await help_handler(message, state)
-
-        except IntegrityError as e:
-            # если пользователь уже есть в системе, обновляем ему почту
-            if isinstance(e.orig, UniqueViolation):
-                update_user_email(user_id, user_email)
-                await message.answer(welcome_msg)
-                user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : пользователь обновил почту')
-            else:
-                await message.answer(exc_msg.format(exc=e))
-                user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
-
         except Exception as e:
-            await message.answer(exc_msg.format(exc=e))
+            await message.answer(exc_msg)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
-
         finally:
             await state.clear()
 
@@ -229,4 +210,3 @@ async def open_meeting_app(message: types.Message) -> None:
         resize_keyboard=True
     )
     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
-

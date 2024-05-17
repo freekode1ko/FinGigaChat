@@ -47,8 +47,10 @@ class ArticleProcess:
         """
         subject_ids = []
         message_text = message.lower().strip().replace('"', '')
-        df_alternative = pd.read_sql(f'SELECT {subject}_id, other_names FROM {subject}_alternative', con=self.engine)
-        df_alternative['other_names'] = df_alternative['other_names'].apply(lambda x: x.split(';'))
+        df_alternative = pd.read_sql(
+            f'SELECT {subject}_id, array_agg(other_name) as other_names FROM {subject}_alternative GROUP BY {subject}_id',
+            con=self.engine,
+        )
         for subject_id, names in zip(df_alternative[f'{subject}_id'], df_alternative['other_names']):
             if message_text in names:
                 subject_ids.append(subject_id)
@@ -195,7 +197,7 @@ class ArticleProcess:
 
         return com_data
 
-    def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
+    async def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
         """
         Получение финансовых показателей для клиента.
         :param client_id: id компании в таблице client
@@ -381,23 +383,6 @@ class ArticleProcess:
             f'ORDER BY {table}_score desc, date asc;',
             con=self.engine,
         )
-
-    def get_industry_client_com_dict(self) -> List[Dict]:
-        """
-        Составление словарей для новостных объектов и их альтернативных названий
-        return: список со словарями клиентов, товаров и отраслей dict(id=List[other_names])
-        """
-        icc_dict = []
-        subjects = ('industry', 'client', 'commodity')
-        query = 'SELECT {subject}_id, other_names FROM {subject}_alternative'
-
-        for subject in subjects:
-            subject_df = pd.read_sql_query(query.format(subject=subject), con=self.engine)
-            subject_df['other_names'] = subject_df['other_names'].str.split(';')
-            subject_dict = subject_df.set_index('{}_id'.format(subject))['other_names'].to_dict()
-            icc_dict.append(subject_dict)
-
-        return icc_dict
 
     @staticmethod
     def get_user_article(client_article, commodity_article, industry_ids, client_ids, commodity_ids, industry_name):

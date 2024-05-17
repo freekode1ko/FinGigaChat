@@ -11,12 +11,15 @@ from typing import Optional
 import pandas as pd
 from aiogram import Bot, types
 from aiogram.utils.media_group import MediaGroupBuilder
+from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
 from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
 from constants import constants
 from constants.constants import research_footer
-from db.database import engine
+from db import models
+from db.database import engine, async_session
 from log.logger_base import Logger
 
 
@@ -84,13 +87,16 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     :param check_email: Флаг, нужно ли проверять наличие почты пользователя в бд
     return Булево значение на наличие пользователя в списке
     """
-    user_json = json.loads(user)
-    user_id = user_json['id']
-    whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
-    user_df = whitelist.loc[whitelist['user_id'] == user_id]
-    if not user_df.empty:
-        return not (check_email and pd.isna(user_df['user_email'].iloc[0]))
-    return False
+    user_id = json.loads(user)['id']
+    async with async_session() as session:
+        result = await session.execute(select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id))
+        try:
+            user_email = result.scalar_one()
+            if not check_email:
+                return True
+            return bool(user_email)
+        except NoResultFound:
+            return False
 
 
 async def is_admin_user(user: dict) -> bool:
@@ -318,7 +324,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
         )
     else:
         handbook = pd.read_sql_query(
-            "SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+            "SELECT client_alternative.other_name AS object, "
             'client.industry_id, industry.name AS industry_name FROM client_alternative '
             'INNER JOIN client ON client_alternative.client_id = client.id '
             'INNER JOIN industry ON client.industry_id = industry.id',
@@ -462,16 +468,27 @@ async def wait_until(to_dt: datetime) -> None:
 
 async def send_or_edit(
         message: types.CallbackQuery | types.Message,
-        msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
+        msg_text: str,
+        keyboard: Optional[types.InlineKeyboardMarkup] = None,
+        parse_mode: Optional[str] = 'HTML'
 ) -> None:
+    """
+    Отправляет новое сообщение, если message это types.Message
+    Изменяет текущее сообщение, если message это types.CallbackQuery
+
+    :param message: Объект сообщения или callback
+    :param msg_text: Текст сообщения, длина 1-4096
+    :param keyboard: Inline клавиатура
+    :param parse_mode: Режим парсинга текста для его форматирования
+    """
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
     if isinstance(message, types.Message):
-        await message.answer(msg_text, reply_markup=keyboard)
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
 
     # Если CallbackQuery - изменяем это сообщение
     else:
         call = message
-        await call.message.edit_text(msg_text, reply_markup=keyboard)
+        await call.message.edit_text(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
 
 
 async def send_pdf(

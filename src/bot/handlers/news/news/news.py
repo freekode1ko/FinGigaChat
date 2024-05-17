@@ -112,7 +112,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     :param ap_obj: экземпляр класса ArticleProcess
     return значение об успешности создания таблицы
     """
-    client_fin_tables = ap_obj.get_client_fin_indicators(s_id)
+    client_fin_tables = await ap_obj.get_client_fin_indicators(s_id)
     client_name = msg_text.strip().lower()
     if not client_fin_tables.empty:
         await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
@@ -181,7 +181,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
-    nearest_subjects = fuzzy_searcher.find_nearest_to_subject(user_msg)
+    nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
 
     cancel_command = 'отмена'
     buttons = [

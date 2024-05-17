@@ -11,6 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from configs import config
 from constants import constants
 from constants.subscriptions import const
+from db import models
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
@@ -61,7 +62,7 @@ class NewsHandler:
             callbacks: Type[CallbacksModule],
             keyboards: BaseKeyboard,
             write_subscriptions_state: State,
-            subject_names_to_find_nearest: list[str],
+            subject_names_to_find_nearest: list[models.Base],
             subject_name_nominative: str,
             subject_name_genitive: str,
             subject_name_accusative: str,
@@ -301,7 +302,7 @@ class NewsHandler:
                 list_of_unknown = list(set(user_request) - set(subscriptions['other_name']))
                 fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
                 near_to_list_of_unknown = '\n'.join(
-                    fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown, self.subject_names_to_find_nearest)
+                    await fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown, self.subject_names_to_find_nearest)
                 )
                 user_logger.info(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: '
                                  f'{list_of_unknown}')
