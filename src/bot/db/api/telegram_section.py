@@ -1,3 +1,6 @@
+import datetime
+
+import pandas as pd
 import sqlalchemy as sa
 
 from db import models
@@ -13,6 +16,59 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
             stmt = sa.select(self._table).where(self._table.group_id == group_id).order_by(self._order)
             result = await session.scalars(stmt)
             return list(result)
+
+    async def get_section_tg_news(
+            self,
+            section_id: int,
+            by_user_subscriptions: bool,
+            user_id: int,
+            tmdelta: datetime.timedelta,
+            to_datetime: datetime.datetime = None,
+    ) -> pd.DataFrame:
+        """
+        Возвращает все тг-новости по разделу за {days} дней с текущего числа
+        Если my_subscriptions == True, то новости вынимаются только из каналов, на которые подписан пользователь
+
+        :param section_id: ID раздела, по которой формируется сводка
+        :param by_user_subscriptions: Флаг указания, что сводка по подпискам или по всем тг каналам отрасли
+        :param user_id: telegram ID пользователя, для которого формируется сводка
+        :param tmdelta: Промежуток, за который формируется сводка новостей до to_datetime
+        :param to_datetime: до какой даты_времени вынимаются новости (по умолчанию datetime.datetime.now())
+        return: DataFrame['telegram_channel_name', 'telegram_article_link', 'title', 'date']
+        """
+        to_datetime = to_datetime or datetime.datetime.now()
+        from_datetime = to_datetime - tmdelta
+
+        stmt = sa.select(
+            models.TelegramChannel.name,
+            models.Article.link,
+            models.Article.title,
+            models.Article.date,
+        ).select_from(
+            models.Article
+        ).join(
+            models.RelationTelegramArticle
+        ).join(
+            models.TelegramChannel
+        ).where(
+            models.TelegramSection.id == section_id,
+            models.Article.date >= from_datetime,
+            to_datetime >= models.Article.date,
+        )
+        if by_user_subscriptions:
+            subquery = sa.select(
+                models.UserTelegramSubscriptions.telegram_id
+            ).where(
+                models.UserTelegramSubscriptions.user_id == user_id
+            )
+            stmt = stmt.where(models.TelegramChannel.id.in_(subquery))
+
+        async with self._async_session_maker() as session:
+            data = await session.execute(stmt)
+            data = data.all()
+            data_df = pd.DataFrame(data, columns=['telegram_channel_name', 'telegram_article_link', 'title', 'date'])
+
+        return data_df
 
 
 telegram_section_db = TelegramSectionCRUD(models.TelegramSection, models.TelegramSection.display_order, logger)

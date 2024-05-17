@@ -34,7 +34,7 @@ PUBLIC_COMMANDS: List[dict] = [
         'description': 'Спросить у Базы Знаний',
     },
     {
-        'command': 'industry_tgnews',
+        'command': 'get_tg_news',
         'description': 'Сводка новостей из telegram каналов по отраслям',
     },
     {

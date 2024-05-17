@@ -1,36 +1,36 @@
-import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
 from constants import industry as callback_prefixes
-from keyboards.industry import callbacks
+from db import models
+from keyboards.telegram_news import callbacks
 
 
-def get_industry_kb(industry_df: pd.DataFrame) -> InlineKeyboardMarkup:
+def get_section_kb(sections: list[models.TelegramSection]) -> InlineKeyboardMarkup:
     """
-    Создает клавиатуру для выбора отрасли, по которой пользователь хочет получить сводку новостей
+    Создает клавиатуру для выбора раздела, по которому пользователь хочет получить сводку новостей
 
-    :param industry_df: DataFrame[[id, name]] с данными об отраслях из БД
-    return: Клавиатура с выбором отраслей
+    :param sections: список разделов тг каналов
+    return: Клавиатура с выбором раздела
     """
     keyboard = InlineKeyboardBuilder()
 
-    for index, industry in industry_df.iterrows():
+    for section in sections:
         callback_meta = callbacks.SelectNewsPeriod(
-            industry_id=industry['id'],
+            section_id=section.id,
             my_subscriptions=True,
         )
-        keyboard.row(types.InlineKeyboardButton(text=industry['name'].capitalize(), callback_data=callback_meta.pack()))
+        keyboard.row(types.InlineKeyboardButton(text=section.name, callback_data=callback_meta.pack()))
     return keyboard.as_markup()
 
 
-def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> InlineKeyboardMarkup:
+def get_select_period_kb(section_id: int, my_subscriptions: bool = True) -> InlineKeyboardMarkup:
     """
     Создает клавиатуру для выбора периода, за который пользователь получит сводку новостей
 
-    :param industry_id: id отрасли из БД
+    :param section_id: id раздела из БД
     :param my_subscriptions: Флаг, что выбран способ получения новостей из моих подписок (True) или из всех каналов (False)
     return: Клавиатура с кнопками
             1а) по подпискам (галка, по умолчанию)
@@ -43,11 +43,11 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
     """
     keyboard = InlineKeyboardBuilder()
     by_my_subs = callbacks.SelectNewsPeriod(
-        industry_id=industry_id,
+        section_id=section_id,
         my_subscriptions=True,
     )
     by_all_subs = callbacks.SelectNewsPeriod(
-        industry_id=industry_id,
+        section_id=section_id,
         my_subscriptions=False,
     )
     is_by_my_subs = constants.SELECTED if my_subscriptions else constants.UNSELECTED
@@ -78,7 +78,7 @@ def get_select_period_kb(industry_id: int, my_subscriptions: bool = True) -> Inl
 
     for period in periods_list:
         by_days = callbacks.GetNewsDaysCount(
-            industry_id=industry_id,
+            section_id=section_id,
             my_subscriptions=my_subscriptions,
             days_count=period['days'],
         )
