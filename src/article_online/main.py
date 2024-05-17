@@ -197,8 +197,8 @@ if __name__ == '__main__':
             logger.info(end_msg)
             for i in range(MINUTES_TO_SLEEP):
                 time.sleep(MINUTE)
-                logger.debug('Ожидание: {}/{} часов'.format(i + 1, MINUTES_TO_SLEEP))
-                print('Ожидание: {}/{} часов'.format(i + 1, MINUTES_TO_SLEEP))
+                logger.debug('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
+                print('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
     except KeyboardInterrupt:
         pass
     except Exception as e:
