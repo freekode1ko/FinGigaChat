@@ -1,4 +1,5 @@
 import asyncio
+import ast
 import json
 import logging
 import os
@@ -357,7 +358,8 @@ async def __create_fin_table(message: types.Message, client_name: str,
 
 
 async def process_fin_table(message: types.Message, client_name: str,
-                            table_type: str, table_data: pd.DataFrame) -> None:
+                            table_type: str, table_data: pd.DataFrame,
+                            logger: Logger.logger = None) -> None:
     """
     Создание и отправка таблицы как изображения
 
@@ -365,10 +367,12 @@ async def process_fin_table(message: types.Message, client_name: str,
     :param client_name: Наименование клиента
     :param table_type: Название темы таблицы
     :param table_data: Таблица финансовых показателей
+    :param logger: Логгер
     return None
     """
-    if not table_data.epty:
-        df = pd.DataFrame(data=ast.literal_eval(table_data.replace(' NaN', '""')))
+    logger = logger or logging.getLogger('bot_runner')
+    df = pd.DataFrame(data=ast.literal_eval(table_data.replace(' NaN', '""')))
+    if not df.empty:
         await __create_fin_table(message, client_name, table_type, df)
         logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
     else:

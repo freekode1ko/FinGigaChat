@@ -1,7 +1,3 @@
-import asyncio
-import ast
-
-import pandas as pd
 from aiogram import F, types, Bot
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -122,10 +118,10 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
 
         # Создание и отправка таблиц
-        await process_fin_table(message, client_name, 'Обзор', client_fin_tables['review_table'][0])
-        await process_fin_table(message, client_name, 'P&L', client_fin_tables['pl_table'][0])
-        await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0])
-        await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0])
+        await process_fin_table(message, client_name, 'Обзор', client_fin_tables['review_table'][0], logger)
+        await process_fin_table(message, client_name, 'P&L', client_fin_tables['pl_table'][0], logger)
+        await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0], logger)
+        await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0], logger)
 
         return True # Создание таблицы успешно
     else:
