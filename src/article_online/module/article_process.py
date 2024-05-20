@@ -375,6 +375,17 @@ class ArticleProcess:
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         # make article table and save it in database
         unsaved_article = self.df_article[self.df_article['id'].isnull()]
+
+        # FIXME перевести потом все на async
+        query_old_article = text('SELECT link FROM article WHERE link IN :links_value')
+        with self.engine.connect() as conn:
+            links_of_old_article = conn.execute(query_old_article.bindparams(links_value=links_value)).scalars().all()
+
+        if links_of_old_article:
+            unsaved_article = unsaved_article[~unsaved_article['link'].isin(links_of_old_article)]
+            self._logger.warning(
+                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(unsaved_article)}')
+
         article = unsaved_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
         self._logger.info(f'Сохранено {subject} {len(article)} новостей')
