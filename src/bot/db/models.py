@@ -676,7 +676,4 @@ class UserDialogHistory(Base):
     __table_args__ = {'comment': 'Истории диалогов между пользователями и ИИ'}
 
     user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
-    knowledge_dialog = Column(JSONB, nullable=False,
-                              comment='Сообщения между Базой Знаний и пользователем')
-    giga_dialog = Column(JSONB, nullable=False,
-                         comment='Сообщения между Базой Знаний и пользователем')
+    dialog = Column(JSONB, nullable=False,comment='Сообщения между ИИ и пользователем')
