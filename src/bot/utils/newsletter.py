@@ -76,16 +76,15 @@ async def subscriptions_newsletter(
         *args,
         **kwargs,
 ) -> None:
-    client_hours = kwargs.get('client_hours', 0)
-    commodity_hours = kwargs.get('commodity_hours', 0)
+    newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(hours=0))
 
     ap_obj = ArticleProcess(logger)
 
     # получим свежие новости за определенный промежуток времени
-    clients_news = ap_obj.get_news_by_time(client_hours, 'client').sort_values(by=['name', 'date'],
-                                                                               ascending=[True, False])
-    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity').sort_values(by=['name', 'date'],
+    clients_news = ap_obj.get_news_by_time(newsletter_timedelta, 'client').sort_values(by=['name', 'date'],
                                                                                        ascending=[True, False])
+    commodity_news = ap_obj.get_news_by_time(newsletter_timedelta, 'commodity').sort_values(by=['name', 'date'],
+                                                                                            ascending=[True, False])
 
     # получим словарь id отрасли и ее название
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()

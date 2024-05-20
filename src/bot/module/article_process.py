@@ -1,4 +1,5 @@
 import copy
+import datetime
 import datetime as dt
 import re
 from typing import Dict, List, Union
@@ -392,21 +393,22 @@ class ArticleProcess:
 
         return com_pricing, reply_msg
 
-    def get_news_by_time(self, hours: int, table: str, columns: str = '*'):
+    def get_news_by_time(self, tmdelta: datetime.timedelta, table: str, columns: str = '*'):
         """
         Получить таблицу с новостями по клиенту/комоде/*индустрии за последние N часов
 
-        :param hours: За сколько последних часов собрать новости? Считается как: (t - N), где N - запрашиваемое число
+        :param tmdelta: За какой промежуток собрать новости? Считается как: (t - N), где N - запрашиваемое число
         :param table: Какая таблица интересует для сбора (commodity, client)?
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
         return Дата Фрейм с таблицей по объекту собранной из бд
         """
+        from_datetime = datetime.datetime.now() - tmdelta
         return pd.read_sql_query(
             f'SELECT {columns} FROM article '
             f'INNER JOIN relation_{table}_article ON '
             f'article.id = relation_{table}_article.article_id '
             f'INNER JOIN {table} ON relation_{table}_article.{table}_id = {table}.id '
-            f"WHERE (date > now() - interval '{hours} hours') and {table}_score > 0 "
+            f"WHERE (date > '{from_datetime.isoformat()}') and {table}_score > 0 "
             f'ORDER BY {table}_score desc, date asc;',
             con=self.engine,
         )

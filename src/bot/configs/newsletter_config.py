@@ -1,3 +1,10 @@
+"""
+Модуль с конфигурацией рассылок новостей по:
+- подпискам на клиентов, сырьевые товары, отрасли
+- подпискам на телеграм каналы
+- викли пульс
+- подпискам на отчеты cib research
+"""
 import calendar
 import datetime
 
@@ -12,7 +19,7 @@ NEWSLETTER_CONFIG = [
             {
                 'weekday': -1,
                 'send_time': '17:00',
-                'kwargs': dict(client_hours=7, commodity_hours=7),
+                'kwargs': {'newsletter_timedelta': datetime.timedelta(hours=6, minutes=30)},
             }
         ],
     },
@@ -23,7 +30,7 @@ NEWSLETTER_CONFIG = [
             {
                 'weekday': -1,
                 'send_time': '10:30',
-                'kwargs': dict(client_hours=18, commodity_hours=18),
+                'kwargs': {'newsletter_timedelta': datetime.timedelta(hours=17, minutes=30)},
             }
         ],
     },
