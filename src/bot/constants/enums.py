@@ -54,8 +54,8 @@ class ResearchSummaryType(Enum):
 
 class FIGroupType(Enum):
     bonds = 0, 'ОФЗ'
-    obligates = 1, 'Корпоративные облигации '
-    foreign_markets = 2, 'Зарубежные рынки '
+    # obligates = 1, 'Корпоративные облигации '
+    # foreign_markets = 2, 'Зарубежные рынки '
 
     def __init__(self, value, title):
         self._value_ = value
