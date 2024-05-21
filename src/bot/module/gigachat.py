@@ -1,63 +1,88 @@
+"""Описание класса GigaChat."""
 import json
 from logging import Logger
+from typing import ClassVar
 from uuid import uuid4
 import warnings
 
 import requests as req
 
-from configs.config import giga_oauth_url, giga_chat_url, giga_scope, giga_model, giga_credentials
+from configs.config import giga_chat_url, giga_credentials, giga_model, giga_oauth_url, giga_scope
 
 warnings.filterwarnings('ignore')
 
 
 class GigaChat:
-    oauth_url = giga_oauth_url
-    chat_url = giga_chat_url
-    scope = giga_scope
-    model = giga_model
+    """
+    Класс для взаимодействия с моделью GigaChat через OAuth авторизацию и отправку запросов.
+
+    Атрибуты:
+    OAUTH_URL:      URL для OAuth авторизации.
+    CHAT_URL:       URL для отправки запросов к модели GigaChat.
+    SCOPE:          Область действия для получения токена.
+    MODEL:          Название модели GigaChat.
+    CREDENTIALS:    Название модели GigaChat.
+    """
+
+    OAUTH_URL: ClassVar[str] = giga_oauth_url
+    CHAT_URL: ClassVar[str] = giga_chat_url
+    SCOPE: ClassVar[str] = giga_scope
+    MODEL: ClassVar[str] = giga_model
+    CREDENTIALS: ClassVar[str] = giga_credentials
 
     def __init__(self, logger: Logger):
-        self._credentials = giga_credentials
+        """
+        Инициализация экземпляра GigaChat.
+
+        :param logger: Логгер для записи событий и ошибок.
+        """
         self.token = self.get_user_token()
         self.logger = logger
 
-    def get_user_token(self) -> str:
-        """Получение токена доступа к модели GigaChat"""
-
+    @staticmethod
+    def get_user_token() -> str:
+        """Получение токена доступа к модели GigaChat."""
         headers = {
-            'Authorization': f'Basic {self._credentials}',
+            'Authorization': f'Basic {GigaChat.CREDENTIALS}',
             'RqUID': str(uuid4()),
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        data = {'scope': self.scope}
-        response = req.post(self.oauth_url, headers=headers, data=data, verify=False)
+        data = {'scope': GigaChat.SCOPE}
+        response = req.post(GigaChat.OAUTH_URL, headers=headers, data=data, verify=False)
         token = response.json()['access_token']
         return token
 
     def post_giga_query(self, text: str, prompt: str = '') -> str:
         """
-        Получение ответа от модели GigaChat
-        :param text: токен доступа к модели
-        :param prompt: системный промпт
-        return ответ модели
-        """
+        Получение ответа от модели GigaChat.
 
+        :param text:     Токен доступа к модели.
+        :param prompt:   Системный промпт.
+        :return:         Ответ модели.
+        """
         headers = {
             'Authorization': f'Bearer {self.token}',
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
         data = json.dumps({
-            'model': self.model,
+            'model': GigaChat.MODEL,
             'messages': [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': text}],
-            'profanity_check': False
+            'profanity_check': False,
+            # 'temperature': 0.01
         })
 
-        response = req.post(url=self.chat_url, headers=headers, data=data, verify=False)
+        response = req.post(url=GigaChat.CHAT_URL, headers=headers, data=data, verify=False)
         return response.json()['choices'][0]['message']['content']
 
-    def get_giga_answer(self, text: str, prompt: str = ''):
-        """Обработчик исключений при получении ответа от GigaChat"""
+    def get_giga_answer(self, text: str, prompt: str = '') -> str:
+        """
+        Обработчик исключений при получении ответа от GigaChat.
+
+        :param text:    Запрос пользователя (user prompt).
+        :param prompt:  Текста промпта.
+        :return:        Ответ от GigaChat.
+        """
         try:
             giga_answer = self.post_giga_query(text=text, prompt=prompt)
         except AttributeError:
@@ -72,4 +97,3 @@ class GigaChat:
                                  f'KeyError (некорректная выдача ответа GigaChat), '
                                  f'ответ после переформирования запроса')
         return giga_answer
-
