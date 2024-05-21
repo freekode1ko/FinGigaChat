@@ -1,3 +1,6 @@
+"""
+Модуль с CRUD для таблицы bot_telegram_section
+"""
 import datetime
 
 import pandas as pd
@@ -11,9 +14,36 @@ from log.bot_logger import logger
 class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
     """Класс, который создает объекты для взаимодействия с таблицей models.TelegramSection"""
 
-    async def get_by_group_id(self, group_id: int) -> list[models.TelegramSection]:
+    async def get_all(self, only_with_channels: bool = True) -> list[models.TelegramSection]:
+        """
+        Получение списка всех телеграм разделов
+        :param only_with_channels: Флаг, что выдавать только те разделы, в которых есть тг каналы
+        :returns: Список телеграм разделов
+        """
+        async with self._async_session_maker() as session:
+            stmt = sa.select(self._table).order_by(self._order)
+
+            if only_with_channels:
+                subquery = sa.select(models.TelegramChannel.section_id).subquery()
+                stmt = stmt.where(self._table.id.in_(subquery))
+
+            result = await session.scalars(stmt)
+            return list(result)
+
+    async def get_by_group_id(self, group_id: int, only_with_channels: bool = True) -> list[models.TelegramSection]:
+        """
+        Получение списка телеграм разделов по group_id
+        :param group_id: id группы, к которой принадлежат выгружаемые разделы
+        :param only_with_channels: Флаг, что выдавать только те разделы, в которых есть тг каналы
+        :returns: Список телеграм разделов
+        """
         async with self._async_session_maker() as session:
             stmt = sa.select(self._table).where(self._table.group_id == group_id).order_by(self._order)
+
+            if only_with_channels:
+                subquery = sa.select(models.TelegramChannel.section_id).subquery()
+                stmt = stmt.where(self._table.id.in_(subquery))
+
             result = await session.scalars(stmt)
             return list(result)
 

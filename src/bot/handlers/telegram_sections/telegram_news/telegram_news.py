@@ -1,3 +1,7 @@
+"""
+Обработчик тг бота для меню
+Сводка новостей из telegram каналов по отраслям
+"""
 from datetime import timedelta
 from typing import Union
 
@@ -15,7 +19,7 @@ from utils.base import user_in_whitelist, bot_send_msg
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
-async def list_industries(message: Union[types.CallbackQuery, types.Message]) -> None:
+async def list_sections(message: Union[types.CallbackQuery, types.Message]) -> None:
     """
     Отправка пользователю меню с выбором раздела в разрезе тг каналов
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
@@ -35,16 +39,16 @@ async def list_industries(message: Union[types.CallbackQuery, types.Message]) ->
 
 
 @router.message(Command('get_tg_news'))
-async def select_industry_to_get_tg_articles(message: types.Message) -> None:
+async def select_section_to_get_tg_articles(message: types.Message) -> None:
     """
-    Получение списка отраслей для получения по ним сводки новостей из тг-каналов
+    Получение списка разделов для получения по ним сводки новостей из тг-каналов
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        await list_industries(message)
+        await list_sections(message)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
@@ -56,7 +60,7 @@ async def back_to_menu(callback_query: types.CallbackQuery) -> None:
     user_msg = BACK_TO_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await list_industries(callback_query)
+    await list_sections(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
