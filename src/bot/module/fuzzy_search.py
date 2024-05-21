@@ -2,6 +2,7 @@ from typing import Optional
 
 import sqlalchemy as sa
 from fuzzywuzzy import process
+from sqlalchemy.orm import InstrumentedAttribute
 
 from db.database import engine, async_session
 from db import models
@@ -20,7 +21,10 @@ class FuzzyAlternativeNames:
         ]
 
     @staticmethod
-    async def get_subjects_names(subjects: list[tuple[int, models.Base]], with_id=False) -> list[str]:
+    async def get_subjects_names(
+            subjects: list[tuple[models.Base, InstrumentedAttribute]],
+            with_id=False
+    ) -> list[tuple[int, str] | str]:
         """
         Получение всех альтернативных имен из таблиц
         :param subjects: список таблиц, из которых выгружает альт имена
@@ -33,9 +37,11 @@ class FuzzyAlternativeNames:
             for subject in subjects:
                 if with_id:
                     data = await session.execute(sa.select(subject[1], subject[0].other_name))
+                    data = data.fetchall()
                 else:
                     data = await session.execute(sa.select(subject[0].other_name))
-                subjects_names.extend(data.fetchall())
+                    data = data.scalars()
+                subjects_names.extend(data)
         return subjects_names
 
     async def find_nearest_to_subject(
@@ -53,7 +59,9 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список имен, похожих на наименование субъекта
         """
-        subject_types = [x for x in self.tables_with_alternative_names if x[0] in subject_types]
+        subject_types = self.tables_with_alternative_names \
+            if subject_types is None else [x for x in self.tables_with_alternative_names if x[0] in subject_types]
+
         subject_name = subject_name.lower().strip().replace('"', '')
         subjects_names = await self.get_subjects_names(subject_types)
 
@@ -79,7 +87,8 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список ближайших похожих имен субъектов
         """
-        subject_types = [x for x in self.tables_with_alternative_names if x[0] in subject_types]
+        subject_types = self.tables_with_alternative_names \
+            if subject_types is None else [x for x in self.tables_with_alternative_names if x[0] in subject_types]
         subject_types = [x for x in subject_types if x in self.tables_with_alternative_names]
         db_subjects_names = await self.get_subjects_names(subject_types)
 

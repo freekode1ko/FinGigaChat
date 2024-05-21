@@ -157,7 +157,7 @@ async def clients_subscriptions_list(
     """
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
     clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
-    clients = await client_db.get_by_id(clients_id)
+    clients = await client_db.get_by_ids(clients_id)
     client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
     clients = clients[clients['id'].isin(client_subscriptions['id'])]
 
@@ -195,7 +195,7 @@ async def clients_all_list(
 
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
     clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
-    clients = await client_db.get_by_id(clients_id)
+    clients = await client_db.get_by_ids(clients_id)
     client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
     clients = clients[~clients['id'].isin(client_subscriptions['id'])]
 

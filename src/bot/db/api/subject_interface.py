@@ -47,7 +47,7 @@ class SubjectInterface:
             data = result.fetchall()
             return pd.DataFrame(data, columns=self.columns)
 
-    async def get_by_id(self, ids: list[int]) -> pd.DataFrame:
+    async def get_by_ids(self, ids: list[int]) -> pd.DataFrame:
         """
         Выгрузка subject которые есть в списке ids
 
@@ -55,7 +55,7 @@ class SubjectInterface:
         :return: DataFrame[все столбцы таблицы self.table] с subject из списка ids
         """
         async with database.async_session() as session:
-            stmt = stmt = select(*self.fields).filter(self.table.id.in_(ids))
+            stmt = select(*self.fields).filter(self.table.id.in_(ids))
             result = await session.execute(stmt)
             data = result.fetchall()
             return pd.DataFrame(data, columns=self.columns)
