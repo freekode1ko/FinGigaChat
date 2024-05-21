@@ -399,7 +399,7 @@ class ArticleProcess:
             table: str,
             to_datetime: Optional[datetime.datetime] = None,
             columns: str = '*',
-    ):
+    ) -> pd.DataFrame:
         """
         Получить таблицу с новостями по клиенту/комоде/*индустрии за последние N часов
 
@@ -407,7 +407,7 @@ class ArticleProcess:
         :param table: Какая таблица интересует для сбора (commodity, client)?
         :param to_datetime: Конец промежутка, за который вынимаются новости
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
-        return Дата Фрейм с таблицей по объекту собранной из бд
+        :returns: Дата Фрейм с таблицей по объекту собранной из бд
         """
         to_datetime = to_datetime or datetime.datetime.now()
         from_datetime = to_datetime - tmdelta
