@@ -70,7 +70,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_qa_system(message, first_user_query)
+            await ask_qa_system_with_history(message, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -81,7 +81,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
 @router.message(RagState.rag_mode)
 async def handler_rag_mode(message: types.Message) -> None:
     """Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя."""
-    await ask_qa_system(message)
+    await ask_qa_system_with_history(message)
 
 
 async def _get_response(
@@ -141,7 +141,7 @@ async def _add_data_to_db(
     )
 
 
-async def ask_qa_system(message: types.Message, first_user_query: str = '') -> None:
+async def ask_qa_system_with_history(message: types.Message, first_user_query: str = '') -> None:
     """
     Отправляет ответ на запрос пользователя.
 
@@ -167,7 +167,7 @@ async def ask_qa_system(message: types.Message, first_user_query: str = '') -> N
 
 
 @router.callback_query(RegenerateResponse.filter())
-async def regenerate_callback(call: types.CallbackQuery) -> None:
+async def ask_qa_system_simple(call: types.CallbackQuery) -> None:
     """
 
     """
