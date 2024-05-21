@@ -455,6 +455,7 @@ class RAGUserFeedback(Base):
     reaction = Column(Boolean)
     date = Column(DateTime, default=datetime.datetime.now)
     query = Column(Text, nullable=False)
+    rephrase_query = Column(Text)
     response = Column(Text)
 
 
