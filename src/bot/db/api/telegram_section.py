@@ -52,7 +52,7 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
             models.TelegramChannel, models.RelationTelegramArticle.telegram_id == models.TelegramChannel.id
         ).where(
             models.TelegramChannel.section_id == section_id,
-            models.Article.date >= from_datetime,
+            models.Article.date > from_datetime,
             to_datetime >= models.Article.date,
         )
         if by_user_subscriptions:

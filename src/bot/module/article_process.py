@@ -2,7 +2,7 @@ import copy
 import datetime
 import datetime as dt
 import re
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 from urllib.parse import urlparse
 
 import numpy as np
@@ -393,22 +393,31 @@ class ArticleProcess:
 
         return com_pricing, reply_msg
 
-    def get_news_by_time(self, tmdelta: datetime.timedelta, table: str, columns: str = '*'):
+    def get_news_by_time(
+            self,
+            tmdelta: datetime.timedelta,
+            table: str,
+            to_datetime: Optional[datetime.datetime] = None,
+            columns: str = '*',
+    ):
         """
         Получить таблицу с новостями по клиенту/комоде/*индустрии за последние N часов
 
         :param tmdelta: За какой промежуток собрать новости? Считается как: (t - N), где N - запрашиваемое число
         :param table: Какая таблица интересует для сбора (commodity, client)?
+        :param to_datetime: Конец промежутка, за который вынимаются новости
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
         return Дата Фрейм с таблицей по объекту собранной из бд
         """
-        from_datetime = datetime.datetime.now() - tmdelta
+        to_datetime = to_datetime or datetime.datetime.now()
+        from_datetime = to_datetime - tmdelta
         return pd.read_sql_query(
             f'SELECT {columns} FROM article '
             f'INNER JOIN relation_{table}_article ON '
             f'article.id = relation_{table}_article.article_id '
             f'INNER JOIN {table} ON relation_{table}_article.{table}_id = {table}.id '
-            f"WHERE (date > '{from_datetime.isoformat()}') and {table}_score > 0 "
+            f"WHERE (date > '{from_datetime.isoformat()}' and date <= '{to_datetime.isoformat()}') "
+            f'and {table}_score > 0 '
             f'ORDER BY {table}_score desc, date asc;',
             con=self.engine,
         )

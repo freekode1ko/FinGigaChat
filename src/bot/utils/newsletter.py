@@ -96,16 +96,23 @@ async def subscriptions_newsletter(
 
     Kwargs:
         - newsletter_timedelta (datetime.timedelta): промежуток, за который выгружаются последние новости
+        - newsletter_start_datetime (datetime.datetime): время начала рассылки
     """
     newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(hours=0))
+    newsletter_start_datetime = kwargs.get('newsletter_start_datetime', datetime.datetime.min)
+
+    if not newsletter_timedelta or newsletter_start_datetime == datetime.datetime.min:
+        return
 
     ap_obj = ArticleProcess(logger)
 
     # получим свежие новости за определенный промежуток времени
-    clients_news = ap_obj.get_news_by_time(newsletter_timedelta, 'client').sort_values(by=['name', 'date'],
-                                                                                       ascending=[True, False])
-    commodity_news = ap_obj.get_news_by_time(newsletter_timedelta, 'commodity').sort_values(by=['name', 'date'],
-                                                                                            ascending=[True, False])
+    clients_news = ap_obj.get_news_by_time(
+        newsletter_timedelta, 'client', newsletter_start_datetime
+    ).sort_values(by=['name', 'date'], ascending=[True, False])
+    commodity_news = ap_obj.get_news_by_time(
+        newsletter_timedelta, 'commodity', newsletter_start_datetime
+    ).sort_values(by=['name', 'date'], ascending=[True, False])
 
     # получим словарь id отрасли и ее название
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
