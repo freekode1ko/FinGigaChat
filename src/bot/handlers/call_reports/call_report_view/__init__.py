@@ -7,4 +7,3 @@ router = Router()
 router.include_routers(
     call_report_view,
 )
-

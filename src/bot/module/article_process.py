@@ -101,8 +101,7 @@ class ArticleProcess:
 
             article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
             count_of_not_top_news = count_all - len(article_data_top)
-            article_data = article_data_top + article_data_all[
-                                              :count_of_not_top_news] if not offset_all else article_data_all
+            article_data = article_data_top + article_data_all[:count_of_not_top_news] if not offset_all else article_data_all
 
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
@@ -226,12 +225,10 @@ class ArticleProcess:
 
                 if len(selected_cols) < 5:
                     if full_nan_cols < 5:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
-                                                 : int(remaining_cols) - 1]
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols) - 1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
                     else:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
-                                                 : int(remaining_cols) + 1]
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[:int(remaining_cols) + 1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
 
                 result = client_copy[selected_cols]

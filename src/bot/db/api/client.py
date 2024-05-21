@@ -24,4 +24,9 @@ async def get_research_type_id_by_name(client_name: str) -> int | None:
         return result.scalar_one_or_none()
 
 
-client_db = SubjectInterface(models.Client, models.ClientAlternative, models.Client.client_alternative, models.RelationClientArticle.article)
+client_db = SubjectInterface(
+    models.Client,
+    models.ClientAlternative,
+    models.Client.client_alternative,
+    models.RelationClientArticle.article
+)

@@ -72,4 +72,3 @@ class GigaChat:
                                  f'KeyError (некорректная выдача ответа GigaChat), '
                                  f'ответ после переформирования запроса')
         return giga_answer
-

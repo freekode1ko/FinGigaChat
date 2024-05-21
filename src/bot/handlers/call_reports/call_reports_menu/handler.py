@@ -53,9 +53,9 @@ async def call_reports_handler_my_reports(
     else:
         keyboard = InlineKeyboardBuilder()
         for client in clients[
-                      callback_data.client_page * config.PAGE_ELEMENTS_COUNT:
-                      (callback_data.client_page + 1) * config.PAGE_ELEMENTS_COUNT
-                      ]:
+            callback_data.client_page * config.PAGE_ELEMENTS_COUNT:
+            (callback_data.client_page + 1) * config.PAGE_ELEMENTS_COUNT
+        ]:
             keyboard.row(
                 types.InlineKeyboardButton(
                     text=f'{client}',
@@ -128,8 +128,8 @@ async def call_reports_handler_my_reports_date(
 
     keyboard = InlineKeyboardBuilder()
     for call_report_id, date in client_call_reports_dates[
-                                callback_data.date_page * config.PAGE_ELEMENTS_COUNT:
-                                (callback_data.date_page + 1) * config.PAGE_ELEMENTS_COUNT]:
+            callback_data.date_page * config.PAGE_ELEMENTS_COUNT:
+            (callback_data.date_page + 1) * config.PAGE_ELEMENTS_COUNT]:
         # Просмотр колл репорта по дате
         keyboard.row(
             types.InlineKeyboardButton(

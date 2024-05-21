@@ -178,8 +178,8 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
     keyboard.add(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_factory.TelegramSubsMenuData(
-                menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
-                group_id=group_id,
+            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
+            group_id=group_id,
         ).pack(),
     ))
 

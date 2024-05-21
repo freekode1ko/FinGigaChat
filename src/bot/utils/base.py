@@ -159,10 +159,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     giga_ans = text
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
-            text_group.append(text[batch : batch + batch_size])
+            text_group.append(text[batch: batch + batch_size])
         for summ_part in text_group:
             await message.answer(
-                 '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
+                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
             )
     else:
         await message.answer(

@@ -86,8 +86,8 @@ class TelegramSubscriptionInterface(SubscriptionInterface):
                 ).outerjoin(
                     self.table,
                     (
-                            (getattr(self.table, self.subject_id_field) == self.subject_table.id) &
-                            (self.table.user_id == user_id)
+                        (getattr(self.table, self.subject_id_field) == self.subject_table.id) &
+                        (self.table.user_id == user_id)
                     ),
                 ).where(
                     self.subject_table.section_id.in_(subquery),
@@ -115,8 +115,8 @@ class TelegramSubscriptionInterface(SubscriptionInterface):
                 ).outerjoin(
                     self.table,
                     (
-                            (getattr(self.table, self.subject_id_field) == self.subject_table.id) &
-                            (self.table.user_id == user_id)
+                        (getattr(self.table, self.subject_id_field) == self.subject_table.id) &
+                        (self.table.user_id == user_id)
                     )
                 ).where(
                     self.subject_table.section_id == section_id,
