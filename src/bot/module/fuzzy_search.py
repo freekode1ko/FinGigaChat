@@ -14,36 +14,48 @@ class FuzzyAlternativeNames:
         self.engine = engine
 
         self.tables_with_alternative_names = [
-            models.IndustryAlternative,
-            models.CommodityAlternative,
-            models.ClientAlternative,
+            (models.IndustryAlternative, models.IndustryAlternative.industry_id),
+            (models.CommodityAlternative, models.CommodityAlternative.commodity_id),
+            (models.ClientAlternative, models.ClientAlternative.client_id),
         ]
 
     @staticmethod
-    async def get_subjects_names(subjects: list[models.Base]) -> list[str]:
+    async def get_subjects_names(subjects: list[tuple[int, models.Base]], with_id=False) -> list[str]:
         """
         Получение всех альтернативных имен из таблиц
         :param subjects: список таблиц, из которых выгружает альт имена
+        :param with_id: нужно ли добавлять айди к клиентам
         :returns: Все альт имена таблиц subjects
         """
         subjects_names = []
 
         async with async_session() as session:
             for subject in subjects:
-                data = await session.execute(sa.select(subject.other_name))
-                subjects_names.extend(data.scalars())
+                if with_id:
+                    data = await session.execute(sa.select(subject[1], subject[0].other_name))
+                else:
+                    data = await session.execute(sa.select(subject[0].other_name))
+                subjects_names.extend(data.fetchall())
         return subjects_names
 
-    async def find_nearest_to_subject(self, subject_name: str, criteria: int = 5) -> list[str]:
+    async def find_nearest_to_subject(
+            self,
+            subject_name: str,
+            criteria: int = 5,
+            subject_types: Optional[list[models.Base]] = None,
+    ) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
         :param subject_name: Наименование субъекта
         :param criteria: отклонение от значения схожести максимально близкого слова к имени субъекта,
                          в пределах отклонения выдается выборка
+        :param subject_types: список из строк ['industry', 'client', 'commodity']
+                              (среди данных таблиц идет поиск ближайших названий)
         :returns: Список имен, похожих на наименование субъекта
         """
+        subject_types = [x for x in self.tables_with_alternative_names if x[0] in subject_types]
         subject_name = subject_name.lower().strip().replace('"', '')
-        subjects_names = await self.get_subjects_names(self.tables_with_alternative_names)
+        subjects_names = await self.get_subjects_names(subject_types)
 
         if not subjects_names:
             return []
@@ -67,7 +79,7 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список ближайших похожих имен субъектов
         """
-        subject_types = subject_types or self.tables_with_alternative_names
+        subject_types = [x for x in self.tables_with_alternative_names if x[0] in subject_types]
         subject_types = [x for x in subject_types if x in self.tables_with_alternative_names]
         db_subjects_names = await self.get_subjects_names(subject_types)
 
@@ -81,3 +93,24 @@ class FuzzyAlternativeNames:
             near_subjects.append(process.extractOne(subject_name, db_subjects_names)[0])
 
         return near_subjects
+
+    async def find_clients_id_by_name(
+            self,
+            name: str,
+            score: int = 80,
+    ) -> list[tuple[str, int]]:
+        """
+        Поиск ближайших похожих имен из таблицы ClientAlternative по имени
+
+        :param name: Имя клиента
+        :param score: Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
+        :return: Список наиболее подходящих имен клиентов с рейтингом
+        """
+        models_to_search = [x for x in self.tables_with_alternative_names if x[0] in [models.ClientAlternative]]
+        if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
+            return []
+
+        client_name = name.lower().strip().replace('"', '')
+        matches = process.extractBests(client_name, [_[1] for _ in subjects_names], score_cutoff=score)
+
+        return [j[0] for j in subjects_names if j[1] in [i[0] for i in matches]]

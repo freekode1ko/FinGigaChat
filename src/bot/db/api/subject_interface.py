@@ -47,6 +47,19 @@ class SubjectInterface:
             data = result.fetchall()
             return pd.DataFrame(data, columns=self.columns)
 
+    async def get_by_id(self, ids: list[int]) -> pd.DataFrame:
+        """
+        Выгрузка subject которые есть в списке ids
+
+        :param ids: список айдишников
+        :return: DataFrame[все столбцы таблицы self.table] с subject из списка ids
+        """
+        async with database.async_session() as session:
+            stmt = stmt = select(*self.fields).filter(self.table.id.in_(ids))
+            result = await session.execute(stmt)
+            data = result.fetchall()
+            return pd.DataFrame(data, columns=self.columns)
+
     async def get_by_industry_id(self, industry_id: int) -> pd.DataFrame:
         """
         Выгружает все subject, у которых industry_id == :industry_id

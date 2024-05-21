@@ -5,10 +5,12 @@ from typing import Optional
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
-from db import subscriptions as subscriptions_db_api
+from db import subscriptions as subscriptions_db_api, models
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product_group import product_group_db
@@ -20,12 +22,21 @@ from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
-from log.bot_logger import user_logger
+from log.bot_logger import user_logger, logger
 from module.article_process import FormatText
+from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import send_or_edit, send_pdf, user_in_whitelist, get_page_data_and_info
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
+
+
+class ChooseClient(StatesGroup):
+    """
+    Состояние для ввода имени клиента для более удобного поиска
+    """
+    choosing_from_all_clients = State()
+    choosing_from_subscriptions = State()
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
@@ -97,12 +108,14 @@ async def main_menu_command(message: types.Message) -> None:
 async def clients_list(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
+        state: FSMContext,
 ) -> None:
     """
     Получение списка клиентов
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param state: Объект, который хранит состояние FSM для пользователя
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -117,16 +130,93 @@ async def clients_list(
     if subscribed:
         msg_text = 'Выберите клиента из списка ваших подписок'
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
+        await state.set_state(ChooseClient.choosing_from_subscriptions)
     else:
         msg_text = 'Выберите клиента из общего списка'
         clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+        await state.set_state(ChooseClient.choosing_from_all_clients)
 
     page_data, page_info, max_pages = get_page_data_and_info(clients, page)
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
-    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\n'
+    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\nДля поиска введите сообщение с именем клиента.'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.message(ChooseClient.choosing_from_subscriptions)
+async def clients_subscriptions_list(
+        message: Message,
+        state: FSMContext,
+) -> None:
+    """
+    Поиск из по клиентам на которые подписаны
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
+    clients = await client_db.get_by_id(clients_id)
+    client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
+    clients = clients[clients['id'].isin(client_subscriptions['id'])]
+
+    if len(clients) > 1:
+        page_data, page_info, max_pages = get_page_data_and_info(clients)
+        keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, True)
+        msg_text = f'Выберите клиента из списка'
+    elif len(clients) == 1:
+        client_name = clients['name'].iloc[0]
+        keyboard = keyboards.get_client_menu_kb(
+            clients['id'].iloc[0],
+            current_page=0,
+            subscribed=True,
+            research_type_id=await get_research_type_id_by_name(client_name),
+        )
+        msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
+    else:
+        msg_text = f'Не нашелся, введите имя клиента по другому'
+        keyboard = None
+
+    await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+
+
+@router.message(ChooseClient.choosing_from_all_clients)
+async def clients_all_list(
+        message: Message,
+        state: FSMContext,
+) -> None:
+    """
+    Поиск по клиентам на которые не подписаны
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+
+    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
+    clients = await client_db.get_by_id(clients_id)
+    client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
+    clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+
+    if len(clients) > 1:
+        page_data, page_info, max_pages = get_page_data_and_info(clients)
+        keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, True)
+        msg_text = f'Выберите клиента из списка'
+    elif len(clients) == 1:
+        client_name = clients['name'].iloc[0]
+        keyboard = keyboards.get_client_menu_kb(
+            clients['id'].iloc[0],
+            current_page=0,
+            subscribed=False,
+            research_type_id=await get_research_type_id_by_name(client_name),
+        )
+        msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
+    else:
+        msg_text = f'Не нашелся, введите имя клиента по другому'
+        keyboard = None
+
+    await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
