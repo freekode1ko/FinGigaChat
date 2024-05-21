@@ -1,3 +1,9 @@
+"""
+модуль с функциями рассылки:
+- новостей по подпискам на клиентов, сырье, отрасли;
+- викли пульса;
+- отчетов CIB research по подпискам.
+"""
 import asyncio
 import datetime
 import os
@@ -25,13 +31,21 @@ from db import parser_source, message, subscriptions
 async def tg_newsletter(
         bot: Bot,
         user_df: pd.DataFrame,
-        *args,
         **kwargs,
 ) -> None:
-    newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(0))
-    next_newsletter_datetime = kwargs.get('next_newsletter_datetime', datetime.datetime.min)
+    """
+    Рассылка новостей по подпискам на клиентов, сырье, отрасли
+    :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
 
-    if not newsletter_timedelta or next_newsletter_datetime == datetime.datetime.min:
+    Kwargs:
+        - newsletter_timedelta (datetime.timedelta): промежуток, за который выгружаются последние новости
+        - newsletter_start_datetime (datetime.datetime): время начала рассылки
+    """
+    newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(0))
+    newsletter_start_datetime = kwargs.get('newsletter_start_datetime', datetime.datetime.min)
+
+    if not newsletter_timedelta or newsletter_start_datetime == datetime.datetime.min:
         return
 
     # получим словарь id отрасли и ее название (в цикле, потому что справочник может пополняться)
@@ -45,7 +59,7 @@ async def tg_newsletter(
             f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
 
         for section in sections:
-            tg_news = await telegram_section_db.get_section_tg_news(section.id, True, user_id, newsletter_timedelta, next_newsletter_datetime)
+            tg_news = await telegram_section_db.get_section_tg_news(section.id, True, user_id, newsletter_timedelta, newsletter_start_datetime)
             if tg_news.empty:
                 continue
 
@@ -73,9 +87,16 @@ async def tg_newsletter(
 async def subscriptions_newsletter(
         bot: Bot,
         user_df: pd.DataFrame,
-        *args,
         **kwargs,
 ) -> None:
+    """
+    Рассылка новостей по подпискам на клиентов, сырье, отрасли
+    :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
+
+    Kwargs:
+        - newsletter_timedelta (datetime.timedelta): промежуток, за который выгружаются последние новости
+    """
     newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(hours=0))
 
     ap_obj = ArticleProcess(logger)
@@ -152,9 +173,16 @@ async def subscriptions_newsletter(
 async def weekly_pulse_newsletter(
         bot: Bot,
         user_df: pd.DataFrame,
-        *args,
         **kwargs,
 ) -> None:
+    """
+    Рассылка новостей по подпискам на клиентов, сырье, отрасли
+    :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
+
+    Kwargs:
+        - newsletter_type (str): тип, указывающий, что идет рассылка итогов недели или "что нас ждет на следующей неделе"
+    """
     newsletter_type = kwargs.get('newsletter_type', '')
     source_name = 'Weekly Pulse'
     # проверяем, что данные обновились с последней рассылки
@@ -251,6 +279,10 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
 
 
 async def send_new_researches_to_users(bot: Bot) -> None:
+    """
+    Функция рассылки новых отчетов CIB Research по подпискам
+    :param bot: телеграм бот, который отправляет сообщения пользователям
+    """
     now = datetime.datetime.now()
     newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
     logger.info(f'Начинается рассылка новостей в {newsletter_dt_str} по CIB Research')
