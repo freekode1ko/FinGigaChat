@@ -17,6 +17,7 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
     async def get_all(self, only_with_channels: bool = True) -> list[models.TelegramSection]:
         """
         Получение списка всех телеграм разделов
+
         :param only_with_channels: Флаг, что выдавать только те разделы, в которых есть тг каналы
         :returns: Список телеграм разделов
         """
