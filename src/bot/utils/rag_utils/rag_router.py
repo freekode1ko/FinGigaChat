@@ -1,3 +1,4 @@
+"""Описание класса RAGRouter."""
 import json
 import re
 import urllib.parse
@@ -5,7 +6,7 @@ import urllib.parse
 import requests
 
 from configs import config
-from constants.constants import GIGA_RAG_FOOTER, DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER
+from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_RAG_FOOTER
 from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
@@ -14,18 +15,30 @@ giga = GigaChat(logger)
 
 
 class RAGRouter:
+    """Класс с классификацией запроса относительно RAG-сервисов(+GigaChat) и с получением ответа на запрос."""
+
     GET_METHOD = 'GET'
     POST_METHOD = 'POST'
 
-    def __init__(self, chat_id: int, full_name: str, query: str):
+    def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
+        """
+        Инициализация экземпляра RAGRouter.
+
+        :param chat_id:         Id Telegram чата с пользователем.
+        :param full_name:       Полное имя пользователя в Telegram.
+        :param user_query:      Запрос пользователя.
+        :param rephrase_query:  Перефразированный запрос пользователя.
+        :param use_rephrase:    Нужно ли использовать перефразированный запрос пользователя для получения ответа.
+        """
         self.chat_id = chat_id
         self.full_name = full_name
-        self.query = query
+        self.user_query = user_query
+        self.rephrase_query = rephrase_query
+        self.query = self.rephrase_query if use_rephrase else self.user_query
         self.retriever_type = self.get_rag_type()
 
     def get_rag_type(self) -> RetrieverType:
-        """По пользовательскому запросу определяет класс рага, который нужно вызвать"""
-
+        """По пользовательскому запросу определяет класс рага, который нужно вызвать."""
         rag_class = RetrieverType.other  # по умолчанию
         rag_class_int = -1  # по умолчанию
 
@@ -49,7 +62,7 @@ class RAGRouter:
         return rag_class
 
     def get_response_from_rag(self) -> str:
-        """Вызов ретривера относительно типа ретривера"""
+        """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
             return self.rag_state_support()
         elif self.retriever_type == RetrieverType.qa_banker:
@@ -57,28 +70,20 @@ class RAGRouter:
         return giga.get_giga_answer(self.query)
 
     def rag_qa_banker(self) -> str:
-        """
-        Формирование параметров к запросу API по новостям
-        и получение ответа
-        """
-
+        """Формирование параметров к запросу API по новостям и получение ответа."""
         query = urllib.parse.quote(self.query)
         query_part = f'queries?query={query}'
         req_kwargs = dict(
             url=config.BASE_QABANKER_URL.format(query_part),
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-
         return self._request_to_api(**req_kwargs)
 
     def rag_state_support(self) -> str:
-        """
-        Формирование параметров к запросу API по господдержке
-        и получение ответа
-        """
+        """Формирование параметров к запросу API по господдержке и получение ответа."""
         req_kwargs = dict(
             url=config.QUERY_STATE_SUPPORT_URL,
-            json={"body": self.query},
+            json={'body': self.user_query},
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
 
@@ -86,12 +91,12 @@ class RAGRouter:
 
     def _request_to_api(self, request_method: str = GET_METHOD, **kwargs) -> str:
         """
-        Отправляет запрос к RAG API И формирует ответ
-        :param  request_method: http метод
-        :param kwargs: параметры http запроса
-        return: отформатированный ответ
-        """
+        Отправляет запрос к RAG API И формирует ответ.
 
+        :param  request_method:     HTTP метод.
+        :param kwargs:              Параметры http запроса.
+        return:                     Отформатированный ответ.
+        """
         try:
             rag_response = requests.request(method=request_method, **kwargs)
             rag_response.raise_for_status()
