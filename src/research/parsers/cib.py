@@ -412,6 +412,7 @@ class ResearchParser:
                 self.driver.get(link)
             except Exception as e:
                 self._logger.error(f'При получении таблицы с фин. показателями для {company} произошла ошибка: %s', e)
+                self.driver.quit()
                 self.driver = get_driver(self._logger)
                 continue
 
@@ -491,7 +492,7 @@ class ResearchParser:
         if not pdf_dir.exists():
             pdf_dir.mkdir(exist_ok=True, parents=True)
         old = [f for f in os.listdir(pdf_dir) if value in f]
-        if filename.exists():
+        if filename is not None and filename.exists():
             return
 
         # time.sleep(5)
@@ -524,119 +525,8 @@ class ResearchParser:
             except Exception as e:
                 self._logger.error(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
                 print(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
+                self.driver.quit()
                 self.driver = get_driver(self._logger)
-
-    @staticmethod
-    def crop_image(img: Image, left: int = 70, top: int = 40, right: int = 1350, bottom: int = 1290) -> Image:
-        return img.crop((left, top, right, bottom))
-
-    def get_weekly_review(self):
-        """
-        Get Research Weekly Pulse review pdf
-        """
-        self._logger.info('Сборка Weekly Pulse')
-
-        base_url = parser_source.get_source(source_name='Weekly Pulse')
-        self.driver.get(base_url)
-        self._logger.info('Ожидаем появления на загружаемой странице объектов для перехода на все отчеты')
-        WebDriverWait(self.driver, 30).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="all"]')) and EC.invisibility_of_element_located(
-                (By.ID, 'all_loading'))
-        )
-        self.driver.find_element(By.XPATH, '//*[@id="all"]').click()
-        self._logger.info('Поиск Weekly Pulse отчета')
-        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
-        weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
-
-        try:
-            self._logger.info('Начало обработки "Weekly Pulse" отчета')
-            while len(weeklies) < 1:
-                self._logger.info('Ожидание доступности отчета для открытия')
-                WebDriverWait(self.driver, 30).until(
-                    EC.element_to_be_clickable((By.XPATH, '//*[@id="loadMorePublications"]'))
-                    and EC.invisibility_of_element_located((By.ID, 'loadMorePublications_loading'))
-                )
-                self._logger.info('Загрузка большего количества публикаций для поиска там отчета')
-                more = self.driver.find_element(By.XPATH, '//*[@id="loadMorePublications"]')
-                self.driver.execute_script('arguments[0].scrollIntoView();', more)
-                self._logger.info('Загрузка следующих публикаций')
-                more.click()
-                self._logger.info('Ожидание доступности дополнительных отчетов для открытия')
-                WebDriverWait(self.driver, 30).until(
-                    EC.element_to_be_selected(more))  # у меня только так заработала сборка weekly pulse
-                weeklies = self.driver.find_elements(By.XPATH, "//div[contains(@title, 'Weekly Pulse')]")
-                self.__sleep_some_time()
-        except Exception as e:
-            self._logger.error('Ошибка (%s) в загрузке Weekly Pulse', e)
-            print(f'Ошибка ({e}) в загрузке Weekly Pulse')
-            return
-
-        weeklies[0].find_element(By.TAG_NAME, 'a').click()
-
-        filename = f"{weeklies[0].text.replace(' ', '_')}.pdf"
-        filename = weekly_dir / filename
-        self._logger.info('Проверка путей до Weekly Pulse')
-
-        if not weekly_dir.exists():
-            weekly_dir.mkdir(parents=True, exist_ok=True)
-
-        if filename.exists():
-            self._logger.info('Weekly Pulse отчет собран')
-            print('Weekly Pulse отчет собран')
-            return
-        else:
-            old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
-            if len(old) > 0:
-                os.remove(os.path.join(weekly_dir, old[0]))
-
-        self.__sleep_some_time(5.0, 6.0)
-        download_report = self.driver.find_element(By.CLASS_NAME, 'file')
-        href = download_report.get_attribute('href')
-
-        session = self.get_emulator_cookies(self.driver)
-        response = session.get(href)
-
-        with open(filename, 'wb') as file:
-            file.write(response.content)
-
-        self._logger.info('Сохранение ключевых слайдов с weekly review')
-        images = convert_from_path(filename)
-        # PARSE PDF TO GET SPECIAL SLIDES
-        weekly_pulse_parser = weekly_pulse_parse.ParsePresentationPDF()
-        slides_meta = weekly_pulse_parser.get_slides_meta()
-        slides = weekly_pulse_parser.parse(filename)
-
-        for slide_meta in slides_meta:
-            slide_info = slides[slide_meta['title']]
-            if slide_info['page_number'] < 0:
-                continue
-
-            with images[slide_info['page_number']] as img:
-                width, height = img.size
-                useful_height = height * weekly_pulse_parse.PERCENT_HEIGHT_OF_USEFUL_INFO // 100
-                img = self.crop_image(img, 0, 0, width, useful_height)
-                if slide_meta['crop']:
-                    img = self.crop_image(img, **slide_meta['crop_params'])
-
-                for sub_img_params in slide_meta['sub_images']:
-                    crop_params = sub_img_params['crop_params'].copy()
-                    if sub_img_params['relative']:
-                        width, height = img.size
-
-                        crop_params = {
-                            'left': int(width * sub_img_params['crop_params']['left']),
-                            'top': int(height * sub_img_params['crop_params']['top']),
-                            'right': int(width * sub_img_params['crop_params']['right']),
-                            'bottom': int(height * sub_img_params['crop_params']['bottom']),
-                        }
-                    sub_img = self.crop_image(img, **crop_params)
-                    sub_img.save(f"{weekly_dir}/{sub_img_params['name']}.png")
-
-                img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
-
-        parser_source.update_get_datetime(source_name='Weekly Pulse')
-        self._logger.info('Weekly review готов')
-        print('Weekly review готов')
 
 
 class ResearchAPIParser:
@@ -666,6 +556,10 @@ class ResearchAPIParser:
             "REMEMBER_ME": 'true',
         }
         self.update_cookies()
+
+    @staticmethod
+    def crop_image(img: Image, left: int = 70, top: int = 40, right: int = 1350, bottom: int = 1290) -> Image:
+        return img.crop((left, top, right, bottom))
 
     def update_cookies(self) -> None:
         """
@@ -745,7 +639,7 @@ class ResearchAPIParser:
         """
         async with self.postgres_conn.acquire() as connection:
             count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE news_id = '{report_id}'"
+                f"SELECT COUNT(id) AS count_news FROM research WHERE report_id = '{report_id}'"
             )
             return bool(count_news['count_news'])
 
@@ -764,25 +658,28 @@ class ResearchAPIParser:
             publication_date = report['publication_date']
             await connection.execute(
                 (
-                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, news_id)'
+                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, report_id)'
                     f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{report_id}')"
                 )
             )
 
     async def parse_reports_by_id(
             self,
-            report_id: int,
+            report_id: str,
             session: ClientSession,
-            params: dict[str, int | str | dict | None]
-    ) -> None:
+            params: dict[str, int | str | dict | None],
+            save_report: bool = True,
+    ) -> dict[str, int | str | datetime.datetime | datetime.date | Path | None]:
         """
         Метод для выгрузки новости по айди из разделов
         :param report_id: айди отчета
         :param session: сессия aiohttp
         :param params: словарь с параметрами страницы
+        :param save_report: сохранять ли полученный отчет в БД
+        :returns: dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]
         """
 
-        self._logger.info('CIB: задача для получения отчета начата: %s', str(report_id))
+        self._logger.info('CIB: задача для получения отчета начата: %s', report_id)
 
         async with session.get(
                 url=config.ARTICLE_URL,
@@ -793,58 +690,65 @@ class ResearchAPIParser:
             report_html = BeautifulSoup(await req.text(), 'html.parser')
 
         header = str(report_html.find('h1', class_='popupTitle').text).strip()
-        if self.is_suitable_report(header, params['starts_with']):
-            self._logger.info('CIB: сохранение отчета: %s', report_id)
 
-            date = self.cib_date_to_normal_date(str(report_html.find('span',
-                                                                   class_="date").text).strip())
-            report_texts = []
-            for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
-                # Удаляем все ссылки
-                if paragraph_tag.find('a'):
-                    continue
-                # Удаление пустых paragraph
-                if text := str(paragraph_tag.text).strip():
-                    report_texts.append(text)
-            report_text = '\n\n'.join(report_texts).replace('>', '-')
+        self._logger.info('CIB: сохранение отчета: %s', report_id)
 
-            if file_element_with_href := report_html.find('a', class_='file', href=True):
-                async with session.get(
-                        url=file_element_with_href['href'].strip(),
-                        cookies=self.cookies,
-                        verify_ssl=False,
-                ) as req:
-                    if req.status == 200:
+        date = self.cib_date_to_normal_date(str(report_html.find('span', class_="date").text).strip())
+        report_texts = []
+        for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
+            # Удаляем все ссылки
+            if paragraph_tag.find('a'):
+                continue
+            # Удаление пустых paragraph
+            if text := str(paragraph_tag.text).strip():
+                report_texts.append(text)
+        report_text = '\n\n'.join(report_texts).replace('>', '-')
 
-                        file_path = config.PATH_TO_REPORTS / f'{report_id}.pdf'
-                        with open(file_path, "wb") as f:
-                            while True:
-                                chunk = await req.content.readany()
-                                if not chunk:
-                                    break
-                                f.write(chunk)
-                self._logger.info('CIB: успешное сохранение файла: %s', report_id)
-            else:
-                file_path = None
+        if file_element_with_href := report_html.find('a', class_='file', href=True):
+            async with session.get(
+                    url=file_element_with_href['href'].strip(),
+                    cookies=self.cookies,
+                    verify_ssl=False,
+            ) as req:
+                if req.status == 200:
 
-            await self.save_report_to_db({
-                'research_type_id': params['research_type_id'],
-                'filepath': file_path,
-                'header': header,
-                'text': report_text,
-                'parse_datetime': datetime.datetime.utcnow(),
-                'publication_date': date,
-                'report_id': report_id,
-            })
+                    file_path = config.PATH_TO_REPORTS / f'{report_id}.pdf'
+                    with open(file_path, "wb") as f:
+                        while True:
+                            chunk = await req.content.readany()
+                            if not chunk:
+                                break
+                            f.write(chunk)
+            self._logger.info('CIB: успешное сохранение файла: %s', report_id)
+        else:
+            file_path = None
+
+        data = {
+            'research_type_id': params['research_type_id'],
+            'filepath': file_path,
+            'header': header,
+            'text': report_text,
+            'parse_datetime': datetime.datetime.utcnow(),
+            'publication_date': date,
+            'report_id': report_id,
+        }
+        if save_report:
+            await self.save_report_to_db(data)
+        return data
 
     async def get_report_ids_from_page(
             self,
             params: dict[str, int | str | list | dict | None],
-            session: ClientSession) -> None:
+            session: ClientSession,
+            check_existing: bool = True,
+            **kwargs,
+    ) -> list[dict[str, int | str | datetime.datetime | datetime.date | Path | None]]:
         """
         Метод для получений айди новостей из разделов
         :param params: Параметры для выгрузки отчетов
         :param session: сессия aiohttp
+        :param check_existing: Делать ли проверку на то, что report_id есть в БД
+        :returns: list[dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]]
         """
         self._logger.info('CIB: Начат парсинг страницы %s', params['url'])
         for i in range(self.REPEAT_TRIES):
@@ -866,7 +770,7 @@ class ResearchAPIParser:
                         url=params['url'],
                         params=json.loads(params['params']),
                         cookies=self.cookies,
-                        verify_ssl=False,
+                        ssl=False,
                     )
                     content = await req.text()
                     status_code = req.status
@@ -878,19 +782,111 @@ class ResearchAPIParser:
             self._logger.error('CIB: не получилось запросить отчеты со страницы: %s', params['url'])
             raise HTTPNoContent
 
-        loop = asyncio.get_event_loop()
-        reports = BeautifulSoup(content, 'html.parser').find_all("div", class_="hidden publication-id")
+        # loop = asyncio.get_event_loop()
+        reports = BeautifulSoup(content, 'html.parser').find_all("tr")
+        reports = [(reports[i], reports[i + 1]) for i in range(0, len(reports), 2)]
 
         self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
 
+        new_reports = []
         for report in reports:
-            if element_with_id := report.text:
-                if not await self.report_exist_in_db(element_with_id):
-                    self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
-                    await loop.create_task(
-                        self.parse_reports_by_id(element_with_id, session, params),
-                    )
-                    self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
+            report_name = str(report[1].find_next("div", class_="title").text).strip()
+            if not self.is_suitable_report(report_name, params['starts_with']):
+                continue
+
+            element_with_id = str(report[0].find_next("div", class_="hidden publication-id").text)
+            if not element_with_id:
+                continue
+
+            if not check_existing or not await self.report_exist_in_db(element_with_id):
+                self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
+                data = await self.parse_reports_by_id(element_with_id, session, params, **kwargs)
+                self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
+                new_reports.append(data)
+        return new_reports
+
+    async def parse_weekly_pulse(self, session) -> None:
+        """
+        Получение отчета Weekly Pulse
+        :param session: сессия aiohttp
+        """
+        self._logger.info('Сборка Weekly Pulse')
+        page = parser_source.get_research_type_source_by_name(source_name='Weekly Pulse')
+
+        self._logger.info('Поиск Weekly Pulse отчета')
+        try:
+            report_data = await self.get_report_ids_from_page(page, session, check_existing=False, save_report=False)
+        except HTTPNoContent as e:
+            self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
+            return
+        except Exception as e:
+            self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
+            return
+
+        if not report_data or not report_data[0]['filepath']:
+            self._logger.info('CIB: Не удалось получить отчет Weekly Pulse')
+            return
+        report_data = report_data[0]
+
+        weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
+
+        filename = f"{report_data['header'].replace(' ', '_')}.pdf"
+        filename = weekly_dir / filename
+        self._logger.info('Проверка путей до Weekly Pulse')
+
+        if not weekly_dir.exists():
+            weekly_dir.mkdir(parents=True, exist_ok=True)
+
+        if filename.exists():
+            self._logger.info('Weekly Pulse отчет собран')
+            print('Weekly Pulse отчет собран')
+            return
+        else:
+            old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
+            if len(old) > 0:
+                os.remove(os.path.join(weekly_dir, old[0]))
+
+        # Перемещаем скачанный файл в папку с данными по викли пульсу
+        report_data['filepath'].replace(filename)
+
+        self._logger.info('Сохранение ключевых слайдов с weekly review')
+        images = convert_from_path(filename)
+        # PARSE PDF TO GET SPECIAL SLIDES
+        weekly_pulse_parser = weekly_pulse_parse.ParsePresentationPDF()
+        slides_meta = weekly_pulse_parser.get_slides_meta()
+        slides = weekly_pulse_parser.parse(filename)
+
+        for slide_meta in slides_meta:
+            slide_info = slides[slide_meta['title']]
+            if slide_info['page_number'] < 0:
+                continue
+
+            with images[slide_info['page_number']] as img:
+                width, height = img.size
+                useful_height = height * weekly_pulse_parse.PERCENT_HEIGHT_OF_USEFUL_INFO // 100
+                img = self.crop_image(img, 0, 0, width, useful_height)
+                if slide_meta['crop']:
+                    img = self.crop_image(img, **slide_meta['crop_params'])
+
+                for sub_img_params in slide_meta['sub_images']:
+                    crop_params = sub_img_params['crop_params'].copy()
+                    if sub_img_params['relative']:
+                        width, height = img.size
+
+                        crop_params = {
+                            'left': int(width * sub_img_params['crop_params']['left']),
+                            'top': int(height * sub_img_params['crop_params']['top']),
+                            'right': int(width * sub_img_params['crop_params']['right']),
+                            'bottom': int(height * sub_img_params['crop_params']['bottom']),
+                        }
+                    sub_img = self.crop_image(img, **crop_params)
+                    sub_img.save(f"{weekly_dir}/{sub_img_params['name']}.png")
+
+                img.save(f"{weekly_dir}/{slide_meta['eng_name']}.png")
+
+        parser_source.update_get_datetime(source_name='Weekly Pulse')
+        self._logger.info('Weekly review готов')
+        print('Weekly review готов')
 
     async def parse_pages(self) -> None:
         """
@@ -911,5 +907,8 @@ class ResearchAPIParser:
                     self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                 except Exception as e:
                     self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
+
+            # weekly pulse
+            await loop.create_task(self.parse_weekly_pulse(session))
 
         self._logger.info('CIB: Конец парсинга CIB')

@@ -30,6 +30,10 @@ class ResearchesGetter:
     def set_driver(self, driver: WebDriver):
         self.__driver = driver
 
+    @property
+    def driver(self) -> WebDriver:
+        return self.__driver
+
     def collect_research(self) -> Tuple[Optional[dict], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         """
         Collect all type of reviews from CIB Research
@@ -51,17 +55,19 @@ class ResearchesGetter:
         try:
             key_eco_table = authed_user.get_key_econ_ind_table()
         except Exception as e:
+            self.logger.error('При сборе ключевых показателей компании произошла ошибка: %s', e)
+            self.__driver.quit()
             self.__driver = get_driver(logger=self.logger)
             authed_user = ResearchParser(self.__driver, self.logger)
-            self.logger.error('При сборе ключевых показателей компании произошла ошибка: %s', e)
             key_eco_table = None
 
         try:
             eco_day = authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
         except Exception as e:
+            self.logger.error('При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Ежедневные" произошла ошибка: %s', e)
+            self.__driver.quit()
             self.__driver = get_driver(logger=self.logger)
             authed_user = ResearchParser(self.__driver, self.logger)
-            self.logger.error('При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Ежедневные" произошла ошибка: %s', e)
             eco_day = None
 
         try:
@@ -72,13 +78,14 @@ class ResearchesGetter:
                 name_of_review='Экономика России. Ежемесячный обзор',
             )
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
                 'name_of_review="Экономика России. Ежемесячный обзор" произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             eco_month = None
         self.logger.info('Блок по экономике собран')
 
@@ -93,8 +100,6 @@ class ResearchesGetter:
                 count_of_review=2,
             )
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Валютный рынок и процентные ставки", '
@@ -102,6 +107,9 @@ class ResearchesGetter:
                 'count_of_review=2 произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             bonds_day = None
 
         try:
@@ -112,13 +120,14 @@ class ResearchesGetter:
                 name_of_review='Обзор рынка процентных ставок',
             )
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Все",'
                 'name_of_review="Обзор рынка процентных ставок" произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             bonds_month = None
         self.logger.info('Блок по ставкам собран')
 
@@ -133,8 +142,6 @@ class ResearchesGetter:
                 count_of_review=2,
             )
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Валютный рынок и процентные ставки", '
@@ -142,19 +149,23 @@ class ResearchesGetter:
                 'count_of_review=2 произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             exchange_day = None
         try:
             exchange_month_uan = authed_user.get_reviews(
                 url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по юаню'
             )
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все",'
                 'name_of_review="Ежемесячный обзор по юаню" произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             exchange_month_uan = None
         try:
             exchange_month_soft = authed_user.get_reviews(
@@ -164,13 +175,14 @@ class ResearchesGetter:
                 name_of_review='Ежемесячный обзор по мягким валютам'
             )
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
                 'name_of_review="Ежемесячный обзор по мягким валютам" произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             exchange_month_soft = None
         self.logger.info('Блок по курсам валют собран')
 
@@ -185,14 +197,15 @@ class ResearchesGetter:
             )
             self.logger.info('Блок по сырью собран')
         except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            authed_user = ResearchParser(self.__driver, self.logger)
             self.logger.error(
                 'При сборе отчетов по "Сырьевые товары - Sberbank CIB" во вкладке "Ежедневные", '
                 'name_of_review="Сырьевые рынки", '
                 'type_of_review="commodity" произошла ошибка: %s',
                 e,
             )
+            self.__driver.quit()
+            self.__driver = get_driver(logger=self.logger)
+            authed_user = ResearchParser(self.__driver, self.logger)
             commodity_day = None
 
         exchange_month = exchange_month_uan + exchange_month_soft
@@ -213,13 +226,6 @@ class ResearchesGetter:
         authed_user.get_industry_reviews()
         self.__driver = authed_user.driver
         self.logger.info('Страница с отчетами по направлениям собрана')
-
-        try:
-            authed_user.get_weekly_review()
-            self.logger.info('Weekly pulse собран')
-        except Exception as e:
-            self.__driver = get_driver(logger=self.logger)
-            self.logger.error('При сборе отчетов weekly pulse произошла ошибка: %s', e)
 
         return reviews, key_eco_table, clients_table
 
@@ -327,7 +333,7 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
             logger.error('Ошибка при сборке отчетов с Research: %s', e)
 
         try:
-            driver.quit()
+            runner.driver.quit()
         except Exception as e:
             # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
             # тогда вылетает MaxRetryError

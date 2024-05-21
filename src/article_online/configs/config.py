@@ -11,6 +11,7 @@ env.read_env()
 
 _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
+STAND = 'prod' if ENV == Environment.PROD else 'test'
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
@@ -61,22 +62,5 @@ POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 
-summarization_prompt = (
-    'Ты - суммаризатор новостной ленты.'
-    'На вход тебе будут подаваться новости.'
-    'Твоя задача - суммаризировать новость.'
-    ''
-    'Формат ответа:'
-    '- суммаризация не должна быть слишком длинной;'
-    '- тезисы должны быть лаконичными;'
-    '- основная мысль не должна искажаться;'
-    '- любые факты, которых не было в оригинальной статье, недопустимы;'
-    '- нельзя использовать вводные слова, только текст суммаризации.'
-    ''
-    'ВАЖНО! Игнорировать формат ответа нельзя! Все условия должны соответствовать формату ответа!'
-    ''
-    '________________'
-    'Твой ответ:'
-)
 
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')

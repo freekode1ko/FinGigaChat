@@ -1,8 +1,0 @@
-from aiogram.filters.callback_data import CallbackData
-
-from constants.products import hot_offers as callback_prefixes
-
-
-class GetHotOffersPDF(CallbackData, prefix=callback_prefixes.GET_HOT_OFFERS_PDF):
-    """Отправка пдф файлов по hot offers"""
-    pass

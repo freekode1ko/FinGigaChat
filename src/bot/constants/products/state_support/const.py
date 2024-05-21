@@ -1,6 +1,8 @@
 from configs import config
 
 
+TITLE = 'Господдержка'
+
 GET_STATE_SUPPORT_PDF = 'get_state_support_pdf'
 
 DATA_ROOT_PATH = config.PATH_TO_SOURCES / 'products' / 'state_support'

@@ -1,6 +1,7 @@
 import datetime as dt
 import json
 import os
+from typing import Optional
 from urllib.parse import unquote
 
 import pandas as pd
@@ -14,6 +15,7 @@ from module.model_pipe import (
     deduplicate,
     model_func,
     model_func_online,
+    gigachat_filtering,
 )
 
 TIME_LIVE_ARTICLE = 100
@@ -113,6 +115,24 @@ class ArticleProcess:
 
         return df_subject
 
+    def clear_from_duplicates(self, df: pd.DataFrame, links_value: Optional[tuple[str]] = None) -> pd.DataFrame:
+        if links_value is None:
+            links_value = tuple(df['link'].apply(unquote))
+
+        if not links_value:
+            return df
+
+        query_old_article = text('SELECT link FROM article WHERE link IN :links_value')
+        with self.engine.connect() as conn:
+            links_of_old_article = conn.execute(
+                query_old_article.bindparams(links_value=links_value)).scalars().all()
+
+        if links_of_old_article:
+            df = df[~df['link'].isin(links_of_old_article)]
+            self._logger.warning(
+                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(df)}')
+        return df
+
     def preprocess_article_online(self, df: pd.DataFrame):
         """
         Preprocess articles dataframe and set df.
@@ -150,6 +170,8 @@ class ArticleProcess:
                 .apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0], 'text': x['text'].iloc[0]}))
                 .reset_index()
             )
+
+            df = self.clear_from_duplicates(df)
             self._logger.info(f'Объединение новостей по одинаковым ссылкам, количество новостей - {len(df)}')
         except Exception as e:
             self._logger.error('Ошибка при объединении ссылок: %s', e)
@@ -231,6 +253,10 @@ class ArticleProcess:
         """Call summary func"""
         self.df_article = add_text_sum_column(self._logger, self.df_article)
 
+    def apply_gigachat_filtering(self):
+        """Применяем фильтрацию новостей с помощью gigachat"""
+        self.df_article = gigachat_filtering(self._logger, self.df_article)
+
     def delete_old_article(self):
         """Delete from db article if there are 10 articles for each subject"""
         count_to_keep = 30
@@ -305,14 +331,7 @@ class ArticleProcess:
         if not links_value:
             return []
 
-        query_old_article = text('SELECT link FROM article WHERE link IN :links_value')
-        with self.engine.connect() as conn:
-            links_of_old_article = conn.execute(query_old_article.bindparams(links_value=links_value)).scalars().all()
-
-        if links_of_old_article:
-            self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article)]
-            self._logger.warning(
-                f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
+        self.df_article = self.clear_from_duplicates(self.df_article, links_value)
 
         # make article table and save it in database
         article = self.df_article[['link', 'title', 'date', 'text', 'text_sum']]
@@ -370,6 +389,9 @@ class ArticleProcess:
         links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
         # make article table and save it in database
         unsaved_article = self.df_article[self.df_article['id'].isnull()]
+
+        unsaved_article = self.clear_from_duplicates(unsaved_article)
+
         article = unsaved_article[['link', 'title', 'date', 'text', 'text_sum']]
         article.to_sql('article', con=self.engine, if_exists='append', index=False)
         self._logger.info(f'Сохранено {subject} {len(article)} новостей')

@@ -4,19 +4,25 @@ import logging
 import os
 from datetime import datetime, timedelta, date
 from math import ceil
-from typing import List, Union, Tuple, Optional
+from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 from aiogram import Bot, types
+from aiogram.utils.media_group import MediaGroupBuilder
+from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
 from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
+from constants import constants
 from constants.constants import research_footer
-from db.database import engine
+from db import models
+from db.database import engine, async_session
 from log.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: str = '\n\n', prefix: str = '') -> List[types.Message]:
+async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = '\n\n', prefix: str = '') -> list[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -25,12 +31,12 @@ async def bot_send_msg(bot: Bot, user_id: Union[int, str], msg: str, delimiter: 
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
-    return: List[aiogram.types.Message] Список объетов отправленных сообщений
+    return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
     current_batch = prefix
     max_batch_length = 4096
-    messages: List[types.Message] = []
+    messages: list[types.Message] = []
 
     for paragraph in msg.split(delimiter):
         if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
@@ -80,13 +86,16 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     :param check_email: Флаг, нужно ли проверять наличие почты пользователя в бд
     return Булево значение на наличие пользователя в списке
     """
-    user_json = json.loads(user)
-    user_id = user_json['id']
-    whitelist = pd.read_sql_query('SELECT * FROM "whitelist"', con=engine)
-    user_df = whitelist.loc[whitelist['user_id'] == user_id]
-    if not user_df.empty:
-        return not (check_email and pd.isna(user_df['user_email'].iloc[0]))
-    return False
+    user_id = json.loads(user)['id']
+    async with async_session() as session:
+        result = await session.execute(select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id))
+        try:
+            user_email = result.scalar_one()
+            if not check_email:
+                return True
+            return bool(user_email)
+        except NoResultFound:
+            return False
 
 
 async def is_admin_user(user: dict) -> bool:
@@ -163,7 +172,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 async def __sent_photo_and_msg(
     message: types.Message,
-    photo: Union[types.InputFile, str],
+    photo: types.InputFile | str,
     day: list[list] = None,
     month: list[list] = None,
     title: str = '',
@@ -314,7 +323,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
         )
     else:
         handbook = pd.read_sql_query(
-            "SELECT REGEXP_REPLACE(client_alternative.other_names, '^.*;', '') AS object, "
+            "SELECT client_alternative.other_name AS object, "
             'client.industry_id, industry.name AS industry_name FROM client_alternative '
             'INNER JOIN client ON client_alternative.client_id = client.id '
             'INNER JOIN industry ON client.industry_id = industry.id',
@@ -345,7 +354,7 @@ def get_page_data_and_info(
         all_data_df: pd.DataFrame,
         page: int,
         page_elements: int = PAGE_ELEMENTS_COUNT,
-) -> Tuple[pd.DataFrame, str, int]:
+) -> tuple[pd.DataFrame, str, int]:
     """
     1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
     2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
@@ -375,7 +384,7 @@ def unwrap_callback_data(data: str) -> str:
     return data.replace(';', ':')
 
 
-def next_weekday(d: Union[date, datetime], weekday: int) -> Union[date, datetime]:
+def next_weekday(d: date | datetime, weekday: int) -> date | datetime:
     """
     Вычисляет дату/дату_время следующего дня недели относительно переданной даты/даты_времени
 
@@ -406,20 +415,75 @@ def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: in
     return datetime(ndt.year, ndt.month, ndt.day, hour, minute)
 
 
+def previous_weekday_date(from_date: date, weekday: int) -> date:
+    """
+    Вычисляет дату последнего прошедшего или текущего дня недели weekday
+
+    :param from_date: переданная дата
+    :param weekday: числовое значение дня недели 0-6 (0-пн, 6-вс)
+    """
+    days_ahead = (-1 * (weekday - from_date.weekday())) % 7
+    return from_date - timedelta(days=days_ahead)
+
+
 async def wait_until(to_dt: datetime) -> None:
     """Спит до переданного datetime"""
     await asyncio.sleep((to_dt - datetime.now()).total_seconds())
 
 
 async def send_or_edit(
-        message: Union[types.CallbackQuery, types.Message],
-        msg_text: str, keyboard: Optional[types.InlineKeyboardMarkup] = None,
+        message: types.CallbackQuery | types.Message,
+        msg_text: str,
+        keyboard: Optional[types.InlineKeyboardMarkup] = None,
+        parse_mode: Optional[str] = 'HTML'
 ) -> None:
+    """
+    Отправляет новое сообщение, если message это types.Message
+    Изменяет текущее сообщение, если message это types.CallbackQuery
+
+    :param message: Объект сообщения или callback
+    :param msg_text: Текст сообщения, длина 1-4096
+    :param keyboard: Inline клавиатура
+    :param parse_mode: Режим парсинга текста для его форматирования
+    """
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
     if isinstance(message, types.Message):
-        await message.answer(msg_text, reply_markup=keyboard)
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
 
     # Если CallbackQuery - изменяем это сообщение
     else:
         call = message
-        await call.message.edit_text(msg_text, reply_markup=keyboard)
+        await call.message.edit_text(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
+
+
+async def send_pdf(
+        callback_query: types.CallbackQuery,
+        pdf_files: list[Path],
+        caption: str,
+        protect_content: bool = False,
+) -> bool:
+    """
+    Отправка сообщения перед файлами
+    Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
+
+    Если файлов нет, то return False и ничего не отправляет
+    :param callback_query: Объект, содержащий информацию о пользователе и сообщении
+    :param pdf_files: Список файлов для отправки пользователю
+    :param caption: Текст сообщения, которое отправляется перед отправкой файлов (если файлы есть)
+    :param protect_content: Защищает отправляемый контент от перессылки и сохранения
+    return: Если были отправлены файлы, то True, иначе False
+    """
+    pdf_files = [f for f in pdf_files if f.exists()]
+    if not pdf_files:
+        return False
+
+    await callback_query.message.answer(caption, parse_mode='HTML', protect_content=protect_content)
+
+    for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
+        media_group = MediaGroupBuilder()
+        for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
+            media_group.add_document(media=types.FSInputFile(fpath))
+
+        await callback_query.message.answer_media_group(media_group.build(), protect_content=protect_content)
+
+    return True

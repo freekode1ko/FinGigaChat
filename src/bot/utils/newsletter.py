@@ -11,14 +11,15 @@ from aiogram.utils.media_group import MediaGroupBuilder
 from configs import config
 import module.data_transformer as dt
 from constants import constants
+from db.api.telegram_section import telegram_section_db
+from db.whitelist import get_users_subscriptions
 from log.bot_logger import logger, user_logger
 from db.database import engine
 from module import formatter
 from module.article_process import ArticleProcess
-from utils.base import bot_send_msg, translate_subscriptions_to_object_id
-from utils.industry import get_tg_channel_news_msg, group_news_by_tg_channels
+from utils.base import bot_send_msg
+from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
 from db import parser_source, message, subscriptions
-from db.industry import get_industry_tg_news
 
 
 async def tg_newsletter(
@@ -34,21 +35,21 @@ async def tg_newsletter(
         return
 
     # получим словарь id отрасли и ее название (в цикле, потому что справочник может пополняться)
-    industry_dict = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
+    sections = await telegram_section_db.get_all()
     saved_messages: List[dict] = []
     newsletter_type = 'tg_subscriptions_news'
 
     for index, user in user_df.iterrows():
         user_id, user_name = user['user_id'], user['username']
-        logger.debug(
+        logger.info(
             f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
 
-        for industry_id, industry_name in industry_dict.items():
-            tg_news = get_industry_tg_news(industry_id, True, user_id, newsletter_timedelta, next_newsletter_datetime)
+        for section in sections:
+            tg_news = await telegram_section_db.get_section_tg_news(section.id, True, user_id, newsletter_timedelta, next_newsletter_datetime)
             if tg_news.empty:
                 continue
 
-            start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по отрасли <b>{industry_name.capitalize()}</b>:'
+            start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по разделу <b>{section.name}</b>:'
             msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
             saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 
@@ -62,7 +63,7 @@ async def tg_newsletter(
 
             user_logger.debug(
                 f'*{user_id}* Пользователю {user_name} пришла рассылка сводки новостей из telegram каналов по отрасли '
-                f'{industry_name}. '
+                f'{section.name}. '
             )
             await asyncio.sleep(1.1)
 
@@ -89,24 +90,23 @@ async def subscriptions_newsletter(
     # получим словарь id отрасли и ее название
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
     # получим словари новостных объектов {id: [альтернативные названия], ...}
-    industry_id_name_dict, client_id_name_dict, commodity_id_name_dict = iter(ap_obj.get_industry_client_com_dict())
-    saved_messages: List[dict] = []
+    saved_messages: list[dict] = []
     newsletter_type = 'subscriptions_news'
 
+    user_df = await get_users_subscriptions()
+
     row_number = 0
-    for index, user in user_df.iterrows():
-        user_id, user_name, subscriptions = user['user_id'], user['username'], user['subscriptions']
-        if not subscriptions:
+    for _, user in user_df.iterrows():
+        user_id = user['user_id']
+        user_name = user['username']
+        industry_ids = user['industry_ids']
+        client_ids = user['client_ids']
+        commodity_ids = user['commodity_ids']
+
+        if not industry_ids and not client_ids and not commodity_ids:
             continue
 
-        subscriptions = subscriptions.split(', ')
-        logger.debug(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
-
-        # получим списки id объектов, на которые подписан пользователь
-        industry_ids = translate_subscriptions_to_object_id(industry_id_name_dict, subscriptions)
-        client_ids = translate_subscriptions_to_object_id(client_id_name_dict, subscriptions)
-        commodity_ids = translate_subscriptions_to_object_id(commodity_id_name_dict, subscriptions)
-
+        logger.info(f'Подготовка новостей для отправки их пользователю {user_name}*{user_id}*')
         # получим новости по подпискам пользователя
         user_industry_df, user_client_comm_df = ArticleProcess.get_user_article(
             clients_news, commodity_news, industry_ids, client_ids, commodity_ids, industry_name
@@ -136,7 +136,7 @@ async def subscriptions_newsletter(
 
                 user_logger.debug(
                     f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. '
-                    f"Активные подписки на момент рассылки: {user['subscriptions']}"
+                    f"Активные подписки на момент рассылки: {industry_ids=:}, {client_ids=:}, {commodity_ids=:}"
                 )
             # except ChatNotFound:  # FIXME 3.3.0
             #     user_logger.error(f'Чата с пользователем *{user_id}* {user_name} не существует')
@@ -214,7 +214,7 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
     :param bot: объект тг бота
     :param user_id: телеграм id пользователя, которому отправляются отчеты
     :param user_name: имя пользователя для логирования
-    :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, news_id]
+    :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
     return: Список объектов отправленных сообщений
     """
     sent_msg_list = []

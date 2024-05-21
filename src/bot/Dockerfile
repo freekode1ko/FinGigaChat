@@ -5,6 +5,10 @@ RUN apt-get install python3-setuptools python3-dev libpq-dev -y
 RUN apt-get install python3 python3-pip -y
 RUN apt-get install ffmpeg -y
 
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+RUN apt-get install -y tzdata
+
 COPY . /code
 WORKDIR /code
 

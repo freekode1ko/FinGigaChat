@@ -2,7 +2,13 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import subscriptions as callback_prefixes, constants
+from constants import constants
+from constants.subscriptions import const
+from constants.subscriptions import research
+from constants.subscriptions.news import client
+from constants.subscriptions.news import commodity
+from constants.subscriptions.news import industry
+from keyboards.subscriptions.news.telegram import callbacks as telegram_callback_factory
 
 
 def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: str) -> InlineKeyboardMarkup:
@@ -26,9 +32,9 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     [ Завершить  ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Новости', callback_data=callback_prefixes.NEWS_SUBS_MENU))
-    keyboard.row(types.InlineKeyboardButton(text='Аналитика', callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU))
-    keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=callback_prefixes.END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(text='Новости', callback_data=const.NEWS_SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Аналитика', callback_data=research.GET_CIB_RESEARCH_SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()
 
 
@@ -42,13 +48,23 @@ def get_news_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на клиентов, сырьевые товары, отрасли',
-        callback_data=callback_prefixes.CLIENT_SUBS_MENU,
+        text='Подписки на клиентов',
+        callback_data=client.CLIENT_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на сырьевые товары',
+        callback_data=commodity.COMMODITY_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на отрасли',
+        callback_data=industry.INDUSTRY_SUBS_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Подписки на телеграм-каналы',
-        callback_data=callback_prefixes.TG_MENU,
+        callback_data=telegram_callback_factory.TelegramSubsMenuData(
+            menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+        ).pack(),
     ))
-    keyboard.row(types.InlineKeyboardButton(text=constants.BACK_BUTTON_TXT, callback_data=callback_prefixes.SUBS_MENU))
-    keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=callback_prefixes.END_WRITE_SUBS))
+    keyboard.row(types.InlineKeyboardButton(text=constants.BACK_BUTTON_TXT, callback_data=const.SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()

@@ -42,7 +42,17 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
-meeting_web_app_url = 'https://alinlpkv.github.io/tg_web_app/meeting_app/templates/meeting.html'
+
+DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
+
+match DOMAIN_NAME:
+    case 'ai-bankir-helper.ru':
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
+    case 'ai-bankir-helper-dev.ru':
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
+    case _:
+        WEB_APP_URL = f'http://{DOMAIN_NAME}'
+
 
 log_file = 'bot_runner'
 LOG_LEVEL_DEBUG = 10
@@ -61,7 +71,7 @@ research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
 api_key_gpt = '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'
 
-NEWS_LIMIT = 5
+NEWS_LIMIT = 10
 PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 USER_SUBSCRIPTIONS_LIMIT = 70
@@ -83,6 +93,11 @@ mail_register_subject = 'Регистрация в AI-помощнике'
 BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
 QUERY_STATE_SUPPORT_URL = 'http://89.223.65.160:8031/api/v1/question'
 POST_TO_SERVICE_TIMEOUT = 90
+
+ECO_INAVIGATOR_URL = (
+    'https://upd.mobile.sbrf.ru:10443/ios/dl/gdash/9845/1964'
+    '#ewogICJ3aWRnZXRzIiA6IHsKICAgICIyODM2NDEiIDogewoKICAgIH0KICB9Cn0='
+)
 
 reg_mail_text = (
     'Добрый день!\n\nВы получили данное письмо, потому что указали данный адрес в AI-помощнике Банкира.\n\n'

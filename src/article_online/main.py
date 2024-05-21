@@ -2,7 +2,6 @@ import datetime
 import json
 import time
 import warnings
-from pathlib import Path
 
 import pandas as pd
 import requests
@@ -13,7 +12,9 @@ from module.article_process import ArticleProcess
 from log.logger_base import selector_logger
 from log import sentry
 
-PERIOD = 1
+MAX_NEWS_BATCH_SIZE = 1000
+MINUTE = 60
+MINUTES_TO_SLEEP = 10
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
@@ -54,7 +55,7 @@ def get_article() -> pd.DataFrame:
     """Получение новостей"""
     df_article = pd.DataFrame()
     try:
-        url = BASE_GIGAPARSER_URL.format('get_articles/all')
+        url = BASE_GIGAPARSER_URL.format(f'get_articles/all?stand={config.STAND}')
         req = try_post_n_times(config.POST_TO_SERVICE_ATTEMPTS, url=url, timeout=config.POST_TO_GIGAPARSER_TIMEOUT)
         if req.status_code == 200:
             df_article = df_article.from_dict(req.json())
@@ -79,11 +80,15 @@ def regular_func():
 
     subject_links, tg_links = [], []
     df_article = get_article()
+    logger.info(f'Получено всего {len(df_article)} новостей')
+    print(f'Получено всего {len(df_article)} новостей')
+    # Берем последнюю тысячу еовостей для обработки
+    df_article = df_article[:MAX_NEWS_BATCH_SIZE]
 
     if not df_article.empty:
         try:
-            logger.info(f'Получено {len(df_article)} новостей')
-            print(f'Получено {len(df_article)} новостей')
+            logger.info(f'На обработку получено {len(df_article)} новостей')
+            print(f'На обработку получено {len(df_article)} новостей')
             df_article, ids = ap_obj_online.preprocess_article_online(df_article)
             if not df_article.empty:
                 print('Старт получения новостей из тг-каналов из общего списка новостей')
@@ -95,8 +100,15 @@ def regular_func():
                 ap_obj_online.df_article = df_article
                 ap_obj_online.drop_duplicate()
                 ap_obj_online.make_text_sum()
+                try:
+                    ap_obj_online.apply_gigachat_filtering()
+                except Exception as e:
+                    logger.error('Ошибка при фильтрации новостей с помощью ГигаЧата: %s', e)
                 subject_links = ap_obj_online.save_tables()
 
+                logger.info('Старт обработки телеграм новостей')
+                print('Старт обработки телеграм новостей')
+                # сохраняем все тг новости без фильтраций
                 saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
                 df_article = ap_obj_online.update_tg_articles(saved_tg_df, all_tg_articles_df)
 
@@ -130,7 +142,7 @@ def post_ids(ids):
         # ids = {'id': [1,2,3...]}
         try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
-            url=BASE_GIGAPARSER_URL.format('success_request'),
+            url=BASE_GIGAPARSER_URL.format(f'success_request?stand={config.STAND}'),
             json=ids,
             timeout=config.POST_TO_GIGAPARSER_TIMEOUT
         )
@@ -176,8 +188,8 @@ if __name__ == '__main__':
             print(start_msg)
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
+            post_ids(gotten_ids)  # отправка giga parsers полученных айди
             if not config.DEBUG:
-                post_ids(gotten_ids)  # отправка giga parsers полученных айди
                 post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
@@ -185,10 +197,10 @@ if __name__ == '__main__':
             end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
             print(end_msg + '\nОжидайте\n')
             logger.info(end_msg)
-            for i in range(PERIOD):
-                time.sleep(3600)
-                logger.debug('Ожидание: {}/{} часов'.format(i + 1, PERIOD))
-                print('Ожидание: {}/{} часов'.format(i + 1, PERIOD))
+            for i in range(MINUTES_TO_SLEEP):
+                time.sleep(MINUTE)
+                logger.debug('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
+                print('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
     except KeyboardInterrupt:
         pass
     except Exception as e:

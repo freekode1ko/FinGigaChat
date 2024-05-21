@@ -3,6 +3,7 @@ import os
 from urllib.parse import unquote
 
 import pandas as pd
+from sqlalchemy import text
 
 from db.database import engine
 from log.logger_base import Logger
@@ -11,6 +12,7 @@ from module.model_pipe import (
     deduplicate,
     model_func,
     model_func_online,
+    gigachat_filtering,
 )
 
 
@@ -134,6 +136,10 @@ class ArticleProcess:
     def make_text_sum(self):
         """Call summary func"""
         self.df_article = add_text_sum_column(self._logger, self.df_article)
+    
+    def apply_gigachat_filtering(self):
+        """Применяем фильтрацию новостей с помощью gigachat"""
+        self.df_article = gigachat_filtering(self._logger, self.df_article)
 
     def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
         """
@@ -176,14 +182,16 @@ class ArticleProcess:
         return: список ссылок сохраненных новостей
         """
 
-        links_value = ', '.join([f"'{unquote(link)}'" for link in self.df_article['link'].values.tolist()])
+        links_value = tuple(self.df_article['link'].apply(unquote))
         if not links_value:
             return []
 
-        query_old_article = f'SELECT link FROM article WHERE link IN ({links_value})'
-        links_of_old_article = pd.read_sql(query_old_article, con=self.engine)
-        if not links_of_old_article.empty:
-            self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article.link)]
+        query_old_article = text('SELECT link FROM article WHERE link IN :links_value')
+        with self.engine.connect() as conn:
+            links_of_old_article = conn.execute(query_old_article.bindparams(links_value=links_value)).scalars().all()
+
+        if links_of_old_article:
+            self.df_article = self.df_article[~self.df_article['link'].isin(links_of_old_article)]
             self._logger.warning(
                 f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(self.df_article)}')
 
@@ -193,8 +201,10 @@ class ArticleProcess:
         self._logger.info(f'Сохранено {len(article)} новостей')
 
         # add ids to df_article from article table from db
-        query_ids = f'SELECT id, link FROM article WHERE link IN ({links_value})'
-        ids = pd.read_sql(query_ids, con=self.engine)
+        query_ids = text('SELECT id, link FROM article WHERE link IN :links_value')
+        with self.engine.connect() as conn:
+            ids_data = conn.execute(query_ids.bindparams(links_value=links_value)).all()
+            ids = pd.DataFrame(ids_data, columns=['id', 'link'])
 
         # merge ids from db with df_article
         self.df_article = self.df_article.merge(pd.DataFrame(ids), on='link')
