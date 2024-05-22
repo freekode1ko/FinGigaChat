@@ -6,11 +6,10 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
-from db import subscriptions as subscriptions_db_api, models
+from db import subscriptions as subscriptions_db_api
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product_group import product_group_db
@@ -35,8 +34,8 @@ class ChooseClient(StatesGroup):
     """
     Состояние для ввода имени клиента для более удобного поиска
     """
-    choosing_from_all_clients = State()
-    choosing_from_subscriptions = State()
+    choosing_from_all_not_subscribed_clients = State()
+    choosing_from_subscribed_clients = State()
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
@@ -130,11 +129,11 @@ async def clients_list(
     if subscribed:
         msg_text = 'Выберите клиента из списка ваших подписок'
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
-        await state.set_state(ChooseClient.choosing_from_subscriptions)
+        await state.set_state(ChooseClient.choosing_from_subscribed_clients)
     else:
         msg_text = 'Выберите клиента из общего списка'
         clients = clients[~clients['id'].isin(client_subscriptions['id'])]
-        await state.set_state(ChooseClient.choosing_from_all_clients)
+        await state.set_state(ChooseClient.choosing_from_all_not_subscribed_clients)
 
     page_data, page_info, max_pages = get_page_data_and_info(clients, page)
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
@@ -144,13 +143,13 @@ async def clients_list(
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.message(ChooseClient.choosing_from_subscriptions)
+@router.message(ChooseClient.choosing_from_subscribed_clients)
 async def clients_subscriptions_list(
-        message: Message,
+        message: types.Message,
         state: FSMContext,
 ) -> None:
     """
-    Поиск из по клиентам на которые подписаны
+    Поиск по клиентам, на которые пользователь подписаны
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
@@ -164,7 +163,7 @@ async def clients_subscriptions_list(
     if len(clients) > 1:
         page_data, page_info, max_pages = get_page_data_and_info(clients)
         keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, True)
-        msg_text = f'Выберите клиента из списка'
+        msg_text = 'Выберите клиента из списка'
     elif len(clients) == 1:
         client_name = clients['name'].iloc[0]
         keyboard = keyboards.get_client_menu_kb(
@@ -175,19 +174,19 @@ async def clients_subscriptions_list(
         )
         msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
     else:
-        msg_text = f'Не нашелся, введите имя клиента по другому'
+        msg_text = 'Не нашелся, введите имя клиента по-другому'
         keyboard = None
 
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
 
-@router.message(ChooseClient.choosing_from_all_clients)
+@router.message(ChooseClient.choosing_from_all_not_subscribed_clients)
 async def clients_all_list(
-        message: Message,
+        message: types.Message,
         state: FSMContext,
 ) -> None:
     """
-    Поиск по клиентам на которые не подписаны
+    Поиск по клиентам, на которые пользователь не подписаны
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
@@ -202,7 +201,7 @@ async def clients_all_list(
     if len(clients) > 1:
         page_data, page_info, max_pages = get_page_data_and_info(clients)
         keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, True)
-        msg_text = f'Выберите клиента из списка'
+        msg_text = 'Выберите клиента из списка'
     elif len(clients) == 1:
         client_name = clients['name'].iloc[0]
         keyboard = keyboards.get_client_menu_kb(
@@ -213,7 +212,7 @@ async def clients_all_list(
         )
         msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
     else:
-        msg_text = f'Не нашелся, введите имя клиента по другому'
+        msg_text = 'Не нашелся, введите имя клиента по-другому'
         keyboard = None
 
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')

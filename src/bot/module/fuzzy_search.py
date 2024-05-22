@@ -14,7 +14,7 @@ class FuzzyAlternativeNames:
         self._logger = logger
         self.engine = engine
 
-        self.tables_with_alternative_names = [
+        self.tables_with_alternative_names_and_pk_colum = [
             (models.IndustryAlternative, models.IndustryAlternative.industry_id),
             (models.CommodityAlternative, models.CommodityAlternative.commodity_id),
             (models.ClientAlternative, models.ClientAlternative.client_id),
@@ -23,7 +23,7 @@ class FuzzyAlternativeNames:
     @staticmethod
     async def get_subjects_names(
             subjects: list[tuple[models.Base, InstrumentedAttribute]],
-            with_id=False
+            with_id: bool = False,
     ) -> list[tuple[int, str] | str]:
         """
         Получение всех альтернативных имен из таблиц
@@ -59,8 +59,8 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список имен, похожих на наименование субъекта
         """
-        subject_types = self.tables_with_alternative_names \
-            if subject_types is None else [x for x in self.tables_with_alternative_names if x[0] in subject_types]
+        subject_types = self.tables_with_alternative_names_and_pk_colum \
+            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
 
         subject_name = subject_name.lower().strip().replace('"', '')
         subjects_names = await self.get_subjects_names(subject_types)
@@ -87,9 +87,9 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список ближайших похожих имен субъектов
         """
-        subject_types = self.tables_with_alternative_names \
-            if subject_types is None else [x for x in self.tables_with_alternative_names if x[0] in subject_types]
-        subject_types = [x for x in subject_types if x in self.tables_with_alternative_names]
+        subject_types = self.tables_with_alternative_names_and_pk_colum \
+            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
+        subject_types = [x for x in subject_types if x in self.tables_with_alternative_names_and_pk_colum]
         db_subjects_names = await self.get_subjects_names(subject_types)
 
         if not subjects_names:
@@ -107,15 +107,15 @@ class FuzzyAlternativeNames:
             self,
             name: str,
             score: int = 80,
-    ) -> list[tuple[str, int]]:
+    ) -> list[int]:
         """
         Поиск ближайших похожих имен из таблицы ClientAlternative по имени
 
         :param name: Имя клиента
         :param score: Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
-        :return: Список наиболее подходящих имен клиентов с рейтингом
+        :return: Список наиболее подходящих айдишников клиентов
         """
-        models_to_search = [x for x in self.tables_with_alternative_names if x[0] in [models.ClientAlternative]]
+        models_to_search = [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in [models.ClientAlternative]]
         if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
             return []
 

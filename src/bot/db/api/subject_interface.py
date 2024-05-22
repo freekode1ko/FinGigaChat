@@ -49,7 +49,7 @@ class SubjectInterface:
 
     async def get_by_ids(self, ids: list[int]) -> pd.DataFrame:
         """
-        Выгрузка subject которые есть в списке ids
+        Выгрузка subject, которые есть в списке ids
 
         :param ids: список айдишников
         :return: DataFrame[все столбцы таблицы self.table] с subject из списка ids
