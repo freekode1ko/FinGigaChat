@@ -1,7 +1,7 @@
 """Работа с историей диалога между пользователем и ИИ."""
 import re
 
-from configs.config import NEW_QUERY_BY_DIALOG_PROMPT
+from configs.prompts import NEW_QUERY_BY_DIALOG_PROMPT
 from db.api.user_dialog_history import user_dialog_history_db
 from log.bot_logger import logger
 import module.gigachat as gig

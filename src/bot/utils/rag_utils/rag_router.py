@@ -5,7 +5,7 @@ import urllib.parse
 
 import requests
 
-from configs import config
+from configs import config, prompts
 from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_RAG_FOOTER
 from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
@@ -42,7 +42,7 @@ class RAGRouter:
         rag_class = RetrieverType.other  # по умолчанию
         rag_class_int = -1  # по умолчанию
 
-        content = config.classification_prompt.format(question=self.query)
+        content = prompts.CLASSIFICATION_PROMPT.format(question=self.query)
         response = giga.get_giga_answer(content)
 
         try:
