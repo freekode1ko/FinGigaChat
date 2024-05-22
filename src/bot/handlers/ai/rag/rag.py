@@ -90,7 +90,7 @@ async def _get_response(
         user_query: str,
         use_rephrase: bool,
         rephrase_query: str = ''
-) -> tuple[RetrieverType, str]:
+) -> tuple[RetrieverType, str, str]:
     """
     Получение ответа от Базы Знаний или GigaChat.
 
@@ -99,17 +99,18 @@ async def _get_response(
     :param user_query:           Запрос пользователя.
     :param rephrase_query:       Перефразированный с помощью GigaChat запрос пользователя.
     :param use_rephrase:         Нужно ли использовать перефразированный запрос пользователя для получения ответа.
-    :return:                     Тип ретривера или GigaChat, который ответил на запрос, и ответ на запрос.
+    :return:                     Тип ретривера или GigaChat, который ответил на запрос, и ответы на запрос
+                                 (чистый (без футера) и отформатированный (с футером)).
     """
     rag_obj = RAGRouter(chat_id, full_name, user_query, rephrase_query, use_rephrase)
-    response = rag_obj.get_response_from_rag()
-    return rag_obj.retriever_type, response
+    clear_response, format_response = rag_obj.get_response()
+    return rag_obj.retriever_type, clear_response, format_response
 
 
 async def _add_data_to_db(
         msg: types.Message,
         user_query: str,
-        response: str,
+        clear_response: str,
         retriever_type: RetrieverType,
         rephrase_query: str = ''
 ) -> None:
@@ -118,7 +119,7 @@ async def _add_data_to_db(
 
     :param msg:             Message от пользователя.
     :param user_query:      Запрос пользователя.
-    :param response:        Ответ на запрос пользователя.
+    :param clear_response:  Неотформатированный ответ на запрос пользователя.
     :param retriever_type:  Тип ретривера (или GigaChat).
     :param rephrase_query:  Перефразированный на основе истории диалога вопрос пользователя.
     """
@@ -129,14 +130,14 @@ async def _add_data_to_db(
         date=msg.date,
         query=user_query,
         rephrase_query=rephrase_query,
-        response=response,
+        response=clear_response,
         retriever_type=retriever_type
     )
 
     # обновление истории диалога пользователя и ИИ
     await user_dialog_history_db.add_msgs_to_user_dialog(
         user_id=msg.chat.id,
-        messages={'user': user_query, 'ai': response},
+        messages={'user': user_query, 'ai': clear_response},
         need_replace=rephrase_query == ''
     )
 
@@ -154,7 +155,8 @@ async def ask_qa_system_with_history(message: types.Message, first_user_query: s
     user_query = first_user_query if first_user_query else user_msg
     rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
 
-    retriever_type, response = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
+    result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
+    retriever_type, clear_response, response = result
 
     msg = await message.answer(
         text=response,
@@ -163,7 +165,7 @@ async def ask_qa_system_with_history(message: types.Message, first_user_query: s
         reply_markup=get_feedback_regenerate_kb()
     )
 
-    await _add_data_to_db(msg, user_query, response, retriever_type, rephrase_query)
+    await _add_data_to_db(msg, user_query, clear_response, retriever_type, rephrase_query)
 
 
 @router.callback_query(RegenerateResponse.filter())
@@ -176,7 +178,7 @@ async def ask_qa_system_simple(call: types.CallbackQuery) -> None:
     user_query = await user_dialog_history_db.get_last_user_query(chat_id)
     await call.message.bot.send_chat_action(chat_id, 'typing')
 
-    retriever_type, response = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
+    retriever_type, clear_response, response = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
 
     msg = await call.message.edit_text(
         text=response,
@@ -185,7 +187,7 @@ async def ask_qa_system_simple(call: types.CallbackQuery) -> None:
         reply_markup=get_feedback_kb()
     )
 
-    await _add_data_to_db(msg, user_query, response, retriever_type)
+    await _add_data_to_db(msg, user_query, clear_response, retriever_type)
 
 
 @router.callback_query(F.data.endswith('like'))

@@ -6,7 +6,7 @@ import urllib.parse
 import requests
 
 from configs import config, prompts
-from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_RAG_FOOTER
+from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_RAG_FOOTER, GIGA_FOOTER
 from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
@@ -61,15 +61,15 @@ class RAGRouter:
 
         return rag_class
 
-    def get_response_from_rag(self) -> str:
+    def get_response(self) -> tuple[str, str]:
         """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
             return self.rag_state_support()
         elif self.retriever_type == RetrieverType.qa_banker:
             return self.rag_qa_banker()
-        return giga.get_giga_answer(self.query)
+        return self._request_to_giga()
 
-    def rag_qa_banker(self) -> str:
+    def rag_qa_banker(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
         query = urllib.parse.quote(self.query)
         query_part = f'queries?query={query}'
@@ -77,9 +77,9 @@ class RAGRouter:
             url=config.BASE_QABANKER_URL.format(query_part),
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-        return self._request_to_api(**req_kwargs)
+        return self._request_to_rag_api(**req_kwargs)
 
-    def rag_state_support(self) -> str:
+    def rag_state_support(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по господдержке и получение ответа."""
         req_kwargs = dict(
             url=config.QUERY_STATE_SUPPORT_URL,
@@ -87,22 +87,25 @@ class RAGRouter:
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
 
-        return self._request_to_api(self.POST_METHOD, **req_kwargs)
+        return self._request_to_rag_api(self.POST_METHOD, **req_kwargs)
 
-    def _request_to_api(self, request_method: str = GET_METHOD, **kwargs) -> str:
+    def _request_to_rag_api(self, request_method: str = GET_METHOD, **kwargs) -> tuple[str, str]:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
         :param  request_method:     HTTP метод.
         :param kwargs:              Параметры http запроса.
-        return:                     Отформатированный ответ.
+        :return:                    Оригинальный ответ RAG и отформатированный ответ.
         """
+        rag_answer = DEFAULT_RAG_ANSWER
+        format_rag_answer = ERROR_RAG_ANSWER
+
         try:
             rag_response = requests.request(method=request_method, **kwargs)
             rag_response.raise_for_status()
             rag_answer = rag_response.text if request_method == self.GET_METHOD else rag_response.json()['body']
 
-            response = f'{rag_answer}\n\n{GIGA_RAG_FOOTER}' if rag_answer != DEFAULT_RAG_ANSWER else rag_answer
+            format_rag_answer = f'{rag_answer}\n\n{GIGA_RAG_FOOTER}' if rag_answer != DEFAULT_RAG_ANSWER else rag_answer
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
                              (self.chat_id, self.full_name, self.query, rag_answer))
 
@@ -110,6 +113,24 @@ class RAGRouter:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
                                  (self.chat_id, self.full_name, self.query, e))
-            response = ERROR_RAG_ANSWER
 
-        return response
+        return rag_answer, format_rag_answer
+
+    def _request_to_giga(self) -> tuple[str, str]:
+        """
+        Получение и форматирование ответа от GigaChat.
+
+        :return:   Оригинальный ответ GigaChat и отформатированный ответ.
+        """
+        giga_answer = format_giga_answer = 'Извините, я пока не могу ответить на ваш запрос'
+        try:
+            giga_answer = giga.get_giga_answer(text=self.query)
+            format_giga_answer = f'{giga_answer}\n\n{GIGA_FOOTER}'
+            user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
+                             f'На запрос GigaChat ответил: "{giga_answer}"')
+        except Exception as e:
+            logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
+            user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
+                                 f'GigaChat не сформировал ответ по причине: {e}"')
+
+        return giga_answer, format_giga_answer
