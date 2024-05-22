@@ -8,18 +8,21 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.utils.media_group import MediaGroupBuilder
 
-from configs import config
 import module.data_transformer as dt
+from configs import config
 from constants import constants
+from db import parser_source, message
+from db.api.research import research_db
+from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
+from db.api.user_research_subscription import user_research_subscription_db
+from db.database import engine
 from db.whitelist import get_users_subscriptions
 from log.bot_logger import logger, user_logger
-from db.database import engine
 from module import formatter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
-from db import parser_source, message, subscriptions
 
 
 async def tg_newsletter(
@@ -45,7 +48,9 @@ async def tg_newsletter(
             f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
 
         for section in sections:
-            tg_news = await telegram_section_db.get_section_tg_news(section.id, True, user_id, newsletter_timedelta, next_newsletter_datetime)
+            tg_news = await telegram_section_db.get_section_tg_news(
+                section.id, True, user_id, newsletter_timedelta, next_newsletter_datetime
+            )
             if tg_news.empty:
                 continue
 
@@ -211,11 +216,12 @@ async def weekly_pulse_newsletter(
 async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, research_df: pd.DataFrame) -> list[types.Message]:
     """
     Отправка отчетов пользователю с форматированием
+
     :param bot: объект тг бота
     :param user_id: телеграм id пользователя, которому отправляются отчеты
     :param user_name: имя пользователя для логирования
     :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
-    return: Список объектов отправленных сообщений
+    :returns: Список объектов отправленных сообщений
     """
     sent_msg_list = []
 
@@ -252,19 +258,24 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
 
 
 async def send_new_researches_to_users(bot: Bot) -> None:
+    """
+    Рассылка новых отчетов с CIB пользователям по их подпискам
+
+    :param bot: объект тг бота
+    """
     now = datetime.datetime.now()
     newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
     logger.info(f'Начинается рассылка новостей в {newsletter_dt_str} по CIB Research')
     start_tm = time.time()
 
     # получаем список отчетов, которые надо разослать
-    research_df = subscriptions.get_new_researches()
+    research_df = await research_db.get_new_researches()
     research_type_ids = research_df['research_type_id'].drop_duplicates().values.tolist()
 
     # Получаем список пользователей, которым требуется разослать отчеты
-    user_df = subscriptions.get_users_by_research_types_df(research_type_ids)
+    user_df = await user_research_subscription_db.get_users_by_research_types_df(research_type_ids)
     # Словарь key=research_type.id, value=research_section
-    research_section_dict = subscriptions.get_research_sections_by_research_types_df(research_type_ids)
+    research_section_dict = await research_section_db.get_research_sections_by_research_types_df(research_type_ids)
 
     # Сохранение отправленных сообщений
     saved_messages = []

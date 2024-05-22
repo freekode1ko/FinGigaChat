@@ -125,4 +125,3 @@ class SubscriptionInterface:
                 items[[self.subject_id_field, 'user_id']].to_dict('records')
             )
             await session.commit()
-

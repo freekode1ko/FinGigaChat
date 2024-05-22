@@ -5,7 +5,10 @@ from aiogram.filters import Command
 
 from constants.subscriptions import research as callback_prefixes
 from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
-from db import subscriptions as subscriptions_db_api
+from db.api.research_group import research_group_db
+from db.api.research_section import research_section_db
+from db.api.research_type import research_type_db
+from db.api.user_research_subscription import user_research_subscription_db
 from handlers.subscriptions.handler import router
 from keyboards.subscriptions.research import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
@@ -33,10 +36,10 @@ async def get_my_research_subscriptions(
     del_sub_id = callback_data.del_sub_id
 
     if del_sub_id:
-        subscriptions_db_api.delete_user_research_subscription(user_id, del_sub_id)
+        await user_research_subscription_db.add_subscription(user_id, del_sub_id)
 
-    user_tg_subs_df = subscriptions_db_api.get_user_research_subscriptions_df(user_id)
-    page_data, page_info, max_pages = get_page_data_and_info(user_tg_subs_df, page)
+    user_subs = await user_research_subscription_db.get_subscription_df(user_id=user_id)
+    page_data, page_info, max_pages = get_page_data_and_info(user_subs, page)
     msg_text = (
         f'Ваш список подписок\n<b>{page_info}</b>\n'
         f'Для получения более детальной информации об отчете - нажмите на него\n\n'
@@ -56,11 +59,11 @@ async def show_cib_research_type_more_info(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    research_info = subscriptions_db_api.get_research_type_info(research_id)
+    research_info = await research_type_db.get(research_id)
 
     msg_text = (
-        f'Название отчета: <b>{research_info["name"]}</b>\n'
-        f'Описание: {research_info["description"]}\n'
+        f'Название отчета: <b>{research_info.name}</b>\n'
+        f'Описание: {research_info.description}\n'
     )
     keyboard = keyboards.get_research_type_info_kb(research_id, is_subscribed, back)
 
@@ -86,10 +89,12 @@ async def update_sub_on_research(
 
     if need_add:
         # add sub
-        subscriptions_db_api.add_user_research_subscription(user_id, research_id)
+        await user_research_subscription_db.add_subscription(user_id, research_id)
+        # add sub on client or industry, if their name is equal to research_type.name
+        research_info = await research_type_db.get(research_id)
     else:
         # delete sub
-        subscriptions_db_api.delete_user_research_subscription(user_id, research_id)
+        await user_research_subscription_db.add_subscription(user_id, research_id)
 
     await show_cib_research_type_more_info(
         callback_query,
@@ -147,15 +152,15 @@ async def get_cib_section_research_types_menu(
     if research_id:
         if need_add:
             # add sub
-            subscriptions_db_api.add_user_research_subscription(user_id, research_id)
+            await user_research_subscription_db.add_subscription(user_id, research_id)
         else:
             # delete sub on research CIB
-            subscriptions_db_api.delete_user_research_subscription(user_id, research_id)
+            await user_research_subscription_db.delete_subscription(user_id, research_id)
 
-    section_info = subscriptions_db_api.get_cib_section_info(section_id)
-    research_type_df = subscriptions_db_api.get_cib_research_types_by_section_df(section_id, user_id)
+    section_info = await research_section_db.get(section_id)
+    research_type_df = await user_research_subscription_db.get_subject_df_by_section_id(user_id, section_id)
     msg_text = (
-        f'Подборка отчетов по разделу "{section_info["name"]}"\n\n'
+        f'Подборка отчетов по разделу "{section_info.name}"\n\n'
         f'Для добавления/удаления подписки на отчет нажмите на {UNSELECTED}/{SELECTED} соответственно'
     )
 
@@ -166,8 +171,8 @@ async def get_cib_section_research_types_menu(
 
 async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, group_id: int, user_id: int) -> None:
     """Формирует сообщение с подборкой отчетов по разделу"""
-    group_info = subscriptions_db_api.get_cib_group_info(group_id)
-    section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
+    group_info = await research_group_db.get(group_id)
+    section_df = await research_section_db.get_cib_sections_by_group_df(group_id, user_id)
     msg_text = f'Выберите разделы, на которые вы хотите подписаться.\n\n'
 
     if not section_df[~section_df['dropdown_flag']].empty:
@@ -202,10 +207,10 @@ async def get_cib_group_sections_menu(
     if section_id:
         if need_add:
             # add sub
-            subscriptions_db_api.add_user_cib_section_subscription(user_id, section_id)
+            await user_research_subscription_db.add_subscriptions_by_section_id(user_id, section_id)
         else:
             # delete sub
-            subscriptions_db_api.delete_user_cib_section_subscription(user_id, section_id)
+            await user_research_subscription_db.delete_all_by_section_id(user_id, section_id)
 
     await make_cib_group_sections_menu(callback_query, group_id, user_id)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -223,7 +228,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    group_df = subscriptions_db_api.get_research_groups_df()  # id, name
+    group_df = await research_group_db.get_all()
     msg_text = 'Изменить подписки'
     keyboard = keyboards.get_research_groups_menu_kb(group_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
@@ -244,7 +249,7 @@ async def delete_all_research_subs(callback_query: types.CallbackQuery) -> None:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     user_id = callback_query.from_user.id
-    subscriptions_db_api.delete_all_user_research_subscriptions(user_id)
+    await user_research_subscription_db.delete_all(user_id)
 
     msg_text = 'Ваши подписки были удалены'
     keyboard = keyboards.get_back_to_research_subs_main_menu_kb()
@@ -265,7 +270,7 @@ async def approve_delete_all_research_subs(callback_query: types.CallbackQuery) 
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = callback_query.from_user.id
 
-    user_subs = subscriptions_db_api.get_user_research_subscriptions_df(user_id=user_id)
+    user_subs = await user_research_subscription_db.get_subscription_df(user_id=user_id)
 
     if user_subs.empty:
         msg_text = 'У вас отсутствуют подписки'
