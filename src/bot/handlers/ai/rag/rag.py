@@ -8,7 +8,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from constants.constants import DISLIKE_FEEDBACK, LIKE_FEEDBACK
 from constants.enums import RetrieverType
 from db.api.user_dialog_history import user_dialog_history_db
-from db.rag_user_feedback import add_rag_activity, update_user_reaction
+from db.rag_user_feedback import add_rag_activity, update_rephrase_query, update_user_reaction
 from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_regenerate_kb, get_feedback_kb
@@ -114,7 +114,9 @@ async def _add_data_to_db(
         user_query: str,
         clear_response: str,
         retriever_type: RetrieverType,
-        rephrase_query: str = ''
+        history_rephrase_query: str = '',
+        rephrase_query: str = '',
+
 ) -> None:
     """
     Добавление данных, связанных с RAG-сервисами, в БД.
@@ -128,15 +130,23 @@ async def _add_data_to_db(
     clear_response = clear_text_from_url(clear_response)
 
     # сохранение пользовательской активности с ИИ
-    await add_rag_activity(
-        chat_id=msg.chat.id,
-        bot_msg_id=msg.message_id,
-        date=msg.date,
-        query=user_query,
-        rephrase_query=rephrase_query,
-        response=clear_response,
-        retriever_type=retriever_type
-    )
+    if history_rephrase_query:
+        await add_rag_activity(
+            chat_id=msg.chat.id,
+            bot_msg_id=msg.message_id,
+            date=msg.date,
+            query=user_query,
+            history_rephrase_query=history_rephrase_query,
+            response=clear_response,
+            retriever_type=retriever_type
+        )
+    else:
+        await update_rephrase_query(
+            chat_id=msg.chat.id,
+            bot_msg_id=msg.message_id,
+            response=clear_response,
+            rephrase_query=rephrase_query
+        )
 
     # обновление истории диалога пользователя и ИИ
     await user_dialog_history_db.add_msgs_to_user_dialog(
@@ -169,7 +179,7 @@ async def ask_with_dialog(message: types.Message, first_user_query: str = '') ->
             reply_markup=get_feedback_regenerate_kb(rephrase_query=True)
         )
 
-        await _add_data_to_db(msg, user_query, clear_response, retriever_type, rephrase_query)
+        await _add_data_to_db(msg, user_query, clear_response, retriever_type, history_rephrase_query=rephrase_query)
 
 
 @router.callback_query(RegenerateResponse.filter())
@@ -186,6 +196,7 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
             result = await _get_response(chat_id, full_name, rephrase_query, use_rephrase=False)
             kb = get_feedback_regenerate_kb(initially_query=True)
         else:
+            rephrase_query = ''
             result = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
             kb = get_feedback_kb()
 
@@ -198,7 +209,7 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
             reply_markup=kb
         )
 
-        await _add_data_to_db(msg, user_query, clear_response, retriever_type)
+        await _add_data_to_db(msg, user_query, clear_response, retriever_type, rephrase_query=rephrase_query)
 
 
 @router.callback_query(F.data.endswith('like'))
