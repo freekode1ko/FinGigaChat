@@ -1,5 +1,5 @@
 """Описание класса GigaChat."""
-import aiohttp
+from aiohttp import ClientSession, TCPConnector
 import json
 from logging import Logger
 from typing import ClassVar
@@ -125,7 +125,7 @@ class GigaChat:
     async def aget_user_token() -> str:
         """Асинхронное получение токена доступа к модели GigaChat."""
         headers, data = GigaChat._get_headers_and_data_for_token()
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+        async with ClientSession(connector=TCPConnector(ssl=False)) as session:
             async with session.post(GigaChat.OAUTH_URL, headers=headers, data=data) as response:
                 response = await response.json()
                 token = response['access_token']
@@ -141,7 +141,7 @@ class GigaChat:
         :return:              Ответ модели.
         """
         headers, data = GigaChat._get_headers_and_data_for_chat(self.token, text, prompt, temperature)
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False), trust_env=True) as session:
+        async with ClientSession(connector=TCPConnector(ssl=False), trust_env=True) as session:
             async with session.post(GigaChat.CHAT_URL, headers=headers, data=data) as response:
                 response = await response.json()
                 return response['choices'][0]['message']['content']

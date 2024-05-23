@@ -1,4 +1,5 @@
 """Описание класса RAGRouter."""
+from aiohttp import ClientSession, TCPConnector
 import json
 import re
 import urllib.parse
@@ -35,15 +36,15 @@ class RAGRouter:
         self.user_query = user_query
         self.rephrase_query = rephrase_query
         self.query = self.rephrase_query if use_rephrase else self.user_query
-        self.retriever_type = self.get_rag_type()
+        self.retriever_type = None
 
-    def get_rag_type(self) -> RetrieverType:
+    async def get_rag_type(self) -> None:
         """По пользовательскому запросу определяет класс рага, который нужно вызвать."""
         rag_class = RetrieverType.other  # по умолчанию
         rag_class_int = -1  # по умолчанию
 
         content = prompts.CLASSIFICATION_PROMPT.format(question=self.query)
-        response = giga.get_giga_answer(content)
+        response = await giga.aget_giga_answer(content)
 
         try:
             response_json = json.loads(response)
@@ -59,17 +60,17 @@ class RAGRouter:
         elif rag_class_int == RetrieverType.qa_banker.value:
             rag_class = RetrieverType.qa_banker
 
-        return rag_class
+        self.retriever_type = rag_class
 
-    def get_response(self) -> tuple[str, str]:
+    async def get_response(self) -> tuple[str, str]:
         """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
-            return self.rag_state_support()
+            return await self.rag_state_support()
         elif self.retriever_type == RetrieverType.qa_banker:
-            return self.rag_qa_banker()
-        return self._request_to_giga()
+            return await self.rag_qa_banker()
+        return await self._request_to_giga()
 
-    def rag_qa_banker(self) -> tuple[str, str]:
+    async def rag_qa_banker(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
         query = urllib.parse.quote(self.query)
         query_part = f'queries?query={query}'
@@ -77,9 +78,9 @@ class RAGRouter:
             url=config.BASE_QABANKER_URL.format(query_part),
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-        return self._request_to_rag_api(**req_kwargs)
+        return await self._request_to_rag_api(**req_kwargs)
 
-    def rag_state_support(self) -> tuple[str, str]:
+    async def rag_state_support(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по господдержке и получение ответа."""
         req_kwargs = dict(
             url=config.QUERY_STATE_SUPPORT_URL,
@@ -87,9 +88,9 @@ class RAGRouter:
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
 
-        return self._request_to_rag_api(self.POST_METHOD, **req_kwargs)
+        return await self._request_to_rag_api(self.POST_METHOD, **req_kwargs)
 
-    def _request_to_rag_api(self, request_method: str = GET_METHOD, **kwargs) -> tuple[str, str]:
+    async def _request_to_rag_api(self, request_method: str = GET_METHOD, **kwargs) -> tuple[str, str]:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
@@ -101,9 +102,13 @@ class RAGRouter:
         format_rag_answer = ERROR_RAG_ANSWER
 
         try:
-            rag_response = requests.request(method=request_method, **kwargs)
-            rag_response.raise_for_status()
-            rag_answer = rag_response.text if request_method == self.GET_METHOD else rag_response.json()['body']
+            async with ClientSession(connector=TCPConnector(ssl=False), raise_for_status=True) as session:
+                async with session.request(method=request_method, **kwargs) as rag_response:
+                    if request_method == self.GET_METHOD:
+                        rag_answer = await rag_response.text()
+                    else:
+                        rag_answer = await rag_response.json()
+                        rag_answer = rag_answer['body']
 
             format_rag_answer = f'{rag_answer}\n\n{GIGA_RAG_FOOTER}' if rag_answer != DEFAULT_RAG_ANSWER else rag_answer
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
@@ -116,7 +121,7 @@ class RAGRouter:
 
         return rag_answer, format_rag_answer
 
-    def _request_to_giga(self) -> tuple[str, str]:
+    async def _request_to_giga(self) -> tuple[str, str]:
         """
         Получение и форматирование ответа от GigaChat.
 
@@ -124,7 +129,7 @@ class RAGRouter:
         """
         giga_answer = format_giga_answer = 'Извините, я пока не могу ответить на ваш запрос'
         try:
-            giga_answer = giga.get_giga_answer(text=self.query)
+            giga_answer = await giga.aget_giga_answer(text=self.query)
             format_giga_answer = f'{giga_answer}\n\n{GIGA_FOOTER}'
             user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
                              f'На запрос GigaChat ответил: "{giga_answer}"')
