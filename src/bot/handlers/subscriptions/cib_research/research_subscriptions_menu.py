@@ -1,3 +1,10 @@
+"""
+Обработчик действий пользователя для меню подписок на отчеты CIB Resarch.
+Главное меню.
+Просмотр своих подписок.
+Изменение подписок.
+Удаление подписок.
+"""
 from typing import Union
 
 from aiogram import F, types
@@ -5,9 +12,12 @@ from aiogram.filters import Command
 
 from constants.subscriptions import research as callback_prefixes
 from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
+from db import models
 from db.api.research_group import research_group_db
 from db.api.research_section import research_section_db
 from db.api.research_type import research_type_db
+from db.api.user_client_subscription import user_client_subscription_db
+from db.api.user_industry_subscription import user_industry_subscription_db
 from db.api.user_research_subscription import user_research_subscription_db
 from handlers.subscriptions.handler import router
 from keyboards.subscriptions.research import callbacks, constructors as keyboards
@@ -36,7 +46,7 @@ async def get_my_research_subscriptions(
     del_sub_id = callback_data.del_sub_id
 
     if del_sub_id:
-        await user_research_subscription_db.add_subscription(user_id, del_sub_id)
+        await user_research_subscription_db.delete_subscription(user_id, del_sub_id)
 
     user_subs = await user_research_subscription_db.get_subscription_df(user_id=user_id)
     page_data, page_info, max_pages = get_page_data_and_info(user_subs, page)
@@ -71,6 +81,17 @@ async def show_cib_research_type_more_info(
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+async def subscribe_on_news_source_with_same_name(user_id: int, research_id: int) -> None:
+    """
+    Подписка на клиента или отрасль, если имя отчета совпадает с именем клиента/отрасли
+
+    :param user_id: телеграм id пользователя
+    :param research_id: id отчета cib research, на который подписывается пользователь
+    """
+    await user_client_subscription_db.subscribe_on_news_source_with_same_name(user_id, models.ResearchType, research_id)
+    await user_industry_subscription_db.subscribe_on_news_source_with_same_name(user_id, models.ResearchType, research_id)
+
+
 @router.callback_query(callbacks.CIBResearchSubAction.filter())
 async def update_sub_on_research(
         callback_query: types.CallbackQuery,
@@ -90,11 +111,10 @@ async def update_sub_on_research(
     if need_add:
         # add sub
         await user_research_subscription_db.add_subscription(user_id, research_id)
-        # add sub on client or industry, if their name is equal to research_type.name
-        research_info = await research_type_db.get(research_id)
+        await subscribe_on_news_source_with_same_name(user_id, research_id)
     else:
         # delete sub
-        await user_research_subscription_db.add_subscription(user_id, research_id)
+        await user_research_subscription_db.delete_subscription(user_id, research_id)
 
     await show_cib_research_type_more_info(
         callback_query,
@@ -153,6 +173,7 @@ async def get_cib_section_research_types_menu(
         if need_add:
             # add sub
             await user_research_subscription_db.add_subscription(user_id, research_id)
+            await subscribe_on_news_source_with_same_name(user_id, research_id)
         else:
             # delete sub on research CIB
             await user_research_subscription_db.delete_subscription(user_id, research_id)

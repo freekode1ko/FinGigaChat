@@ -11,6 +11,11 @@ from db.api.subscriptions_interface import SubscriptionInterface
 
 
 class ResearchSubscriptionInterface(SubscriptionInterface):
+    """
+    Интерфейс взаимодействия с подписками на отчеты CIB Research.
+    Позволяет выполнять стандартные операции для работы с подписками,
+    а также позволяет подписываться на все отчеты в разделе
+    """
 
     def __init__(self) -> None:
         """

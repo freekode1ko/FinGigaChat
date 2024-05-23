@@ -1,3 +1,7 @@
+"""
+Реализует интерфейс для работы с группой подписок на субъекты.
+Позволяет просматирваться подписки, изменять подписки, удалять подписки.
+"""
 import copy
 from typing import Type, Protocol
 
@@ -15,6 +19,7 @@ from db import models
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
+from db.api.user_research_subscription import user_research_subscription_db
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
 from log.bot_logger import logger, user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
@@ -154,6 +159,9 @@ class NewsHandler:
 
             if not elements_to_add.empty:
                 await self.subscription_db.add_subscriptions(user_id, elements_to_add)
+                await user_research_subscription_db.subscribe_on_news_source_with_same_name(
+                    user_id, self.subscription_db.subject_table, elements_to_add['id'].tolist()
+                )
                 new_subs = ', '.join(elements_to_add['name'])
 
                 msg_text = (
@@ -187,6 +195,9 @@ class NewsHandler:
             if subject_id:
                 if need_add:
                     await self.subscription_db.add_subscription(user_id, subject_id)
+                    await user_research_subscription_db.subscribe_on_news_source_with_same_name(
+                        user_id, self.subscription_db.subject_table, subject_id
+                    )
                 else:
                     await self.subscription_db.delete_subscription(user_id, subject_id)
 
@@ -320,6 +331,9 @@ class NewsHandler:
             # Если есть новые подписки, которые можем добавить
             if not new_subs.empty:
                 await self.subscription_db.add_subscriptions(user_id, new_subs)
+                await user_research_subscription_db.subscribe_on_news_source_with_same_name(
+                    user_id, self.subscription_db.subject_table, new_subs['id'].tolist()
+                )
 
                 new_subs_str = ', '.join(new_subs['name']).title()
                 user_logger.info(f'*{user_id}* Пользователь подписался на : {new_subs_str}')
