@@ -116,7 +116,7 @@ async def _add_data_to_db(
         retriever_type: RetrieverType,
         history_rephrase_query: str = '',
         rephrase_query: str = '',
-
+        need_replace: bool = False
 ) -> None:
     """
     Добавление данных, связанных с RAG-сервисами, в БД.
@@ -126,6 +126,7 @@ async def _add_data_to_db(
     :param clear_response:  Неотформатированный ответ на запрос пользователя.
     :param retriever_type:  Тип ретривера (или GigaChat).
     :param rephrase_query:  Перефразированный на основе истории диалога вопрос пользователя.
+    :param need_replace:    Нужно ли изменять последние сообщения в диалоге.
     """
     clear_response = clear_text_from_url(clear_response)
 
@@ -152,7 +153,7 @@ async def _add_data_to_db(
     await user_dialog_history_db.add_msgs_to_user_dialog(
         user_id=msg.chat.id,
         messages={'user': user_query, 'ai': clear_response},
-        need_replace=rephrase_query == ''
+        need_replace=need_replace
     )
 
 
@@ -168,7 +169,6 @@ async def ask_with_dialog(message: types.Message, first_user_query: str = '') ->
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
         user_query = first_user_query if first_user_query else user_msg
         rephrase_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
-
         result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
         retriever_type, clear_response, response = result
 
@@ -209,7 +209,14 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
             reply_markup=kb
         )
 
-        await _add_data_to_db(msg, user_query, clear_response, retriever_type, rephrase_query=rephrase_query)
+        await _add_data_to_db(
+            msg,
+            user_query,
+            clear_response,
+            retriever_type,
+            rephrase_query=rephrase_query,
+            need_replace=True
+        )
 
 
 @router.callback_query(F.data.endswith('like'))
