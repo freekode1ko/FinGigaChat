@@ -22,9 +22,8 @@ async def _make_rephrase_query_by_history(query: str, dialog: list[dict[str, str
     if not dialog:
         return query
     history = '\n'.join([
-        f'Пользователь: {mini_dialog["user"]}\n ИИ: {mini_dialog["ai"]}'
-        for mini_dialog in dialog[:-COUNT_OF_USEFUL_LAST_MSGS:-1]
-        # for mini_dialog in dialog[-COUNT_OF_USEFUL_LAST_MSGS:] #TODO
+        f'Пользователь: {mini_dialog["user"]}\nИИ: {mini_dialog["ai"]}'
+        for mini_dialog in dialog[-COUNT_OF_USEFUL_LAST_MSGS:]
     ])
     text = NEW_QUERY_BY_DIALOG_PROMPT.format(query=query, history=history)
     giga_answer = await chat.aget_giga_answer(text=text, prompt=AUGMENT_SYSTEM_PROMPT)

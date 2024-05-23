@@ -497,4 +497,4 @@ def clear_text_from_url(text: str) -> str:
     :param text:    Текст.
     :return:        Текст без ссылок.
     """
-    return re.sub(r'<a href="[^"]*">[^<]*</a>', '', text)
+    return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
