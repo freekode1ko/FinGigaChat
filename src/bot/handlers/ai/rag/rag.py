@@ -3,6 +3,7 @@ from aiogram import F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.chat_action import ChatActionSender
 
 from constants.constants import DISLIKE_FEEDBACK, LIKE_FEEDBACK
 from constants.enums import RetrieverType
@@ -12,8 +13,8 @@ from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_regenerate_kb, get_feedback_kb
 from log.bot_logger import user_logger
-from utils.base import user_in_whitelist
-from utils.rag_utils.rag_dialog import get_rephrase_query
+from utils.base import clear_text_from_url, user_in_whitelist
+from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 from utils.rag_utils.rag_router import RAGRouter
 
 
@@ -70,7 +71,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_qa_system_with_history(message, first_user_query)
+            await ask_with_dialog(message, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -81,7 +82,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
 @router.message(RagState.rag_mode)
 async def handler_rag_mode(message: types.Message) -> None:
     """Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя."""
-    await ask_qa_system_with_history(message)
+    await ask_with_dialog(message)
 
 
 async def _get_response(
@@ -103,7 +104,8 @@ async def _get_response(
                                  (чистый (без футера) и отформатированный (с футером)).
     """
     rag_obj = RAGRouter(chat_id, full_name, user_query, rephrase_query, use_rephrase)
-    clear_response, format_response = rag_obj.get_response()
+    await rag_obj.get_rag_type()
+    clear_response, format_response = await rag_obj.get_response()
     return rag_obj.retriever_type, clear_response, format_response
 
 
@@ -123,6 +125,8 @@ async def _add_data_to_db(
     :param retriever_type:  Тип ретривера (или GigaChat).
     :param rephrase_query:  Перефразированный на основе истории диалога вопрос пользователя.
     """
+    clear_response = clear_text_from_url(clear_response)
+
     # сохранение пользовательской активности с ИИ
     await add_rag_activity(
         chat_id=msg.chat.id,
@@ -142,52 +146,59 @@ async def _add_data_to_db(
     )
 
 
-async def ask_qa_system_with_history(message: types.Message, first_user_query: str = '') -> None:
+async def ask_with_dialog(message: types.Message, first_user_query: str = '') -> None:
     """
-    Отправляет ответ на запрос пользователя.
+    Отправляет ответ на запрос пользователя, используя историю диалога.
 
     :param message:            Message от пользователя.
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    await message.bot.send_chat_action(chat_id, 'typing')
 
-    user_query = first_user_query if first_user_query else user_msg
-    rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
+    async with ChatActionSender(bot=message.bot, chat_id=chat_id):
+        user_query = first_user_query if first_user_query else user_msg
+        rephrase_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
 
-    result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
-    retriever_type, clear_response, response = result
+        result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
+        retriever_type, clear_response, response = result
 
-    msg = await message.answer(
-        text=response,
-        parse_mode='HTML',
-        disable_web_page_preview=True,
-        reply_markup=get_feedback_regenerate_kb()
-    )
+        msg = await message.answer(
+            text=response,
+            parse_mode='HTML',
+            disable_web_page_preview=True,
+            reply_markup=get_feedback_regenerate_kb(rephrase_query=True)
+        )
 
-    await _add_data_to_db(msg, user_query, clear_response, retriever_type, rephrase_query)
+        await _add_data_to_db(msg, user_query, clear_response, retriever_type, rephrase_query)
 
 
 @router.callback_query(RegenerateResponse.filter())
-async def ask_qa_system_simple(call: types.CallbackQuery) -> None:
-    """
+async def ask_without_dialog(call: types.CallbackQuery, callback_data: RegenerateResponse) -> None:
+    """Отправляет ответ на запрос пользователя без использования истории диалога."""
 
-    """
-    chat_id = call.message.chat.id
-    full_name = call.message.from_user.full_name
-    user_query = await user_dialog_history_db.get_last_user_query(chat_id)
-    await call.message.bot.send_chat_action(chat_id, 'typing')
+    async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
+        chat_id = call.message.chat.id
+        full_name = call.message.from_user.full_name
+        user_query = await user_dialog_history_db.get_last_user_query(chat_id)
 
-    retriever_type, clear_response, response = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
+        if callback_data.rephrase_query:
+            rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
+            result = await _get_response(chat_id, full_name, rephrase_query, use_rephrase=False)
+            kb = get_feedback_regenerate_kb(initially_query=True)
+        else:
+            result = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
+            kb = get_feedback_kb()
 
-    msg = await call.message.edit_text(
-        text=response,
-        parse_mode='HTML',
-        disable_web_page_preview=True,
-        reply_markup=get_feedback_kb()
-    )
+        retriever_type, clear_response, response = result
 
-    await _add_data_to_db(msg, user_query, clear_response, retriever_type)
+        msg = await call.message.edit_text(
+            text=response,
+            parse_mode='HTML',
+            disable_web_page_preview=True,
+            reply_markup=kb
+        )
+
+        await _add_data_to_db(msg, user_query, clear_response, retriever_type)
 
 
 @router.callback_query(F.data.endswith('like'))
