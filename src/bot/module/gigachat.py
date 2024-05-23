@@ -30,7 +30,8 @@ class GigaChat:
     SCOPE: ClassVar[str] = giga_scope
     MODEL: ClassVar[str] = giga_model
     CREDENTIALS: ClassVar[str] = giga_credentials
-    TEMPERATURE: ClassVar[int] = 0.5
+    TEMPERATURE: ClassVar[float] = 0.5
+    MAX_TOKENS: ClassVar[int] = 0.5
 
     def __init__(self, logger: Logger):
         """
@@ -72,7 +73,8 @@ class GigaChat:
             'model': GigaChat.MODEL,
             'messages': [{'role': 'system', 'content': prompt}, {'role': 'user', 'content': text}],
             'profanity_check': False,
-            'temperature': temperature
+            'temperature': temperature,
+            'max_tokens ': GigaChat.MAX_TOKENS
         })
         return headers, data
 

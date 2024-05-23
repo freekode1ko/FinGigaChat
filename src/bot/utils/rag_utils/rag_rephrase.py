@@ -22,11 +22,11 @@ async def _make_rephrase_query_by_history(query: str, dialog: list[dict[str, str
     if not dialog:
         return query
     history = '\n'.join([
-        f'Пользователь: {mini_dialog["user"]}\nИИ: {mini_dialog["ai"]}'
+        f'Пользователь: {mini_dialog["user"]}\nБот: {mini_dialog["ai"]}'
         for mini_dialog in dialog[-COUNT_OF_USEFUL_LAST_MSGS:]
     ])
     text = NEW_QUERY_BY_DIALOG_PROMPT.format(query=query, history=history)
-    giga_answer = await chat.aget_giga_answer(text=text, prompt=AUGMENT_SYSTEM_PROMPT)
+    giga_answer = await chat.aget_giga_answer(text=text, prompt=AUGMENT_SYSTEM_PROMPT, temperature=0.01)
     return giga_answer
 
 
@@ -42,7 +42,7 @@ async def get_rephrase_query_by_history(user_id: int, full_name: str, query: str
     user_dialog_history = await user_dialog_history_db.get_user_dialog(user_id)
     rephrase_query = await _make_rephrase_query_by_history(query, user_dialog_history['dialog'])
 
-    if matches := re.findall(r'Пользователь:(.*?)(?:\n|$)', rephrase_query):
+    if matches := re.findall(r'Отдельный вопрос:(.*?)(?:\n|$)', rephrase_query):
         rephrase_query = matches[-1]
     rephrase_query = rephrase_query.strip()
     logger.info(f'*{user_id}* {full_name} - "{query}" : По истории диалога сформирован запрос: "{rephrase_query}"')
