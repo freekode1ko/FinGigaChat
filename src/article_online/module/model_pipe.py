@@ -3,6 +3,7 @@ import pickle
 import re
 from re import search
 from typing import Dict, Optional, Any
+import requests
 
 import pandas as pd
 import pymorphy2
@@ -104,6 +105,9 @@ commodity_rating_system_dict = modify_commodity_rating_system_dict(commodity_rat
 
 CLIENT_NAMES_DICT = create_alternative_names_dict(client_names)
 CLIENT_INDUSTRY_DICT = create_client_industry_dict()
+
+with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+    binary_model = pickle.load(f)
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
@@ -344,20 +348,39 @@ def search_top_sources(link: Optional[str or Any], score: int) -> int:
     return score
 
 
-def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
+def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Logger.logger) -> list[float]:
+    """
+    Получаем вероятности релевантности для текста новости клиента. Делаем гет запрос к модели roberta, в случае
+    неуспеха делаем предсказания с локальной моделью.
+    :param text: текст новости.
+    :param clean_text: очищенный текст новости.
+    :param logger: экземпляр класса логер для логирования процесса.
+    :return: список вероятностей релевантности.
+    """
+    try:
+        # делаем запрос к модели roberta
+        params = {"query": text}
+        response = requests.get('http://localhost:80/query', params=params).content
+        probs = list(map(float, response.split(':')))
+    except Exception as e:
+        logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
+        probs = [-1, -1]
+    # если не смогли получить ответ от сервиса, или классификация на сервере некорректна, то используем локальную модель
+    return binary_model.predict_proba(clean_text) if probs[0] < 0 else probs
+
+
+def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
     :param rating_dict: dict with rating
     :param df: Pandas DF. Pandas DF with current news batch.
+    :param logger: экземпляр класса логер для логирования процесса.
     :param threshold: limit relevant for binary model
     :return: Pandas DF. Current news batch DF with added column 'client_labels'
     """
-    # read binary classification model (relevant or not)
-    with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-        binary_model = pickle.load(f)
-
     # predict relevance and adding a column with relevance label (1 or 0)
-    probs = binary_model.predict_proba(df['cleaned_data'])
+    probs = df.apply(lambda row: get_prediction_bert_client_relevance(
+        row['cleaned_data'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
     df['relevance'] = [
         int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
         for index, pair in enumerate(probs)

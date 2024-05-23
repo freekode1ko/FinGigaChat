@@ -1,0 +1,16 @@
+FROM python:3.10
+
+WORKDIR /code
+
+COPY . /code
+
+RUN pip install poetry
+
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1
+
+RUN poetry install
+
+
+CMD ["poetry", "run",  "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "444"]

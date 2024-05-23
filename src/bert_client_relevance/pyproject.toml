@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "bert_client_relevance"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+setuptools = "^69.2.0"
+environs = "^10.3.0"
+numpy = "^1.16.1"
+fastapi = "^0.110.1"
+torch = "^2.2.2"
+transformers = "^4.41.0"
+accelerate = "^0.30.0"
+uvicorn = "^0.29.0"
+Pillow = "^10.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
