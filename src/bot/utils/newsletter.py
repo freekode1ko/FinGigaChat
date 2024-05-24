@@ -1,5 +1,6 @@
-"""
-модуль с функциями рассылки:
+"""Реализует функции рассылок
+
+Модуль с функциями рассылки:
 - новостей по подпискам на клиентов, сырье, отрасли;
 - викли пульса;
 - отчетов CIB research по подпискам.
@@ -14,18 +15,18 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.utils.media_group import MediaGroupBuilder
 
-from configs import config
 import module.data_transformer as dt
+from configs import config
 from constants import constants
+from db import message, parser_source, subscriptions
 from db.api.telegram_section import telegram_section_db
+from db.database import engine
 from db.whitelist import get_users_subscriptions
 from log.bot_logger import logger, user_logger
-from db.database import engine
 from module import formatter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
-from db import parser_source, message, subscriptions
 
 
 async def tg_newsletter(
@@ -171,7 +172,7 @@ async def subscriptions_newsletter(
 
                 user_logger.debug(
                     f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. '
-                    f"Активные подписки на момент рассылки: {industry_ids=:}, {client_ids=:}, {commodity_ids=:}"
+                    f'Активные подписки на момент рассылки: {industry_ids=:}, {client_ids=:}, {commodity_ids=:}'
                 )
             # except ChatNotFound:  # FIXME 3.3.0
             #     user_logger.error(f'Чата с пользователем *{user_id}* {user_name} не существует')
@@ -322,8 +323,8 @@ async def send_new_researches_to_users(bot: Bot) -> None:
     research_df['research_section_name'] = research_df['research_type_id'].apply(lambda x: research_section_dict[x]['name'])
 
     for _, user_row in user_df.iterrows():
-        user_id = user_row["user_id"]
-        user_name = user_row["username"]
+        user_id = user_row['user_id']
+        user_name = user_row['username']
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         # filter by user`s subs and group research_df by research_section_name

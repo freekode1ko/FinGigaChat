@@ -1,26 +1,26 @@
-"""
-Обработчик тг бота для меню
-Сводка новостей из telegram каналов по отраслям
+"""Обработчик тг бота для меню
+
+Сводка новостей из telegram каналов по отраслям и группам
 """
 from datetime import timedelta
 
 from aiogram import F, types
 from aiogram.filters import Command
 
-from constants.industry import SELECTED_INDUSTRY_TOKEN, MY_TG_CHANNELS_CALLBACK_TEXT, ALL_TG_CHANNELS_CALLBACK_TEXT, \
-    BACK_TO_MENU, GET_INDUSTRY_TG_NEWS
+from constants import industry
 from db.api.telegram_section import telegram_section_db
 from handlers.telegram_sections.handler import router
 from keyboards.telegram_news import callbacks
 from keyboards.telegram_news import constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import user_in_whitelist, bot_send_msg
+from utils.base import bot_send_msg, user_in_whitelist
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
 async def list_sections(message: types.CallbackQuery | types.Message) -> None:
     """
     Отправка пользователю меню с выбором раздела в разрезе тг каналов
+
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     msg_text = 'Выберите раздел для получения краткой сводки новостей из telegram каналов'
@@ -53,10 +53,15 @@ async def select_section_to_get_tg_articles(message: types.Message) -> None:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-@router.callback_query(F.data.startswith(BACK_TO_MENU))
+@router.callback_query(F.data.startswith(industry.BACK_TO_MENU))
 async def back_to_menu(callback_query: types.CallbackQuery) -> None:
+    """
+    Обработка перехода в главное меню с помощью кнопки Назад
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     chat_id = callback_query.message.chat.id
-    user_msg = BACK_TO_MENU
+    user_msg = industry.BACK_TO_MENU
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await list_sections(callback_query)
@@ -72,7 +77,7 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
     :param callback_data: Выбранный раздел и способ получения новостей (по подпискам или по всем каналам)
     """
     chat_id = callback_query.message.chat.id
-    user_msg = SELECTED_INDUSTRY_TOKEN
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     section_id = callback_data.section_id
@@ -83,9 +88,9 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
         f'Выберите период, за который хотите получить сводку новостей из telegram каналов по разделу '
         f'<b>{section_info.name}</b>\n\n'
         f'Для получения новостей из telegram каналов, на которые вы подписались в боте, выберите '
-        f'<b>"{MY_TG_CHANNELS_CALLBACK_TEXT}"</b>\n'
+        f'<b>"{industry.MY_TG_CHANNELS_CALLBACK_TEXT}"</b>\n'
         f'Для получения новостей из всех telegram каналов, связанных с разделом, выберите '
-        f'<b>"{ALL_TG_CHANNELS_CALLBACK_TEXT}"</b>'
+        f'<b>"{industry.ALL_TG_CHANNELS_CALLBACK_TEXT}"</b>'
     )
     keyboard = keyboards.get_select_period_kb(section_id, my_subs)
 
@@ -102,7 +107,7 @@ async def get_section_summary_tg_news(callback_query: types.CallbackQuery, callb
     :param callback_data: Выбранный раздел, кол-во дней, за которые пользователь хочет получить сводку, способ получения новостей
     """
     chat_id = callback_query.message.chat.id
-    user_msg = GET_INDUSTRY_TG_NEWS
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = callback_query.from_user.id

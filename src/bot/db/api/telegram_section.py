@@ -1,6 +1,4 @@
-"""
-Модуль с CRUD для таблицы bot_telegram_section
-"""
+"""Модуль с CRUD для таблицы bot_telegram_section"""
 import datetime
 
 import pandas as pd
@@ -59,6 +57,7 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
     ) -> pd.DataFrame:
         """
         Возвращает все тг-новости по разделу за {days} дней с текущего числа
+
         Если my_subscriptions == True, то новости вынимаются только из каналов, на которые подписан пользователь
 
         :param section_id: ID раздела, по которой формируется сводка
