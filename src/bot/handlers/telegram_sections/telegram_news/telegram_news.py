@@ -3,7 +3,6 @@
 Сводка новостей из telegram каналов по отраслям
 """
 from datetime import timedelta
-from typing import Union
 
 from aiogram import F, types
 from aiogram.filters import Command
@@ -19,7 +18,7 @@ from utils.base import user_in_whitelist, bot_send_msg
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
-async def list_sections(message: Union[types.CallbackQuery, types.Message]) -> None:
+async def list_sections(message: types.CallbackQuery | types.Message) -> None:
     """
     Отправка пользователю меню с выбором раздела в разрезе тг каналов
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению

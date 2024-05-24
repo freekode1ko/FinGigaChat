@@ -35,6 +35,7 @@ async def tg_newsletter(
 ) -> None:
     """
     Рассылка новостей по подпискам на клиентов, сырье, отрасли
+
     :param bot: тг бот, который будет отправлять сообщения пользователям
     :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
 
@@ -59,7 +60,13 @@ async def tg_newsletter(
             f'Подготовка сводки новостей из telegram каналов для отправки их пользователю {user_name}*{user_id}*')
 
         for section in sections:
-            tg_news = await telegram_section_db.get_section_tg_news(section.id, True, user_id, newsletter_timedelta, newsletter_start_datetime)
+            tg_news = await telegram_section_db.get_section_tg_news(
+                section.id,
+                True,
+                user_id,
+                newsletter_timedelta,
+                newsletter_start_datetime,
+            )
             if tg_news.empty:
                 continue
 
@@ -91,6 +98,7 @@ async def subscriptions_newsletter(
 ) -> None:
     """
     Рассылка новостей по подпискам на клиентов, сырье, отрасли
+
     :param bot: тг бот, который будет отправлять сообщения пользователям
     :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
 
@@ -184,6 +192,7 @@ async def weekly_pulse_newsletter(
 ) -> None:
     """
     Рассылка новостей по подпискам на клиентов, сырье, отрасли
+
     :param bot: тг бот, который будет отправлять сообщения пользователям
     :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
 
@@ -245,6 +254,7 @@ async def weekly_pulse_newsletter(
 async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, research_df: pd.DataFrame) -> list[types.Message]:
     """
     Отправка отчетов пользователю с форматированием
+
     :param bot: объект тг бота
     :param user_id: телеграм id пользователя, которому отправляются отчеты
     :param user_name: имя пользователя для логирования
@@ -288,6 +298,7 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
 async def send_new_researches_to_users(bot: Bot) -> None:
     """
     Функция рассылки новых отчетов CIB Research по подпискам
+
     :param bot: телеграм бот, который отправляет сообщения пользователям
     """
     now = datetime.datetime.now()

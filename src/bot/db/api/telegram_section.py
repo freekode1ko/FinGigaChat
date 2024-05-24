@@ -34,6 +34,7 @@ class TelegramSectionCRUD(BaseCRUD[models.TelegramSection]):
     async def get_by_group_id(self, group_id: int, only_with_channels: bool = True) -> list[models.TelegramSection]:
         """
         Получение списка телеграм разделов по group_id
+
         :param group_id: id группы, к которой принадлежат выгружаемые разделы
         :param only_with_channels: Флаг, что выдавать только те разделы, в которых есть тг каналы
         :returns: Список телеграм разделов
