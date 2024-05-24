@@ -1,5 +1,6 @@
 """
 Интерфейс взаимодействия с подписками на отчеты cib Research.
+
 Позволяет выполнять стандартные операции для работы с подписками,
 а также позволяет подписываться на все отчеты в разделе
 """
@@ -13,14 +14,13 @@ from db.api.subscriptions_interface import SubscriptionInterface
 class ResearchSubscriptionInterface(SubscriptionInterface):
     """
     Интерфейс взаимодействия с подписками на отчеты CIB Research.
+
     Позволяет выполнять стандартные операции для работы с подписками,
     а также позволяет подписываться на все отчеты в разделе
     """
 
     def __init__(self) -> None:
-        """
-        Инициализация объекта, предоставляющего интерфейс для взаимодействия с подписками на cib research
-        """
+        """Инициализация объекта, предоставляющего интерфейс для взаимодействия с подписками на cib research"""
         super().__init__(models.UserResearchSubscriptions, 'research_type_id', models.ResearchType)
         self.group_table = models.ResearchGroup
         self.section_table = models.ResearchSection
@@ -89,7 +89,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
                 self.subject_table
             ).where(self.subject_table.research_section_id == section_id)
 
-            await session.execute(sa.insert(self.table).from_select(["user_id", 'research_type_id'], select_stmt))
+            await session.execute(sa.insert(self.table).from_select(['user_id', 'research_type_id'], select_stmt))
             await session.commit()
 
     async def get_users_by_research_types_df(self, research_type_ids: list[int]) -> pd.DataFrame:

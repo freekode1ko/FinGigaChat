@@ -1,5 +1,6 @@
 """
 Обработчик меню клиентов.
+
 Позволяет получить различную информацию о клиенте:
 - новости
 - аналитика публичных рынков (для публичных клиентов)
@@ -31,7 +32,7 @@ from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import user_logger
 from module.article_process import FormatText
-from utils.base import send_or_edit, send_pdf, user_in_whitelist, get_page_data_and_info
+from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -55,6 +56,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню клиенты
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()

@@ -1,5 +1,6 @@
 """
 CRUD для взаимодействия с таблицей models.ResearchGroup.
+
 Позволяет выполнять стандартные операции
 """
 import pandas as pd

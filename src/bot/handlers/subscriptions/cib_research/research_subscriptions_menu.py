@@ -1,5 +1,6 @@
 """
 Обработчик действий пользователя для меню подписок на отчеты CIB Resarch.
+
 Главное меню.
 Просмотр своих подписок.
 Изменение подписок.
@@ -10,8 +11,8 @@ from typing import Union
 from aiogram import F, types
 from aiogram.filters import Command
 
+from constants.constants import DELETE_CROSS, SELECTED, UNSELECTED
 from constants.subscriptions import research as callback_prefixes
-from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
 from db import models
 from db.api.research_group import research_group_db
 from db.api.research_section import research_section_db
@@ -22,7 +23,7 @@ from db.api.user_research_subscription import user_research_subscription_db
 from handlers.subscriptions.handler import router
 from keyboards.subscriptions.research import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
+from utils.base import get_page_data_and_info, send_or_edit, user_in_whitelist
 
 
 @router.callback_query(callbacks.GetUserCIBResearchSubs.filter())
@@ -194,7 +195,7 @@ async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, grou
     """Формирует сообщение с подборкой отчетов по разделу"""
     group_info = await research_group_db.get(group_id)
     section_df = await research_section_db.get_cib_sections_by_group_df(group_id, user_id)
-    msg_text = f'Выберите разделы, на которые вы хотите подписаться.\n\n'
+    msg_text = 'Выберите разделы, на которые вы хотите подписаться.\n\n'
 
     if not section_df[~section_df['dropdown_flag']].empty:
         msg_text += f'Для добавления/удаления подписки на раздел нажмите на {UNSELECTED}/{SELECTED} соответственно'
@@ -260,6 +261,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
 async def delete_all_research_subs(callback_query: types.CallbackQuery) -> None:
     """
     Удаляет подписки пользователя на тг каналы
+
     Уведомляет пользователя, что удаление всех подписок завершено
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению

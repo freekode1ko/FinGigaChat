@@ -1,5 +1,6 @@
 """
 CRUD для взаимодействия с таблицей models.ResearchSection.
+
 Позволяет выполнять стандартные операции, выгружать разделы по id группы, выгружать разделы по списку id типов отчетов
 """
 from typing import Any
@@ -7,7 +8,7 @@ from typing import Any
 import pandas as pd
 import sqlalchemy as sa
 
-from db import models, database
+from db import database, models
 from db.api.base_crud import BaseCRUD
 from log.bot_logger import logger
 
@@ -16,16 +17,16 @@ class ResearchSectionCRUD(BaseCRUD[models.ResearchSection]):
     """Класс, который создает объекты для взаимодействия с таблицей models.ResearchSection"""
 
     @staticmethod
-    async def get_cib_sections_by_group_df(group_id: int, user_id: int) -> pd.DataFrame:
+    async def get_research_sections_df_by_group_id(group_id: int, user_id: int) -> pd.DataFrame:
         """
         Возвращает данные по разделам в группе group_id
+
         Если пользователь подписан на все отчеты в разделе, то у него ставится флаг is_subscribed=True
 
         :param group_id: research_group.id группы CIB Research
         :param user_id: whitelist.id пользователя
         :returns: DataFrame[id, name, dropdown_flag, is_subscribed]
         """
-
         query = sa.text(
             'WITH section_subscriptions AS ('
             '   SELECT count(rt.id) as types_cnt, research_section_id,'
@@ -51,7 +52,7 @@ class ResearchSectionCRUD(BaseCRUD[models.ResearchSection]):
 
     async def get_research_sections_by_research_types_df(self, research_type_ids: list[int]) -> dict[int, dict[str, Any]]:
         """
-        Возвращает словарь
+        Возвращает словарь, где ключ - это research_type.id, а значение - словарь с данными о разделе, в котором находится данный отчет
 
         :param research_type_ids: список research_type.id, по которому выгружается информация о том, к какому разделу
          принадлежит данный отчет

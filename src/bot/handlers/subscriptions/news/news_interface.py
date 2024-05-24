@@ -1,12 +1,13 @@
 """
 Реализует интерфейс для работы с группой подписок на субъекты.
+
 Позволяет просматирваться подписки, изменять подписки, удалять подписки.
 """
 import copy
-from typing import Type, Protocol
+from typing import Protocol, Type
 
 import pandas as pd
-from aiogram import types, Router
+from aiogram import Router, types
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
@@ -23,7 +24,7 @@ from db.api.user_research_subscription import user_research_subscription_db
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
 from log.bot_logger import logger, user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, send_or_edit, get_page_data_and_info
+from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit
 
 
 emoji = copy.deepcopy(config.dict_of_emoji)
@@ -73,6 +74,8 @@ class NewsHandler:
             subject_name_accusative: str,
     ) -> None:
         """
+        Инициализация обработчика подписок на новости
+
         :param router: aiogram.Router роутер
         :param subject_db: Интерфейс взаимодействия с клиентамы/сырьем/отраслями
         :param subscription_db: Интерфейс взаимодействия с подписками
@@ -219,11 +222,12 @@ class NewsHandler:
         ) -> None:
             """
             Сообщение с кнопками для получения готовых сборок подписок по отраслям
+
             :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
             :param callback_data: Действие пользователя
             """
             from_user = callback_query.from_user
-            chat_id, user_first_name = from_user.id, from_user.first_name
+            chat_id = from_user.id
             user_logger.info(f'Пользователь *{chat_id}* решил воспользоваться готовыми сборками подписок')
 
             keyboard = InlineKeyboardBuilder()
@@ -248,6 +252,7 @@ class NewsHandler:
         ) -> None:
             """
             Отображение связанных с отраслью объектов (клиентов или сырья)
+
             :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
             :param callback_data: Содержит id отрасли
             """

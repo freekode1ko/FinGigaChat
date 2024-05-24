@@ -1,5 +1,6 @@
 """
 CRUD для взаимодействия с таблицей models.ResearchType.
+
 Позволяет выполнять стандартные операции
 """
 from db import models

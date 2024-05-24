@@ -14,7 +14,7 @@ from typing import Type, Iterable
 
 import pandas as pd
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from db import database
 from db.models import Base
@@ -164,7 +164,7 @@ class SubscriptionInterface:
                 sa.text(f'{user_id}::int'),
                 self.subject_table.id,
             ).where(sa.func.lower(self.subject_table.name).in_(subquery)).group_by(self.subject_table.id)
-            stmt = insert(
+            stmt = insert_pg(
                 self.table
             ).from_select(['user_id', self.subject_id_field], select_query).on_conflict_do_nothing()
             await session.execute(stmt)
