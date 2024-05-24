@@ -53,6 +53,8 @@ class ResearchSectionCRUD(BaseCRUD[models.ResearchSection]):
         """
         Возвращает словарь
 
+        :param research_type_ids: список research_type.id, по которому выгружается информация о том, к какому разделу
+         принадлежит данный отчет
         :returns: dict[
             research_type_id: {
                 research_section_id: int,

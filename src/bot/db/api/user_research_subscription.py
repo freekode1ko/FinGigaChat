@@ -96,6 +96,8 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Выгрузка пользователей со списком их подписок на отчеты cib research
 
+        :param research_type_ids: список research_type.id, в пределах которого выгружаются подписки на отчеты
+        (то есть id вне этого списка не выгружаются)
         :returns: DataFrame[user_id: int, username: str, research_types: list[int]]
         """
         async with database.async_session() as session:
