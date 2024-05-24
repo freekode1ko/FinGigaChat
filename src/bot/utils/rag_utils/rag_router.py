@@ -1,5 +1,5 @@
 """Описание класса RAGRouter."""
-from aiohttp import ClientSession, TCPConnector
+from aiohttp import ClientSession
 import json
 import re
 import urllib.parse
@@ -11,6 +11,7 @@ from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_RAG_F
 from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
+from utils.sessions import RagQaBankerClient, RagStateSupportClient
 
 giga = GigaChat(logger)
 
@@ -73,27 +74,29 @@ class RAGRouter:
     async def rag_qa_banker(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
         query = urllib.parse.quote(self.query)
-        query_part = f'queries?query={query}'
+        query_part = f'/api/queries?query={query}'
         req_kwargs = dict(
-            url=config.BASE_QABANKER_URL.format(query_part),
+            url=query_part,
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-        return await self._request_to_rag_api(**req_kwargs)
+        session = RagQaBankerClient(config.BASE_QA_BANKER_URL).session
+        return await self._request_to_rag_api(session, **req_kwargs)
 
     async def rag_state_support(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по господдержке и получение ответа."""
         req_kwargs = dict(
-            url=config.QUERY_STATE_SUPPORT_URL,
+            url='/api/v1/question',
             json={'body': self.user_query},
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
+        session = RagStateSupportClient(config.BASE_STATE_SUPPORT_URL).session
+        return await self._request_to_rag_api(session, self.POST_METHOD, **req_kwargs)
 
-        return await self._request_to_rag_api(self.POST_METHOD, **req_kwargs)
-
-    async def _request_to_rag_api(self, request_method: str = GET_METHOD, **kwargs) -> tuple[str, str]:
+    async def _request_to_rag_api(self, session: ClientSession, request_method: str = GET_METHOD, **kwargs) -> tuple[str, str]:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
+        :param  session:            Сессия для подключения.
         :param  request_method:     HTTP метод.
         :param kwargs:              Параметры http запроса.
         :return:                    Оригинальный ответ RAG и отформатированный ответ.
@@ -102,13 +105,12 @@ class RAGRouter:
         format_rag_answer = ERROR_RAG_ANSWER
 
         try:
-            async with ClientSession(connector=TCPConnector(ssl=False), raise_for_status=True) as session:
-                async with session.request(method=request_method, **kwargs) as rag_response:
-                    if request_method == self.GET_METHOD:
-                        rag_answer = await rag_response.text()
-                    else:
-                        rag_answer = await rag_response.json()
-                        rag_answer = rag_answer['body']
+            async with session.request(method=request_method, **kwargs) as rag_response:
+                if request_method == self.GET_METHOD:
+                    rag_answer = await rag_response.text()
+                else:
+                    rag_answer = await rag_response.json()
+                    rag_answer = rag_answer['body']
 
             format_rag_answer = f'{rag_answer}\n\n{GIGA_RAG_FOOTER}' if rag_answer != DEFAULT_RAG_ANSWER else rag_answer
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %

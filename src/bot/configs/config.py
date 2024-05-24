@@ -62,10 +62,15 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
-giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
+giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443'
+giga_chat_url = 'https://gigachat.devices.sberbank.ru'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
+
+# url к rag-сервисам
+BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'
+BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
+POST_TO_SERVICE_TIMEOUT = 90
 
 research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
@@ -89,10 +94,6 @@ mail_smpt_server = 'smtp.mail.ru'
 mail_smpt_port = 465
 mail_register_subject = 'Регистрация в AI-помощнике'
 
-# url к rag-сервисам
-BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
-QUERY_STATE_SUPPORT_URL = 'http://89.223.65.160:8031/api/v1/question'
-POST_TO_SERVICE_TIMEOUT = 90
 
 ECO_INAVIGATOR_URL = (
     'https://upd.mobile.sbrf.ru:10443/ios/dl/gdash/9845/1964'
