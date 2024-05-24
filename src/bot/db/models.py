@@ -37,7 +37,7 @@ class Article(Base):
     link = Column(Text, nullable=False, comment='Ссылка на новость')
     date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
     text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
-    title = Column(Text, comment='Сформированный гигачатом заголовок')
+    title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
     text_sum = Column(Text, comment='Сформированная гигачатом сводка по новости')
 
     article_name_impact = relationship('ArticleNameImpact', back_populates='article')
