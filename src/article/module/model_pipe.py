@@ -29,7 +29,6 @@ COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
-ROBERTA_CLIENT_RELEVANCE_LINK = 'http://localhost:444/query'
 
 BAD_GIGA_ANSWERS = [
     'Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
@@ -384,7 +383,7 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
     # predict relevance and adding a column with relevance label (1 or 0)
     logger.info('Старт обработки новостей клиентов на релевантность')
     probs = df.apply(lambda row: get_prediction_bert_client_relevance(
-        row['cleaned_data'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
+        row['text'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
     logger.info('Окончание обработки новостей клиентов на релевантность')
     df['relevance'] = [
         int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
@@ -536,7 +535,7 @@ def model_func(logger: Logger.logger, df: pd.DataFrame,
                                       row['text']), axis=1)
 
         logger.debug('Сортировка новостей о клиентах')
-        df = rate_client(df, client_rating_system_dict)
+        df = rate_client(df, client_rating_system_dict, logger)
 
     else:
         df[['found_commodity', 'commodity_impact']] = df['cleaned_data'].apply(

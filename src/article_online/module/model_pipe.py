@@ -22,12 +22,12 @@ from module.utils import *
 
 import datetime as dt
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
-COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
-STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
-COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
-CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
-ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = '../../data/model/client_relevance_model_0.5_threshold_upd.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = '../../data/model/commodity_binary_best.pkl'
+STOP_WORDS_FILE_PATH = '../../data/stop_words_list.txt'
+COMMODITY_RATING_FILE_PATH = '../../data/rating/commodity_rating_system.xlsx'
+CLIENT_RATING_FILE_PATH = '../../data/rating/client_rating_system.xlsx'
+ALTERNATIVE_NAME_FILE = '../../data/name/{}_with_alternative_names.xlsx'
 
 BAD_GIGA_ANSWERS = [
     'Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
@@ -363,6 +363,7 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
         response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params).content
         # достаем вероятности релевантности
         probs = list(map(float, str(response)[2:-1].split(':')))
+        print(probs, text)
     except Exception as e:
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
@@ -382,7 +383,7 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
     # predict relevance and adding a column with relevance label (1 or 0)
     logger.info('Старт обработки новостей клиентов на релевантность')
     probs = df.apply(lambda row: get_prediction_bert_client_relevance(
-        row['cleaned_data'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
+        row['text'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
     logger.info('Окончание обработки новостей клиентов на релевантность')
     df['relevance'] = [
         int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
@@ -593,7 +594,7 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     # make rating for article
     logger.debug('Сортировка новостей о клиентах')
-    df = rate_client(df, client_rating_system_dict)
+    df = rate_client(df, client_rating_system_dict, logger)
     logger.debug('Сортировка новостей о товарах')
     df = rate_commodity(df, commodity_rating_system_dict)
 
