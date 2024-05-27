@@ -144,6 +144,7 @@ async def clients_list(
 
 
 @router.message(ChooseClient.choosing_from_subscribed_clients)
+@router.message(ChooseClient.choosing_from_all_not_subscribed_clients)
 async def clients_subscriptions_list(
         message: types.Message,
         state: FSMContext,
@@ -154,60 +155,28 @@ async def clients_subscriptions_list(
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
+    subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
+
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
     clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
     clients = await client_db.get_by_ids(clients_id)
     client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
-    clients = clients[clients['id'].isin(client_subscriptions['id'])]
 
-    if len(clients) > 1:
-        page_data, page_info, max_pages = get_page_data_and_info(clients)
-        keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, True)
-        msg_text = 'Выберите клиента из списка'
-    elif len(clients) == 1:
-        client_name = clients['name'].iloc[0]
-        keyboard = keyboards.get_client_menu_kb(
-            clients['id'].iloc[0],
-            current_page=0,
-            subscribed=True,
-            research_type_id=await get_research_type_id_by_name(client_name),
-        )
-        msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
+    if subscribed:
+        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
     else:
-        msg_text = 'Не нашелся, введите имя клиента по-другому'
-        keyboard = None
-
-    await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
-
-
-@router.message(ChooseClient.choosing_from_all_not_subscribed_clients)
-async def clients_all_list(
-        message: types.Message,
-        state: FSMContext,
-) -> None:
-    """
-    Поиск по клиентам, на которые пользователь не подписаны
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: Объект, который хранит состояние FSM для пользователя
-    """
-
-    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
-    clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
-    clients = await client_db.get_by_ids(clients_id)
-    client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
-    clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+        clients = clients[clients['id'].isin(client_subscriptions['id'])]
 
     if len(clients) > 1:
         page_data, page_info, max_pages = get_page_data_and_info(clients)
-        keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, True)
+        keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, subscribed)
         msg_text = 'Выберите клиента из списка'
     elif len(clients) == 1:
         client_name = clients['name'].iloc[0]
         keyboard = keyboards.get_client_menu_kb(
             clients['id'].iloc[0],
             current_page=0,
-            subscribed=False,
+            subscribed=subscribed,
             research_type_id=await get_research_type_id_by_name(client_name),
         )
         msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
