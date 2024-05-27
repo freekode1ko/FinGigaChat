@@ -1,5 +1,14 @@
-from typing import Any
-
+"""
+Формирует клавиатуры для меню подписок на аналитические отчеты.
+Главное меню.
+Меню просмотра своих подписок.
+Меню изменения своих подписок.
+Меню удаления своих подписок.
+Меню информации об отчете.
+Меню выбора группы отчетов.
+Меню выбора разделов отчетов.
+Меню изменения подписок на отчеты.
+"""
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
@@ -8,6 +17,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants.subscriptions import const
 from constants.subscriptions import research as callback_prefixes
+from db import models
 from keyboards.subscriptions import constructors
 from keyboards.subscriptions.research import callbacks
 from utils.base import wrap_callback_data, unwrap_callback_data
@@ -159,7 +169,7 @@ def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
 
 
 def get_research_sections_by_group_menu_kb(
-        group_info: dict[str, Any],
+        group_info: models.ResearchGroup,
         section_df: pd.DataFrame,
 ) -> InlineKeyboardMarkup:
     """
@@ -169,7 +179,7 @@ def get_research_sections_by_group_menu_kb(
     [ Раздел n ]
     [  назад  ]
 
-    :param group_info: dict[id, name] инфа о группе CIB Research
+    :param group_info: инфа о группе CIB Research
     :param section_df: DataFrame[id, name, dropdown_flag, is_subscribed] инфа о разделах CIB Research
     """
     keyboard = InlineKeyboardBuilder()
@@ -178,14 +188,14 @@ def get_research_sections_by_group_menu_kb(
         if item['dropdown_flag']:
             button_txt = item['name'].capitalize()
             section_callback = callbacks.GetCIBSectionResearches(
-                group_id=group_info['id'],
+                group_id=group_info.id,
                 section_id=item['id'],
             )
         else:
             mark = constants.SELECTED if item['is_subscribed'] else constants.UNSELECTED
             button_txt = f'{mark} {item["name"].capitalize()}'
             section_callback = callbacks.GetCIBGroupSections(
-                group_id=group_info['id'],
+                group_id=group_info.id,
                 section_id=item['id'],
                 need_add=int(not item['is_subscribed']),
             )

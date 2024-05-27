@@ -18,8 +18,11 @@ from aiogram.utils.media_group import MediaGroupBuilder
 import module.data_transformer as dt
 from configs import config
 from constants import constants
-from db import message, parser_source, subscriptions
+from db import parser_source, message
+from db.api.research import research_db
+from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
+from db.api.user_research_subscription import user_research_subscription_db
 from db.database import engine
 from db.whitelist import get_users_subscriptions
 from log.bot_logger import logger, user_logger
@@ -260,7 +263,7 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
     :param user_id: телеграм id пользователя, которому отправляются отчеты
     :param user_name: имя пользователя для логирования
     :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
-    return: Список объектов отправленных сообщений
+    :returns: Список объектов отправленных сообщений
     """
     sent_msg_list = []
 
@@ -308,13 +311,13 @@ async def send_new_researches_to_users(bot: Bot) -> None:
     start_tm = time.time()
 
     # получаем список отчетов, которые надо разослать
-    research_df = subscriptions.get_new_researches()
+    research_df = await research_db.get_new_researches()
     research_type_ids = research_df['research_type_id'].drop_duplicates().values.tolist()
 
     # Получаем список пользователей, которым требуется разослать отчеты
-    user_df = subscriptions.get_users_by_research_types_df(research_type_ids)
+    user_df = await user_research_subscription_db.get_users_by_research_types_df(research_type_ids)
     # Словарь key=research_type.id, value=research_section
-    research_section_dict = subscriptions.get_research_sections_by_research_types_df(research_type_ids)
+    research_section_dict = await research_section_db.get_research_sections_by_research_types_df(research_type_ids)
 
     # Сохранение отправленных сообщений
     saved_messages = []

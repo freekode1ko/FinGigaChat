@@ -1,3 +1,9 @@
+"""
+Обработчик для меню аналитики публичный рынков.
+
+Позволяет выгрузить отчеты по разделам и клиентам с CIB Research,
+а также макроэкономические показатели, прогноз валютных курсов и прогноз по ключевой ставке
+"""
 import datetime
 import re
 import textwrap
@@ -11,8 +17,13 @@ from aiogram.filters.callback_data import CallbackData
 from configs import config
 from constants import enums
 from constants.analytics import analytics_sell_side
-from db import subscriptions as subscriptions_db_api, database
+from db import database
 from db.api import client as client_db_api
+from db.api.research import research_db
+from db.api.research_group import research_group_db
+from db.api.research_section import research_section_db
+from db.api.research_type import research_type_db
+from db.api.user_research_subscription import user_research_subscription_db
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
@@ -34,7 +45,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    group_df = subscriptions_db_api.get_research_groups_df()  # id, name
+    group_df = await research_group_db.get_all()
     msg_text = (
         'Аналитика публичных рынков\n'
         'Выберите раздел'
@@ -43,7 +54,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
     group_df = group_df[group_df['name'] != 'Разделы']
 
-    section_df = subscriptions_db_api.get_cib_sections_by_group_df(section_group_id, from_user.id)
+    section_df = await research_section_db.get_cib_sections_by_group_df(section_group_id, from_user.id)
 
     section_df['callback_data'] = section_df['id'].apply(lambda x: callbacks.GetCIBSectionResearches(section_id=x).pack())
     group_df['callback_data'] = group_df['id'].apply(lambda x: callbacks.GetCIBGroupSections(group_id=x).pack())
@@ -72,7 +83,7 @@ async def get_group_sections_menu(
     user_id = callback_query.from_user.id
     group_id = callback_data.group_id
 
-    section_df = subscriptions_db_api.get_cib_sections_by_group_df(group_id, user_id)
+    section_df = await research_section_db.get_cib_sections_by_group_df(group_id, user_id)
 
     msg_text = 'Выберете отрасль клиента, по которому вы хотели бы получить данные из SberCIB Investment Research'
     keyboard = keyboards.get_sections_by_group_menu_kb(section_df)
@@ -100,20 +111,20 @@ async def get_section_research_types_menu(
     user_id = callback_query.from_user.id
     section_id = callback_data.section_id
 
-    group_df = subscriptions_db_api.get_research_groups_df()  # id, name
+    group_df = await research_group_db.get_all()
     section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
 
-    section_info = subscriptions_db_api.get_cib_section_info(section_id)
-    research_type_df = subscriptions_db_api.get_cib_research_types_by_section_df(section_id, user_id)
+    section_info = await research_section_db.get(section_id)
+    research_type_df = await user_research_subscription_db.get_subject_df_by_section_id(user_id, section_id)
 
     back_callback_data = (
-        callbacks.GetCIBGroupSections(group_id=section_info['research_group_id']).pack()
-        if section_info['research_group_id'] != section_group_id else callbacks.Menu().pack()
+        callbacks.GetCIBGroupSections(group_id=section_info.research_group_id).pack()
+        if section_info.research_group_id != section_group_id else callbacks.Menu().pack()
     )
 
     msg_text = (
         f'Аналитика публичных рынков\n'
-        f'Раздел "{section_info["name"]}":'  # FIXME text
+        f'Раздел "{section_info.name}":'  # FIXME text
     )
     keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)
 
@@ -163,6 +174,7 @@ async def select_period_to_get_researches(
 ) -> None:
     """
     Меню выбора периода, за который выгружаются отчеты
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     :param callback_factory: Фабрика создания callback_data для выгрузки отчетов за период
@@ -175,15 +187,15 @@ async def select_period_to_get_researches(
 
     research_type_id = callback_data.research_type_id
 
-    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
+    research_info = await research_type_db.get(research_type_id)
 
     msg_text = (
         f'Выберите период, за который хотите получить отчеты по '
-        f'<b>{research_info["name"]}</b>\n\n'
+        f'<b>{research_info.name}</b>\n\n'
     )
 
     back_callback = (
-            back_callback or callbacks.GetCIBSectionResearches(section_id=research_info['research_section_id']).pack()
+            back_callback or callbacks.GetCIBSectionResearches(section_id=research_info.research_section_id).pack()
     )
 
     keyboard = keyboards.get_select_period_kb(
@@ -213,7 +225,7 @@ async def get_last_actual_research(
 
     research_type_id = callback_data.research_type_id
 
-    research_df = subscriptions_db_api.get_researches_by_type(research_type_id)
+    research_df = await research_db.get_researches_by_type(research_type_id)
     if not research_df.empty:
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
@@ -240,9 +252,9 @@ async def cib_client_analytical_indicators(
 
     research_type_id = callback_data.research_type_id
 
-    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
+    research_info = await research_type_db.get(research_type_id)
 
-    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info["name"]}</b>?'
+    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(research_info)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -426,7 +438,7 @@ async def economy_monthly_callback(
 
     research_type_id = callback_data.research_type_id
 
-    research_df = subscriptions_db_api.get_researches_by_type(research_type_id)
+    research_df = await research_db.get_researches_by_type(research_type_id)
     last_research = pd.DataFrame()
     if not research_df.empty:
         research_df = research_df[
@@ -480,7 +492,7 @@ async def get_researches_over_period(
     to_date = datetime.date.today()
     from_date = to_date - datetime.timedelta(days=days)
 
-    researches_df = subscriptions_db_api.get_researches_over_period(from_date, to_date, [research_type_id])
+    researches_df = await research_db.get_researches_over_period(from_date, to_date, [research_type_id])
     if header_not_contains:
         researches_df = researches_df[~researches_df['header'].str.contains(header_not_contains, case=False)]
 
@@ -529,13 +541,13 @@ async def get_client_inavigator_source(
 
     research_type_id = callback_data.research_type_id
 
-    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
-    navi_link = client_db_api.get_client_navi_link_by_name(research_info['name'])
+    research_info = await research_type_db.get(research_type_id)
+    navi_link = client_db_api.get_client_navi_link_by_name(research_info.name)
 
     if navi_link:
-        msg_text = f'<a href="{str(navi_link)}">Цифровая справка клиента: "{research_info["name"]}"</a>'
+        msg_text = f'<a href="{str(navi_link)}">Цифровая справка клиента: "{research_info.name}"</a>'
     else:
-        msg_text = f'Цифровая справка по клиенту "{research_info["name"]}" отсутствует'
+        msg_text = f'Цифровая справка по клиенту "{research_info.name}" отсутствует'
 
     await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
