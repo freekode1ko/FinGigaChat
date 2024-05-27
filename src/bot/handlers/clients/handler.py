@@ -128,6 +128,8 @@ async def clients_list(
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     :param state: Объект, который хранит состояние FSM для пользователя
     """
+    msg_text = ''
+
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -139,17 +141,19 @@ async def clients_list(
     clients = await client_db.get_all()
     client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
     if subscribed:
-        msg_text = 'Выберите клиента из списка ваших подписок'
+
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
         await state.set_state(ChooseClient.choosing_from_subscribed_clients)
     else:
-        msg_text = 'Выберите клиента из общего списка'
-        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+        clients = clients.iloc[0:0]
         await state.set_state(ChooseClient.choosing_from_all_not_subscribed_clients)
 
     page_data, page_info, max_pages = get_page_data_and_info(clients, page)
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
-    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\nДля поиска введите сообщение с именем клиента.'
+
+    if subscribed:
+        msg_text = f'Выберите клиента из списка ваших подписок\n<b>{page_info}</b>\n\n'
+    msg_text += 'Для поиска введите сообщение с именем клиента.'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
