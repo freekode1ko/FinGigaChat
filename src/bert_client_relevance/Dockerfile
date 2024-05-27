@@ -12,5 +12,3 @@ ENV POETRY_NO_INTERACTION=1 \
 
 RUN poetry install
 
-
-CMD ["poetry", "run",  "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "444"]

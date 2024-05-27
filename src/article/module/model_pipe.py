@@ -29,7 +29,6 @@ COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
-
 BAD_GIGA_ANSWERS = [
     'Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
     'Как у нейросетевой языковой модели у меня не может быть настроения, но почему-то я совсем не хочу ' 'говорить на эту тему.',
@@ -535,7 +534,7 @@ def model_func(logger: Logger.logger, df: pd.DataFrame,
                                       row['text']), axis=1)
 
         logger.debug('Сортировка новостей о клиентах')
-        df = rate_client(df, client_rating_system_dict, logger)
+        df = rate_client(df, client_rating_system_dict)
 
     else:
         df[['found_commodity', 'commodity_impact']] = df['cleaned_data'].apply(
@@ -594,7 +593,7 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     # make rating for article
     logger.debug('Сортировка новостей о клиентах')
-    df = rate_client(df, client_rating_system_dict)
+    df = rate_client(df, client_rating_system_dict, logger)
     logger.debug('Сортировка новостей о товарах')
     df = rate_commodity(df, commodity_rating_system_dict)
 

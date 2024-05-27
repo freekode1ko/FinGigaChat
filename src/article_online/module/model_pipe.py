@@ -22,12 +22,12 @@ from module.utils import *
 
 import datetime as dt
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = '../../data/model/client_relevance_model_0.5_threshold_upd.pkl'
-COM_BINARY_CLASSIFICATION_MODEL_PATH = '../../data/model/commodity_binary_best.pkl'
-STOP_WORDS_FILE_PATH = '../../data/stop_words_list.txt'
-COMMODITY_RATING_FILE_PATH = '../../data/rating/commodity_rating_system.xlsx'
-CLIENT_RATING_FILE_PATH = '../../data/rating/client_rating_system.xlsx'
-ALTERNATIVE_NAME_FILE = '../../data/name/{}_with_alternative_names.xlsx'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
+STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
+COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
+CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
+ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
 BAD_GIGA_ANSWERS = [
     'Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
@@ -363,7 +363,6 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
         response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params).content
         # достаем вероятности релевантности
         probs = list(map(float, str(response)[2:-1].split(':')))
-        print(probs, text)
     except Exception as e:
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
