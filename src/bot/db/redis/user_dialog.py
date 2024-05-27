@@ -16,7 +16,7 @@ async def get_dialog(user_id: int) -> list[dict[str, str]]:
     return json.loads(dialog) if dialog else []
 
 
-async def update_dialog(user_id: int, msgs: dict[str, str], need_replace: bool = False):
+async def update_dialog(user_id: int, msgs: dict[str, str], need_replace: bool = False) -> None:
     """
     Обновление истории диалога.
 
@@ -36,7 +36,7 @@ async def update_dialog(user_id: int, msgs: dict[str, str], need_replace: bool =
     await redis_client.expire(name=str(user_id), time=KEEP_DIALOG_TIME)
 
 
-async def del_dialog(user_id: int):
+async def del_dialog(user_id: int) -> None:
     """
     Очистка истории диалога между пользователем и ИИ.
 
