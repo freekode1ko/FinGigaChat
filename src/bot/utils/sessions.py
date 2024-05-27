@@ -19,7 +19,8 @@ class BaseClient:
         self.session = ClientSession(base_url, connector=TCPConnector(ssl=False))
 
     async def close(self):
-        await self.session.close()
+        if not self.session.closed:
+            await self.session.close()
 
     async def recreate(self):
         await self.close()

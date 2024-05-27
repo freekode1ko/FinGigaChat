@@ -23,7 +23,7 @@ from middlewares.logger import LoggingMiddleware
 from utils.base import (
     next_weekday_time, wait_until,
 )
-from utils import newsletter
+from utils import newsletter, sessions
 
 storage = MemoryStorage()
 bot = Bot(token=config.api_token)
@@ -148,8 +148,13 @@ async def main():
                 apscheduler=scheduler,
                 **param['kwargs'],
             ))
-
-    await start_bot()
+    try:
+        await start_bot()
+    finally:
+        await sessions.GigaOauthClient(config.giga_oauth_url).close()
+        await sessions.GigaChatClient(config.giga_chat_url).close()
+        await sessions.RagQaBankerClient(config.BASE_QA_BANKER_URL).close()
+        await sessions.RagStateSupportClient(config.BASE_STATE_SUPPORT_URL).close()
 
 
 if __name__ == '__main__':

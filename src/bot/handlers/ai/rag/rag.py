@@ -1,5 +1,6 @@
 """Описание обработчиков событий при общении пользователя с RAG-системами."""
 from aiogram import F, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -31,6 +32,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
         await del_dialog(message.from_user.id)
+        await update_keyboard_of_penultimate_bot_msg(message, state)
         await message.answer('История диалога очищена!')
 
 
@@ -201,6 +203,9 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
         chat_id = call.message.chat.id
         full_name = call.message.from_user.full_name
         user_query = await get_last_user_msg(chat_id)
+        if not user_query:
+            await update_keyboard_of_penultimate_bot_msg(call.message, state)
+            await call.bot.send_message(chat_id, 'Напишите, пожалуйста, свой запрос еще раз')
 
         if callback_data.rephrase_query:
             rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
@@ -258,8 +263,11 @@ async def update_keyboard_of_penultimate_bot_msg(message: types.Message, state: 
     """Обновляет клавиатуру предпоследнего сообщения от рага: убирает кнопку генерации."""
     data = await state.get_data()
     if (rag_last_bot_msg := data.get('rag_last_bot_msg', None)) is not None:
-        await message.bot.edit_message_reply_markup(
-            chat_id=message.chat.id,
-            message_id=rag_last_bot_msg,
-            reply_markup=get_feedback_kb()
-        )
+        try:
+            await message.bot.edit_message_reply_markup(
+                chat_id=message.chat.id,
+                message_id=rag_last_bot_msg,
+                reply_markup=get_feedback_kb()
+            )
+        except TelegramBadRequest:
+            pass
