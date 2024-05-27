@@ -138,19 +138,18 @@ async def clients_list(
     page = callback_data.page
     clients = await client_db.get_all()
     client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
+
     if subscribed:
-        msg_text = 'Выберите клиента из списка ваших подписок'
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
+        page_data, page_info, max_pages = get_page_data_and_info(clients, page)
+        keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
+        msg_text = f'Выберите клиента из списка ваших подписок\n<b>{page_info}</b>\n\n'
         await state.set_state(ChooseClient.choosing_from_subscribed_clients)
     else:
-        msg_text = 'Выберите клиента из общего списка'
-        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+        msg_text = ''
+        keyboard = None
         await state.set_state(ChooseClient.choosing_from_all_not_subscribed_clients)
-
-    page_data, page_info, max_pages = get_page_data_and_info(clients, page)
-    keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
-    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\nДля поиска введите сообщение с именем клиента.'
-
+    msg_text += 'Для поиска введите сообщение с именем клиента.'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -162,7 +161,7 @@ async def clients_subscriptions_list(
         state: FSMContext,
 ) -> None:
     """
-    Поиск по клиентам, на которые пользователь подписаны
+    Поиск по клиентам
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
