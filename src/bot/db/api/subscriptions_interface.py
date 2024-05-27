@@ -1,7 +1,20 @@
-from typing import Type
+"""
+Реализация интерфейса для взаимодействия с подписками на что-либо.
+
+Позволяет:
+- подписываться на один субъект,
+- отписываться от одного субъекта,
+- подписываться на группу субъектов,
+- удалять все подписки на субъекты,
+- выгружать список подписок,
+- выгружать список субъектов с флагом, подписан ли на него пользователь
+- подписываться на субъект с именем, которое похоже на имя субъекта другой таблицы
+"""
+from typing import Type, Iterable
 
 import pandas as pd
-from sqlalchemy import insert, delete, select, case
+import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from db import database
 from db.models import Base
@@ -29,7 +42,7 @@ class SubscriptionInterface:
         """
         async with database.async_session() as session:
             await session.execute(
-                insert(self.table),
+                sa.insert(self.table),
                 [
                     {'user_id': user_id, self.subject_id_field: subject_id}
                 ]
@@ -44,7 +57,7 @@ class SubscriptionInterface:
         """
         async with database.async_session() as session:
             await session.execute(
-                delete(self.table)
+                sa.delete(self.table)
                 .where(
                     getattr(self.table, self.subject_id_field) == subject_id,
                     self.table.user_id == user_id
@@ -59,7 +72,7 @@ class SubscriptionInterface:
         """
         async with database.async_session() as session:
             await session.execute(
-                delete(self.table)
+                sa.delete(self.table)
                 .where(
                     self.table.user_id == user_id
                 )
@@ -75,7 +88,7 @@ class SubscriptionInterface:
         """
         async with database.async_session() as session:
             result = await session.execute(
-                select(self.subject_table.id, self.subject_table.name)
+                sa.select(self.subject_table.id, self.subject_table.name)
                 .join(self.table, getattr(self.table, self.subject_id_field) == self.subject_table.id)
                 .where(self.table.user_id == user_id)
                 .order_by(self.subject_table.name)
@@ -90,10 +103,10 @@ class SubscriptionInterface:
         """
         async with database.async_session() as session:
             result = await session.execute(
-                select(
+                sa.select(
                     self.subject_table.id,
                     self.subject_table.name,
-                    case(
+                    sa.case(
                         (self.table.user_id.is_(None), False),
                         else_=True,
                     ).label('is_subscribed'),
@@ -121,8 +134,39 @@ class SubscriptionInterface:
                 return
 
             await session.execute(
-                insert(self.table),
+                sa.insert(self.table),
                 items[[self.subject_id_field, 'user_id']].to_dict('records')
             )
+            await session.commit()
+
+    async def subscribe_on_news_source_with_same_name(
+        self,
+        user_id: int,
+        from_table: Type[Base],
+        subject_ids: int | list[int],
+    ) -> None:
+        """
+        Подписка на клиента или отрасль, если имя отчета совпадает с именем клиента/отрасли.
+        Подписка на отчет, если имя клиента/отрасли совпадает с именем отчета.
+        Позволяет делать подписку сразу на группу субъектов
+
+        :param user_id: телеграм id пользователя
+        :param from_table: таблица, из которой по subject_ids вынимается поле name для поиска похожих имен в self.subject_table
+        :param subject_ids: список id объектов из таблицы from_table
+        """
+        if not isinstance(subject_ids, Iterable):
+            subject_ids = [subject_ids]
+
+        async with database.async_session() as session:
+            subquery = sa.select(sa.func.lower(from_table.name)).where(from_table.id.in_(subject_ids)).subquery()
+
+            select_query = sa.select(
+                sa.text(f'{user_id}::int'),
+                self.subject_table.id,
+            ).where(sa.func.lower(self.subject_table.name).in_(subquery)).group_by(self.subject_table.id)
+            stmt = insert_pg(
+                self.table
+            ).from_select(['user_id', self.subject_id_field], select_query).on_conflict_do_nothing()
+            await session.execute(stmt)
             await session.commit()
 

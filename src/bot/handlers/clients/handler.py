@@ -1,3 +1,13 @@
+"""
+Обработчик меню клиентов.
+
+Позволяет получить различную информацию о клиенте:
+- новости
+- аналитика публичных рынков (для публичных клиентов)
+- отраслевая аналитик
+- продуктовые предложения
+- цифровая справка
+"""
 import datetime
 from pathlib import Path
 from typing import Optional
@@ -8,10 +18,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
-from db import subscriptions as subscriptions_db_api
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product_group import product_group_db
+from db.api.research_type import research_type_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
 from handlers import products
@@ -22,7 +32,7 @@ from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import user_logger
 from module.article_process import FormatText
-from utils.base import send_or_edit, send_pdf, user_in_whitelist, get_page_data_and_info
+from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -46,6 +56,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню клиенты
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
@@ -215,9 +226,9 @@ async def get_client_analytic_indicators(
 
     research_type_id = callback_data.research_type_id
 
-    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
+    research_info = await research_type_db.get(research_type_id)
 
-    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info["name"]}</b>?'
+    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(
         client_id=callback_data.client_id,
         current_page=callback_data.page,

@@ -80,13 +80,15 @@ def regular_func():
 
     subject_links, tg_links = [], []
     df_article = get_article()
+    logger.info(f'Получено всего {len(df_article)} новостей')
+    print(f'Получено всего {len(df_article)} новостей')
     # Берем последнюю тысячу еовостей для обработки
-    df_article = df_article[-MAX_NEWS_BATCH_SIZE:]
+    df_article = df_article[:MAX_NEWS_BATCH_SIZE]
 
     if not df_article.empty:
         try:
-            logger.info(f'Получено {len(df_article)} новостей')
-            print(f'Получено {len(df_article)} новостей')
+            logger.info(f'На обработку получено {len(df_article)} новостей')
+            print(f'На обработку получено {len(df_article)} новостей')
             df_article, ids = ap_obj_online.preprocess_article_online(df_article)
             if not df_article.empty:
                 print('Старт получения новостей из тг-каналов из общего списка новостей')
@@ -140,7 +142,7 @@ def post_ids(ids):
         # ids = {'id': [1,2,3...]}
         try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
-            url=BASE_GIGAPARSER_URL.format(f'success_request/all?stand={config.STAND}'),
+            url=BASE_GIGAPARSER_URL.format(f'success_request?stand={config.STAND}'),
             json=ids,
             timeout=config.POST_TO_GIGAPARSER_TIMEOUT
         )

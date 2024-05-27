@@ -1,5 +1,6 @@
 [flake8]
 max-line-length = 135
+ignore = D400
 exclude =
     migrations
     __pycache__
@@ -9,4 +10,4 @@ exclude =
 
 inline-quotes = '
 application-import-names = src
-import-order-style = google
+import-order-style = smarkets
