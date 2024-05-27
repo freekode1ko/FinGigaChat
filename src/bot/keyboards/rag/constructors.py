@@ -12,6 +12,10 @@ def get_feedback_kb(as_markup: bool = True) -> InlineKeyboardMarkup | InlineKeyb
 
     Формат:
     [ 👍 ][ 👎 ]
+
+    :param as_markup:   Флаг для преобразования клавиатуры в разметку.
+    :return:            Builder для последующей модификации клавиатуры
+                        или разметку для прикрепления клавиатуры к сообщению.
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text=dict_of_emoji['like'], callback_data='like'))
@@ -28,6 +32,7 @@ def get_feedback_regenerate_kb(rephrase_query: bool = False, initially_query: bo
 
     :param rephrase_query:      Использовать для генерации ответа перефразированный вопрос.
     :param initially_query:     Использовать для генерации ответа изначальный вопрос пользователя.
+    :return:                    Разметку для прикрепления клавиатуры к сообщению.
     """
     call_data = RegenerateResponse(rephrase_query=rephrase_query, initially_query=initially_query).pack()
 

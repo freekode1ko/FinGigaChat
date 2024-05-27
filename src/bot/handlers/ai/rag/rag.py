@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionSender
 
-from constants.constants import DISLIKE_FEEDBACK, LIKE_FEEDBACK
+from constants.constants import DISLIKE_FEEDBACK, END_BUTTON_TXT, LIKE_FEEDBACK
 from constants.enums import RetrieverType
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
 from db.redis import del_dialog, get_last_user_msg, update_dialog
@@ -27,8 +27,14 @@ class RagState(StatesGroup):
     rag_last_bot_msg = State()
 
 
+@router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
 async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -> None:
-    """Очистка пользовательской истории диалога, если завершается состояние RagState."""
+    """
+    Очистка пользовательской истории диалога, если завершается состояние RagState.
+
+    :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param state:       Состояние FSM.
+    """
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
         await del_dialog(message.from_user.id)
@@ -36,29 +42,27 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
         await message.answer('История диалога очищена!')
 
 
-@router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
-async def clear_user_dialog_handler(message: types.Message, state: FSMContext) -> None:
-    """Обработчик отчистки истории диалога."""
-    await clear_user_dialog_if_need(message, state)
-
-
 @router.message(Command('knowledgebase'))
 async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
-    """Переключение в режим общения с Вопросно-ответной системой (ВОС)."""
+    """
+    Переключение в режим общения с Вопросно-ответной системой (ВОС).
+
+    :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param state:       Состояние FSM.
+    """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
         await state.set_state(RagState.rag_mode)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-        cancel_command = 'Завершить'
-        cancel_msg = f'Напишите «{cancel_command}» для завершения общения с Базой Знаний'
+        cancel_msg = f'Напишите «{END_BUTTON_TXT}» для завершения общения с Базой Знаний'
         msg_text = 'Начато общение с Базой Знаний\n\n' + cancel_msg
 
         buttons = [
             [
                 types.KeyboardButton(text='Очистить историю диалога'),
-                types.KeyboardButton(text=cancel_command),
+                types.KeyboardButton(text=END_BUTTON_TXT),
             ]
         ]
         keyboard = types.ReplyKeyboardMarkup(
@@ -84,7 +88,12 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
 
 @router.message(RagState.rag_mode)
 async def handler_rag_mode(message: types.Message, state: FSMContext) -> None:
-    """Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя."""
+    """
+    Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя.
+
+    :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param state:       Состояние FSM.
+    """
     await ask_with_dialog(message, state)
 
 
@@ -198,7 +207,13 @@ async def ask_with_dialog(message: types.Message, state: FSMContext, first_user_
 
 @router.callback_query(RegenerateResponse.filter())
 async def ask_without_dialog(call: types.CallbackQuery, callback_data: RegenerateResponse, state: FSMContext) -> None:
-    """Отправляет ответ на запрос пользователя без использования истории диалога."""
+    """
+    Отправляет ответ на запрос пользователя без использования истории диалога.
+
+    :param call:              Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:     Объект, содержащий дополнительную информацию.
+    :param state:             Состояние FSM.
+    """
     async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
         chat_id = call.message.chat.id
         full_name = call.message.from_user.full_name

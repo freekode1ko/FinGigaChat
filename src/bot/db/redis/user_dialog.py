@@ -13,8 +13,7 @@ async def get_dialog(user_id: int) -> list[dict[str, str]]:
     :return:                История диалога.
     """
     dialog = await redis_client.hget(str(user_id), key='dialog')
-    dialog = [] if not dialog else json.loads(dialog)
-    return dialog
+    return json.loads(dialog) if dialog else []
 
 
 async def update_dialog(user_id: int, msgs: dict[str, str], need_replace: bool = False):
@@ -24,12 +23,12 @@ async def update_dialog(user_id: int, msgs: dict[str, str], need_replace: bool =
     :param user_id:        Telegram id пользователя.
     :param msgs:           Диалог из двух сообщений: пользователь и ИИ.
     :param need_replace:   Необходимость замены последних сообщений новыми.
-            """
+    """
     dialog = await get_dialog(user_id)
-    if dialog and need_replace:
-        dialog.pop()
-    elif len(dialog) > COUNT_OF_USEFUL_LAST_MSGS:
-        dialog.pop(0)
+    if dialog:
+        if need_replace:
+            dialog.pop()
+        dialog = dialog[-COUNT_OF_USEFUL_LAST_MSGS:]
 
     dialog.append(msgs)
     dialog_serialized = json.dumps(dialog)

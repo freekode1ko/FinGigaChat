@@ -16,7 +16,7 @@ async def add_rag_activity(
         query: str,
         history_query: str,
         history_response: str
-):
+) -> None:
     """
     Логирование использования RAG-системы.
 
@@ -42,7 +42,7 @@ async def add_rag_activity(
         await session.commit()
 
 
-async def update_response(chat_id: int, bot_msg_id: int, response: str, rephrase_query: str = ''):
+async def update_response(chat_id: int, bot_msg_id: int, response: str, rephrase_query: str = '') -> None:
     """
     Обновление ответа относительно запроса, поступающего в RAG.
 
@@ -66,7 +66,7 @@ async def update_response(chat_id: int, bot_msg_id: int, response: str, rephrase
         await session.commit()
 
 
-async def update_user_reaction(chat_id: int, bot_msg_id: int, reaction: bool):
+async def update_user_reaction(chat_id: int, bot_msg_id: int, reaction: bool) -> None:
     """
     Добавление обратной связи от пользователя по использованию RAG-системы.
 

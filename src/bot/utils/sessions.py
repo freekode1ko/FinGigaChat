@@ -1,3 +1,4 @@
+"""Формирование клиентов для работы с http запросами в асинхронном режиме."""
 from aiohttp import ClientSession, TCPConnector
 
 
@@ -13,6 +14,7 @@ def singleton(cls):
 
 
 class BaseClient:
+    """Базовый класс для создания клиентов."""
 
     def __init__(self, base_url: str):
         self.base_url = base_url
