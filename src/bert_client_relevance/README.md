@@ -2,4 +2,4 @@
 
 Инференс fine-tune модели ruRoberta-large для предсказания 
 релевантности/нерелевантности новостей по клиентам
-https://huggingface.co/ai-forever/ruRoberta-large
+https://huggingface.co/hellcatAI/ruRoberta_client_relevance_classification

@@ -11,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from configs.config import psql_engine
+from configs.config import psql_engine, ROBERTA_CLIENT_RELEVANCE_LINK
 from configs.prompts import summarization_prompt, CLIENT_SYSTEM_PROMPT, CLIENT_MESSAGE_PROMPT, \
     COMMODITY_SYSTEM_PROMPT, COMMODITY_MESSAGE_PROMPT
 from db.database import engine
@@ -28,6 +28,8 @@ STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
 COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
 CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
+
+ROBERTA_CLIENT_RELEVANCE_LINK = 'http://localhost:444/query'
 
 BAD_GIGA_ANSWERS = [
     'Что-то в вашем вопросе меня смущает. Может, поговорим на другую тему?',
@@ -358,10 +360,11 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
     :return: список вероятностей релевантности.
     """
     try:
-        # делаем запрос к модели roberta
-        params = {"query": text}
-        response = requests.get('http://localhost:80/query', params=params).content
-        probs = list(map(float, response.split(':')))
+        # делаем запрос к модели roberta, обрезаем слишком большой инпут
+        params = {"query": text[:6000]}
+        response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params).content
+        # достаем вероятности релевантности
+        probs = list(map(float, str(response)[2:-1].split(':')))
     except Exception as e:
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
@@ -379,13 +382,14 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
     :return: Pandas DF. Current news batch DF with added column 'client_labels'
     """
     # predict relevance and adding a column with relevance label (1 or 0)
+    logger.info('Старт обработки новостей клиентов на релевантность')
     probs = df.apply(lambda row: get_prediction_bert_client_relevance(
         row['cleaned_data'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
+    logger.info('Окончание обработки новостей клиентов на релевантность')
     df['relevance'] = [
         int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
         for index, pair in enumerate(probs)
     ]
-
     # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
     df['client_labels'] = df.apply(lambda x:
                                    5 if max((json.loads(x['client_impact'])).values(), default=0) > 2 else 2, axis=1)
