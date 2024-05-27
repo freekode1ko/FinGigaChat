@@ -163,9 +163,9 @@ async def clients_subscriptions_list(
     client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
 
     if subscribed:
-        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
-    else:
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
+    else:
+        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
 
     if len(clients) > 1:
         page_data, page_info, max_pages = get_page_data_and_info(clients)
