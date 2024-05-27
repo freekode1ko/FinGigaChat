@@ -1,3 +1,10 @@
+"""Реализует функции рассылок
+
+Модуль с функциями рассылки:
+- новостей по подпискам на клиентов, сырье, отрасли;
+- викли пульса;
+- отчетов CIB research по подпискам.
+"""
 import asyncio
 import datetime
 import os
@@ -28,13 +35,22 @@ from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channe
 async def tg_newsletter(
         bot: Bot,
         user_df: pd.DataFrame,
-        *args,
         **kwargs,
 ) -> None:
-    newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(0))
-    next_newsletter_datetime = kwargs.get('next_newsletter_datetime', datetime.datetime.min)
+    """
+    Рассылка новостей по подпискам на клиентов, сырье, отрасли
 
-    if not newsletter_timedelta or next_newsletter_datetime == datetime.datetime.min:
+    :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
+
+    Kwargs:
+        - newsletter_timedelta (datetime.timedelta): промежуток, за который выгружаются последние новости
+        - newsletter_start_datetime (datetime.datetime): время начала рассылки
+    """
+    newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(0))
+    newsletter_start_datetime = kwargs.get('newsletter_start_datetime', datetime.datetime.min)
+
+    if not newsletter_timedelta or newsletter_start_datetime == datetime.datetime.min:
         return
 
     # получим словарь id отрасли и ее название (в цикле, потому что справочник может пополняться)
@@ -49,7 +65,11 @@ async def tg_newsletter(
 
         for section in sections:
             tg_news = await telegram_section_db.get_section_tg_news(
-                section.id, True, user_id, newsletter_timedelta, next_newsletter_datetime
+                section.id,
+                True,
+                user_id,
+                newsletter_timedelta,
+                newsletter_start_datetime,
             )
             if tg_news.empty:
                 continue
@@ -78,19 +98,33 @@ async def tg_newsletter(
 async def subscriptions_newsletter(
         bot: Bot,
         user_df: pd.DataFrame,
-        *args,
         **kwargs,
 ) -> None:
-    client_hours = kwargs.get('client_hours', 0)
-    commodity_hours = kwargs.get('commodity_hours', 0)
+    """
+    Рассылка новостей по подпискам на клиентов, сырье, отрасли
+
+    :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
+
+    Kwargs:
+        - newsletter_timedelta (datetime.timedelta): промежуток, за который выгружаются последние новости
+        - newsletter_start_datetime (datetime.datetime): время начала рассылки
+    """
+    newsletter_timedelta = kwargs.get('newsletter_timedelta', datetime.timedelta(hours=0))
+    newsletter_start_datetime = kwargs.get('newsletter_start_datetime', datetime.datetime.min)
+
+    if not newsletter_timedelta or newsletter_start_datetime == datetime.datetime.min:
+        return
 
     ap_obj = ArticleProcess(logger)
 
     # получим свежие новости за определенный промежуток времени
-    clients_news = ap_obj.get_news_by_time(client_hours, 'client').sort_values(by=['name', 'date'],
-                                                                               ascending=[True, False])
-    commodity_news = ap_obj.get_news_by_time(commodity_hours, 'commodity').sort_values(by=['name', 'date'],
-                                                                                       ascending=[True, False])
+    clients_news = ap_obj.get_news_by_time(
+        newsletter_timedelta, 'client', newsletter_start_datetime
+    ).sort_values(by=['name', 'date'], ascending=[True, False])
+    commodity_news = ap_obj.get_news_by_time(
+        newsletter_timedelta, 'commodity', newsletter_start_datetime
+    ).sort_values(by=['name', 'date'], ascending=[True, False])
 
     # получим словарь id отрасли и ее название
     industry_name = pd.read_sql_table('industry', con=engine, index_col='id')['name'].to_dict()
@@ -141,7 +175,7 @@ async def subscriptions_newsletter(
 
                 user_logger.debug(
                     f'*{user_id}* Пользователю {user_name} пришла ежедневная рассылка. '
-                    f"Активные подписки на момент рассылки: {industry_ids=:}, {client_ids=:}, {commodity_ids=:}"
+                    f'Активные подписки на момент рассылки: {industry_ids=:}, {client_ids=:}, {commodity_ids=:}'
                 )
             # except ChatNotFound:  # FIXME 3.3.0
             #     user_logger.error(f'Чата с пользователем *{user_id}* {user_name} не существует')
@@ -158,9 +192,17 @@ async def subscriptions_newsletter(
 async def weekly_pulse_newsletter(
         bot: Bot,
         user_df: pd.DataFrame,
-        *args,
         **kwargs,
 ) -> None:
+    """
+    Рассылка новостей по подпискам на клиентов, сырье, отрасли
+
+    :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
+
+    Kwargs:
+        - newsletter_type (str): тип, указывающий, что идет рассылка итогов недели или "что нас ждет на следующей неделе"
+    """
     newsletter_type = kwargs.get('newsletter_type', '')
     source_name = 'Weekly Pulse'
     # проверяем, что данные обновились с последней рассылки
@@ -259,9 +301,9 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
 
 async def send_new_researches_to_users(bot: Bot) -> None:
     """
-    Рассылка новых отчетов с CIB пользователям по их подпискам
+    Функция рассылки новых отчетов CIB Research по подпискам
 
-    :param bot: объект тг бота
+    :param bot: телеграм бот, который отправляет сообщения пользователям
     """
     now = datetime.datetime.now()
     newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
@@ -284,8 +326,8 @@ async def send_new_researches_to_users(bot: Bot) -> None:
     research_df['research_section_name'] = research_df['research_type_id'].apply(lambda x: research_section_dict[x]['name'])
 
     for _, user_row in user_df.iterrows():
-        user_id = user_row["user_id"]
-        user_name = user_row["username"]
+        user_id = user_row['user_id']
+        user_name = user_row['username']
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         # filter by user`s subs and group research_df by research_section_name

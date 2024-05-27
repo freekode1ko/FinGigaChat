@@ -1,7 +1,12 @@
+"""много чего делает
+
+придется это писать?
+"""
 import copy
+import datetime
 import datetime as dt
 import re
-from typing import Dict, List, Union
+from typing import Optional
 from urllib.parse import urlparse
 
 import numpy as np
@@ -32,18 +37,26 @@ CONDITION_TOP = (
 
 
 class ArticleProcess:
+    """Предоставляет методы для работы с новостями из таблицы article"""
+
     def __init__(self, logger: Logger.logger):
+        """
+        Инициализация объекта обработчика новостей
+
+        :param logger: объект логгера
+        """
         self._logger = logger
         self.engine = engine
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     # FIXME need
-    def find_subject_id(self, message: str, subject: str):
+    def find_subject_id(self, message: str, subject: str) -> list[int]:
         """
-        Find id of client or commodity by user message
-        :param message: user massage
-        :param subject: client or commodity
-        :return: id of client(commodity) or False if user message not about client or commodity
+        Ищет id клиента или сырьевого товара по сообщению пользователя
+
+        :param message: сообщение пользователя
+        :param subject: client | commodity
+        :return: список id клиентов(сырья)
         """
         subject_ids = []
         message_text = message.lower().strip().replace('"', '')
@@ -59,6 +72,7 @@ class ArticleProcess:
     def _get_articles(self, subject_id: int, subject: str, limit_all: int = NEWS_LIMIT, offset_all: int = 0):
         """
         Get sorted sum article by subject id.
+
         :param subject_id: id of client or commodity
         :param subject: client or commodity
         :return: name of client(commodity) and sorted sum articles
@@ -101,16 +115,14 @@ class ArticleProcess:
 
             article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
             count_of_not_top_news = count_all - len(article_data_top)
-            article_data = article_data_top + article_data_all[
-                                              :count_of_not_top_news] if not offset_all else article_data_all
+            article_data = article_data_top + article_data_all[:count_of_not_top_news] if not offset_all else article_data_all
 
             name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
 
             return name, article_data
 
-    def _get_sorted_subject(self) -> (Dict, Dict):
-        """Создание словарей для сортировки по топ клиентам/товарам
-        в зависимости от кол-ва новостей за период времени"""
+    def _get_sorted_subject(self) -> tuple[dict[str, int], dict[str, int]]:
+        """Создание словарей для сортировки по топ клиентам/товарам в зависимости от кол-ва новостей за период времени"""
         period = '3 months'
         query_sort = (
             'select name from {subject_type} '
@@ -131,9 +143,10 @@ class ArticleProcess:
         return client_sorted_dict, commodity_sorted_dict
 
     @staticmethod
-    def _sort_by_top_subject(sorted_subject_name: Dict, articles) -> List:
+    def _sort_by_top_subject(sorted_subject_name: dict, articles) -> list:
         """
         Возвращает отсортированный по топ объектам список со статьями
+
         :param sorted_subject_name: словарь {имя объекта: отсортированный индекс}
         :param articles: данные по новостям, включая имена объектов
         """
@@ -148,7 +161,7 @@ class ArticleProcess:
         article_sorted = [a[0] for a in article_sorted]  # список из ключей, т.е. только из данных по новостям
         return article_sorted
 
-    def _get_industry_articles(self, industry_id) -> List:
+    def _get_industry_articles(self, industry_id: int) -> list:
         """Получение отсортированных новостей по клиентам и товарам для выдачи новостей по отрасли"""
         query = (
             'SELECT * FROM '
@@ -184,11 +197,11 @@ class ArticleProcess:
 
     def _get_commodity_pricing(self, subject_id: int) -> list[tuple]:
         """
-        Get pricing about commodity from db.
-        :param subject_id: id of commodity
-        :return: list(dict) data about commodity pricing
-        """
+        Вынимает цены на сырье из БД.
 
+        :param subject_id: id сырья
+        :return: list(dict) цены на сырье
+        """
         query = text('select source, sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" from metals '
                      'join relation_commodity_metals rcm on rcm.name_from_source=metals."Metals" '
                      'where commodity_id=:subject_id')
@@ -197,12 +210,13 @@ class ArticleProcess:
 
         return com_data
 
-    def get_client_fin_indicators(self, client_id, client_name):
+    def get_client_fin_indicators(self, client_id: int, client_name: str) -> tuple[str, pd.DataFrame]:
         """
-        Get company finanical indicators.
-        :param client_id: id of company in client table
-        :param client_name: str of company in user's message
-        :return: df financial indicators
+        Получить финансовые показатели по компании.
+
+        :param client_id: id компании в таблице клиентов
+        :param client_name: наименование компании в сообщении пользователя
+        :return: df финансовых показателей
         """
         if client_id:
             client = pd.read_sql('client', con=self.engine)
@@ -226,12 +240,10 @@ class ArticleProcess:
 
                 if len(selected_cols) < 5:
                     if full_nan_cols < 5:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
-                                                 : int(remaining_cols) - 1]
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[: int(remaining_cols) - 1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
                     else:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[
-                                                 : int(remaining_cols) + 1]
+                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[: int(remaining_cols) + 1]
                         selected_cols = selected_cols.tolist() + remaining_numeric_cols
 
                 result = client_copy[selected_cols]
@@ -252,7 +264,7 @@ class ArticleProcess:
         Преобразовывает финансовый показатель в текст с пробелом между тысячными разрядами чисел.
 
         :param mark: показатель
-        return: преобразованную строку или None
+        :return: преобразованную строку или None
         """
         if isinstance(mark, str):
             number = re.search(r'\d+([.,]\d+)?', mark)
@@ -274,7 +286,6 @@ class ArticleProcess:
         :param commodity_data: список с данными о коммоде
         return: форматированный текст о показателях коммода
         """
-
         if not commodity_data:
             return ''
 
@@ -316,11 +327,12 @@ class ArticleProcess:
                         com_data: list[tuple] | None
                         ) -> tuple[str, str | bool]:
         """
-        Make format to message.
-        :param subject_name: name of client(commodity)
-        :param articles: article data about client(commodity)
-        :param com_data: data about commodity pricing
-        :return: formatted text
+        Формирует отформатированное сообщение.
+
+        :param subject_name: имя клиента или сырья
+        :param articles: новости о клиенте или сырье
+        :param com_data: данные о ценах на сырье
+        :return: отформатированный текст
         """
         frmt_msg = f'<b>{subject_name.capitalize()}</b>'
 
@@ -339,7 +351,13 @@ class ArticleProcess:
         return com_msg, frmt_msg
 
     @staticmethod
-    def make_format_industry_msg(articles):
+    def make_format_industry_msg(articles: list[list]) -> str:
+        """
+        Формирует одно сообщение со всеми новостями в заданном формате из списка переденных новостей
+
+        :param articles: список новостей
+        :returns: отформатированное сообщение
+        """
         format_msg = ''
 
         if articles:
@@ -392,21 +410,31 @@ class ArticleProcess:
 
         return com_pricing, reply_msg
 
-    def get_news_by_time(self, hours: int, table: str, columns: str = '*'):
+    def get_news_by_time(
+            self,
+            tmdelta: datetime.timedelta,
+            table: str,
+            to_datetime: Optional[datetime.datetime] = None,
+            columns: str = '*',
+    ) -> pd.DataFrame:
         """
         Получить таблицу с новостями по клиенту/комоде/*индустрии за последние N часов
 
-        :param hours: За сколько последних часов собрать новости? Считается как: (t - N), где N - запрашиваемое число
+        :param tmdelta: За какой промежуток собрать новости? Считается как: (t - N), где N - запрашиваемое число
         :param table: Какая таблица интересует для сбора (commodity, client)?
+        :param to_datetime: Конец промежутка, за который вынимаются новости
         :param columns: Какие колонки необходимо собрать из таблицы (пример: 'id, name, link'). Default = '*'
-        return Дата Фрейм с таблицей по объекту собранной из бд
+        :returns: Дата Фрейм с таблицей по объекту собранной из бд
         """
+        to_datetime = to_datetime or datetime.datetime.now()
+        from_datetime = to_datetime - tmdelta
         return pd.read_sql_query(
             f'SELECT {columns} FROM article '
             f'INNER JOIN relation_{table}_article ON '
             f'article.id = relation_{table}_article.article_id '
             f'INNER JOIN {table} ON relation_{table}_article.{table}_id = {table}.id '
-            f"WHERE (date > now() - interval '{hours} hours') and {table}_score > 0 "
+            f"WHERE (date > '{from_datetime.isoformat()}' and date <= '{to_datetime.isoformat()}') "
+            f'and {table}_score > 0 '
             f'ORDER BY {table}_score desc, date asc;',
             con=self.engine,
         )
@@ -415,15 +443,15 @@ class ArticleProcess:
     def get_user_article(client_article, commodity_article, industry_ids, client_ids, commodity_ids, industry_name):
         """
         Формирует два df со свежими новостями про объекты, на которые подписан пользователь.
+
         :param client_article: df со свежими новостями про клиентов
         :param commodity_article: df со свежими новостями про коммоды
         :param industry_ids: id отраслей, на которые подписан пользователь
         :param client_ids: id клиентов, на которых подписан пользователь
         :param commodity_ids: id коммодов, на которые подписан пользователь
         :param industry_name: dict с id отрасли в качества ключа и названия отрасли в качестве значения
-        return: df с отраслевыми новостями, df с новостями по клиентам и коммодам
+        :return: df с отраслевыми новостями, df с новостями по клиентам и коммодам
         """
-
         # получим новости по отраслям, на которые подписан пользователь
         cols = ['name', 'date', 'link', 'title', 'text_sum', 'industry_id']
         all_article = pd.concat([client_article[cols], commodity_article[cols]], ignore_index=True)
@@ -447,8 +475,9 @@ class ArticleProcess:
     def get_client_name_and_navi_link(self, client_id: int) -> (str, str):
         """
         Получить по ID из таблицы client имя и ссылку
+
         :param client_id: ID
-        return: имя и ссылку (name, navi_link )
+        :return: имя и ссылку (name, navi_link )
         """
         with self.engine.connect() as conn:
             if (result := conn.execute(
@@ -556,8 +585,9 @@ class FormatText:
 
     MARKER = copy.deepcopy(dict_of_emoji)['marker']  # '&#128204;'
 
-    def __init__(self, subject: str = '', date: Union[dt.datetime, str] = '', link: str = '', title: str = '',
-                 text_sum: str = ''):
+    def __init__(self, subject: str = '', date: dt.datetime | str = '', link: str = '', title: str = '',
+                 text_sum: str = '') -> None:
+        """Инициализация форматтера текста"""
         self.__subject = subject  # имя клиента/товара
         self.__title = title
         self.__date = date
@@ -565,24 +595,27 @@ class FormatText:
         self.__text_sum = text_sum
 
     @property
-    def subject(self):
+    def subject(self) -> str:
         """Возвращает отформатированное имя клиента/товара"""
         return f'\n<b>{self.__subject.capitalize()}</b>\n'
 
     @property
-    def title(self):
+    def title(self) -> str:
+        """Возвращает отформатированный заголовок"""
         title = self.__title
         return self.text_sum.split('.')[0] if not title else title
 
     @property
-    def date(self):
+    def date(self) -> str:
+        """Возвращает отформатированную дату"""
         if self.__date:
             return f'\n<i>{self.__date.strftime(BASE_DATE_FORMAT)}</i>'
         else:
             return self.__date
 
     @property
-    def link(self):
+    def link(self) -> str:
+        """Возвращает отформатированную ссылку"""
         url = urlparse(self.__link)
         base_url = url.netloc.split('www.')[-1]
         if base_url == 't.me':
@@ -590,11 +623,12 @@ class FormatText:
         return f'<a href="{self.__link}">{base_url}</a>'
 
     @property
-    def text_sum(self):
+    def text_sum(self) -> str:
+        """Возвращает отформатированную краткую сводку новости"""
         text_sum = self.__text_sum
         return f'{text_sum}.' if text_sum[-1] != '.' else text_sum
 
-    def make_subject_text(self):
+    def make_subject_text(self) -> str:
         """Возвращает новостной текст для клиента/товара"""
         if self.__title and self.__text_sum:
             return f'{self.MARKER} <b>{self.__title}</b>\n{self.text_sum} {self.link}{self.date}'
@@ -605,13 +639,13 @@ class FormatText:
         else:
             raise Exception(f'У новости нет заголовка и саммари, ссылка: {self.__link}')
 
-    def make_industry_text(self):
+    def make_industry_text(self) -> str:
         """Возвращает новостной текст для просмотра новостей про индустрию"""
         msg = f'{self.MARKER} {self.title} {self.link}{self.date}'
         return msg
 
     @staticmethod
-    def make_industry_msg(industry, format_msg):
+    def make_industry_msg(industry: str, format_msg: str) -> str:
         """Возвращает сообщение с новостями об индустрии"""
         industry = f'<b>{industry.upper()}</b>\n'
         industry_description = '<b>Подборка новостей отрасли</b>\n'
