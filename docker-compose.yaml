@@ -60,6 +60,16 @@ services:
             - ./sources:/code/sources/
         restart: always
 
+    redis:
+        image: "redis:latest"
+        ports:
+            - "6379:6379"
+        container_name: redis_container
+        environment:
+            - TZ=Europe/Moscow
+        volumes:
+            - redis_data:/redis_data
+        restart: always
 
     bot:
         build:
@@ -73,12 +83,12 @@ services:
         command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
         depends_on:
             - database
+            - redis
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
             - ./sources:/code/sources/
         restart: always
-
 
     web-app:
         build:
@@ -197,3 +207,6 @@ services:
             - ./data:/code/data
             - ./sources:/code/sources/
         restart: always
+
+volumes:
+  redis_data:
