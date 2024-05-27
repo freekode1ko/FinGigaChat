@@ -14,8 +14,8 @@ async def add_rag_activity(
         retriever_type: RetrieverType,
         date: datetime,
         query: str,
-        history_rephrase_query: str,
-        response: str
+        history_query: str,
+        history_response: str
 ):
     """
     Логирование использования RAG-системы.
@@ -25,8 +25,8 @@ async def add_rag_activity(
     :param retriever_type:          Тип ретривера.
     :param date:                    Дата+время ответа сообщения от бота.
     :param query:                   Запрос пользователя.
-    :param history_rephrase_query:  Перефразированный на основе истории диалога с помощью GigaChat запрос пользователя.
-    :param response:                Ответ ретривера (сообщение от бота).
+    :param history_query:           Перефразированный на основе истории диалога с помощью GigaChat запрос пользователя.
+    :param history_response:        Ответ ретривера (сообщение от бота).
     """
     stmt = insert(RAGUserFeedback).values(
         chat_id=chat_id,
@@ -34,15 +34,15 @@ async def add_rag_activity(
         retriever_type=retriever_type.name,
         date=date.replace(tzinfo=None),
         query=query,
-        history_rephrase_query=history_rephrase_query,
-        response=response
+        history_query=history_query,
+        history_response=history_response
     )
     async with async_session() as session:
         await session.execute(stmt)
         await session.commit()
 
 
-async def update_rephrase_query(chat_id: int, bot_msg_id: int, response: str, rephrase_query: str = ''):
+async def update_response(chat_id: int, bot_msg_id: int, response: str, rephrase_query: str = ''):
     """
     Обновление ответа относительно запроса, поступающего в RAG.
 
@@ -51,8 +51,10 @@ async def update_rephrase_query(chat_id: int, bot_msg_id: int, response: str, re
     :param response:         Ответ ретривера (сообщение от бота).
     :param rephrase_query:   Перефразированный с помощью GigaChat запрос пользователя.
     """
-    values = {'rephrase_query': rephrase_query} if rephrase_query else {}
-    values['response'] = response
+    if rephrase_query:
+        values = {'rephrase_query': rephrase_query, 'rephrase_response': response}
+    else:
+        values = {'response': response}
 
     stmt = (
         update(RAGUserFeedback).

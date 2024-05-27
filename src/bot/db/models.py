@@ -449,15 +449,17 @@ class RAGUserFeedback(Base):
     __tablename__ = 'rag_user_feedback'
     __table_args__ = {'comment': 'Обратная связь от пользователей по работе с RAG-системой'}
 
-    chat_id = Column(BigInteger, primary_key=True)
-    bot_msg_id = Column(BigInteger, primary_key=True)
-    retriever_type = Column(String(16), nullable=False)
-    reaction = Column(Boolean)
-    date = Column(DateTime, default=datetime.datetime.now)
-    query = Column(Text, nullable=False)
-    history_rephrase_query = Column(Text)
-    rephrase_query = Column(Text)
-    response = Column(Text)
+    chat_id = Column(BigInteger, primary_key=True, comment='ID чата с пользователем')
+    bot_msg_id = Column(BigInteger, primary_key=True, comment='ID сообщения бота')
+    retriever_type = Column(String(16), nullable=False, comment='Тип ретривера: новости, господдержка, гигачат')
+    reaction = Column(Boolean, comment='Обратная связь от пользователя: True - положительная, False - отрицательная')
+    date = Column(DateTime, default=datetime.datetime.now, comment='Дата сообщения от бота')
+    query = Column(Text, nullable=False, comment='Запрос пользователя')
+    response = Column(Text, comment='Ответ на запрос пользователя')
+    history_query = Column(Text, comment='Перефразированный на истории диалога запрос пользователя')
+    history_response = Column(Text, comment='Ответ на перефразированный на истории диалога запрос пользователя')
+    rephrase_query = Column(Text, comment='Перефразированный запрос пользователя')
+    rephrase_response = Column(Text, comment='Ответ на перефразированный запрос пользователя')
 
 
 class ResearchGroup(Base):
@@ -671,11 +673,3 @@ class TelegramSection(Base):
 
     telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
     telegram_channel = relationship('TelegramChannel', back_populates='section')
-
-
-class UserDialogHistory(Base):
-    __tablename__ = 'user_dialog_history'
-    __table_args__ = {'comment': 'Истории диалогов между пользователями и ИИ'}
-
-    user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
-    dialog = Column(JSONB, nullable=False,comment='Сообщения между ИИ и пользователем')
