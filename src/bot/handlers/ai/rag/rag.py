@@ -7,8 +7,8 @@ from aiogram.utils.chat_action import ChatActionSender
 
 from constants.constants import DISLIKE_FEEDBACK, LIKE_FEEDBACK
 from constants.enums import RetrieverType
-from db.api.user_dialog_history import user_dialog_history_db
-from db.rag_user_feedback import add_rag_activity, update_rephrase_query, update_user_reaction
+from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
+from db.redis import del_dialog, get_last_user_msg, update_dialog
 from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_regenerate_kb, get_feedback_kb
@@ -23,13 +23,14 @@ class RagState(StatesGroup):
 
     rag_mode = State()
     rag_query = State()
+    rag_last_bot_msg = State()
 
 
 async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -> None:
     """Очистка пользовательской истории диалога, если завершается состояние RagState."""
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
-        await user_dialog_history_db.clear_user_dialog(message.from_user.id)
+        await del_dialog(message.from_user.id)
         await message.answer('История диалога очищена!')
 
 
@@ -71,7 +72,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_with_dialog(message, first_user_query)
+            await ask_with_dialog(message, state, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -80,9 +81,9 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(RagState.rag_mode)
-async def handler_rag_mode(message: types.Message) -> None:
+async def handler_rag_mode(message: types.Message, state: FSMContext) -> None:
     """Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя."""
-    await ask_with_dialog(message)
+    await ask_with_dialog(message, state)
 
 
 async def _get_response(
@@ -114,7 +115,7 @@ async def _add_data_to_db(
         user_query: str,
         clear_response: str,
         retriever_type: RetrieverType,
-        history_rephrase_query: str = '',
+        history_query: str = '',
         rephrase_query: str = '',
         need_replace: bool = False
 ) -> None:
@@ -123,26 +124,27 @@ async def _add_data_to_db(
 
     :param msg:             Message от пользователя.
     :param user_query:      Запрос пользователя.
-    :param clear_response:  Неотформатированный ответ на запрос пользователя.
+    :param clear_response:  Неотформатированный ответ на запрос.
     :param retriever_type:  Тип ретривера (или GigaChat).
-    :param rephrase_query:  Перефразированный на основе истории диалога вопрос пользователя.
+    :param history_query:   Перефразированный с помощью истории диалога запрос пользователя.
+    :param rephrase_query:  Перефразированный запрос пользователя.
     :param need_replace:    Нужно ли изменять последние сообщения в диалоге.
     """
     clear_response = clear_text_from_url(clear_response)
 
     # сохранение пользовательской активности с ИИ
-    if history_rephrase_query:
+    if history_query:
         await add_rag_activity(
             chat_id=msg.chat.id,
             bot_msg_id=msg.message_id,
             date=msg.date,
             query=user_query,
-            history_rephrase_query=history_rephrase_query,
-            response=clear_response,
+            history_query=history_query,
+            history_response=clear_response,
             retriever_type=retriever_type
         )
     else:
-        await update_rephrase_query(
+        await update_response(
             chat_id=msg.chat.id,
             bot_msg_id=msg.message_id,
             response=clear_response,
@@ -150,17 +152,18 @@ async def _add_data_to_db(
         )
 
     # обновление истории диалога пользователя и ИИ
-    await user_dialog_history_db.add_msgs_to_user_dialog(
+    await update_dialog(
         user_id=msg.chat.id,
-        messages={'user': user_query, 'ai': clear_response},
+        msgs={'user': user_query, 'ai': clear_response},
         need_replace=need_replace
     )
 
 
-async def ask_with_dialog(message: types.Message, first_user_query: str = '') -> None:
+async def ask_with_dialog(message: types.Message, state: FSMContext, first_user_query: str = '') -> None:
     """
     Отправляет ответ на запрос пользователя, используя историю диалога.
 
+    :param state:              Состояние.
     :param message:            Message от пользователя.
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
@@ -168,8 +171,8 @@ async def ask_with_dialog(message: types.Message, first_user_query: str = '') ->
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
         user_query = first_user_query if first_user_query else user_msg
-        rephrase_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
-        result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
+        history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
+        result = await _get_response(chat_id, full_name, user_query, True, history_query)
         retriever_type, clear_response, response = result
 
         msg = await message.answer(
@@ -179,17 +182,25 @@ async def ask_with_dialog(message: types.Message, first_user_query: str = '') ->
             reply_markup=get_feedback_regenerate_kb(rephrase_query=True)
         )
 
-        await _add_data_to_db(msg, user_query, clear_response, retriever_type, history_rephrase_query=rephrase_query)
+        await _add_data_to_db(
+            msg,
+            user_query,
+            clear_response,
+            retriever_type,
+            history_query=history_query
+        )
+
+        await update_keyboard_of_penultimate_bot_msg(message, state)
+        await state.update_data(rag_last_bot_msg=msg.message_id)
 
 
 @router.callback_query(RegenerateResponse.filter())
-async def ask_without_dialog(call: types.CallbackQuery, callback_data: RegenerateResponse) -> None:
+async def ask_without_dialog(call: types.CallbackQuery, callback_data: RegenerateResponse, state: FSMContext) -> None:
     """Отправляет ответ на запрос пользователя без использования истории диалога."""
-
     async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
         chat_id = call.message.chat.id
         full_name = call.message.from_user.full_name
-        user_query = await user_dialog_history_db.get_last_user_query(chat_id)
+        user_query = await get_last_user_msg(chat_id)
 
         if callback_data.rephrase_query:
             rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
@@ -218,6 +229,8 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
             need_replace=True
         )
 
+        await state.update_data(rag_last_bot_msg=msg.message_id)
+
 
 @router.callback_query(F.data.endswith('like'))
 async def callback_keyboard(callback_query: types.CallbackQuery) -> None:
@@ -239,3 +252,14 @@ async def callback_keyboard(callback_query: types.CallbackQuery) -> None:
         callback_query.message.message_id,
         reaction
     )
+
+
+async def update_keyboard_of_penultimate_bot_msg(message: types.Message, state: FSMContext) -> None:
+    """Обновляет клавиатуру предпоследнего сообщения от рага: убирает кнопку генерации."""
+    data = await state.get_data()
+    if (rag_last_bot_msg := data.get('rag_last_bot_msg', None)) is not None:
+        await message.bot.edit_message_reply_markup(
+            chat_id=message.chat.id,
+            message_id=rag_last_bot_msg,
+            reply_markup=get_feedback_kb()
+        )

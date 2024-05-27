@@ -2,13 +2,13 @@
 import re
 
 from configs.prompts import AUGMENT_SYSTEM_PROMPT, AUGMENT_MESSAGE_PROMPT, NEW_QUERY_BY_DIALOG_PROMPT
-from db.api.user_dialog_history import user_dialog_history_db
+from constants.constants import COUNT_OF_USEFUL_LAST_MSGS
+from db.redis import get_dialog
 from log.bot_logger import logger
 import module.gigachat as gig
 
 
 chat = gig.GigaChat(logger)
-COUNT_OF_USEFUL_LAST_MSGS = 5
 
 
 async def _make_rephrase_query_by_history(query: str, dialog: list[dict[str, str]]) -> str:
@@ -39,8 +39,8 @@ async def get_rephrase_query_by_history(user_id: int, full_name: str, query: str
     :param query:       Запрос пользователя.
     :return:            Переписанный (если нужно) на основе диалога запрос пользователя.
     """
-    user_dialog_history = await user_dialog_history_db.get_user_dialog(user_id)
-    rephrase_query = await _make_rephrase_query_by_history(query, user_dialog_history['dialog'])
+    user_dialog_history = await get_dialog(user_id)
+    rephrase_query = await _make_rephrase_query_by_history(query, user_dialog_history)
 
     if matches := re.findall(r'Отдельный вопрос:(.*?)(?:\n|$)', rephrase_query):
         rephrase_query = matches[-1]

@@ -63,6 +63,17 @@ class RAGRouter:
 
         self.retriever_type = rag_class
 
+    @staticmethod
+    def add_question_mark(query: str) -> str:
+        """
+        Добавляет вопросительный знак в конец запроса, если его нет.
+
+        :param query: Запрос.
+        :return:      Запрос с вопросительным знаком в конце.
+        """
+        query = query.strip()
+        return query if query[-1] == '?' else query + '?'
+
     async def get_response(self) -> tuple[str, str]:
         """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
@@ -73,7 +84,8 @@ class RAGRouter:
 
     async def rag_qa_banker(self) -> tuple[str, str]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
-        query = urllib.parse.quote(self.query)
+        query = self.add_question_mark(self.query)
+        query = urllib.parse.quote(query)
         query_part = f'/api/queries?query={query}'
         req_kwargs = dict(
             url=query_part,
@@ -92,7 +104,10 @@ class RAGRouter:
         session = RagStateSupportClient(config.BASE_STATE_SUPPORT_URL).session
         return await self._request_to_rag_api(session, self.POST_METHOD, **req_kwargs)
 
-    async def _request_to_rag_api(self, session: ClientSession, request_method: str = GET_METHOD, **kwargs) -> tuple[str, str]:
+    async def _request_to_rag_api(self,
+                                  session: ClientSession,
+                                  request_method: str = GET_METHOD,
+                                  **kwargs) -> tuple[str, str]:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
