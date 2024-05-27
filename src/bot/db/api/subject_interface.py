@@ -1,15 +1,25 @@
+"""
+Реализует стандартный интерфейс взаимодействия с субъектами (клиенты, сырье, отрасли).
+
+Позволяет:
+- выгружать информацию по одному субъекту,
+- по множеству субъектов,
+- выгружать альт имена,
+- выгружать новости по subject.id
+"""
 import datetime
-from typing import Any, Type, Optional
+from typing import Any, Optional, Type
 
 import pandas as pd
-from sqlalchemy import select, func, ColumnElement
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import InstrumentedAttribute
 
 from db import database
-from db.models import Base, Article
+from db.models import Article, Base
 
 
 class SubjectInterface:
+    """Реализация интерфейса взаимодействия с таблицами, у которых есть альтернативные имена и которые связаны с новостями"""
 
     def __init__(
             self,
@@ -37,6 +47,7 @@ class SubjectInterface:
     async def get_all(self) -> pd.DataFrame:
         """
         Выгрузка всех subject
+
         :returns: DataFrame[все столбцы таблицы self.table] со всеми subject
         """
         async with database.async_session() as session:
@@ -63,6 +74,7 @@ class SubjectInterface:
     async def get_by_industry_id(self, industry_id: int) -> pd.DataFrame:
         """
         Выгружает все subject, у которых industry_id == :industry_id
+
         :returns: DataFrame[все столбцы таблицы self.table] со всеми subject
         """
         async with database.async_session() as session:
@@ -76,6 +88,7 @@ class SubjectInterface:
     async def get_other_names(self) -> pd.DataFrame:
         """
         Возвращает датафрейм с альтернативными именами для каждого subject
+
         :returns: DataFrame['id', 'name', 'other_name']  (subject.id, subject.name,subject_alternative.other_name)
         """
         async with database.async_session() as session:
@@ -91,6 +104,7 @@ class SubjectInterface:
     async def get(self, _id: int) -> dict[str, Any]:
         """
         Возвращает словарь с данными по subject с id==_id
+
         :returns: dict[все столбцы таблицы self.table]
         """
         async with database.async_session() as session:
@@ -108,6 +122,7 @@ class SubjectInterface:
     ) -> list[Article]:
         """
         Выгрузка новостей по subject_id
+
         :param subject_id: id клиента/сырьевого товара
         :param from_date: Ограничение снизу по дате
         :param to_date: Ограничение сверху по дате в запросе

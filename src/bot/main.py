@@ -1,3 +1,6 @@
+"""
+Точка входа для запуска бота🤡
+"""
 import asyncio
 import datetime
 import time
@@ -62,7 +65,7 @@ async def passive_newsletter(
         # получим справочник пользователей (в цикле, потому что справочник может пополняться)
         user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist', con=engine)
 
-        kwargs['next_newsletter_datetime'] = next_newsletter_datetime
+        kwargs['newsletter_start_datetime'] = next_newsletter_datetime
         await newsletter_executor(bot, user_df, **kwargs)
 
         work_time = time.time() - start_tm
