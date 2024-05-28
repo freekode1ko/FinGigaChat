@@ -43,6 +43,7 @@ psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 redis_host: str = env.str('REDIS_HOST', default='localhost')
 redis_port: int = env.int('REDIS_PORT', default=6379)
+redis_password: str = env.str('REDIS_PASSWORD', default='')
 
 DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
 
