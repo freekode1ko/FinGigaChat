@@ -1,8 +1,9 @@
+"""Обработка истории диалога между пользователем и ботом в Redis."""
+
 import json
 
-from db.redis.client import redis_client
-
 from constants.constants import COUNT_OF_USEFUL_LAST_MSGS, KEEP_DIALOG_TIME
+from db.redis.client import redis_client
 
 
 async def get_dialog(user_id: int) -> list[dict[str, str]]:

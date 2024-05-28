@@ -1,13 +1,13 @@
 """Описание класса RAGRouter."""
-from aiohttp import ClientSession
 import json
 import re
 import urllib.parse
 
 import requests
+from aiohttp import ClientSession
 
 from configs import config, prompts
-from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_RAG_FOOTER, GIGA_FOOTER
+from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_FOOTER, GIGA_RAG_FOOTER
 from constants.enums import RetrieverType
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat

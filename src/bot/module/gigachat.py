@@ -1,14 +1,14 @@
 """Описание класса GigaChat."""
 import json
+import warnings
 from logging import Logger
 from typing import ClassVar
 from uuid import uuid4
-import warnings
 
 import requests as req
 
 from configs.config import giga_chat_url, giga_credentials, giga_model, giga_oauth_url, giga_scope
-from utils.sessions import GigaOauthClient, GigaChatClient
+from utils.sessions import GigaChatClient, GigaOauthClient
 
 warnings.filterwarnings('ignore')
 

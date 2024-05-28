@@ -1,3 +1,5 @@
+"""Пакет по работе с Redis."""
+
 from db.redis.user_dialog import (
     del_dialog,
     get_dialog,

@@ -13,7 +13,7 @@ from db.rag_user_feedback import add_rag_activity, update_response, update_user_
 from db.redis import del_dialog, get_last_user_msg, update_dialog
 from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
-from keyboards.rag.constructors import get_feedback_regenerate_kb, get_feedback_kb
+from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
 from utils.base import clear_text_from_url, user_in_whitelist
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history

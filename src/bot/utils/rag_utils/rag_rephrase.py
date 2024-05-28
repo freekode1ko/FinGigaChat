@@ -1,11 +1,11 @@
 """Работа с перефразированием запроса пользователя."""
 import re
 
-from configs.prompts import AUGMENT_SYSTEM_PROMPT, AUGMENT_MESSAGE_PROMPT, NEW_QUERY_BY_DIALOG_PROMPT
+import module.gigachat as gig
+from configs.prompts import AUGMENT_MESSAGE_PROMPT, AUGMENT_SYSTEM_PROMPT, NEW_QUERY_BY_DIALOG_PROMPT
 from constants.constants import COUNT_OF_USEFUL_LAST_MSGS
 from db.redis import get_dialog
 from log.bot_logger import logger
-import module.gigachat as gig
 
 
 chat = gig.GigaChat(logger)
