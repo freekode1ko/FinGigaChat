@@ -18,7 +18,7 @@ class BaseClient:
 
     def __init__(self, base_url: str):
         self.base_url = base_url
-        self.session = ClientSession(base_url, connector=TCPConnector(ssl=False))
+        self.session = ClientSession(base_url, connector=TCPConnector(verify_ssl=False), trust_env=True)
 
     async def close(self):
         if not self.session.closed:
@@ -26,7 +26,7 @@ class BaseClient:
 
     async def recreate(self):
         await self.close()
-        self.session = ClientSession(self.base_url, connector=TCPConnector(ssl=False))
+        self.session = ClientSession(self.base_url, connector=TCPConnector(verify_ssl=False), trust_env=True)
 
 
 @singleton

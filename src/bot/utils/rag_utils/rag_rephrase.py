@@ -75,5 +75,5 @@ async def get_rephrase_query(user_id: int, full_name: str, query: str) -> str:
         rephrase_query = matches[-1]
     rephrase_query = rephrase_query.strip()
 
-    logger.info(f'*{user_id}* {full_name} - "{query}" : По истории диалога сформирован запрос: "{rephrase_query}"')
+    logger.info(f'*{user_id}* {full_name} - "{query}" : После перефразирования сформирован запрос: "{rephrase_query}"')
     return rephrase_query

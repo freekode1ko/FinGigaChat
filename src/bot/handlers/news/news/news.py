@@ -5,6 +5,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from configs import config
@@ -317,7 +318,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
 
 
 @router.message(F.text)
-async def find_news(message: types.Message, state: FSMContext) -> None:
+async def find_news(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
@@ -329,7 +330,7 @@ async def find_news(message: types.Message, state: FSMContext) -> None:
         else:
             aliases_dict = {
                 **{alias: (common.help_handler, {}) for alias in aliases.help_aliases},
-                **{alias: (rag.set_rag_mode, {'state': state}) for alias in aliases.giga_and_rag_aliases},
+                **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
                 **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
                 **{alias: (quotes.bonds_info, {}) for alias in aliases.bonds_aliases},
                 **{alias: (quotes.economy_info, {}) for alias in aliases.eco_aliases},

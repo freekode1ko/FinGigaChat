@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionSender
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.constants import DISLIKE_FEEDBACK, END_BUTTON_TXT, LIKE_FEEDBACK
 from constants.enums import RetrieverType
@@ -37,18 +38,19 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
     """
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
-        await del_dialog(message.from_user.id)
         await update_keyboard_of_penultimate_bot_msg(message, state)
+        await del_dialog(message.from_user.id)
         await message.answer('История диалога очищена!')
 
 
 @router.message(Command('knowledgebase'))
-async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
+async def set_rag_mode(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС).
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
+    :param session:     Асинхронная сессия базы данных.
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
@@ -78,7 +80,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_with_dialog(message, state, first_user_query)
+            await ask_with_dialog(message, state, session, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -87,14 +89,15 @@ async def set_rag_mode(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(RagState.rag_mode)
-async def handler_rag_mode(message: types.Message, state: FSMContext) -> None:
+async def handler_rag_mode(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """
     Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя.
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
+    :param session:     Асинхронная сессия базы данных.
     """
-    await ask_with_dialog(message, state)
+    await ask_with_dialog(message, state, session)
 
 
 async def _get_response(
@@ -122,6 +125,7 @@ async def _get_response(
 
 
 async def _add_data_to_db(
+        session: AsyncSession,
         msg: types.Message,
         user_query: str,
         clear_response: str,
@@ -133,6 +137,7 @@ async def _add_data_to_db(
     """
     Добавление данных, связанных с RAG-сервисами, в БД.
 
+    :param session:         Асинхронная сессия базы данных.
     :param msg:             Message от пользователя.
     :param user_query:      Запрос пользователя.
     :param clear_response:  Неотформатированный ответ на запрос.
@@ -146,16 +151,18 @@ async def _add_data_to_db(
     # сохранение пользовательской активности с ИИ
     if history_query:
         await add_rag_activity(
+            session=session,
             chat_id=msg.chat.id,
             bot_msg_id=msg.message_id,
+            retriever_type=retriever_type,
             date=msg.date,
             query=user_query,
             history_query=history_query,
-            history_response=clear_response,
-            retriever_type=retriever_type
+            history_response=clear_response
         )
     else:
         await update_response(
+            session=session,
             chat_id=msg.chat.id,
             bot_msg_id=msg.message_id,
             response=clear_response,
@@ -170,15 +177,22 @@ async def _add_data_to_db(
     )
 
 
-async def ask_with_dialog(message: types.Message, state: FSMContext, first_user_query: str = '') -> None:
+async def ask_with_dialog(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        first_user_query: str = ''
+) -> None:
     """
     Отправляет ответ на запрос пользователя, используя историю диалога.
 
     :param state:              Состояние.
     :param message:            Message от пользователя.
+    :param session:            Асинхронная сессия базы данных.
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
         user_query = first_user_query if first_user_query else user_msg
@@ -194,25 +208,31 @@ async def ask_with_dialog(message: types.Message, state: FSMContext, first_user_
         )
 
         await _add_data_to_db(
-            msg,
-            user_query,
-            clear_response,
-            retriever_type,
+            session=session,
+            msg=msg,
+            user_query=user_query,
+            clear_response=clear_response,
+            retriever_type=retriever_type,
             history_query=history_query
         )
 
-        await update_keyboard_of_penultimate_bot_msg(message, state)
         await state.update_data(rag_last_bot_msg=msg.message_id)
 
 
 @router.callback_query(RegenerateResponse.filter())
-async def ask_without_dialog(call: types.CallbackQuery, callback_data: RegenerateResponse, state: FSMContext) -> None:
+async def ask_without_dialog(
+        call: types.CallbackQuery,
+        callback_data: RegenerateResponse,
+        state: FSMContext,
+        session: AsyncSession
+) -> None:
     """
     Отправляет ответ на запрос пользователя без использования истории диалога.
 
     :param call:              Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param callback_data:     Объект, содержащий дополнительную информацию.
     :param state:             Состояние FSM.
+    :param session:           Асинхронная сессия базы данных.
     """
     async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
         chat_id = call.message.chat.id
@@ -224,7 +244,7 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
 
         if callback_data.rephrase_query:
             rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
-            result = await _get_response(chat_id, full_name, rephrase_query, use_rephrase=False)
+            result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
             kb = get_feedback_regenerate_kb(initially_query=True)
         else:
             rephrase_query = ''
@@ -241,6 +261,7 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
         )
 
         await _add_data_to_db(
+            session,
             msg,
             user_query,
             clear_response,
@@ -253,7 +274,7 @@ async def ask_without_dialog(call: types.CallbackQuery, callback_data: Regenerat
 
 
 @router.callback_query(F.data.endswith('like'))
-async def callback_keyboard(callback_query: types.CallbackQuery) -> None:
+async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncSession) -> None:
     """Обработка обратной связи от пользователя."""
     if callback_query.data == 'like':
         txt, reaction = LIKE_FEEDBACK, True
@@ -267,11 +288,7 @@ async def callback_keyboard(callback_query: types.CallbackQuery) -> None:
                                            disable_web_page_preview=True, parse_mode='HTML')
 
     # добавим в бд обратную связь от пользователя
-    await update_user_reaction(
-        callback_query.message.chat.id,
-        callback_query.message.message_id,
-        reaction
-    )
+    await update_user_reaction(session, callback_query.message.chat.id, callback_query.message.message_id, reaction)
 
 
 async def update_keyboard_of_penultimate_bot_msg(message: types.Message, state: FSMContext) -> None:

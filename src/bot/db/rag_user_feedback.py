@@ -2,13 +2,14 @@
 import datetime
 
 from sqlalchemy import insert, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.enums import RetrieverType
-from db.database import async_session
 from db.models import RAGUserFeedback
 
 
 async def add_rag_activity(
+        session: AsyncSession,
         chat_id: int,
         bot_msg_id: int,
         retriever_type: RetrieverType,
@@ -20,6 +21,7 @@ async def add_rag_activity(
     """
     Логирование использования RAG-системы.
 
+    :param session:                 Асинхронная сессия базы данных.
     :param chat_id:                 Id чата с пользователем.
     :param bot_msg_id:              Id сообщения от бота.
     :param retriever_type:          Тип ретривера.
@@ -37,15 +39,21 @@ async def add_rag_activity(
         history_query=history_query,
         history_response=history_response
     )
-    async with async_session() as session:
-        await session.execute(stmt)
-        await session.commit()
+    await session.execute(stmt)
+    await session.commit()
 
 
-async def update_response(chat_id: int, bot_msg_id: int, response: str, rephrase_query: str = '') -> None:
+async def update_response(
+        session: AsyncSession,
+        chat_id: int,
+        bot_msg_id: int,
+        response: str,
+        rephrase_query: str = ''
+) -> None:
     """
     Обновление ответа относительно запроса, поступающего в RAG.
 
+    :param session:          Асинхронная сессия базы данных.
     :param chat_id:          Id чата с пользователем.
     :param bot_msg_id:       Id сообщения от бота.
     :param response:         Ответ ретривера (сообщение от бота).
@@ -61,15 +69,15 @@ async def update_response(chat_id: int, bot_msg_id: int, response: str, rephrase
         where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == bot_msg_id).
         values(values)
     )
-    async with async_session() as session:
-        await session.execute(stmt)
-        await session.commit()
+    await session.execute(stmt)
+    await session.commit()
 
 
-async def update_user_reaction(chat_id: int, bot_msg_id: int, reaction: bool) -> None:
+async def update_user_reaction(session: AsyncSession, chat_id: int, bot_msg_id: int, reaction: bool) -> None:
     """
     Добавление обратной связи от пользователя по использованию RAG-системы.
 
+    :param session:     Асинхронная сессия базы данных.
     :param chat_id:     Id чата с пользователем.
     :param bot_msg_id:  Id сообщения от бота.
     :param reaction:    Реакция пользователя на ответ RAG-системы (True/False).
@@ -79,6 +87,5 @@ async def update_user_reaction(chat_id: int, bot_msg_id: int, reaction: bool) ->
         .where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == bot_msg_id)
         .values(reaction=reaction)
     )
-    async with async_session() as session:
-        await session.execute(stmt)
-        await session.commit()
+    await session.execute(stmt)
+    await session.commit()

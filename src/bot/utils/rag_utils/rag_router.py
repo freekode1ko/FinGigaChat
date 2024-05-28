@@ -98,7 +98,7 @@ class RAGRouter:
         """Формирование параметров к запросу API по господдержке и получение ответа."""
         req_kwargs = dict(
             url='/api/v1/question',
-            json={'body': self.user_query},
+            json={'body': self.query},
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
         session = RagStateSupportClient(config.BASE_STATE_SUPPORT_URL).session
