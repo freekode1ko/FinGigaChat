@@ -350,7 +350,7 @@ async def __create_fin_table(message: types.Message, client_name: str,
             if not row['Финансовые показатели']:
                 client_fin_table.drop(index=i, inplace=True)
             else:
-                client_fin_table.loc[row[i]] = pd.Series(
+                client_fin_table.loc[i] = pd.Series(
                     {'Финансовые показатели': client_fin_table.loc[i]['Финансовые показатели']})
     client_fin_table.where(pd.notnull(client_fin_table), '')
 

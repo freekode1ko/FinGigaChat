@@ -112,6 +112,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     :param ap_obj: экземпляр класса ArticleProcess
     return значение об успешности создания таблицы
     """
+    logger.info(f'НАЧАЛО Вывода таблицы с финансовыми показателями в виде фотокарточки для клиента {s_id}')
     client_fin_tables = await ap_obj.get_client_fin_indicators(s_id)
     client_name = msg_text.strip().lower()
     if not client_fin_tables.empty:
@@ -123,7 +124,7 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0], logger)
         await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0], logger)
 
-        return True # Создание таблицы успешно
+        return True  # Создание таблицы успешно
     else:
         logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
         return False
