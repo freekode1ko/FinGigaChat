@@ -63,7 +63,7 @@ services:
     redis:
         image: "redis:latest"
         ports:
-            - "6379:6379"
+            - ${REDIS_PORT}:${REDIS_PORT}
         container_name: redis_container
         environment:
             - TZ=Europe/Moscow
