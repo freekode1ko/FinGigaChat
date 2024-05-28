@@ -1,3 +1,6 @@
+"""
+Модели таблиц всех сервисов
+"""
 import datetime
 
 import sqlalchemy as sa
@@ -31,11 +34,11 @@ class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    link = Column(Text, nullable=False)
-    date = Column(DateTime, nullable=False)
-    text_ = Column('text', Text, nullable=False)
-    title = Column(Text)
-    text_sum = Column(Text)
+    link = Column(Text, nullable=False, comment='Ссылка на новость')
+    date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
+    text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
+    title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
+    text_sum = Column(Text, comment='Сформированная гигачатом сводка по новости')
 
     article_name_impact = relationship('ArticleNameImpact', back_populates='article')
     relation_client_article = relationship('RelationClientArticle', back_populates='article')
@@ -678,6 +681,8 @@ class TelegramSection(Base):
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
     group_id = Column(ForeignKey('bot_telegram_group.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=False,
                       nullable=False, comment='id группы, к которой принадлежит раздел')
+    rag_name = Column(String(100), nullable=False, server_default='',
+                      comment='Название секции для создания документов в RAG-сервисе')
 
     telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
     telegram_channel = relationship('TelegramChannel', back_populates='section')

@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 135
+ignore = D400
+exclude =
+    migrations
+    __pycache__
+    logs
+    .env
+    .env.example
+
+inline-quotes = '
+application-import-names = src
+import-order-style = smarkets

@@ -63,10 +63,10 @@ def get_menu_kb() -> InlineKeyboardMarkup:
         text='FI',
         callback_data=quotes.FI,
     ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Equity',
-        callback_data=quotes.EQUITY,
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='Equity',
+    #     callback_data=quotes.EQUITY,
+    # ))
     keyboard.row(types.InlineKeyboardButton(
         text='Commodities',
         callback_data=quotes.COMMODITIES,

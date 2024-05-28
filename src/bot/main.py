@@ -1,3 +1,6 @@
+"""
+Точка входа для запуска бота🤡
+"""
 import asyncio
 import datetime
 import time
@@ -12,12 +15,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
-from db.database import engine
+from db.database import engine, async_session as async_session_maker
 from handlers import (
-    admin, ai, analytics, common, industry, news, quotes, referencebook, subscriptions, products, call_reports, clients
+    admin, ai, analytics, common, telegram_sections, news, quotes, referencebook, subscriptions, products, call_reports, clients
 )
 from log.bot_logger import logger
 from log.sentry import init_sentry
+from middlewares.db import DatabaseMiddleware
+from middlewares.logger import LoggingMiddleware
 from utils.base import (
     next_weekday_time, wait_until,
 )
@@ -60,7 +65,7 @@ async def passive_newsletter(
         # получим справочник пользователей (в цикле, потому что справочник может пополняться)
         user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist', con=engine)
 
-        kwargs['next_newsletter_datetime'] = next_newsletter_datetime
+        kwargs['newsletter_start_datetime'] = next_newsletter_datetime
         await newsletter_executor(bot, user_df, **kwargs)
 
         work_time = time.time() - start_tm
@@ -95,12 +100,17 @@ async def start_bot():
         ai.router,
         call_reports.router,
         referencebook.router,
-        industry.router,
+        telegram_sections.router,
         analytics.router,
         products.router,
         clients.router,
         news.router,
     )
+    # Добавляем мидлварю для работы с БД
+    dp.update.middleware(DatabaseMiddleware(session_maker=async_session_maker))
+    # Добавляем мидлварю для логирования
+    dp.update.middleware(LoggingMiddleware(logger=logger))
+
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

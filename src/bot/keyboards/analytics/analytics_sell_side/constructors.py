@@ -1,4 +1,12 @@
-from typing import Any, Type
+"""
+Формирует клавиатуры для меню аналитики публичных рынков.
+Главное меню.
+Меню разделов в группе.
+Меню отчетов в разделе.
+Меню аналитических показателей для клиентов.
+Меню выбора периода для выгрузки отчетов.
+"""
+from typing import Type
 
 import pandas as pd
 from aiogram import types
@@ -7,6 +15,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import analytics, enums, constants
+from db import models
 from keyboards.analytics import constructors
 from keyboards.analytics.analytics_sell_side import callbacks
 
@@ -70,7 +79,7 @@ def get_sections_by_group_menu_kb(
 
 
 def get_research_types_by_section_menu_kb(
-        section_info: dict[str, Any],
+        section_info: models.ResearchSection,
         research_types_df: pd.DataFrame,
         back_callback_data: str,
 ) -> InlineKeyboardMarkup:
@@ -82,14 +91,14 @@ def get_research_types_by_section_menu_kb(
     [   назад   ]
     [   Завершить   ]
 
-    :param section_info: dict[id раздела CIB Research, section_type, research_group_id id группы CIB Research]
+    :param section_info: id раздела CIB Research, section_type, research_group_id id группы CIB Research
     :param research_types_df: DataFrame[id, name, is_subscribed, summary_type] инфа о подборке подписок
     :param back_callback_data: Данные для кнопки Назад
     """
     keyboard = InlineKeyboardBuilder()
 
     # update research_type_df by section_type (add weekly pulse, view)
-    match section_info['section_type']:
+    match section_info.section_type:
         case enums.ResearchSectionType.economy.value:
             # add weekly pulse прогноз динамики КС ЦБ
             # add view
@@ -194,7 +203,7 @@ def get_select_period_kb(
     return keyboard.as_markup()
 
 
-def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> InlineKeyboardMarkup:
+def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
     [ Справка ]
@@ -206,7 +215,7 @@ def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> Inlin
     [  назад  ]
     [   Завершить   ]
 
-    :param research_type_info: инфа о типе отчета CIB Research dict[id, research_section_id, summary_type]
+    :param research_type_info: инфа о типе отчета CIB Research
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -218,8 +227,8 @@ def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> Inlin
         {
             'name': 'Аналитические обзоры',
             'callback_data': callbacks.SelectClientResearchesGettingPeriod(
-                research_type_id=research_type_info['id'],
-                summary_type=research_type_info['summary_type'],
+                research_type_id=research_type_info.id,
+                summary_type=research_type_info.summary_type,
             ).pack(),
         },
         # {
@@ -248,7 +257,7 @@ def client_analytical_indicators_kb(research_type_info: dict[str, Any]) -> Inlin
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callbacks.GetCIBSectionResearches(section_id=research_type_info['research_section_id']).pack(),
+        callback_data=callbacks.GetCIBSectionResearches(section_id=research_type_info.research_section_id).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
