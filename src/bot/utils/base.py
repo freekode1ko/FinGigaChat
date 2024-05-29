@@ -353,7 +353,7 @@ async def __create_fin_table(message: types.Message, client_name: str, client_fi
 
 def get_page_data_and_info(
         all_data_df: pd.DataFrame,
-        page: int,
+        page: int = 0,
         page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> tuple[pd.DataFrame, str, int]:
     """
