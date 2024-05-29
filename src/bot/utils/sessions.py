@@ -1,6 +1,13 @@
 """Формирование клиентов для работы с http запросами в асинхронном режиме."""
 from aiohttp import ClientSession, TCPConnector
 
+from configs.config import (
+    BASE_QA_BANKER_URL,
+    BASE_STATE_SUPPORT_URL,
+    giga_chat_url,
+    giga_oauth_url,
+)
+
 
 def singleton(cls):
     instances = {}
@@ -32,22 +39,26 @@ class BaseClient:
 @singleton
 class GigaOauthClient(BaseClient):
     """Клиент для получения токена GigaChat."""
-    pass
+    def __init__(self):
+        super().__init__(giga_oauth_url)
 
 
 @singleton
 class GigaChatClient(BaseClient):
     """Клиент для получения ответа от GigaChat."""
-    pass
+    def __init__(self):
+        super().__init__(giga_chat_url)
 
 
 @singleton
 class RagQaBankerClient(BaseClient):
     """Клиент для получения ответа от RAG по новостям."""
-    pass
+    def __init__(self):
+        super().__init__(BASE_QA_BANKER_URL)
 
 
 @singleton
 class RagStateSupportClient(BaseClient):
     """Клиент для получения ответа от RAG по господдержке."""
-    pass
+    def __init__(self):
+        super().__init__(BASE_STATE_SUPPORT_URL)

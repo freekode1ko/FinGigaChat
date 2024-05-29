@@ -154,10 +154,10 @@ async def main():
     try:
         await start_bot()
     finally:
-        await sessions.GigaOauthClient(config.giga_oauth_url).close()
-        await sessions.GigaChatClient(config.giga_chat_url).close()
-        await sessions.RagQaBankerClient(config.BASE_QA_BANKER_URL).close()
-        await sessions.RagStateSupportClient(config.BASE_STATE_SUPPORT_URL).close()
+        await sessions.GigaOauthClient().close()
+        await sessions.GigaChatClient().close()
+        await sessions.RagQaBankerClient().close()
+        await sessions.RagStateSupportClient().close()
 
 
 if __name__ == '__main__':

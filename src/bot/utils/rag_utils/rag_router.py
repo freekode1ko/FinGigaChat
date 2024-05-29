@@ -91,7 +91,7 @@ class RAGRouter:
             url=query_part,
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-        session = RagQaBankerClient(config.BASE_QA_BANKER_URL).session
+        session = RagQaBankerClient().session
         return await self._request_to_rag_api(session, **req_kwargs)
 
     async def rag_state_support(self) -> tuple[str, str]:
@@ -101,7 +101,7 @@ class RAGRouter:
             json={'body': self.query},
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-        session = RagStateSupportClient(config.BASE_STATE_SUPPORT_URL).session
+        session = RagStateSupportClient().session
         return await self._request_to_rag_api(session, self.POST_METHOD, **req_kwargs)
 
     async def _request_to_rag_api(self,

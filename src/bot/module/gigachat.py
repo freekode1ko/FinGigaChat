@@ -43,7 +43,7 @@ class GigaChat:
         self.logger = logger
 
     @staticmethod
-    def _get_headers_and_data_for_token():
+    def _get_headers_and_data_for_token() -> tuple[dict[str, str], dict[str, str]]:
         """Формирование хэдера и даты для формирования токена."""
         headers = {
             'Authorization': f'Basic {GigaChat.CREDENTIALS}',
@@ -54,7 +54,12 @@ class GigaChat:
         return headers, data
 
     @staticmethod
-    def _get_headers_and_data_for_chat(token: str, text: str, prompt: str, temperature: float):
+    def _get_headers_and_data_for_chat(
+            token: str,
+            text: str,
+            prompt: str,
+            temperature: float
+    ) -> tuple[dict[str, str], str]:
         """
         Формирование хэдера и даты для запроса к модели.
 
@@ -113,11 +118,9 @@ class GigaChat:
         try:
             giga_answer = self.post_giga_query(text=text, prompt=prompt)
         except AttributeError:
-            self.logger.debug('Перевыпуск токена для общения с GigaChat')
             self.token = self.get_user_token()
             giga_answer = self.post_giga_query(text=text, prompt=prompt, temperature=temperature)
         except KeyError as key_error:
-            self.logger.debug('Перевыпуск токена для общения с GigaChat')
             self.token = self.get_user_token()
             giga_answer = self.post_giga_query(text=text, prompt=prompt, temperature=temperature)
             self.logger.critical(f'msg - {text}, prompt - {prompt} : KeyError ({key_error.args})')
@@ -127,7 +130,7 @@ class GigaChat:
     async def aget_user_token() -> str:
         """Асинхронное получение токена доступа к модели GigaChat."""
         headers, data = GigaChat._get_headers_and_data_for_token()
-        giga_oauth_session = GigaOauthClient(giga_oauth_url).session
+        giga_oauth_session = GigaOauthClient().session
         async with giga_oauth_session.post(GigaChat.OAUTH_URL_PART, headers=headers, data=data) as response:
             response = await response.json()
             token = response['access_token']
@@ -143,7 +146,7 @@ class GigaChat:
         :return:              Ответ модели.
         """
         headers, data = GigaChat._get_headers_and_data_for_chat(self.token, text, prompt, temperature)
-        giga_chat_session = GigaChatClient(giga_chat_url).session
+        giga_chat_session = GigaChatClient().session
         async with giga_chat_session.post(GigaChat.CHAT_URL_PART, headers=headers, data=data) as response:
             response = await response.json()
             return response['choices'][0]['message']['content']
@@ -160,16 +163,14 @@ class GigaChat:
         try:
             giga_answer = await self.apost_giga_query(text=text, prompt=prompt, temperature=temperature)
         except AttributeError:
-            self.logger.debug('Перевыпуск токена для общения с GigaChat')
             self.token = await self.aget_user_token()
             giga_answer = await self.apost_giga_query(text=text, prompt=prompt, temperature=temperature)
         except KeyError as key_error:
-            giga_oauth = GigaOauthClient(giga_oauth_url)
-            giga_chat = GigaChatClient(giga_chat_url)
+            giga_oauth = GigaOauthClient()
+            giga_chat = GigaChatClient()
             await giga_oauth.recreate()
             await giga_chat.recreate()
 
-            self.logger.debug('Перевыпуск токена для общения с GigaChat')
             self.token = await self.aget_user_token()
             giga_answer = await self.apost_giga_query(text=text, prompt=prompt, temperature=temperature)
             self.logger.critical(f'msg - {text}, prompt - {prompt} : KeyError ({key_error.args})')
