@@ -142,21 +142,24 @@ class NewsMenusEnum(IntEnum):
     end_menu = auto()
 
     # переход из main_menu
-    choose_news_subjects = auto()   # для тг групп (отображение зависит от флага у группы)
-    choose_subs_or_unsubs = auto()  # выбор из подписок или остальных
-
-    # переход из субъекта в выбор периода (из choose_news_subjects)
-    choose_period_for_subject = auto()
-    choose_period = auto()          # period to get news (1, 3, 7, 30 days)
+    choose_telegram_subjects = auto()   # для тг групп (отображение зависит от флага у группы)
+    choose_subs_or_unsubs = auto()      # выбор из подписок или остальных
 
     # переход из выбора отрасли в тг группе
-    choose_source_group = auto()    # tg каналы или внешние источники
+    choose_source_group = auto()        # tg каналы или внешние источники
 
     # Переход из choose_subs_or_unsubs (поиск или выбор)
-    subjects_list = auto()          # subs group items or unsubs group items for client, commodity
+    subjects_list = auto()              # subs group items or unsubs group items for client, commodity
+
+    # Переход из choose_source_group
+    telegram_channels_by_section = auto()
+
+    # переход из субъекта в выбор периода (из choose_telegram_subjects, subjects_list)
+    choose_period_for_subject = auto()  # для клиента или сырья
+    choose_period = auto()              # period to get news (1, 3, 7, 30 days)
 
     # Переход из choose_period
-    news_by_period = auto()
+    news_by_period = auto()             # выдача новостей за период
 
 
 class NewsMenuData(CallbackData, prefix=MENU):
@@ -174,6 +177,7 @@ class TelegramGroupData(NewsMenuData, prefix=MENU):
     """
     telegram_group_id: int
     telegram_section_id: int = 0
+    telegram_channel_id: int = 0
     is_external_sources: bool = False
 
 
