@@ -103,10 +103,11 @@ class FuzzyAlternativeNames:
 
         return near_subjects
 
-    async def find_clients_id_by_name(
+    async def find_subjects_id_by_name(
             self,
             name: str,
             score: int = 80,
+            subject_types: Optional[list[models.Base]] = None,
     ) -> list[int]:
         """
         Поиск ближайших похожих имен из таблицы ClientAlternative по имени
@@ -115,7 +116,8 @@ class FuzzyAlternativeNames:
         :param score: Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
         :return: Список наиболее подходящих айдишников клиентов
         """
-        models_to_search = [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in [models.ClientAlternative]]
+        models_to_search = self.tables_with_alternative_names_and_pk_colum \
+            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
         if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
             return []
 

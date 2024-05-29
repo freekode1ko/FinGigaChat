@@ -8,7 +8,7 @@
 - выгружать новости по subject.id
 """
 import datetime
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, Iterable
 
 import pandas as pd
 from sqlalchemy import ColumnElement, func, select
@@ -113,24 +113,33 @@ class SubjectInterface:
             data = result.scalar()
             return {c: getattr(data, c) for c in self.columns}
 
-    async def get_articles_by_subject_id(
+    async def get_articles_by_subject_ids(
             self,
-            subject_id: int,
+            subject_ids: int | list[int],
             from_date: datetime.date = None,
             to_date: datetime.date = None,
             order_by: str | ColumnElement = None,
-    ) -> list[Article]:
+    ) -> list[tuple[Article, int]]:
         """
         Выгрузка новостей по subject_id
 
-        :param subject_id: id клиента/сырьевого товара
+        :param subject_ids: id клиента/сырьевого товара
         :param from_date: Ограничение снизу по дате
         :param to_date: Ограничение сверху по дате в запросе
         :param order_by: Параметр сортировки в запросе
         :returns: list[Article]
         """
+        if not isinstance(subject_ids, Iterable):
+            subject_ids = [subject_ids]
+
         async with database.async_session() as session:
-            stmt = select(Article).join(self.relation_article).join(self.table).where(self.table.id == subject_id)
+            stmt = (
+                select(Article, self.table.id)
+                .join(self.relation_article)
+                .join(self.table)
+                .where(self.table.id.in_(subject_ids))
+                .order_by(self.table.id)
+            )
 
             if from_date is not None:
                 stmt = stmt.where(func.date(Article.date) >= from_date)
@@ -140,4 +149,4 @@ class SubjectInterface:
                 stmt = stmt.order_by(order_by)
 
             result = await session.execute(stmt)
-            return list(result.scalars())
+            return list(result.all())

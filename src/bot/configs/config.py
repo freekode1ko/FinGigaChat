@@ -12,7 +12,7 @@ _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
-PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
+PROJECT_DIR = pathlib.Path(__file__).parent.parent.parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 PATH_TO_SOURCES = PROJECT_DIR / 'sources'
 TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice'
