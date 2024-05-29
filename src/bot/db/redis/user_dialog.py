@@ -53,7 +53,6 @@ async def get_last_user_msg(user_id: int) -> str:
     :param user_id:     Telegram id пользователя.
     :return:            Последний пользовательский запрос.
     """
-    dialog = await get_dialog(user_id)
-    if dialog:
+    if dialog := await get_dialog(user_id):
         return dialog[-1]['user']
     return ''

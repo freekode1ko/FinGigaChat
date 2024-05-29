@@ -33,7 +33,7 @@ class GigaChat:
     TEMPERATURE: ClassVar[float] = 0.5
     MAX_TOKENS: ClassVar[int] = 0.5
 
-    def __init__(self, logger: Logger):
+    def __init__(self, logger: Logger) -> None:
         """
         Инициализация экземпляра GigaChat.
 
@@ -44,7 +44,11 @@ class GigaChat:
 
     @staticmethod
     def _get_headers_and_data_for_token() -> tuple[dict[str, str], dict[str, str]]:
-        """Формирование хэдера и даты для формирования токена."""
+        """
+        Формирование хэдера и даты для формирования токена.
+
+        :return: Header и data для получения токена к GigaChat.
+        """
         headers = {
             'Authorization': f'Basic {GigaChat.CREDENTIALS}',
             'RqUID': str(uuid4()),
@@ -67,7 +71,7 @@ class GigaChat:
         :param text:            Пользовательское сообщение.
         :param prompt:          Системный промпт.
         :param temperature:     Параметр температуры для модели.
-        :return:                Хэдер и дату.
+        :return:                Header и data для отправки запроса к GigaChat.
         """
         headers = {
             'Authorization': f'Bearer {token}',
