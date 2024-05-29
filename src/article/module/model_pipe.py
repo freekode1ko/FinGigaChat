@@ -362,7 +362,7 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
     try:
         # делаем запрос к модели roberta, обрезаем слишком большой инпут
         params = {"query": text[:MAX_LEN_INPUT]}
-        response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params).content
+        response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60).content
         # достаем вероятности релевантности
         probs = list(map(float, str(response)[2:-1].split(':')))
     except Exception as e:

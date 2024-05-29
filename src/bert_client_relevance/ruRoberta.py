@@ -55,7 +55,7 @@ async def get_prediction_batch_cpu(texts: list[str], batch_size: int = 4) -> lis
         inputs = torch.tensor([tokenizer.encode(text, padding='max_length', truncation=True,
                                          max_length=MAX_INPUT_LENGTH, add_special_tokens=True) for text in texts])
     except Exception as e:
-        logger.error("Ошибка при токенизации: " + str(e))
+        logger.error(f"Ошибка при токенизации: {e}")
         return [[-1, -1] for _ in range(len(texts))]
     try:
         # получаем предсказания модели
