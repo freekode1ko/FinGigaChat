@@ -3,8 +3,8 @@ import pickle
 import re
 from re import search
 from typing import Dict, Optional, Any
-import requests
 
+import requests
 import pandas as pd
 import pymorphy2
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -88,6 +88,8 @@ STOCK_WORDS = [
 ]
 
 TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
+
+MAX_LEN_INPUT = 6000
 
 morph = pymorphy2.MorphAnalyzer()
 
@@ -359,7 +361,7 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
     """
     try:
         # делаем запрос к модели roberta, обрезаем слишком большой инпут
-        params = {"query": text[:6000]}
+        params = {"query": text[:MAX_LEN_INPUT]}
         response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params).content
         # достаем вероятности релевантности
         probs = list(map(float, str(response)[2:-1].split(':')))

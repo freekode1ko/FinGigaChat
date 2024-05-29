@@ -1,8 +1,8 @@
-FROM python:3.10
+FROM python
 
 WORKDIR /code
 
-COPY . /code
+COPY ./pyproject.toml /code/pyproject.toml
 
 RUN pip install poetry
 
@@ -12,3 +12,4 @@ ENV POETRY_NO_INTERACTION=1 \
 
 RUN poetry install
 
+COPY . /code

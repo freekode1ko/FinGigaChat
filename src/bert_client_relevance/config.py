@@ -12,4 +12,4 @@ LOG_LEVEL = 20  # INFO
 
 DEBUG: bool = env.bool('DEBUG', default=False)
 
-MODEL_PATH = 'hellcatAI/ruRoberta_client_relevance_classification'
+MODEL_PATH = 'hellcatAI/ruRoberta_client_relevance_classification_quant'
