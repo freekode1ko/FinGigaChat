@@ -41,6 +41,9 @@ SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 api_token: str = env.str('BOT_API_TOKEN', default='')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
+redis_host: str = env.str('REDIS_HOST', default='localhost')
+redis_port: int = env.int('REDIS_PORT', default=6379)
+redis_password: str = env.str('REDIS_PASSWORD', default='')
 
 DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
 
@@ -61,10 +64,15 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
-giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
+giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443'
+giga_chat_url = 'https://gigachat.devices.sberbank.ru'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
+
+# url к rag-сервисам
+BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'
+BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
+POST_TO_SERVICE_TIMEOUT = 90
 
 research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
@@ -88,10 +96,6 @@ mail_smpt_server = 'smtp.mail.ru'
 mail_smpt_port = 465
 mail_register_subject = 'Регистрация в AI-помощнике'
 
-# url к rag-сервисам
-BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
-QUERY_STATE_SUPPORT_URL = 'http://89.223.65.160:8031/api/v1/question'
-POST_TO_SERVICE_TIMEOUT = 90
 
 ECO_INAVIGATOR_URL = (
     'https://upd.mobile.sbrf.ru:10443/ios/dl/gdash/9845/1964'
@@ -110,38 +114,6 @@ new_user_start = (
     'Введите корпоративную почту, на нее будет выслан код для завершения регистрации.'
 )
 
-summarization_prompt = (
-    'Ты - суммаризатор новостной ленты.'
-    'На вход тебе будут подаваться новости.'
-    'Твоя задача - суммаризировать новость.'
-    ''
-    'Формат ответа:'
-    '- суммаризация не должна быть слишком длинной;'
-    '- тезисы должны быть лаконичными;'
-    '- основная мысль не должна искажаться;'
-    '- любые факты, которых не было в оригинальной статье, недопустимы;'
-    '- нельзя использовать вводные слова, только текст суммаризации.'
-    ''
-    'ВАЖНО! Игнорировать формат ответа нельзя! Все условия должны соответствовать формату ответа!'
-    ''
-    '________________'
-    'Твой ответ:'
-)
-
-classification_prompt = """
-Ты - модель классификации, твоя задача определить относится ли вопрос к теме программ господдержки или к новостям экономики и финансов.
-По госпрограммам клиенты могут спрашивать условия, документы и льготы, программы.
-По новостям статистику, курсы, события по сырью, события клиентов-компаний (финансовые, банкротство, административные, уголовные, происшествия).
-В качестве ответа сформируй json:
-{{
-    "reason": "твоя аргументация (почему ты так решил)",
-    "answer": итоговая метка:
-      1 если вопрос относиться к программам господдержки,
-      2 если вопрос относится к новостям,
-      0 если это какая-то другая тема.
-}}
-question: {question}
-"""
 
 help_text = (
     'Рады приветствовать Вас в AI-помощнике банкира!\n\n'

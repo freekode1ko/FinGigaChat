@@ -5,6 +5,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from configs import config
@@ -15,7 +16,6 @@ from db.api.commodity import commodity_db
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
-from handlers.ai.gigachat import gigachat
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
 from handlers.news.handler import router
@@ -178,7 +178,6 @@ async def send_nearest_subjects(message: types.Message) -> None:
     cancel_command = 'отмена'
     buttons = [
         [types.KeyboardButton(text=cancel_command)],
-        [types.KeyboardButton(text='Спросить у GigaChat')],
         [types.KeyboardButton(text='Спросить у Базы Знаний')],
     ]
     for subject_name in nearest_subjects:
@@ -319,7 +318,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
 
 
 @router.message(F.text)
-async def find_news(message: types.Message, state: FSMContext) -> None:
+async def find_news(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
@@ -331,8 +330,7 @@ async def find_news(message: types.Message, state: FSMContext) -> None:
         else:
             aliases_dict = {
                 **{alias: (common.help_handler, {}) for alias in aliases.help_aliases},
-                **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in aliases.gigachat_aliases},
-                **{alias: (rag.set_rag_mode, {'state': state}) for alias in aliases.rag_aliases},
+                **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
                 **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
                 **{alias: (quotes.bonds_info, {}) for alias in aliases.bonds_aliases},
                 **{alias: (quotes.economy_info, {}) for alias in aliases.eco_aliases},
@@ -345,8 +343,6 @@ async def find_news(message: types.Message, state: FSMContext) -> None:
             if function_to_call:
                 await function_to_call(message, **kwargs)
             else:
-                await state.set_state(gigachat.GigaChatState.gigachat_query)
-                await state.update_data(gigachat_query=message.text)
                 await state.set_state(rag.RagState.rag_query)
                 await state.update_data(rag_query=message.text)
                 await send_nearest_subjects(message)
