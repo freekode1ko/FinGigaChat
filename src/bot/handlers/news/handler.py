@@ -244,7 +244,6 @@ async def telegram_channels_by_section(
     utils.update_selected_ids(selected_ids, callback_data.telegram_channel_id)
     callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
 
-    telegram_group_info = await telegram_group_db.get(callback_data.telegram_group_id)
     telegram_section_info = await telegram_section_db.get(callback_data.telegram_section_id)
 
     telegram_channels = await user_telegram_subscription_db.get_subject_df_by_section_id(
@@ -256,7 +255,7 @@ async def telegram_channels_by_section(
     callback_data.back_menu = callback_data_factories.NewsMenusEnum.choose_source_group
     keyboard = keyboards.get_select_telegram_channels_kb(telegram_channels, callback_data)
     msg_text = (
-        f'{telegram_group_info.name} по отрасли "{telegram_section_info.name}"\n\n'
+        f'Телеграм-каналы по отрасли "{telegram_section_info.name}"\n\n'
         f'Выберите телеграм каналы, по которым хотите получить новости'
     )
     await send_or_edit(callback_query, msg_text, keyboard)

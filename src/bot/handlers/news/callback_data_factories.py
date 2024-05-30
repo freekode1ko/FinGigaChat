@@ -113,7 +113,7 @@ class NewsItems(AutoEnum):
         return self._subject_subscription_db_
 
     clients = {
-        'title': 'Клиентские новости',
+        'title': 'Новости по клиентам',
         'subject_name': 'клиента',
         'subject_name_genitive': 'клиента',
         'subject_db': client_db,
@@ -130,7 +130,7 @@ class NewsItems(AutoEnum):
         ],
     }
     commodities = {
-        'title': 'Сырьевые новости',
+        'title': 'Новости по commodities',
         'subject_name': 'сырьевой товар',
         'subject_name_genitive': 'сырьевого товара',
         'subject_db': commodity_db,

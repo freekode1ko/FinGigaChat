@@ -37,7 +37,7 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
 
     for telegram_group in telegram_groups:
         keyboard.row(types.InlineKeyboardButton(
-            text=telegram_group.name,
+            text=telegram_group.general_name,
             callback_data=callback_data_factories.TelegramGroupData(
                 menu=callback_data_factories.NewsMenusEnum.choose_telegram_subjects,
                 back_menu=callback_data_factories.NewsMenusEnum.main_menu,
