@@ -53,6 +53,7 @@ class AutoEnum(Enum):
     True
     >>> Test.data1
     """
+
     def __new__(cls, *args):
         """При создании экземпляра енумератора из всех переданных аргументов, лишь первый станет value"""
         value = len(cls.__members__)
@@ -61,12 +62,14 @@ class AutoEnum(Enum):
         return obj
 
     def __eq__(self, obj):
-        if type(self) == type(obj):
+        """Оператор равенства"""
+        if type(self) is type(obj):
             return super().__eq__(obj)
         return self.value == obj
 
     def __ne__(self, obj):
-        if type(self) == type(obj):
+        """Оператор неравенства"""
+        if type(self) is type(obj):
             return super().__ne__(obj)
         return self.value != obj
 
@@ -80,6 +83,15 @@ class NewsItems(AutoEnum):
     """
 
     def __init__(self, *args) -> None:
+        """
+        Инициализация енумератора.
+
+        Атрибуты:
+        - титул,
+        - имя субъекта в винительном и родительном падежах,
+        - кнопки,
+        - интерфейсы.
+        """
         if len(args) > 0 and isinstance(args[0], dict):
             self._title_ = args[0].get('title', self._name_)
             self._subject_name_ = args[0].get('subject_name', self._name_)
@@ -90,26 +102,32 @@ class NewsItems(AutoEnum):
 
     @property
     def title(self) -> str:
+        """Возврат атрибута титула"""
         return self._title_
 
     @property
     def subject_name(self) -> str:
+        """Возврат атрибута имени субъекта в винительном падеже"""
         return self._subject_name_
 
     @property
     def subject_name_genitive(self) -> str:
+        """Возврат атрибута имени субъекта в родительном падеже"""
         return self._subject_name_genitive_
 
     @property
     def buttons(self) -> list[dict]:
+        """Возврат атрибута кнопок"""
         return self._buttons_
 
     @property
     def subject_db(self) -> SubjectInterface:
+        """Возврат атрибута интерфейса субъекта"""
         return self._subject_db_
 
     @property
     def subject_subscription_db(self) -> SubscriptionInterface:
+        """Возврат атрибута интерфейса подписок"""
         return self._subject_subscription_db_
 
     clients = {
@@ -152,11 +170,13 @@ class SubjectsInterfaces(AutoEnum):
     """Интерфейсы для получения новостей"""
 
     def __init__(self, *args) -> None:
+        """Инициализация енумератора с атрибутом-интерфейсом субъекта"""
         if len(args) > 0 and isinstance(args[0], SubjectInterface):
             self._interface_ = args[0]
 
     @property
     def interface(self) -> SubjectInterface:
+        """Возврат атрибута интерфейса субъекта"""
         return self._interface_
 
     clients = client_db
@@ -167,6 +187,7 @@ class SubjectsInterfaces(AutoEnum):
 
 class NewsMenusEnum(IntEnum):
     """Уровни меню клиенты"""
+
     main_menu = auto()
     end_menu = auto()
 
@@ -194,6 +215,7 @@ class NewsMenusEnum(IntEnum):
 
 class NewsMenuData(CallbackData, prefix=MENU):
     """Меню новости"""
+
     menu: NewsMenusEnum
     back_menu: NewsMenusEnum = NewsMenusEnum.main_menu
     days_count: int = 1
@@ -207,6 +229,7 @@ class TelegramGroupData(NewsMenuData, prefix=MENU):
 
     Внеш источники есть только в отраслевых новостях (там же флаг is_show_all_channels)
     """
+
     telegram_group_id: int
     telegram_section_id: int = 0
     telegram_channel_id: int = 0
@@ -215,6 +238,7 @@ class TelegramGroupData(NewsMenuData, prefix=MENU):
 
 class SubjectData(NewsMenuData, prefix=MENU):
     """Выгрузка новостей по клиентам или сырьевых товарам"""
+
     subject: NewsItems
     subscribed: bool = True
     page: int = 0

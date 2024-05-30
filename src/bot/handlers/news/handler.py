@@ -6,12 +6,13 @@
 import asyncio
 import datetime
 from itertools import groupby
+from typing import Union
 
 import pandas as pd
-from aiogram import Router, types, F
+from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 from db import models
@@ -21,10 +22,10 @@ from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
 from handlers.news import callback_data_factories, keyboards, utils
-from log.bot_logger import user_logger, logger
-from module.article_process import FormatText, ArticleProcess
+from log.bot_logger import logger, user_logger
+from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import send_or_edit, user_in_whitelist, get_page_data_and_info, bot_send_msg
+from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -36,9 +37,9 @@ STATE_DATA_SELECTED_SUBJECTS = 'selected'
 
 class ChooseSubject(StatesGroup):
     """Состояние для ввода имени субъекта для более удобного поиска"""
+
     choosing_from_all_not_subscribed = State()
     choosing_from_subscribed = State()
-    choosing_from_telegram_channels = State()
 
 
 @router.callback_query(callback_data_factories.NewsMenuData.filter(
@@ -81,9 +82,9 @@ async def main_menu(message: types.CallbackQuery | types.Message, state: FSMCont
 ))
 async def main_menu_callback(
         callback_query: types.CallbackQuery,
-        callback_data: (callback_data_factories.NewsMenuData |
-                        callback_data_factories.TelegramGroupData |
-                        callback_data_factories.SubjectData),
+        callback_data: Union[callback_data_factories.NewsMenuData,
+                             callback_data_factories.TelegramGroupData,
+                             callback_data_factories.SubjectData],
         state: FSMContext,
 ) -> None:
     """
@@ -447,9 +448,9 @@ async def choose_period_for_telegram(
 
 async def choose_period(
         callback_query: types.CallbackQuery,
-        callback_data: (callback_data_factories.NewsMenuData |
-                        callback_data_factories.TelegramGroupData |
-                        callback_data_factories.SubjectData),
+        callback_data: Union[callback_data_factories.NewsMenuData,
+                             callback_data_factories.TelegramGroupData,
+                             callback_data_factories.SubjectData],
         get_news_handler: callback_data_factories.NewsMenusEnum = callback_data_factories.NewsMenusEnum.news_by_period,
 ) -> None:
     """
@@ -548,7 +549,12 @@ async def get_subject_news_by_period(
     subject_db: SubjectInterface = callback_data.interface.interface
     selected = {i: (await subject_db.get(i))['name'] for i in utils.get_selected_ids_from_callback_data(callback_data)}
 
-    articles = await subject_db.get_articles_by_subject_ids(list(selected.keys()), from_date, to_date, order_by=models.Article.date.desc())
+    articles = await subject_db.get_articles_by_subject_ids(
+        list(selected.keys()),
+        from_date,
+        to_date,
+        order_by=models.Article.date.desc(),
+    )
     if not articles:
         msg_text = f'Новости по <b>{", ".join(selected.values())}</b> за {days} дней отсутствуют'
         await callback_query.message.answer(msg_text, parse_mode='HTML')

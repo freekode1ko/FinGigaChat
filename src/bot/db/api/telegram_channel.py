@@ -1,3 +1,9 @@
+"""
+Реализует два интерфейса взаимодействия с таблицей telegram_channel.
+
+Один интерфейс работает с объектами sqlalchemy.
+Второй интерфейс предоставляет возможность получения новостей
+"""
 from db import models
 from db.api.base_crud import BaseCRUD
 from db.api.subject_interface import SubjectInterface
