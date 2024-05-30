@@ -6,7 +6,7 @@ from db.api.subject_interface import SubjectInterface
 
 
 def get_client_navi_link_by_name(client_name: str) -> str | None:
-    """Получние ссылки на inavigator по имени клиента"""
+    """Получение ссылки на inavigator по имени клиента."""
     with database.engine.connect() as conn:
         query = text('SELECT navi_link FROM client WHERE LOWER(name)=:client_name LIMIT 1')
         navi_link = conn.execute(query.bindparams(client_name=client_name.lower())).scalar_one_or_none()
@@ -15,7 +15,7 @@ def get_client_navi_link_by_name(client_name: str) -> str | None:
 
 
 async def get_research_type_id_by_name(client_name: str) -> int | None:
-    """Получние research_type.id по имени клиента"""
+    """Получение research_type.id по имени клиента."""
     async with database.async_session() as session:
         stmt = sa.select(models.ResearchType.id).where(
             sa.func.lower(models.ResearchType.name) == client_name.lower()
@@ -24,4 +24,10 @@ async def get_research_type_id_by_name(client_name: str) -> int | None:
         return result.scalar_one_or_none()
 
 
-client_db = SubjectInterface(models.Client, models.ClientAlternative, models.Client.client_alternative, models.RelationClientArticle.article)
+client_db = SubjectInterface(
+    models.Client,
+    models.ClientAlternative,
+    models.Client.client_alternative,
+    models.RelationClientArticle,
+    models.RelationClientArticle.article
+)

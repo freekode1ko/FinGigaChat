@@ -90,7 +90,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
 
     ap_obj = ArticleProcess(logger)
 
-    _, reply_msg = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    _, reply_msg = await ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
     new_offset = offset_all + config.NEWS_LIMIT
 
     if reply_msg and isinstance(reply_msg, str):
@@ -227,7 +227,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
     if subject_ids:
         industry_id = subject_ids[0]
-        _, reply_msg = ap_obj.process_user_alias(industry_id, subject)
+        _, reply_msg = await ap_obj.process_user_alias(industry_id, subject)
         await bot_send_msg(message.bot, chat_id, reply_msg)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
         return True
@@ -238,7 +238,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
         subject_ids, subject = ap_obj.find_subject_id(msg_text, 'commodity'), 'commodity'
 
     for subject_id in subject_ids:
-        com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject)
+        com_price, reply_msg = await ap_obj.process_user_alias(subject_id, subject)
 
         return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
 
@@ -250,7 +250,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
 
         if isinstance(reply_msg, str):
             await send_news_with_next_button(message.bot, chat_id, reply_msg, subject_id, subject,
-                                             config.NEWS_LIMIT, config.NEWS_LIMIT + 1)
+                                             config.OTHER_NEWS_COUNT, config.NEWS_LIMIT + 1)
 
             if subject == 'client':
                 await send_client_navi_link(message, subject_id, ap_obj)

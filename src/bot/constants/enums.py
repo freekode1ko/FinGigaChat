@@ -71,3 +71,11 @@ class IndustryTypes(IntEnum):
     default = auto()            # Все стандартные отрасли
     other = auto()              # Пункт прочее
     general_comments = auto()   # Пункт общий комментарий
+
+
+class SubjectType(str, Enum):
+    """Типы объектов, по которым собираются новости."""
+
+    client = 'client'
+    commodity = 'commodity'
+    industry = 'industry'
