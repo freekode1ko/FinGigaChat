@@ -25,13 +25,14 @@ from aiogram.filters.callback_data import CallbackData
 
 from db.api.client import client_db
 from db.api.commodity import commodity_db
+from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
 from db.api.telegram_channel import telegram_channel_article_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.api.user_commodity_subscription import user_commodity_subscription_db
 
-MENU = 'news_menu'
+MENU = 'news'
 
 
 class AutoEnum(Enum):
@@ -82,6 +83,7 @@ class NewsItems(AutoEnum):
         if len(args) > 0 and isinstance(args[0], dict):
             self._title_ = args[0].get('title', self._name_)
             self._subject_name_ = args[0].get('subject_name', self._name_)
+            self._subject_name_genitive_ = args[0].get('subject_name_genitive', self._name_)
             self._buttons_ = args[0].get('buttons', [])
             self._subject_db_ = args[0].get('subject_db')
             self._subject_subscription_db_ = args[0].get('subject_subscription_db')
@@ -93,6 +95,10 @@ class NewsItems(AutoEnum):
     @property
     def subject_name(self) -> str:
         return self._subject_name_
+
+    @property
+    def subject_name_genitive(self) -> str:
+        return self._subject_name_genitive_
 
     @property
     def buttons(self) -> list[dict]:
@@ -109,6 +115,7 @@ class NewsItems(AutoEnum):
     clients = {
         'title': 'Клиентские новости',
         'subject_name': 'клиента',
+        'subject_name_genitive': 'клиента',
         'subject_db': client_db,
         'subject_subscription_db': user_client_subscription_db,
         'buttons': [
@@ -125,6 +132,7 @@ class NewsItems(AutoEnum):
     commodities = {
         'title': 'Сырьевые новости',
         'subject_name': 'сырьевой товар',
+        'subject_name_genitive': 'сырьевого товара',
         'subject_db': commodity_db,
         'subject_subscription_db': user_commodity_subscription_db,
         'buttons': [
@@ -154,6 +162,7 @@ class SubjectsInterfaces(AutoEnum):
     clients = client_db
     commodities = commodity_db
     telegram = telegram_channel_article_db
+    industry = industry_db
 
 
 class NewsMenusEnum(IntEnum):

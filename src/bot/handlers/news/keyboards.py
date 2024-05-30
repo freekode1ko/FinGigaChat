@@ -190,7 +190,7 @@ def get_choose_source_kb(
             menu=callback_data_factories.NewsMenusEnum.telegram_channels_by_section,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
-            is_external=False,
+            is_external_sources=False,
             back_menu=callback_data.back_menu,
         ).pack(),
     ))
@@ -200,14 +200,14 @@ def get_choose_source_kb(
             menu=callback_data_factories.NewsMenusEnum.choose_period_for_telegram,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
-            is_external=True,
+            is_external_sources=True,
             back_menu=callback_data.back_menu,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_data_factories.TelegramGroupData(
-            menu=callback_data.back_menu,
+            menu=callback_data_factories.NewsMenusEnum.choose_telegram_subjects,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
             back_menu=callback_data.back_menu,
@@ -326,6 +326,7 @@ def get_periods_kb(
         subject_interface: callback_data_factories.SubjectsInterfaces,
         selected_ids: str,
         back_menu: callback_data_factories.NewsMenuData,
+        get_news_handler: callback_data_factories.NewsMenusEnum,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура с выбором периода, за который выгружаются новости по клиенту
@@ -334,6 +335,7 @@ def get_periods_kb(
     :param subject_interface:   SubjectInterface обработчик выдачи новостей за период
     :param selected_ids:        id выбранных субъектов, по которым надо получить новости
     :param back_menu:           callback_data_factories.NewsMenuData пункт меню, в который ведет кнопка Назад
+    :param get_news_handler:    обработчик получения новостей
     return:
     [ period.text ]
     ...
@@ -346,7 +348,7 @@ def get_periods_kb(
         keyboard.row(types.InlineKeyboardButton(
             text=period['text'],
             callback_data=callback_data_factories.NewsMenuData(
-                menu=callback_data_factories.NewsMenusEnum.news_by_period,
+                menu=get_news_handler,
                 days_count=period['days'],
                 interface=subject_interface,
                 subject_ids=selected_ids,

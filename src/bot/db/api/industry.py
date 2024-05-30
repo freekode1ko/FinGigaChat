@@ -1,7 +1,12 @@
-from typing import Any, Optional
+"""
+Модуль для взаимодействия с таблицей отраслей.
 
-import pandas as pd
-from sqlalchemy import text, select
+Предоставляет стандартный интерфейс взаимодействия с таблицей.
+Дает возможность поиска по имени
+"""
+from typing import Optional
+
+from sqlalchemy import func, select
 
 from constants import enums
 from db import database
@@ -9,30 +14,12 @@ from db.api.subject_interface import SubjectInterface
 from db.models import Industry, IndustryAlternative, IndustryDocuments
 
 
-def get_industries_with_tg_channels() -> pd.DataFrame:
-    query = 'SELECT id, name FROM industry WHERE id IN (SELECT industry_id FROM telegram_channel) ORDER BY name;'
-    industry_df = pd.read_sql(query, con=database.engine)
-    return industry_df
-
-
-def get_industry_name(industry_id: int) -> str:
-    with database.engine.connect() as conn:
-        query = text('SELECT name FROM industry WHERE id=:industry_id')
-        industry_name = conn.execute(query.bindparams(industry_id=industry_id)).scalar_one()
-
-    return industry_name
-
-
-async def get_by_name(name: str) -> dict[str, Any]:
+async def get_by_name(name: str) -> Optional[Industry]:
+    """Поиск отрасли по имени."""
     async with database.async_session() as session:
-        stmt = select(Industry).where(Industry.name == name)
+        stmt = select(Industry).where(func.lower(Industry.name) == name.lower())
         result = await session.execute(stmt)
-        data = result.fetchone()
-        data = {
-            'id': data[0],
-            'name': data[1],
-        }
-        return data
+        return result.scalar()
 
 
 async def get_industry_analytic_files(

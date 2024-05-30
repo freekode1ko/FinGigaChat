@@ -7,6 +7,7 @@ import asyncio
 import datetime
 from itertools import groupby
 
+import pandas as pd
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -14,13 +15,14 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 from db import models
+from db.api import industry
 from db.api.subject_interface import SubjectInterface
 from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
 from handlers.news import callback_data_factories, keyboards, utils
 from log.bot_logger import user_logger, logger
-from module.article_process import FormatText
+from module.article_process import FormatText, ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import send_or_edit, user_in_whitelist, get_page_data_and_info, bot_send_msg
 
@@ -311,24 +313,23 @@ async def subjects_list(
     subscribed = callback_data.subscribed
     page = callback_data.page
     subject = callback_data.subject
-    subject_db = subject.subject_db
     user_subject_subscription = subject.subject_subscription_db
 
-    subjects = await subject_db.get_all()
-    subject_subscriptions = await user_subject_subscription.get_subscription_df(user_id)
     if subscribed:
-        msg_text = f'Выберите {subject.subject_name} из списка ваших подписок'
-        subjects = subjects[subjects['id'].isin(subject_subscriptions['id'])]
+        subjects = await user_subject_subscription.get_subscription_df(user_id)
         await state.set_state(ChooseSubject.choosing_from_subscribed)
     else:
-        msg_text = f'Выберите {subject.subject_name} из общего списка'
-        subjects = subjects[~subjects['id'].isin(subject_subscriptions['id'])]
+        subjects = pd.DataFrame(columns=['id', 'name'])
         await state.set_state(ChooseSubject.choosing_from_all_not_subscribed)
 
     await state.update_data(subject=subject)
     page_data, page_info, max_pages = get_page_data_and_info(subjects, page)
     keyboard = keyboards.get_subjects_list_kb(page_data, page, max_pages, subscribed, subject)
-    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\nДля поиска введите сообщение с именем {subject.subject_name}.'
+
+    if subscribed:
+        msg_text = f'Выберите {subject.subject_name} из списка ваших подписок\n<b>{page_info}</b>'
+    else:
+        msg_text = f'Для поиска введите сообщение с именем {subject.subject_name_genitive}.'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -433,9 +434,16 @@ async def choose_period_for_telegram(
     """
     if not callback_data.is_external_sources:
         callback_data.interface = callback_data_factories.SubjectsInterfaces.telegram
+        get_news_handler = callback_data_factories.NewsMenusEnum.news_by_period
     else:
-        callback_data.subject_ids = str(callback_data.telegram_section_id)
-    await choose_period(callback_query, callback_data)
+        callback_data.interface = callback_data_factories.SubjectsInterfaces.industry
+        section = await telegram_section_db.get(callback_data.telegram_section_id)
+        industry_info = await industry.get_by_name(section.name)
+
+        callback_data.subject_ids = str(industry_info.id)
+        callback_data.back_menu = callback_data_factories.NewsMenusEnum.choose_source_group
+        get_news_handler = callback_data_factories.NewsMenusEnum.industry_news_by_period
+    await choose_period(callback_query, callback_data, get_news_handler)
 
 
 async def choose_period(
@@ -443,12 +451,14 @@ async def choose_period(
         callback_data: (callback_data_factories.NewsMenuData |
                         callback_data_factories.TelegramGroupData |
                         callback_data_factories.SubjectData),
+        get_news_handler: callback_data_factories.NewsMenusEnum = callback_data_factories.NewsMenusEnum.news_by_period,
 ) -> None:
     """
     Выбор периода для получения новостей.
 
-    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param callback_query:      Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:       subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param get_news_handler:    обработчик получения новостей
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -461,6 +471,7 @@ async def choose_period(
         callback_data,
         callback_data.interface,
         utils.get_selected_ids_from_callback_data(callback_data),
+        get_news_handler,
     )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -470,6 +481,7 @@ async def answer_choose_period(
         back_menu: callback_data_factories.NewsMenuData,
         subject_interface: callback_data_factories.SubjectsInterfaces,
         selected_ids: list[int],
+        get_news_handler: callback_data_factories.NewsMenusEnum = callback_data_factories.NewsMenusEnum.news_by_period,
 ) -> None:
     """
     Выбор периода для получения новостей.
@@ -478,6 +490,7 @@ async def answer_choose_period(
     :param back_menu:           callback_data для кнопки Назад
     :param subject_interface:   SubjectInterface обработчик выдачи новостей за период
     :param selected_ids:        id выбранных субъектов, по которым надо получить новости
+    :param get_news_handler:    обработчик получения новостей
     """
     selected = {i: (await subject_interface.interface.get(i))['name'] for i in selected_ids}
     periods = [
@@ -504,6 +517,7 @@ async def answer_choose_period(
         subject_interface=subject_interface,
         selected_ids=utils.wrap_selected_ids(selected_ids),
         back_menu=back_menu,
+        get_news_handler=get_news_handler,
     )
     msg_text = f'Выберите период для получения новостей по <b>{", ".join(selected.values())}</b>'
     await send_or_edit(message, msg_text, keyboard)
@@ -523,7 +537,7 @@ async def get_subject_news_by_period(
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -559,12 +573,12 @@ async def get_subject_news_by_period(
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(callback_data_factories.TelegramGroupData.filter(
+@router.callback_query(callback_data_factories.NewsMenuData.filter(
     F.menu == callback_data_factories.NewsMenusEnum.industry_news_by_period
 ))
 async def get_industry_news_by_period(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.TelegramGroupData,
+        callback_data: callback_data_factories.NewsMenuData,
 ) -> None:
     """
     Получение новостей за выбранный период
@@ -573,38 +587,31 @@ async def get_industry_news_by_period(
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
+    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    days = callback_data.days_count
-    section_id = int(callback_data.subject_ids)
+    industry_info = await industry.industry_db.get(int(callback_data.subject_ids))
 
-    to_date = datetime.datetime.now()
-    from_date = to_date - datetime.timedelta(days=days)
+    ap_obj = ArticleProcess(logger)
+    tmdelta = datetime.timedelta(days=callback_data.days_count)
 
-    subject_db: SubjectInterface = callback_data.interface.interface
-    selected = {i: (await subject_db.get(i))['name'] for i in utils.get_selected_ids_from_callback_data(callback_data)}
+    clients_news = ap_obj.get_news_by_time(tmdelta, 'client').sort_values(by=['name', 'date'], ascending=[True, False])
+    commodity_news = ap_obj.get_news_by_time(tmdelta, 'commodity').sort_values(by=['name', 'date'], ascending=[True, False])
 
-    articles = await subject_db.get_articles_by_subject_ids(list(selected.keys()), from_date, to_date, order_by=models.Article.date.desc())
-    if not articles:
-        msg_text = f'Новости по <b>{", ".join(selected.values())}</b> за {days} дней отсутствуют'
+    cols = ['name', 'date', 'link', 'title', 'text_sum', 'industry_id']
+    all_article = pd.concat([clients_news[cols], commodity_news[cols]], ignore_index=True)
+    industry_article_df = all_article[all_article['industry_id'] == industry_info['id']].drop_duplicates(subset='link')
+    industry_article_df.insert(0, 'industry', industry_info['name'])
+    industry_article_df['date'] = ''
+
+    msg_text = f'Новости по отрасли <b>{industry_info["name"]}</b> за {callback_data.days_count} дней'
+    if not industry_article_df.empty:
         await callback_query.message.answer(msg_text, parse_mode='HTML')
+        msg = ArticleProcess.make_format_industry_msg(industry_article_df.values.tolist())
+        await bot_send_msg(callback_query.bot, from_user.id, msg)
     else:
-        for subject_id, articles_by_subject_id in groupby(articles, lambda x: x[1]):
-            subject_name = selected[subject_id]
-            frmt_msg = f'<b>{subject_name.capitalize()}</b>'
-            msg_text = f'Новости по {frmt_msg} за {days} дней\n'
-
-            all_articles = '\n\n'.join(
-                FormatText(
-                    title=article.title, date=article.date, link=article.link, text_sum=article.text_sum
-                ).make_subject_text()
-                for article, _ in articles_by_subject_id
-            )
-            frmt_msg += f'\n\n{all_articles}'
-            await callback_query.message.answer(msg_text, parse_mode='HTML')
-            await bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
-            await asyncio.sleep(1)
+        msg_text += ' отсутствуют'
+        await callback_query.message.answer(msg_text, parse_mode='HTML')
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
