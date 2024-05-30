@@ -112,9 +112,10 @@ class FuzzyAlternativeNames:
         """
         Поиск ближайших похожих имен из таблицы ClientAlternative по имени
 
-        :param name: Имя клиента
-        :param score: Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
-        :return: Список наиболее подходящих айдишников клиентов
+        :param name:            Имя клиента
+        :param score:           Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
+        :param subject_types:   Список таблиц, среди которых идет поиск ближайших названий
+        :return:                Список наиболее подходящих айдишников клиентов
         """
         models_to_search = self.tables_with_alternative_names_and_pk_colum \
             if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]

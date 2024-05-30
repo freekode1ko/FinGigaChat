@@ -116,8 +116,8 @@ class SubjectInterface:
     async def get_articles_by_subject_ids(
             self,
             subject_ids: int | list[int],
-            from_date: datetime.date = None,
-            to_date: datetime.date = None,
+            from_date: datetime.datetime = None,
+            to_date: datetime.datetime = None,
             order_by: str | ColumnElement = None,
     ) -> list[tuple[Article, int]]:
         """
@@ -142,9 +142,9 @@ class SubjectInterface:
             )
 
             if from_date is not None:
-                stmt = stmt.where(func.date(Article.date) >= from_date)
+                stmt = stmt.where(Article.date >= from_date)
             if to_date is not None:
-                stmt = stmt.where(func.date(Article.date) <= to_date)
+                stmt = stmt.where(Article.date <= to_date)
             if order_by is not None:
                 stmt = stmt.order_by(order_by)
 

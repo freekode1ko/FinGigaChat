@@ -3,6 +3,7 @@
 
 Позволяет получать новости по тг каналам, отраслям, клиентам и сырьевым товарам.
 """
+import asyncio
 import datetime
 from itertools import groupby
 
@@ -395,8 +396,8 @@ async def find_subject_by_name(
     user_subject_subscription = subject.subject_subscription_db
 
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
-    clients_id = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[subject_db.table])
-    subjects = await subject_db.get_by_ids(clients_id)
+    subject_ids = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[subject_db.table_alternative])
+    subjects = await subject_db.get_by_ids(subject_ids)
     subject_subscriptions = await user_subject_subscription.get_subscription_df(message.chat.id)
 
     if subscribed:
@@ -554,7 +555,7 @@ async def get_subject_news_by_period(
 
     days = callback_data.days_count
 
-    to_date = datetime.date.today()
+    to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
     data = await state.get_data()
@@ -563,7 +564,7 @@ async def get_subject_news_by_period(
 
     articles = await subject_db.get_articles_by_subject_ids(list(selected.keys()), from_date, to_date, order_by=models.Article.date.desc())
     if not articles:
-        msg_text = f'Новости по {", ".join(selected.values())} за {days} дней отсутствуют'
+        msg_text = f'Новости по <b>{", ".join(selected.values())}</b> за {days} дней отсутствуют'
         await callback_query.message.answer(msg_text, parse_mode='HTML')
     else:
         for subject_id, articles_by_subject_id in groupby(articles, lambda x: x[1]):
@@ -580,5 +581,6 @@ async def get_subject_news_by_period(
             frmt_msg += f'\n\n{all_articles}'
             await callback_query.message.answer(msg_text, parse_mode='HTML')
             await bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
+            await asyncio.sleep(1)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

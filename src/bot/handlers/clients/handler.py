@@ -570,7 +570,7 @@ async def get_client_news_by_period(
     days = callback_data.days_count
     client_info = await client_db.get(client_id)
 
-    to_date = datetime.date.today()
+    to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
     msg_text = f'Новости по клиенту <b>{client_info["name"].capitalize()}</b> за {days} дней\n'
