@@ -15,11 +15,10 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 from db import models
 from db.api.subject_interface import SubjectInterface
-from db.api.telegram_channel import telegram_channel_db, telegram_channel_article_db
 from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
-from handlers.news import callback_data_factories, keyboards
+from handlers.news import callback_data_factories, keyboards, utils
 from log.bot_logger import user_logger, logger
 from module.article_process import FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
@@ -124,14 +123,12 @@ async def main_menu_command(message: types.Message, state: FSMContext) -> None:
 async def choose_news_subjects(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.TelegramGroupData,
-        state: FSMContext,
 ) -> None:
     """
     Отображает все тг каналы, если is_show_all_channels, либо отображает тг разделы.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
-    :param state:           Объект, который хранит состояние FSM для пользователя
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -141,12 +138,9 @@ async def choose_news_subjects(
     group_id = callback_data.telegram_group_id
     telegram_group_info = await telegram_group_db.get(group_id)
 
-    await state.update_data({STATE_DATA_NEWS_GETTER: telegram_channel_article_db})
-
     if telegram_group_info.is_show_all_channels:
-        await state.set_state(ChooseSubject.choosing_from_telegram_channels)
         callback_data.back_menu = callback_data_factories.NewsMenusEnum.main_menu
-        await __show_telegram_channels_by_group(callback_query, callback_data, state, telegram_group_info)
+        await __show_telegram_channels_by_group(callback_query, callback_data, telegram_group_info)
     else:
         await __show_telegram_sections_by_group(callback_query, callback_data, telegram_group_info)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -155,7 +149,6 @@ async def choose_news_subjects(
 async def __show_telegram_channels_by_group(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.TelegramGroupData,
-        state: FSMContext,
         telegram_group_info: models.TelegramGroup,
 ) -> None:
     """
@@ -163,28 +156,17 @@ async def __show_telegram_channels_by_group(
 
     :param callback_query:      Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:       Содержит информацию о текущем меню
-    :param state:               Объект, который хранит состояние FSM для пользователя
     :param telegram_group_info: Объект телеграмм группы
     """
-    telegram_id = callback_data.telegram_channel_id
-
-    data = await state.get_data()
-    selected: dict[int, str] = data.get(STATE_DATA_SELECTED_SUBJECTS, {})
-
-    if telegram_id:
-        if telegram_id in selected:
-            del selected[telegram_id]
-        else:
-            tg_channel_info = await telegram_channel_db.get(telegram_id)
-            selected[telegram_id] = tg_channel_info.name
-        data[STATE_DATA_SELECTED_SUBJECTS] = selected
-        await state.update_data(data)
+    selected_ids = utils.get_selected_ids_from_callback_data(callback_data)
+    utils.update_selected_ids(selected_ids, callback_data.telegram_channel_id)
+    callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
 
     telegram_channels = await user_telegram_subscription_db.get_subject_df_by_group_id(
         user_id=callback_query.from_user.id,
         group_id=telegram_group_info.id,
     )
-    telegram_channels['is_subscribed'] = telegram_channels['id'].apply(lambda x: x in selected)
+    telegram_channels['is_subscribed'] = telegram_channels['id'].apply(lambda x: x in selected_ids)
 
     msg_text = (
         f'{telegram_group_info.name}\n\n'
@@ -218,14 +200,12 @@ async def __show_telegram_sections_by_group(
 async def choose_source_group(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.TelegramGroupData,
-        state: FSMContext,
 ) -> None:
     """
     Формирует список тг каналов определенного раздела (bot_telegram_section)
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   Содержит информацию о текущем меню
-    :param state:           Объект, который хранит состояние FSM для пользователя
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -246,47 +226,30 @@ async def choose_source_group(
 async def telegram_channels_by_section(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.TelegramGroupData,
-        state: FSMContext,
 ) -> None:
     """
     Формирует список тг каналов определенного раздела (bot_telegram_section)
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   Содержит информацию о текущем меню
-    :param state:           Объект, который хранит состояние FSM для пользователя
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    telegram_id = callback_data.telegram_channel_id
+    selected_ids = utils.get_selected_ids_from_callback_data(callback_data)
+    utils.update_selected_ids(selected_ids, callback_data.telegram_channel_id)
+    callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
 
-    telegram_group_info = await telegram_group_db.get(callback_data.group_id)
-    telegram_section_info = await telegram_section_db.get(callback_data.section_id)
-
-    data = await state.get_data()
-    selected: dict[int, str] = data.get(STATE_DATA_SELECTED_SUBJECTS, {})
-
-    if telegram_id:
-        if telegram_id in selected:
-            del selected[telegram_id]
-        else:
-            tg_channel_info = await telegram_channel_db.get(telegram_id)
-            selected[telegram_id] = tg_channel_info.name
-        data[STATE_DATA_SELECTED_SUBJECTS] = selected
-        await state.update_data(data)
-
-    telegram_channels = await user_telegram_subscription_db.get_subject_df_by_group_id(
-        user_id=callback_query.from_user.id,
-        group_id=telegram_group_info.id,
-    )
-    telegram_channels['is_subscribed'] = telegram_channels['id'].apply(lambda x: x in selected)
+    telegram_group_info = await telegram_group_db.get(callback_data.telegram_group_id)
+    telegram_section_info = await telegram_section_db.get(callback_data.telegram_section_id)
 
     telegram_channels = await user_telegram_subscription_db.get_subject_df_by_section_id(
         user_id=callback_query.from_user.id,
         section_id=telegram_section_info.id,
     )
+    telegram_channels['is_subscribed'] = telegram_channels['id'].apply(lambda x: x in selected_ids)
 
     callback_data.back_menu = callback_data_factories.NewsMenusEnum.choose_source_group
     keyboard = keyboards.get_select_telegram_channels_kb(telegram_channels, callback_data)
@@ -365,7 +328,7 @@ async def subjects_list(
     await state.update_data(subject=subject)
     page_data, page_info, max_pages = get_page_data_and_info(subjects, page)
     keyboard = keyboards.get_subjects_list_kb(page_data, page, max_pages, subscribed, subject)
-    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\nДля поиска введите сообщение с именем клиента.'
+    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\nДля поиска введите сообщение с именем {subject.subject_name}.'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -411,7 +374,11 @@ async def find_subject_by_name(
         msg_text = f'Выберите {subject.subject_name} из списка'
     elif len(subjects) == 1:
         subject_id = subjects['id'].iloc[0]
-        subject_name = subjects['name'].iloc[0]
+        interface = None
+        for subject_interface in callback_data_factories.SubjectsInterfaces:
+            if subject_interface.interface == subject_db:
+                interface = subject_interface
+                break
 
         back_callback_data = callback_data_factories.SubjectData(
             menu=callback_data_factories.NewsMenusEnum.subjects_list,
@@ -419,10 +386,7 @@ async def find_subject_by_name(
             subscribed=subscribed,
             subject=subject,
         )
-        selected = {subject_id: subject_name}
-        await state.update_data(selected=selected)
-        await state.update_data(news_getter=subject_db)
-        await answer_choose_period(message, state, back_callback_data)
+        await answer_choose_period(message, back_callback_data, interface, [subject_id])
         return
     else:
         msg_text = 'Не нашелся, введите имя по-другому'
@@ -437,74 +401,85 @@ async def find_subject_by_name(
 async def choose_period_for_subject(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.SubjectData,
-        state: FSMContext,
 ) -> None:
     """
     Выбор периода для получения новостей.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
-    :param state:           Объект, который хранит состояние FSM для пользователя
     """
-    subject = callback_data.subject
-    subject_db = subject.subject_db
+    subject_db = callback_data.subject.subject_db
 
-    subject_info = await subject_db.get(callback_data.subject_id)
-    data = {
-        STATE_DATA_SELECTED_SUBJECTS: {callback_data.subject_id: subject_info['name']},
-        STATE_DATA_NEWS_GETTER: subject_db,
-    }
-    await state.update_data(data)
-    await choose_period(callback_query, callback_data, state)
+    callback_data.subject_ids = str(callback_data.subject_id)
+    for subject in callback_data_factories.SubjectsInterfaces:
+        if subject.interface == subject_db:
+            callback_data.interface = subject
+            break
+    await choose_period(callback_query, callback_data)
 
 
-@router.callback_query(callback_data_factories.NewsMenuData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_period
-))
 @router.callback_query(callback_data_factories.TelegramGroupData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_period
+    F.menu == callback_data_factories.NewsMenusEnum.choose_period_for_telegram
 ))
-@router.callback_query(callback_data_factories.SubjectData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_period
-))
+async def choose_period_for_telegram(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.TelegramGroupData,
+) -> None:
+    """
+    Выбор периода для получения новостей.
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    if not callback_data.is_external_sources:
+        callback_data.interface = callback_data_factories.SubjectsInterfaces.telegram
+    else:
+        callback_data.subject_ids = str(callback_data.telegram_section_id)
+    await choose_period(callback_query, callback_data)
+
+
 async def choose_period(
         callback_query: types.CallbackQuery,
         callback_data: (callback_data_factories.NewsMenuData |
                         callback_data_factories.TelegramGroupData |
                         callback_data_factories.SubjectData),
-        state: FSMContext,
 ) -> None:
     """
     Выбор периода для получения новостей.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
-    :param state:           Объект, который хранит состояние FSM для пользователя
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    callback_data.menu = callback_data.back_menu  # FIXME check
-    await answer_choose_period(callback_query, state, callback_data)
+    callback_data.menu = callback_data.back_menu
+    await answer_choose_period(
+        callback_query,
+        callback_data,
+        callback_data.interface,
+        utils.get_selected_ids_from_callback_data(callback_data),
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 async def answer_choose_period(
         message: types.CallbackQuery | types.Message,
-        state: FSMContext,
         back_menu: callback_data_factories.NewsMenuData,
+        subject_interface: callback_data_factories.SubjectsInterfaces,
+        selected_ids: list[int],
 ) -> None:
     """
     Выбор периода для получения новостей.
 
-    :param message:         Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state:           Объект, который хранит состояние FSM для пользователя
-    :param back_menu:       callback_data для кнопки Назад
+    :param message:             Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param back_menu:           callback_data для кнопки Назад
+    :param subject_interface:   SubjectInterface обработчик выдачи новостей за период
+    :param selected_ids:        id выбранных субъектов, по которым надо получить новости
     """
-    data = await state.get_data()
-    selected: dict[int, str] = data.get(STATE_DATA_SELECTED_SUBJECTS, {})  # хранит словарь с id
+    selected = {i: (await subject_interface.interface.get(i))['name'] for i in selected_ids}
     periods = [
         {
             'text': 'За 1 день',
@@ -526,7 +501,8 @@ async def answer_choose_period(
 
     keyboard = keyboards.get_periods_kb(
         periods=periods,
-        get_period_news=callback_data_factories.NewsMenusEnum.news_by_period,
+        subject_interface=subject_interface,
+        selected_ids=utils.wrap_selected_ids(selected_ids),
         back_menu=back_menu,
     )
     msg_text = f'Выберите период для получения новостей по <b>{", ".join(selected.values())}</b>'
@@ -539,14 +515,12 @@ async def answer_choose_period(
 async def get_subject_news_by_period(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.NewsMenuData,
-        state: FSMContext,
 ) -> None:
     """
     Получение новостей за выбранный период
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
-    :param state:           Объект, который хранит состояние FSM для пользователя
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -558,9 +532,59 @@ async def get_subject_news_by_period(
     to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
-    data = await state.get_data()
-    selected: dict[int, str] = data.get(STATE_DATA_SELECTED_SUBJECTS, {})  # хранит словарь с id
-    subject_db: SubjectInterface = data.get(STATE_DATA_NEWS_GETTER)  # хранит интерфейс взаимодействия с субъектами
+    subject_db: SubjectInterface = callback_data.interface.interface
+    selected = {i: (await subject_db.get(i))['name'] for i in utils.get_selected_ids_from_callback_data(callback_data)}
+
+    articles = await subject_db.get_articles_by_subject_ids(list(selected.keys()), from_date, to_date, order_by=models.Article.date.desc())
+    if not articles:
+        msg_text = f'Новости по <b>{", ".join(selected.values())}</b> за {days} дней отсутствуют'
+        await callback_query.message.answer(msg_text, parse_mode='HTML')
+    else:
+        for subject_id, articles_by_subject_id in groupby(articles, lambda x: x[1]):
+            subject_name = selected[subject_id]
+            frmt_msg = f'<b>{subject_name.capitalize()}</b>'
+            msg_text = f'Новости по {frmt_msg} за {days} дней\n'
+
+            all_articles = '\n\n'.join(
+                FormatText(
+                    title=article.title, date=article.date, link=article.link, text_sum=article.text_sum
+                ).make_subject_text()
+                for article, _ in articles_by_subject_id
+            )
+            frmt_msg += f'\n\n{all_articles}'
+            await callback_query.message.answer(msg_text, parse_mode='HTML')
+            await bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
+            await asyncio.sleep(1)
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(callback_data_factories.TelegramGroupData.filter(
+    F.menu == callback_data_factories.NewsMenusEnum.industry_news_by_period
+))
+async def get_industry_news_by_period(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.TelegramGroupData,
+) -> None:
+    """
+    Получение новостей за выбранный период
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    days = callback_data.days_count
+    section_id = int(callback_data.subject_ids)
+
+    to_date = datetime.datetime.now()
+    from_date = to_date - datetime.timedelta(days=days)
+
+    subject_db: SubjectInterface = callback_data.interface.interface
+    selected = {i: (await subject_db.get(i))['name'] for i in utils.get_selected_ids_from_callback_data(callback_data)}
 
     articles = await subject_db.get_articles_by_subject_ids(list(selected.keys()), from_date, to_date, order_by=models.Article.date.desc())
     if not articles:

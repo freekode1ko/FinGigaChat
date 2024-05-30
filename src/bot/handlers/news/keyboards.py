@@ -118,6 +118,7 @@ def get_select_telegram_channels_kb(
     [✅/🟩][ telegram_channel['name'] ]
     [✅/🟩][ ... ]
     [✅/🟩][ telegram_channel['name'] ]
+    [ Получить новости ]
     [ Назад ]
     [ Завершить ]
 
@@ -130,6 +131,7 @@ def get_select_telegram_channels_kb(
     for _, item in telegram_channels.iterrows():
         add_del_call = callback_data_factories.TelegramGroupData(
             menu=callback_data.menu,
+            subject_ids=callback_data.subject_ids,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
             telegram_channel_id=item['id'],
@@ -143,7 +145,8 @@ def get_select_telegram_channels_kb(
     keyboard.row(types.InlineKeyboardButton(
         text='Получить новости',
         callback_data=callback_data_factories.TelegramGroupData(
-            menu=callback_data_factories.NewsMenusEnum.choose_period,
+            menu=callback_data_factories.NewsMenusEnum.choose_period_for_telegram,
+            subject_ids=callback_data.subject_ids,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
             back_menu=callback_data.menu,
@@ -184,7 +187,7 @@ def get_choose_source_kb(
     keyboard.row(types.InlineKeyboardButton(
         text='Телеграм каналы',
         callback_data=callback_data_factories.TelegramGroupData(
-            menu=callback_data_factories.NewsMenusEnum.choose_period,
+            menu=callback_data_factories.NewsMenusEnum.telegram_channels_by_section,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
             is_external=False,
@@ -194,7 +197,7 @@ def get_choose_source_kb(
     keyboard.row(types.InlineKeyboardButton(
         text='Внешние источники',
         callback_data=callback_data_factories.TelegramGroupData(
-            menu=callback_data_factories.NewsMenusEnum.choose_period,
+            menu=callback_data_factories.NewsMenusEnum.choose_period_for_telegram,
             telegram_group_id=callback_data.telegram_group_id,
             telegram_section_id=callback_data.telegram_section_id,
             is_external=True,
@@ -320,15 +323,17 @@ def get_subjects_list_kb(
 
 def get_periods_kb(
         periods: list[dict[str, Any]],
-        get_period_news: callback_data_factories.NewsMenusEnum,
+        subject_interface: callback_data_factories.SubjectsInterfaces,
+        selected_ids: str,
         back_menu: callback_data_factories.NewsMenuData,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура с выбором периода, за который выгружаются новости по клиенту
 
-    :param periods: list[dict[text: str, days: int]]
-    :param get_period_news: callback_data_factories.NewsMenusEnum обработчик выдачи новостей за период
-    :param back_menu: callback_data_factories.NewsMenuData пункт меню, в который ведет кнопка Назад
+    :param periods:             list[dict[text: str, days: int]]
+    :param subject_interface:   SubjectInterface обработчик выдачи новостей за период
+    :param selected_ids:        id выбранных субъектов, по которым надо получить новости
+    :param back_menu:           callback_data_factories.NewsMenuData пункт меню, в который ведет кнопка Назад
     return:
     [ period.text ]
     ...
@@ -341,8 +346,10 @@ def get_periods_kb(
         keyboard.row(types.InlineKeyboardButton(
             text=period['text'],
             callback_data=callback_data_factories.NewsMenuData(
-                menu=get_period_news,
+                menu=callback_data_factories.NewsMenusEnum.news_by_period,
                 days_count=period['days'],
+                interface=subject_interface,
+                subject_ids=selected_ids,
             ).pack(),
         ))
 

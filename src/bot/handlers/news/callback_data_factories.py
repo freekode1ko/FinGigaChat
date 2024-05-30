@@ -19,6 +19,7 @@ tg section дает выбор - тг каналы или внешние ист�
 клиенты и сырье дают выбор поиска из подписок или остальных, после выбора клиента или сырья - выбор периода
 """
 from enum import auto, Enum, IntEnum
+from typing import Optional
 
 from aiogram.filters.callback_data import CallbackData
 
@@ -26,23 +27,22 @@ from db.api.client import client_db
 from db.api.commodity import commodity_db
 from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
+from db.api.telegram_channel import telegram_channel_article_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.api.user_commodity_subscription import user_commodity_subscription_db
 
 MENU = 'news_menu'
 
 
-class TitledEnum(Enum):
+class AutoEnum(Enum):
     """
     Родительский класс, который позволяет задать атрибуты у значений енумератора.
 
     Атрибут value задается автоматически в зависимости от количества создаваемых значений енумератора.
-    В качестве значения енумератора передается dict,
-    для заданных атрибутов с декоратором property вынимаются значения этого dict.
     Тажке позволяет производить сравнение value енумератора с int и получать значения енумератора по передаваемому int.
     Например,
 
-    >>> class Test(TitledEnum):
+    >>> class Test(AutoEnum):
     ...    data1 = {'title': 'data1'}
     ...    data2 = {'title': 'data2'}
 
@@ -50,8 +50,7 @@ class TitledEnum(Enum):
     True
     >>> Test('0') == Test.data1
     True
-    >>> Test.data1.title
-    'data1'
+    >>> Test.data1
     """
     def __new__(cls, *args):
         """При создании экземпляра енумератора из всех переданных аргументов, лишь первый станет value"""
@@ -59,14 +58,6 @@ class TitledEnum(Enum):
         obj = object.__new__(cls)
         obj._value_ = str(value)
         return obj
-
-    def __init__(self, *args) -> None:
-        if len(args) > 0 and isinstance(args[0], dict):
-            self._title_ = args[0].get('title', self._name_)
-            self._subject_name_ = args[0].get('subject_name', self._name_)
-            self._buttons_ = args[0].get('buttons', [])
-            self._subject_db_ = args[0].get('subject_db')
-            self._subject_subscription_db_ = args[0].get('subject_subscription_db')
 
     def __eq__(self, obj):
         if type(self) == type(obj):
@@ -77,6 +68,23 @@ class TitledEnum(Enum):
         if type(self) == type(obj):
             return super().__ne__(obj)
         return self.value != obj
+
+
+class NewsItems(AutoEnum):
+    """
+    Класс с хардкод кнопками для получения новостей
+
+    В качестве значения енумератора передается dict,
+    для заданных атрибутов с декоратором property вынимаются значения этого dict.
+    """
+
+    def __init__(self, *args) -> None:
+        if len(args) > 0 and isinstance(args[0], dict):
+            self._title_ = args[0].get('title', self._name_)
+            self._subject_name_ = args[0].get('subject_name', self._name_)
+            self._buttons_ = args[0].get('buttons', [])
+            self._subject_db_ = args[0].get('subject_db')
+            self._subject_subscription_db_ = args[0].get('subject_subscription_db')
 
     @property
     def title(self) -> str:
@@ -97,10 +105,6 @@ class TitledEnum(Enum):
     @property
     def subject_subscription_db(self) -> SubscriptionInterface:
         return self._subject_subscription_db_
-
-
-class NewsItems(TitledEnum):
-    """Класс с хардкод кнопками для получения новостей"""
 
     clients = {
         'title': 'Клиентские новости',
@@ -136,6 +140,22 @@ class NewsItems(TitledEnum):
     }
 
 
+class SubjectsInterfaces(AutoEnum):
+    """Интерфейсы для получения новостей"""
+
+    def __init__(self, *args) -> None:
+        if len(args) > 0 and isinstance(args[0], SubjectInterface):
+            self._interface_ = args[0]
+
+    @property
+    def interface(self) -> SubjectInterface:
+        return self._interface_
+
+    clients = client_db
+    commodities = commodity_db
+    telegram = telegram_channel_article_db
+
+
 class NewsMenusEnum(IntEnum):
     """Уровни меню клиенты"""
     main_menu = auto()
@@ -155,11 +175,12 @@ class NewsMenusEnum(IntEnum):
     telegram_channels_by_section = auto()
 
     # переход из субъекта в выбор периода (из choose_telegram_subjects, subjects_list)
-    choose_period_for_subject = auto()  # для клиента или сырья
-    choose_period = auto()              # period to get news (1, 3, 7, 30 days)
+    choose_period_for_subject = auto()   # для клиента или сырья
+    choose_period_for_telegram = auto()  # для тг каналов и отраслей
 
     # Переход из choose_period
     news_by_period = auto()             # выдача новостей за период
+    industry_news_by_period = auto()             # выдача новостей за период
 
 
 class NewsMenuData(CallbackData, prefix=MENU):
@@ -167,6 +188,8 @@ class NewsMenuData(CallbackData, prefix=MENU):
     menu: NewsMenusEnum
     back_menu: NewsMenusEnum = NewsMenusEnum.main_menu
     days_count: int = 1
+    subject_ids: str = '0'
+    interface: Optional[SubjectsInterfaces] = None
 
 
 class TelegramGroupData(NewsMenuData, prefix=MENU):
