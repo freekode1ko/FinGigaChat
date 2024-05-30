@@ -8,10 +8,10 @@
 - выгружать новости по subject.id
 """
 import datetime
-from typing import Any, Optional, Type, Iterable
+from typing import Any, Optional, Type
 
 import pandas as pd
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import InstrumentedAttribute
 
 from db import database
@@ -129,7 +129,7 @@ class SubjectInterface:
         :param order_by: Параметр сортировки в запросе
         :returns: list[Article]
         """
-        if not isinstance(subject_ids, Iterable):
+        if not isinstance(subject_ids, list):
             subject_ids = [subject_ids]
 
         async with database.async_session() as session:
