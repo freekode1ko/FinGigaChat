@@ -6,6 +6,7 @@
 Меню аналитических показателей для клиентов.
 Меню выбора периода для выгрузки отчетов.
 """
+import datetime
 from typing import Type
 
 import pandas as pd
@@ -190,7 +191,10 @@ def get_select_period_kb(
             'text': 'За полгода',
             'days': 176,  # average
         },
-
+        {
+            'text': 'За год',
+            'days': 365 if datetime.date.today().year % 4 else 366,  # average
+        },
     ]
 
     for period in periods_list:
