@@ -197,7 +197,7 @@ async def clients_subscriptions_list(
             subscribed=subscribed,
             research_type_id=await get_research_type_id_by_name(client_name),
         )
-        msg_text = f'Выберите раздел для получения данных по клиентам <b>{client_name}</b>'
+        msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
     else:
         msg_text = 'Не нашелся, введите имя клиента по-другому'
         keyboard = None
