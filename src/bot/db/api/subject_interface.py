@@ -167,14 +167,14 @@ class SubjectInterface:
             subject_id: int,
             limit_val: Optional[int] = None,
             offset_val: int = 0
-    ) -> list[tuple[Any]]:
+    ) -> list[tuple[str, datetime.datetime, str, str]]:
         """
         Получение актуальных и отсортированных новостей по объекту.
 
         :param subject_id:  ID объекта.
         :param limit_val:   Количество нужных новостей.
         :param offset_val:  Сколько сначала нужно пропустить новостей.
-        :return:            Список с атрибутами новостей.
+        :return:            Список с атрибутами новостей [title, date, link, text_sum].
         """
         subject_id_col, _,  score_col = self.table_relation_article.__table__.columns
         new_score = self._get_new_score_col(score_col)
@@ -184,7 +184,7 @@ class SubjectInterface:
             .join(self.relation_article)
             .where(subject_id_col == subject_id)
             .where(score_col > 0)
-            )
+        )
 
         async with database.async_session() as session:
             # Получение топ самых свежих новостей

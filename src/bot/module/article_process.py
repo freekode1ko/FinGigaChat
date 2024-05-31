@@ -277,7 +277,7 @@ class ArticleProcess:
             subject_name: str,
             articles: list,
             com_data: list[tuple] | None
-        ) -> tuple[str, str]:
+    ) -> tuple[str, str]:
         """
         Формирует отформатированное сообщение.
 
@@ -352,15 +352,12 @@ class ArticleProcess:
         :param offset_val:  Сколько сначала нужно пропустить новостей.
         :return:            Цены на товар и сообщение с новостями об объекте.
         """
-        com_data = None
-
         match subject:
             case SubjectType.client:
-                articles = await client_db.get_sort_articles_by_id(subject_id, limit_val, offset_val)
-                subject_data = await client_db.get(subject_id)
+                subject_db = client_db
+                com_data = None
             case SubjectType.commodity:
-                articles = await commodity_db.get_sort_articles_by_id(subject_id, limit_val, offset_val)
-                subject_data = await commodity_db.get(subject_id)
+                subject_db = commodity_db
                 com_data = self._get_commodity_pricing(subject_id)
             case SubjectType.industry:
                 articles = self._get_industry_articles(subject_id)
@@ -369,6 +366,8 @@ class ArticleProcess:
             case _:
                 return '', ''
 
+        articles = await subject_db.get_sort_articles_by_id(subject_id, limit_val, offset_val)
+        subject_data = await subject_db.get(subject_id)
         com_pricing, reply_msg = self.make_format_msg(subject_data['name'], articles, com_data)
         return com_pricing, reply_msg
 
