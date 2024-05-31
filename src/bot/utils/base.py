@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, date
 from math import ceil
 from pathlib import Path
 from typing import Optional
+import re
 
 import pandas as pd
 from aiogram import Bot, types
@@ -352,7 +353,7 @@ async def __create_fin_table(message: types.Message, client_name: str, client_fi
 
 def get_page_data_and_info(
         all_data_df: pd.DataFrame,
-        page: int,
+        page: int = 0,
         page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> tuple[pd.DataFrame, str, int]:
     """
@@ -487,3 +488,13 @@ async def send_pdf(
         await callback_query.message.answer_media_group(media_group.build(), protect_content=protect_content)
 
     return True
+
+
+def clear_text_from_url(text: str) -> str:
+    """
+    Очистка текста от ссылок.
+
+    :param text:    Текст.
+    :return:        Текст без ссылок.
+    """
+    return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)

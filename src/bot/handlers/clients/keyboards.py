@@ -93,8 +93,9 @@ def get_clients_list_kb(
 def get_client_menu_kb(
         client_id: int,
         current_page: int,
-        subscribed: bool,
+        subscribed: bool = False,
         research_type_id: Optional[int] = None,
+        with_back_button: bool = True,
 ) -> InlineKeyboardMarkup:
     """
     [ Новости ]
@@ -104,12 +105,14 @@ def get_client_menu_kb(
     [ Цифровая справка ]
     [ Сформировать материалы для встречи ]
     [ Call-reports ]
-    [ Назад ]
+    Optional{ [ Назад ] }
     [ Завершить ]
     :param client_id: client.id
     :param current_page: ClientsMenuData.page
     :param subscribed: ClientsMenuData.subscribed
     :param research_type_id: research_type.id | None
+    :param with_back_button: нужна ли кнопка назад
+    :return: клавиатура
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -180,14 +183,15 @@ def get_client_menu_kb(
     #         subscribed=subscribed,
     #     ).pack(),
     # ))
-    keyboard.row(types.InlineKeyboardButton(
-        text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_data_factories.ClientsMenuData(
-            menu=callback_data_factories.ClientsMenusEnum.clients_list,
-            page=current_page,
-            subscribed=subscribed,
-        ).pack(),
-    ))
+    if with_back_button:
+        keyboard.row(types.InlineKeyboardButton(
+            text=constants.BACK_BUTTON_TXT,
+            callback_data=callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.clients_list,
+                page=current_page,
+                subscribed=subscribed,
+            ).pack(),
+        ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
         callback_data=callback_data_factories.ClientsMenuData(

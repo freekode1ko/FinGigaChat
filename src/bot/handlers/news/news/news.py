@@ -5,6 +5,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from configs import config
@@ -15,9 +16,9 @@ from db.api.commodity import commodity_db
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
-from handlers.ai.gigachat import gigachat
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
+from handlers.clients.utils import is_client_in_message
 from handlers.news.handler import router
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
@@ -90,7 +91,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
 
     ap_obj = ArticleProcess(logger)
 
-    _, reply_msg = ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
+    _, reply_msg = await ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
     new_offset = offset_all + config.NEWS_LIMIT
 
     if reply_msg and isinstance(reply_msg, str):
@@ -178,7 +179,6 @@ async def send_nearest_subjects(message: types.Message) -> None:
     cancel_command = 'отмена'
     buttons = [
         [types.KeyboardButton(text=cancel_command)],
-        [types.KeyboardButton(text='Спросить у GigaChat')],
         [types.KeyboardButton(text='Спросить у Базы Знаний')],
     ]
     for subject_name in nearest_subjects:
@@ -227,7 +227,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     subject_ids, subject = ap_obj.find_subject_id(msg_text, 'industry'), 'industry'
     if subject_ids:
         industry_id = subject_ids[0]
-        _, reply_msg = ap_obj.process_user_alias(industry_id, subject)
+        _, reply_msg = await ap_obj.process_user_alias(industry_id, subject)
         await bot_send_msg(message.bot, chat_id, reply_msg)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по отраслям')
         return True
@@ -238,7 +238,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
         subject_ids, subject = ap_obj.find_subject_id(msg_text, 'commodity'), 'commodity'
 
     for subject_id in subject_ids:
-        com_price, reply_msg = ap_obj.process_user_alias(subject_id, subject)
+        com_price, reply_msg = await ap_obj.process_user_alias(subject_id, subject)
 
         return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
 
@@ -250,7 +250,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
 
         if isinstance(reply_msg, str):
             await send_news_with_next_button(message.bot, chat_id, reply_msg, subject_id, subject,
-                                             config.NEWS_LIMIT, config.NEWS_LIMIT + 1)
+                                             config.OTHER_NEWS_COUNT, config.NEWS_LIMIT + 1)
 
             if subject == 'client':
                 await send_client_navi_link(message, subject_id, ap_obj)
@@ -319,11 +319,14 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
 
 
 @router.message(F.text)
-async def find_news(message: types.Message, state: FSMContext) -> None:
+async def find_news(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
+        if await is_client_in_message(message, user_logger, score_for_fuzzy=95):
+            return
+
         return_ans = await send_news(message, user_msg, full_name)
 
         if return_ans:
@@ -331,8 +334,7 @@ async def find_news(message: types.Message, state: FSMContext) -> None:
         else:
             aliases_dict = {
                 **{alias: (common.help_handler, {}) for alias in aliases.help_aliases},
-                **{alias: (gigachat.set_gigachat_mode, {'state': state}) for alias in aliases.gigachat_aliases},
-                **{alias: (rag.set_rag_mode, {'state': state}) for alias in aliases.rag_aliases},
+                **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
                 **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
                 **{alias: (quotes.bonds_info, {}) for alias in aliases.bonds_aliases},
                 **{alias: (quotes.economy_info, {}) for alias in aliases.eco_aliases},
@@ -345,8 +347,6 @@ async def find_news(message: types.Message, state: FSMContext) -> None:
             if function_to_call:
                 await function_to_call(message, **kwargs)
             else:
-                await state.set_state(gigachat.GigaChatState.gigachat_query)
-                await state.update_data(gigachat_query=message.text)
                 await state.set_state(rag.RagState.rag_query)
                 await state.update_data(rag_query=message.text)
                 await send_nearest_subjects(message)

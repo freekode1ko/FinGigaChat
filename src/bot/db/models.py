@@ -1,3 +1,6 @@
+"""
+Модели таблиц всех сервисов
+"""
 import datetime
 
 import sqlalchemy as sa
@@ -17,7 +20,7 @@ from sqlalchemy import (
     Text,
     Date,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import declarative_base, relationship
 
 from constants import enums
@@ -31,11 +34,11 @@ class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    link = Column(Text, nullable=False)
-    date = Column(DateTime, nullable=False)
-    text_ = Column('text', Text, nullable=False)
-    title = Column(Text)
-    text_sum = Column(Text)
+    link = Column(Text, nullable=False, comment='Ссылка на новость')
+    date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
+    text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
+    title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
+    text_sum = Column(Text, comment='Сформированная гигачатом сводка по новости')
 
     article_name_impact = relationship('ArticleNameImpact', back_populates='article')
     relation_client_article = relationship('RelationClientArticle', back_populates='article')
@@ -449,13 +452,17 @@ class RAGUserFeedback(Base):
     __tablename__ = 'rag_user_feedback'
     __table_args__ = {'comment': 'Обратная связь от пользователей по работе с RAG-системой'}
 
-    chat_id = Column(BigInteger, primary_key=True)
-    bot_msg_id = Column(BigInteger, primary_key=True)
-    retriever_type = Column(String(16), nullable=False)
-    reaction = Column(Boolean)
-    date = Column(DateTime, default=datetime.datetime.now)
-    query = Column(Text, nullable=False)
-    response = Column(Text)
+    chat_id = Column(BigInteger, primary_key=True, comment='ID чата с пользователем')
+    bot_msg_id = Column(BigInteger, primary_key=True, comment='ID сообщения бота')
+    retriever_type = Column(String(16), nullable=False, comment='Тип ретривера: новости, господдержка, гигачат')
+    reaction = Column(Boolean, comment='Обратная связь от пользователя: True - положительная, False - отрицательная')
+    date = Column(DateTime, default=datetime.datetime.now, comment='Дата сообщения от бота')
+    query = Column(Text, nullable=False, comment='Запрос пользователя')
+    response = Column(Text, comment='Ответ на запрос пользователя')
+    history_query = Column(Text, comment='Перефразированный на истории диалога запрос пользователя')
+    history_response = Column(Text, comment='Ответ на перефразированный на истории диалога запрос пользователя')
+    rephrase_query = Column(Text, comment='Перефразированный запрос пользователя')
+    rephrase_response = Column(Text, comment='Ответ на перефразированный запрос пользователя')
 
 
 class ResearchGroup(Base):
@@ -647,6 +654,7 @@ class TelegramGroup(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='id группы в базе')
     name = Column(String(255), nullable=False, comment='Наименование группы')
+    general_name = Column(String(255), nullable=False, comment='Наименование группы для меню новостей')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
     is_show_all_channels = Column(Boolean(), nullable=False, server_default=sa.text("'false'::boolean"),
                                   comment='Указывает, показывать ли сразу все тг каналы, '

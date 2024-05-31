@@ -2,6 +2,10 @@ from typing import List
 
 PUBLIC_COMMANDS: List[dict] = [
     {
+        'command': 'news',
+        'description': 'Новости',
+    },
+    {
         'command': 'analytics_menu',
         'description': 'Аналитика',
     },
