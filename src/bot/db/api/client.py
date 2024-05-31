@@ -28,6 +28,6 @@ client_db = SubjectInterface(
     models.Client,
     models.ClientAlternative,
     models.Client.client_alternative,
+    models.RelationClientArticle.article,
     models.RelationClientArticle,
-    models.RelationClientArticle.article
 )

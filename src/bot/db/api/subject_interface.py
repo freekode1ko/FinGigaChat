@@ -27,8 +27,8 @@ class SubjectInterface:
             table: Type[Base],
             table_alternative: Type[Base],
             relation_alternative: InstrumentedAttribute,
+            relation_article: Optional[InstrumentedAttribute] = None,
             table_relation_article: Optional[Type[Base]] = None,
-            relation_article: Optional[InstrumentedAttribute] = None
     ) -> None:
         """
         Инициализация объекта, предоставляющего интерфейс для взаимодействия с таблицей table.

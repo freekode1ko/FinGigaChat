@@ -6,6 +6,6 @@ commodity_db = SubjectInterface(
     Commodity,
     CommodityAlternative,
     Commodity.commodity_alternative,
+    RelationCommodityArticle.article,
     RelationCommodityArticle,
-    RelationCommodityArticle.article
 )
