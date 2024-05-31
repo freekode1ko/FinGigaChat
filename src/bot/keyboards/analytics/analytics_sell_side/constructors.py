@@ -182,6 +182,15 @@ def get_select_period_kb(
             'text': 'За месяц',
             'days': 30,  # average
         },
+        {
+            'text': 'За квартал',
+            'days': 90,  # average
+        },
+        {
+            'text': 'За полгода',
+            'days': 176,  # average
+        },
+
     ]
 
     for period in periods_list:

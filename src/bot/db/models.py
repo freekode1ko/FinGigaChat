@@ -20,7 +20,7 @@ from sqlalchemy import (
     Text,
     Date,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import declarative_base, relationship
 
 from constants import enums
@@ -452,13 +452,17 @@ class RAGUserFeedback(Base):
     __tablename__ = 'rag_user_feedback'
     __table_args__ = {'comment': 'Обратная связь от пользователей по работе с RAG-системой'}
 
-    chat_id = Column(BigInteger, primary_key=True)
-    bot_msg_id = Column(BigInteger, primary_key=True)
-    retriever_type = Column(String(16), nullable=False)
-    reaction = Column(Boolean)
-    date = Column(DateTime, default=datetime.datetime.now)
-    query = Column(Text, nullable=False)
-    response = Column(Text)
+    chat_id = Column(BigInteger, primary_key=True, comment='ID чата с пользователем')
+    bot_msg_id = Column(BigInteger, primary_key=True, comment='ID сообщения бота')
+    retriever_type = Column(String(16), nullable=False, comment='Тип ретривера: новости, господдержка, гигачат')
+    reaction = Column(Boolean, comment='Обратная связь от пользователя: True - положительная, False - отрицательная')
+    date = Column(DateTime, default=datetime.datetime.now, comment='Дата сообщения от бота')
+    query = Column(Text, nullable=False, comment='Запрос пользователя')
+    response = Column(Text, comment='Ответ на запрос пользователя')
+    history_query = Column(Text, comment='Перефразированный на истории диалога запрос пользователя')
+    history_response = Column(Text, comment='Ответ на перефразированный на истории диалога запрос пользователя')
+    rephrase_query = Column(Text, comment='Перефразированный запрос пользователя')
+    rephrase_response = Column(Text, comment='Ответ на перефразированный запрос пользователя')
 
 
 class ResearchGroup(Base):

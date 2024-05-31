@@ -54,7 +54,7 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
     group_df = group_df[group_df['name'] != 'Разделы']
 
-    section_df = await research_section_db.get_cib_sections_by_group_df(section_group_id, from_user.id)
+    section_df = await research_section_db.get_research_sections_df_by_group_id(section_group_id, from_user.id)
 
     section_df['callback_data'] = section_df['id'].apply(lambda x: callbacks.GetCIBSectionResearches(section_id=x).pack())
     group_df['callback_data'] = group_df['id'].apply(lambda x: callbacks.GetCIBGroupSections(group_id=x).pack())
@@ -83,7 +83,7 @@ async def get_group_sections_menu(
     user_id = callback_query.from_user.id
     group_id = callback_data.group_id
 
-    section_df = await research_section_db.get_cib_sections_by_group_df(group_id, user_id)
+    section_df = await research_section_db.get_research_sections_df_by_group_id(group_id, user_id)
 
     msg_text = 'Выберете отрасль клиента, по которому вы хотели бы получить данные из SberCIB Investment Research'
     keyboard = keyboards.get_sections_by_group_menu_kb(section_df)
