@@ -35,6 +35,7 @@ async def is_client_in_message(
                 clients['id'].iloc[0],
                 current_page=0,
                 research_type_id=await get_research_type_id_by_name(client_name),
+                with_back_button=False,
             )
             msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
             await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
