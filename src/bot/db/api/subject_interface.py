@@ -121,13 +121,13 @@ class SubjectInterface:
             order_by: str | ColumnElement = None,
     ) -> list[tuple[Article, int]]:
         """
-        Выгрузка новостей по subject_id
+        Выгрузка новостей по subject_ids
 
         :param subject_ids: id клиента/сырьевого товара
         :param from_date: Ограничение снизу по дате
         :param to_date: Ограничение сверху по дате в запросе
         :param order_by: Параметр сортировки в запросе
-        :returns: list[Article]
+        :returns: list[tuple[Article, int]]
         """
         if not isinstance(subject_ids, list):
             subject_ids = [subject_ids]

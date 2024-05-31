@@ -19,6 +19,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
+from constants import constants
 from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
@@ -490,24 +491,6 @@ async def get_client_select_period_menu(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     client_info = await client_db.get(callback_data.client_id)
-    periods = [   # FIXME стоит ли унести в константы уже?
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-    ]
     select_period_menu = select_period_menu or callback_data_factories.ClientsMenusEnum.news_by_period
     back_menu = back_menu or callback_data_factories.ClientsMenusEnum.client_news_menu
 
@@ -516,7 +499,7 @@ async def get_client_select_period_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=callback_data.research_type_id,
-        periods=periods,
+        periods=constants.GET_NEWS_PERIODS,
         select_period_menu=select_period_menu,
         back_menu=back_menu,
     )

@@ -16,7 +16,7 @@ from migrations.data.new_column_for_tg_groups import general_name
 
 # revision identifiers, used by Alembic.
 revision: str = '259565411b58'
-down_revision: Union[str, None] = 'bba2d88afbeb'
+down_revision: Union[str, None] = '378aac2e1b79'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

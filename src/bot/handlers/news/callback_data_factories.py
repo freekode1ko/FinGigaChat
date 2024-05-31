@@ -61,13 +61,13 @@ class AutoEnum(Enum):
         obj._value_ = str(value)
         return obj
 
-    def __eq__(self, obj):
+    def __eq__(self, obj) -> bool:
         """Оператор равенства"""
         if type(self) is type(obj):
             return super().__eq__(obj)
         return self.value == obj
 
-    def __ne__(self, obj):
+    def __ne__(self, obj) -> bool:
         """Оператор неравенства"""
         if type(self) is type(obj):
             return super().__ne__(obj)

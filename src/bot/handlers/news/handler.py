@@ -15,6 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
+from constants import constants
 from db import models
 from db.api import industry
 from db.api.subject_interface import SubjectInterface
@@ -493,27 +494,9 @@ async def answer_choose_period(
     :param get_news_handler:    обработчик получения новостей
     """
     selected = {i: (await subject_interface.interface.get(i))['name'] for i in selected_ids}
-    periods = [
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-    ]
 
     keyboard = keyboards.get_periods_kb(
-        periods=periods,
+        periods=constants.GET_NEWS_PERIODS,
         subject_interface=subject_interface,
         selected_ids=utils.wrap_selected_ids(selected_ids),
         back_menu=back_menu,

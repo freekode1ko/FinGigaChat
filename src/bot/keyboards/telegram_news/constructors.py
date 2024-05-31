@@ -57,26 +57,7 @@ def get_select_period_kb(section_id: int, my_subscriptions: bool = True) -> Inli
     keyboard.add(types.InlineKeyboardButton(text=get_by_my_subs_text, callback_data=by_my_subs.pack()))
     keyboard.add(types.InlineKeyboardButton(text=get_by_all_subs_text, callback_data=by_all_subs.pack()))
 
-    periods_list = [
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-    ]
-
-    for period in periods_list:
+    for period in constants.GET_NEWS_PERIODS:
         by_days = callbacks.GetNewsDaysCount(
             section_id=section_id,
             my_subscriptions=my_subscriptions,
