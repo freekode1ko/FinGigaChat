@@ -324,7 +324,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
-        if await is_client_in_message(message, user_logger):
+        if await is_client_in_message(message, user_logger, score_for_fuzzy=95):
             return
 
         return_ans = await send_news(message, user_msg, full_name)
