@@ -19,6 +19,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
+from constants import constants
+from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product_group import product_group_db
@@ -174,7 +176,7 @@ async def clients_subscriptions_list(
     subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
 
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
-    clients_id = await fuzzy_searcher.find_clients_id_by_name(message.text)
+    clients_id = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[models.ClientAlternative])
     clients = await client_db.get_by_ids(clients_id)
     client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
 
@@ -493,24 +495,6 @@ async def get_client_select_period_menu(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     client_info = await client_db.get(callback_data.client_id)
-    periods = [   # FIXME стоит ли унести в константы уже?
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-    ]
     select_period_menu = select_period_menu or callback_data_factories.ClientsMenusEnum.news_by_period
     back_menu = back_menu or callback_data_factories.ClientsMenusEnum.client_news_menu
 
@@ -519,7 +503,7 @@ async def get_client_select_period_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=callback_data.research_type_id,
-        periods=periods,
+        periods=constants.GET_NEWS_PERIODS,
         select_period_menu=select_period_menu,
         back_menu=back_menu,
     )
@@ -573,11 +557,11 @@ async def get_client_news_by_period(
     days = callback_data.days_count
     client_info = await client_db.get(client_id)
 
-    to_date = datetime.date.today()
+    to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
     msg_text = f'Новости по клиенту <b>{client_info["name"].capitalize()}</b> за {days} дней\n'
-    articles = await client_db.get_articles_by_subject_id(client_id, from_date, to_date, order_by=Article.date.desc())
+    articles = await client_db.get_articles_by_subject_ids(client_id, from_date, to_date, order_by=Article.date.desc())
     if not articles:
         msg_text += 'отсутствуют'
         await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -588,7 +572,7 @@ async def get_client_news_by_period(
             FormatText(
                 title=article.title, date=article.date, link=article.link, text_sum=article.text_sum
             ).make_subject_text()
-            for article in articles
+            for article, _ in articles
         )
         frmt_msg += f'\n\n{all_articles}'
         await callback_query.message.answer(msg_text, parse_mode='HTML')

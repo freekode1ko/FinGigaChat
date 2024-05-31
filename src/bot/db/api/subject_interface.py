@@ -117,34 +117,43 @@ class SubjectInterface:
             data = result.scalar()
             return {c: getattr(data, c) for c in self.columns}
 
-    async def get_articles_by_subject_id(
+    async def get_articles_by_subject_ids(
             self,
-            subject_id: int,
-            from_date: datetime.date = None,
-            to_date: datetime.date = None,
+            subject_ids: int | list[int],
+            from_date: datetime.datetime = None,
+            to_date: datetime.datetime = None,
             order_by: str | ColumnElement = None,
-    ) -> list[Article]:
+    ) -> list[tuple[Article, int]]:
         """
-        Выгрузка новостей по subject_id
+        Выгрузка новостей по subject_ids
 
-        :param subject_id: id клиента/сырьевого товара
+        :param subject_ids: id клиента/сырьевого товара
         :param from_date: Ограничение снизу по дате
         :param to_date: Ограничение сверху по дате в запросе
         :param order_by: Параметр сортировки в запросе
-        :returns: list[Article]
+        :returns: list[tuple[Article, int]]
         """
+        if not isinstance(subject_ids, list):
+            subject_ids = [subject_ids]
+
         async with database.async_session() as session:
-            stmt = select(Article).join(self.relation_article).join(self.table).where(self.table.id == subject_id)
+            stmt = (
+                select(Article, self.table.id)
+                .join(self.relation_article)
+                .join(self.table)
+                .where(self.table.id.in_(subject_ids))
+                .order_by(self.table.id)
+            )
 
             if from_date is not None:
-                stmt = stmt.where(func.date(Article.date) >= from_date)
+                stmt = stmt.where(Article.date >= from_date)
             if to_date is not None:
-                stmt = stmt.where(func.date(Article.date) <= to_date)
+                stmt = stmt.where(Article.date <= to_date)
             if order_by is not None:
                 stmt = stmt.order_by(order_by)
 
             result = await session.execute(stmt)
-            return list(result.scalars())
+            return list(result.all())
 
     @staticmethod
     def _get_new_score_col(score_col: ColumnElement) -> case:

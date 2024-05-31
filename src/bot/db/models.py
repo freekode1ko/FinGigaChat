@@ -654,6 +654,7 @@ class TelegramGroup(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='id группы в базе')
     name = Column(String(255), nullable=False, comment='Наименование группы')
+    general_name = Column(String(255), nullable=False, comment='Наименование группы для меню новостей')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
     is_show_all_channels = Column(Boolean(), nullable=False, server_default=sa.text("'false'::boolean"),
                                   comment='Указывает, показывать ли сразу все тг каналы, '
