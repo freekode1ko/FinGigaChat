@@ -1,5 +1,4 @@
 import collections
-from typing import List, Dict
 
 import pandas as pd
 
@@ -7,7 +6,7 @@ from db.api.telegram_section import telegram_section_db
 from module.article_process import FormatText
 
 
-def group_news_by_tg_channels(news: pd.DataFrame) -> Dict[str, list]:
+def group_news_by_tg_channels(news: pd.DataFrame) -> dict[str, list]:
     """
     Группирует новости из тг каналов по тг каналам
 
@@ -24,7 +23,7 @@ def group_news_by_tg_channels(news: pd.DataFrame) -> Dict[str, list]:
     return tg_chan_names2data
 
 
-def get_tg_channel_news_msg(tg_chan_name: str, news: List[str], delimiter: str = '\n\n') -> str:
+def get_tg_channel_news_msg(tg_chan_name: str, news: list[str], delimiter: str = '\n\n') -> str:
     """Формирует подсообщение с новостями из тг-канала"""
     msg_text = f'<b>{tg_chan_name}:</b>\n'
     msg_text += delimiter.join(news) + delimiter

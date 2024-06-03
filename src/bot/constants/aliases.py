@@ -1,3 +1,5 @@
+"""Алиасы"""
+
 # FIXME load from json
 bonds_aliases = ['облигации', 'бонды', 'офз', 'бонлы', 'доходность офз']
 help_aliases = [

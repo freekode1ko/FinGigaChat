@@ -1,3 +1,5 @@
+"""Файл с основными константами для бота"""
+
 sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'

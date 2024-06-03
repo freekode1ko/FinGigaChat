@@ -1,12 +1,12 @@
+"""Файл с перечислениями"""
+
 from __future__ import annotations
 
-from enum import Enum, IntEnum, auto
+from enum import auto, Enum, IntEnum
 
 
 class Environment(str, Enum):
-    """
-    Среда окружения, где запускаем код
-    """
+    """Среда окружения, где запускаем код"""
 
     STAGE = 'dev'
     PROD = 'prod'
@@ -14,10 +14,12 @@ class Environment(str, Enum):
     UNKNOWN = 'unknown'
 
     def is_local(self) -> bool:
+        """Является ли окружение локальным?"""
         return self in (Environment.UNKNOWN, Environment.LOCAL)
 
     @classmethod
     def from_str(cls, param: str) -> Environment:
+        """Получить объект енумератора из переданной строки"""
         try:
             return cls(param.lower())
         except ValueError:
@@ -25,9 +27,8 @@ class Environment(str, Enum):
 
 
 class RetrieverType(Enum):
-    """
-    Типы ретриверов в боте
-    """
+    """Типы ретриверов в боте"""
+
     other = 0  # простое обращение к гигачат
     state_support = 1  # ретривер по господдержке
     qa_banker = 2  # ретривер по новостям и финансовым показателям
@@ -35,6 +36,7 @@ class RetrieverType(Enum):
 
 class ResearchSectionType(Enum):
     """Типы разделов CIB Research, участвует в формировании меню аналитики"""
+
     default = 0  # Раздел без доп пунктов
     economy = 1  # Раздел с прогнозом КС ЦБ и макроэконом показателями [витрина данных]
     financial_exchange = 2  # Раздел с прогнозом валютных курсов
@@ -42,6 +44,7 @@ class ResearchSectionType(Enum):
 
 class ResearchSummaryType(Enum):
     """Тип формирования сводки отчетов CIB Research, участвует в формировании меню аналитики"""
+
     periodic = 0  # Предлагает пользователю выгрузить отчеты за период
     last_actual = 1  # Выгружает последний актуальный отчет
     analytical_indicators = 2  # Формирует отдельное меню для выгрузки различных аналитических данных
@@ -53,7 +56,10 @@ class ResearchSummaryType(Enum):
 
 
 class FIGroupType(Enum):
+    """Типы долговых рынков"""
+
     bonds = 0, 'ОФЗ'
+
     # obligates = 1, 'Корпоративные облигации '
     # foreign_markets = 2, 'Зарубежные рынки '
 
@@ -68,6 +74,7 @@ class FIGroupType(Enum):
 
 class IndustryTypes(IntEnum):
     """Типы отраслей. Используется для меню отраслевой аналитики и для таблицы bot_industry_documents"""
+
     default = auto()            # Все стандартные отрасли
     other = auto()              # Пункт прочее
     general_comments = auto()   # Пункт общий комментарий
