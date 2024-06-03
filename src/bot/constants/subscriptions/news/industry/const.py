@@ -14,6 +14,3 @@ SHOW_INDUSTRY_INDUSTRIES = 'industry_showmeindustry'
 WHAT_IN_THIS_INDUSTRY = 'industry_whatinthisindustry'
 
 ADD_ALL_INDUSTRY_SUBS_BY_DOMAIN = 'industry_add_all_subs_by_domain'
-
-
-

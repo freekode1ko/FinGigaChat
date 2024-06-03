@@ -14,6 +14,3 @@ SHOW_INDUSTRY_CLIENTS = 'client_showmeindustry'
 WHAT_IN_THIS_INDUSTRY = 'client_whatinthisindustry'
 
 ADD_ALL_CLIENT_SUBS_BY_DOMAIN = 'client_add_all_subs_by_domain'
-
-
-

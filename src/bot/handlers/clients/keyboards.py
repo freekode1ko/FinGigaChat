@@ -60,13 +60,13 @@ def get_clients_list_kb(
     """
     page_data['name'] = page_data['name'].str.capitalize()
     page_data['item_callback'] = page_data['id'].apply(
-            lambda x: callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.client_menu,
-                client_id=x,
-                page=current_page,
-                subscribed=subscribed,
-            ).pack()
-        )
+        lambda x: callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.client_menu,
+            client_id=x,
+            page=current_page,
+            subscribed=subscribed,
+        ).pack()
+    )
     return get_pagination_kb(
         page_data,
         current_page,
@@ -438,4 +438,3 @@ def client_analytical_indicators_kb(
         ).pack(),
     ))
     return keyboard.as_markup()
-

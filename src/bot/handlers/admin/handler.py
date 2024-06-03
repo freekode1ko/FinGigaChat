@@ -501,4 +501,3 @@ async def back_to_delete_newsletter_msg_menu(callback_query: types.CallbackQuery
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await delete_newsletter_menu(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-

@@ -39,6 +39,7 @@ class BaseClient:
 @singleton
 class GigaOauthClient(BaseClient):
     """Клиент для получения токена GigaChat."""
+
     def __init__(self):
         super().__init__(giga_oauth_url)
 
@@ -46,6 +47,7 @@ class GigaOauthClient(BaseClient):
 @singleton
 class GigaChatClient(BaseClient):
     """Клиент для получения ответа от GigaChat."""
+
     def __init__(self):
         super().__init__(giga_chat_url)
 
@@ -53,6 +55,7 @@ class GigaChatClient(BaseClient):
 @singleton
 class RagQaBankerClient(BaseClient):
     """Клиент для получения ответа от RAG по новостям."""
+
     def __init__(self):
         super().__init__(BASE_QA_BANKER_URL)
 
@@ -60,5 +63,6 @@ class RagQaBankerClient(BaseClient):
 @singleton
 class RagStateSupportClient(BaseClient):
     """Клиент для получения ответа от RAG по господдержке."""
+
     def __init__(self):
         super().__init__(BASE_STATE_SUPPORT_URL)
