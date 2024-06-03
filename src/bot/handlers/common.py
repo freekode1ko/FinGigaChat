@@ -1,4 +1,13 @@
-﻿import json
+﻿"""
+Описание общих обработчиков событий в боте.
+
+    Содержит методы по:
+        выводу информационного сообщения о боте
+        регистрации пользователя в боте
+        по выходу из состояния
+        открытию web app с календарем (встречами)
+"""
+import json
 import random
 import re
 
@@ -13,18 +22,19 @@ from configs import config
 from constants.constants import (
     CANCEL_CALLBACK,
     MAX_REGISTRATION_CODE_ATTEMPTS,
-    REGISTRATION_CODE_MIN,
     REGISTRATION_CODE_MAX,
+    REGISTRATION_CODE_MIN,
 )
-from db.whitelist import is_new_user_email, is_user_email_exist, insert_user_email_after_register
+from db.whitelist import insert_user_email_after_register, is_new_user_email, is_user_email_exist
+from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
 from utils.base import user_in_whitelist
 
 
-# States
 class Form(StatesGroup):
-    """Конечный автомат состояний регистрации пользователя"""
+    """Конечный автомат состояний регистрации пользователя."""
+
     new_user_reg = State()
     continue_user_reg = State()
 
@@ -34,12 +44,7 @@ router = Router()
 
 @router.message(Command('start', 'help'))
 async def help_handler(message: types.Message, state: FSMContext) -> None:
-    """
-    Вывод приветственного окна, с описанием бота и лицами для связи
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state:
-    """
+    """Вывод приветственного окна, с описанием бота и лицами для связи."""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     check_mail = user_msg == '/start'
     if await user_in_whitelist(message.from_user.model_dump_json(), check_mail):
@@ -56,36 +61,37 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
 
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
     """
-    Позволяет пользователю очищать клавиатуру и выходить из любого состояния
+    Позволяет пользователю очищать клавиатуру и выходить из любого состояния.
 
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: состояние FSM
-    :param msg_text: Ответное сообщение пользователю
+    :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param state:       Состояние FSM.
+    :param msg_text:    Ответное сообщение пользователю.
     """
     if state is None:
         return
 
-    # Cancel state and inform user about it
+    await clear_user_dialog_if_need(message, state)  # очистка истории диалога, если состояние RagState
     await state.clear()
-    # And remove keyboard (just in case)
     await message.reply(msg_text, reply_markup=types.ReplyKeyboardRemove())
 
 
 @router.message(Command('exit', 'завершить'))
 @router.message(F.text.lower().in_({'exit', 'завершить'}))
 async def exit_handler(message: types.Message, state: FSMContext) -> None:
+    """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Завершено')
 
 
 @router.message(Command('cancel', 'отмена'))
 @router.message(F.text.lower().in_({'cancel', 'отмена'}))
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+    """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Отменено')
 
 
 @router.callback_query(F.data.startswith(CANCEL_CALLBACK))
 async def cancel_callback(callback_query: types.CallbackQuery) -> None:
-    """Удаляет сообщение, у которого нажали на отмену"""
+    """Удаляет сообщение, у которого нажали на отмену."""
     try:
         await callback_query.message.delete()
     except TelegramBadRequest:
@@ -93,16 +99,7 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
 
 
 async def user_registration(message: types.Message, state: FSMContext) -> None:
-    """
-    Регистрация нового пользователя.
-    Если почта \\w+@sberbank.ru, то отправка закодированного chat_id на почту и ожидание сообщения от пользователя
-        После ввода следующего сообщения раскодируем его и сверяем с chat_id сообщения, если ок - добавляем в БД,
-        Если не сходится, то пишем что код не верный и просим проверить и повторить отправку
-        Так до тех пор, пока не получим правильный код.
-    Если почта не \\w+@sberbank.ru, то сообщить что почта должна быть корпоративной и так пока не получим валидную почту
-
-    По слову "отмена" в чате - отменить регистрацию
-    """
+    """Регистрация нового пользователя в боте: запрос пользовательской почты."""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
     await state.set_state(Form.new_user_reg)
@@ -112,6 +109,7 @@ async def user_registration(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Form.new_user_reg)
 async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
+    """Обработка пользовательской почты и отправка регистрационного кода на нее."""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip().lower()
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if re.search(r'\w+@sber(bank)?.ru', user_msg):
@@ -155,6 +153,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Form.continue_user_reg)
 async def validate_user_reg_code(message: types.Message, state: FSMContext) -> None:
+    """Валидация введенного пользователем регистрационного кода и добавление пользователя в БД."""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip()
     reg_info = await state.get_data()
     reg_code: str = reg_info['reg_code']
@@ -197,7 +196,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 
 @router.message(Command('meeting'))
 async def open_meeting_app(message: types.Message) -> None:
-    """Открытие веб приложения со встречами"""
+    """Открытие веб приложения со встречами."""
     user_id = message.from_user.id
     if not is_user_email_exist(user_id):
         await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')

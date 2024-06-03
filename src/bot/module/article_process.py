@@ -18,8 +18,11 @@ from configs.config import (
     dict_of_emoji,
     NEWS_LIMIT,
 )
+from constants.enums import SubjectType
 from constants.quotes import COMMODITY_MARKS
 from db.database import async_session, engine
+from db.api.client import client_db
+from db.api.commodity import commodity_db
 from log.logger_base import Logger
 from db.models import FinancialSummary
 
@@ -68,58 +71,6 @@ class ArticleProcess:
             if message_text in names:
                 subject_ids.append(subject_id)
         return subject_ids
-
-    def _get_articles(self, subject_id: int, subject: str, limit_all: int = NEWS_LIMIT, offset_all: int = 0):
-        """
-        Get sorted sum article by subject id.
-
-        :param subject_id: id of client or commodity
-        :param subject: client or commodity
-        :return: name of client(commodity) and sorted sum articles
-        """
-        count_all, count_top = limit_all, 3
-        offset_top = 0
-        query_temp = (
-            'SELECT relation.article_id, relation.{subject}_score, '
-            'article_.title, article_.date, article_.link, article_.text_sum '
-            'FROM relation_{subject}_article AS relation '
-            'INNER JOIN ('
-            'SELECT id, title, date, link, text_sum '
-            'FROM article '
-            ') AS article_ '
-            'ON article_.id = relation.article_id '
-            'WHERE relation.{subject}_id = {subject_id} AND relation.{subject}_score > 0 '
-            '{condition} '
-            'ORDER BY date DESC, relation.{subject}_score DESC '
-            'OFFSET {offset} '
-            'LIMIT {count}'
-        )
-        condition_top = CONDITION_TOP.format(condition_word='AND', table='article_')
-
-        with self.engine.connect() as conn:
-            query_article_top_data = query_temp.format(
-                subject=subject, subject_id=subject_id, count=count_top, condition=condition_top, offset=offset_top
-            )
-            result_top = conn.execute(text(query_article_top_data)).fetchall()
-            article_data_top = [item[2:] for item in result_top]
-            article_data_top_len = len(article_data_top)
-            top_link = ','.join([f"'{item[4]}'" for item in result_top]) if result_top else "''"
-
-            offset_all_updated = (offset_all - article_data_top_len) if offset_all > article_data_top_len else 0
-
-            condition_all = f'AND article_.link not in ({top_link})'
-            query_article_all_data = query_temp.format(
-                subject=subject, subject_id=subject_id, count=count_all, condition=condition_all,
-                offset=offset_all_updated
-            )
-
-            article_data_all = [item[2:] for item in conn.execute(text(query_article_all_data))]
-            count_of_not_top_news = count_all - len(article_data_top)
-            article_data = article_data_top + article_data_all[:count_of_not_top_news] if not offset_all else article_data_all
-
-            name = conn.execute(text(f'SELECT name FROM {subject} WHERE id={subject_id}')).fetchone()[0]
-
-            return name, article_data
 
     def _get_sorted_subject(self) -> tuple[dict[str, int], dict[str, int]]:
         """Создание словарей для сортировки по топ клиентам/товарам в зависимости от кол-ва новостей за период времени"""
@@ -296,17 +247,18 @@ class ArticleProcess:
         return com_msg
 
     @staticmethod
-    def make_format_msg(subject_name: str,
-                        articles: list,
-                        com_data: list[tuple] | None
-                        ) -> tuple[str, str | bool]:
+    def make_format_msg(
+            subject_name: str,
+            articles: list,
+            com_data: list[tuple] | None
+    ) -> tuple[str, str]:
         """
         Формирует отформатированное сообщение.
 
-        :param subject_name: имя клиента или сырья
-        :param articles: новости о клиенте или сырье
-        :param com_data: данные о ценах на сырье
-        :return: отформатированный текст
+        :param subject_name:    Имя клиента или сырья.
+        :param articles:        Новости о клиенте или сырье.
+        :param com_data:        Данные о ценах на сырье.
+        :return:                Отформатированный текст.
         """
         frmt_msg = f'<b>{subject_name.capitalize()}</b>'
 
@@ -318,10 +270,9 @@ class ArticleProcess:
             all_articles = '\n\n'.join(articles)
             frmt_msg += f'\n\n{all_articles}'
         else:
-            frmt_msg = True
+            frmt_msg += '\n\nПока нет новостей на эту тему'
 
         com_msg = ArticleProcess._make_format_commodity_pricing(com_data)
-
         return com_msg, frmt_msg
 
     @staticmethod
@@ -359,29 +310,39 @@ class ArticleProcess:
         format_msg = FormatText.make_industry_msg(articles[0][0], format_msg)
         return format_msg
 
-    def process_user_alias(self, subject_id: int, subject: str = '', limit_all: int = NEWS_LIMIT + 1,
-                           offset_all: int = 0) -> tuple[str, str]:
-        """Обработка пользовательского запроса"""
-        com_data = None
+    async def process_user_alias(
+            self,
+            subject_id: int,
+            subject: str = '',
+            limit_val: int = NEWS_LIMIT + 1,
+            offset_val: int = 0
+    ) -> tuple[str, str]:
+        """
+        Получение новостей по объекту.
 
-        if subject == 'client':
-            subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
-        elif subject == 'commodity':
-            subject_name, articles = self._get_articles(subject_id, subject, limit_all, offset_all)
-            com_data = self._get_commodity_pricing(subject_id)
-        elif subject == 'industry':
-            articles = self._get_industry_articles(subject_id)
-            reply_msg = self.make_format_industry_msg(articles)
-            return '', reply_msg
-        else:
-            return '', ''
+        :param subject_id:  ID объекта.
+        :param subject:     Тип объекта.
+        :param limit_val:   Количество нужных новостей.
+        :param offset_val:  Сколько сначала нужно пропустить новостей.
+        :return:            Цены на товар и сообщение с новостями об объекте.
+        """
+        match subject:
+            case SubjectType.client:
+                subject_db = client_db
+                com_data = None
+            case SubjectType.commodity:
+                subject_db = commodity_db
+                com_data = self._get_commodity_pricing(subject_id)
+            case SubjectType.industry:
+                articles = self._get_industry_articles(subject_id)
+                reply_msg = self.make_format_industry_msg(articles)
+                return '', reply_msg
+            case _:
+                return '', ''
 
-        com_pricing, reply_msg = self.make_format_msg(subject_name, articles, com_data)
-
-        if subject_id and not articles:
-            self._logger.warning(f'По {subject_name} не найдены новости')
-            reply_msg = f'<b>{subject_name.capitalize()}</b>\n\nПока нет новостей на эту тему'
-
+        articles = await subject_db.get_sort_articles_by_id(subject_id, limit_val, offset_val)
+        subject_data = await subject_db.get(subject_id)
+        com_pricing, reply_msg = self.make_format_msg(subject_data['name'], articles, com_data)
         return com_pricing, reply_msg
 
     def get_news_by_time(

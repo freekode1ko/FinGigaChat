@@ -10,7 +10,7 @@
 - выгружать список субъектов с флагом, подписан ли на него пользователь
 - подписываться на субъект с именем, которое похоже на имя субъекта другой таблицы
 """
-from typing import Type, Iterable
+from typing import Type
 
 import pandas as pd
 import sqlalchemy as sa
@@ -21,6 +21,7 @@ from db.models import Base
 
 
 class SubscriptionInterface:
+    """Интерфейс для взаимодействия с подписками."""
 
     def __init__(self, table: Type[Base], subject_id_field: str, subject_table: Type[Base]) -> None:
         """
@@ -37,6 +38,7 @@ class SubscriptionInterface:
     async def add_subscription(self, user_id: int, subject_id: int) -> None:
         """
         Добавляет подписку на элемент из subject_table
+
         :param user_id: whitelist.user_id
         :param subject_id: subject.id
         """
@@ -52,6 +54,7 @@ class SubscriptionInterface:
     async def delete_subscription(self, user_id: int, subject_id: int) -> None:
         """
         Удаляет подписку на элемент из subject_table
+
         :param user_id: whitelist.user_id
         :param subject_id: subject.id
         """
@@ -68,6 +71,7 @@ class SubscriptionInterface:
     async def delete_all(self, user_id: int) -> None:
         """
         Удаляет все подписки пользователя на элементы из subject_table
+
         :param user_id: whitelist.user_id
         """
         async with database.async_session() as session:
@@ -84,7 +88,7 @@ class SubscriptionInterface:
         Возвращает список подписок пользователя на элементы из subject_table
 
         :param user_id: whitelist.user_id
-        return: DataFrame[id, name]
+        :returns:       DataFrame[id, name]
         """
         async with database.async_session() as session:
             result = await session.execute(
@@ -99,7 +103,9 @@ class SubscriptionInterface:
     async def get_subject_df(self, user_id: int) -> pd.DataFrame:
         """
         Список элементов с флагом is_subscribed
-        :return DataFrame[id, name, is_subscribed]
+
+        :param user_id: telegram user_id
+        :returns:       DataFrame[id, name, is_subscribed]
         """
         async with database.async_session() as session:
             result = await session.execute(
@@ -110,11 +116,10 @@ class SubscriptionInterface:
                         (self.table.user_id.is_(None), False),
                         else_=True,
                     ).label('is_subscribed'),
-                ).outerjoin(self.table,
-                            ((getattr(self.table, self.subject_id_field) == self.subject_table.id) &
-                             (self.table.user_id == user_id))
-                            )
-                .order_by(self.subject_table.name)
+                ).outerjoin(
+                    self.table,
+                    ((getattr(self.table, self.subject_id_field) == self.subject_table.id) & (self.table.user_id == user_id))
+                ).order_by(self.subject_table.name)
             )
             data = result.all()
             return pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
@@ -147,14 +152,15 @@ class SubscriptionInterface:
     ) -> None:
         """
         Подписка на клиента или отрасль, если имя отчета совпадает с именем клиента/отрасли.
+
         Подписка на отчет, если имя клиента/отрасли совпадает с именем отчета.
         Позволяет делать подписку сразу на группу субъектов
 
-        :param user_id: телеграм id пользователя
-        :param from_table: таблица, из которой по subject_ids вынимается поле name для поиска похожих имен в self.subject_table
+        :param user_id:     телеграм id пользователя
+        :param from_table:  таблица, из которой по subject_ids вынимается поле name для поиска похожих имен в self.subject_table
         :param subject_ids: список id объектов из таблицы from_table
         """
-        if not isinstance(subject_ids, Iterable):
+        if not isinstance(subject_ids, list):
             subject_ids = [subject_ids]
 
         async with database.async_session() as session:
@@ -169,4 +175,3 @@ class SubscriptionInterface:
             ).from_select(['user_id', self.subject_id_field], select_query).on_conflict_do_nothing()
             await session.execute(stmt)
             await session.commit()
-

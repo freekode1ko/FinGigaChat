@@ -1,3 +1,6 @@
+"""
+Неточный поиск по клиентам, сырью, отраслям.
+"""
 from typing import Optional
 
 import sqlalchemy as sa
@@ -10,9 +13,11 @@ from log.logger_base import Logger
 
 
 class FuzzyAlternativeNames:
+    """Неточный поиск по клиентам, сырью, отраслям"""
+
     def __init__(self, logger: Logger.logger):
+        """Инициализация экземпляра модуля неточного поиска"""
         self._logger = logger
-        self.engine = engine
 
         self.tables_with_alternative_names_and_pk_colum = [
             (models.IndustryAlternative, models.IndustryAlternative.industry_id),
@@ -27,6 +32,7 @@ class FuzzyAlternativeNames:
     ) -> list[tuple[int, str] | str]:
         """
         Получение всех альтернативных имен из таблиц
+
         :param subjects: список таблиц, из которых выгружает альт имена
         :param with_id: нужно ли добавлять айди к клиентам
         :returns: Все альт имена таблиц subjects
@@ -52,6 +58,7 @@ class FuzzyAlternativeNames:
     ) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов
+
         :param subject_name: Наименование субъекта
         :param criteria: отклонение от значения схожести максимально близкого слова к имени субъекта,
                          в пределах отклонения выдается выборка
@@ -103,19 +110,22 @@ class FuzzyAlternativeNames:
 
         return near_subjects
 
-    async def find_clients_id_by_name(
+    async def find_subjects_id_by_name(
             self,
             name: str,
             score: int = 80,
+            subject_types: Optional[list[models.Base]] = None,
     ) -> list[int]:
         """
-        Поиск ближайших похожих имен из таблицы ClientAlternative по имени
+        Поиск ближайших похожих имен из таблиц subject_types по имени
 
-        :param name: Имя клиента
-        :param score: Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
-        :return: Список наиболее подходящих айдишников клиентов
+        :param name:            Имя клиента/сырьевого товара/отрасли
+        :param score:           Процент совпадения из библиотеки fuzzywuzzy для параметра score_cutoff
+        :param subject_types:   Список таблиц, среди которых идет поиск ближайших названий
+        :return:                Список наиболее подходящих айдишников клиентов/сырья/отраслей
         """
-        models_to_search = [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in [models.ClientAlternative]]
+        models_to_search = self.tables_with_alternative_names_and_pk_colum \
+            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
         if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
             return []
 
