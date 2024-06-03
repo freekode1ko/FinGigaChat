@@ -1,7 +1,6 @@
 """Конфиг для сервиса research"""
 import json
 import pathlib
-from typing import Dict, List, Union
 
 from environs import Env
 
@@ -23,7 +22,7 @@ DEBUG: bool = env.bool('DEBUG', default=False)
 PATH_TO_REPORTS.mkdir(parents=True, exist_ok=True)
 
 
-def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
+def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8') -> list | dict | str:
     """
     Считывает константу из json-файла
 
@@ -58,9 +57,9 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-user_agents: List[str] = read_asset_from_json(file_name='user_agents.json')
+user_agents: list[str] = read_asset_from_json(file_name='user_agents.json')
 
-list_of_companies: List[List] = read_asset_from_json('companies_list.json')
+list_of_companies: list[list] = read_asset_from_json('companies_list.json')
 
 giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
 giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
@@ -185,7 +184,7 @@ help_text = (
 )
 
 dict_of_companies: dict = read_asset_from_json('companies_dict.json')
-industry_reviews: Dict[str, str] = read_asset_from_json('industry_reviews.json')
+industry_reviews: dict[str, str] = read_asset_from_json('industry_reviews.json')
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 industry_base_url = (
