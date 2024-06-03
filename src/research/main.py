@@ -1,7 +1,6 @@
+"""Точка входа для сервиса сбора аналитических отчетов с CIB Research и сбора котировок через Selenium."""
 import asyncio
 import datetime
-import json
-import re
 import time
 import warnings
 from typing import Dict, List, Optional, Tuple
@@ -21,26 +20,32 @@ from utils.selenium_utils import get_driver
 
 
 class ResearchesGetter:
-    def __init__(self, logger):
+    """Класс сборщик отчетов"""
+
+    def __init__(self, logger: Logger.logger) -> None:
+        """Инициализация сборщика отчетов"""
         self.logger = logger
         self.parser_obj = crawler.Parser(self.logger)
         self.list_of_companies = config.list_of_companies
         self.__driver = None
 
-    def set_driver(self, driver: WebDriver):
+    def set_driver(self, driver: WebDriver) -> None:
+        """Задание атрибута driver"""
         self.__driver = driver
 
     @property
     def driver(self) -> WebDriver:
+        """Получение атрибута driver"""
         return self.__driver
 
     def collect_research(self) -> Tuple[Optional[dict], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
         """
         Collect all type of reviews from CIB Research
+
         And get page html with fin data about companies from CIB Research
+
         :return: dict with data reviews, dict with html page
         """
-
         self.logger.info('Начало сборки с research')
         economy, money, comm = 'econ', 'money', 'comm'
 
@@ -167,6 +172,7 @@ class ResearchesGetter:
             self.__driver = get_driver(logger=self.logger)
             authed_user = ResearchParser(self.__driver, self.logger)
             exchange_month_uan = None
+
         try:
             exchange_month_soft = authed_user.get_reviews(
                 url_part=economy,
@@ -232,6 +238,7 @@ class ResearchesGetter:
     def save_reviews(self, reviews_to_save: Dict[str, List[Tuple]]) -> None:
         """
         Save all reviews into the database.
+
         :param reviews_to_save: dict of list of the reviews
         """
         # TODO: мб сделать одну таблицу для обзоров ?
@@ -257,21 +264,24 @@ class ResearchesGetter:
 
         self.logger.info('Все собранные отчеты с research записаны')
 
-    def save_clients_financial_indicators(self, clients_table):
+    def save_clients_financial_indicators(self, clients_table: Optional[pd.DataFrame]) -> None:
+        """Сохранение таблицы с финансовыми показателями по клиентам"""
         if clients_table is not None:
             clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
             self.logger.info('Таблица financial_indicators записана')
         else:
-            self.logger.warning(f'Таблица financial_indicators не обновлена')
+            self.logger.warning('Таблица financial_indicators не обновлена')
 
-    def save_key_eco_table(self, key_eco_table):
+    def save_key_eco_table(self, key_eco_table: Optional[pd.DataFrame]) -> None:
+        """Сохранение таблицы с ключевыми экономическими показателями"""
         if key_eco_table is not None:
             key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
             self.logger.info('Таблица key_eco записана')
         else:
-            self.logger.warning(f'Таблица key_eco не обновлена')
+            self.logger.warning('Таблица key_eco не обновлена')
 
-    def save_date_of_last_build(self):
+    def save_date_of_last_build(self) -> None:
+        """Сохранение даты последней сборки данных"""
         cur_time = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
         cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
         cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
@@ -285,7 +295,7 @@ def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datet
     :param next_research_getting_time: строка формата %H:%M
     """
     now = datetime.datetime.now()
-    next_collect_dt = datetime.datetime.strptime(next_research_getting_time, "%H:%M")
+    next_collect_dt = datetime.datetime.strptime(next_research_getting_time, '%H:%M')
     next_collect_dt = datetime.datetime(now.year, now.month, now.day, next_collect_dt.hour, next_collect_dt.minute)
 
     if next_collect_dt < now:
@@ -293,7 +303,12 @@ def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datet
     return next_collect_dt
 
 
-async def run_parse_cib(logger):
+async def run_parse_cib(logger: Logger.logger) -> None:
+    """
+    Запуск парсинга портала CIB Research
+
+    :param logger: логгер
+    """
     postgres_pool = await asyncpg.create_pool(
         user=config.DB_USER,
         password=config.DB_PASS,
@@ -306,6 +321,12 @@ async def run_parse_cib(logger):
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
+    """
+    Запуск сборки отчетов и котировок.
+
+    :param next_research_getting_time: Время следующей сборки данных в формате HH:MM
+    :param logger: логгер
+    """
     start_tm = time.time()
 
     logger.info('Инициализация сборщика researches')
@@ -366,6 +387,7 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
 def main():
     """
     Сборщик researches
+
     Сборка происходит каждый день в '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'
     Время сборки указано в списке в config.RESEARCH_GETTING_TIMES_LIST
     """

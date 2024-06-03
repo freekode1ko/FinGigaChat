@@ -1,3 +1,4 @@
+"""Конфиг для сервиса research"""
 import json
 import pathlib
 from typing import Dict, List, Union
@@ -25,6 +26,7 @@ PATH_TO_REPORTS.mkdir(parents=True, exist_ok=True)
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
     Считывает константу из json-файла
+
     Args:
         file_name: Путь до файла относительно STATIC_ASSETS_PATH
         encoding: Кодировка файла

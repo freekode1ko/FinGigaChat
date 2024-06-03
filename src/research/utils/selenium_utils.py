@@ -1,13 +1,15 @@
-# Позволяет запускать контейнер selenium
-# В случае, если main_research запущен в контейнере,
-# то у него должен быть прописан доступ к сервису docker
-# для удаленного вызова команд
-# ВАЖНО
-# Для корректной работы скрипта должна быть настроена работа с Docker Engine
-# https://docs.docker.com/engine/install/linux-postinstall/
-# по умолчанию docker работает из-под sudo
-# Если данный скрипт запускается не из-под sudo, то возникнет ошибка прав доступа
+"""
+Позволяет запускать контейнер selenium.
 
+В случае, если main_research запущен в контейнере,
+то у него должен быть прописан доступ к сервису docker
+для удаленного вызова команд
+ВАЖНО
+Для корректной работы скрипта должна быть настроена работа с Docker Engine
+https://docs.docker.com/engine/install/linux-postinstall/
+по умолчанию docker работает из-под sudo
+Если данный скрипт запускается не из-под sudo, то возникнет ошибка прав доступа
+"""
 import logging
 import time
 
@@ -71,6 +73,7 @@ def stop_container(logger: Logger.logger = None) -> None:
 def run_container(logger: Logger.logger = None) -> None:
     """
     Запускает докер контейнер
+
     Эквивалентно
     docker run -d -p 4444:4444 -p 7900:7900 --shm-size="2g" --name="selenium" selenium/standalone-firefox:latest
     """
