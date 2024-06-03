@@ -9,5 +9,5 @@ exclude =
     .env.example
 
 inline-quotes = '
-application-import-names = configs, constants, data, db, handlers, keyboards, log, middlewares, migrations, module, parsers, utils
+application-import-names = configs, constants, data, db, handlers, keyboards, log, middlewares, migrations, module, parsers, schemas, utils
 import-order-style = smarkets

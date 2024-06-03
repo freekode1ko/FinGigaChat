@@ -1,6 +1,7 @@
+"""Модуль с engine для взаимодействия с базой данных"""
 from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.pool import NullPool
 
 from configs.config import psql_engine
 

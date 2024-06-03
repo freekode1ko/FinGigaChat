@@ -1,19 +1,21 @@
+"""Модуль форматирования статусов парсеров"""
 import time
 from datetime import datetime
-from typing import List
 
 import pandas as pd
 
 from schemas.parser import ParserStatusSend
 
 
-DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
 class ParserStatusFormatter:
+    """Класс форматирования статусов парсеров"""
 
     @staticmethod
     def _convert_datetime_to_utc_tz(dt: datetime) -> datetime:
+        """Перевести время в utc"""
         return datetime.strptime(
             time.strftime(
                 DATETIME_FORMAT,
@@ -30,7 +32,8 @@ class ParserStatusFormatter:
         )
 
     @classmethod
-    def format(cls, data: pd.DataFrame) -> List[ParserStatusSend]:
+    def format(cls, data: pd.DataFrame) -> list[ParserStatusSend]:
+        """Отформатировать статусы парсеров"""
         res = []
         for i, row in data.iterrows():
             d = row.to_dict()
@@ -44,4 +47,3 @@ class ParserStatusFormatter:
                 d['previous_update_datetime'] = cls._convert_datetime_to_utc_tz(d['previous_update_datetime'])
             res.append(ParserStatusSend(**d))
         return res
-
