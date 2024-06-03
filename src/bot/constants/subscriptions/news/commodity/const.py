@@ -1,3 +1,5 @@
+"""Файл с константами для подписок по новостям по commodity"""
+
 COMMODITY_SUBS_MENU = 'commodity_subscriptions_menu'
 
 GET_MY_SUBS = 'get_commodity_subs'

@@ -1,4 +1,4 @@
-from constants import enums
+"""Файл с константами для quotes"""
 
 MENU = 'quotes_menu'
 END_MENU = 'end_quotes_menu'

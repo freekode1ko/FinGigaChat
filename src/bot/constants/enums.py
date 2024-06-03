@@ -69,6 +69,7 @@ class FIGroupType(Enum):
 
     @property
     def title(self):
+        """Получить тайтл"""
         return self._title_
 
 

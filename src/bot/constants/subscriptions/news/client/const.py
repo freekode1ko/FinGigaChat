@@ -1,3 +1,5 @@
+"""Файл с константами для подписок по новостям по клиентам"""
+
 CLIENT_SUBS_MENU = 'client_subscriptions_menu'
 
 GET_MY_SUBS = 'get_client_subs'

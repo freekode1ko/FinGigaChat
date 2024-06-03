@@ -1,7 +1,5 @@
-"""
-Функции в БД для рабы с call report'ами
-"""
-from sqlalchemy import select, func
+"""Функции в БД для рабы с call report'ами"""
+from sqlalchemy import func, select
 
 from db.database import async_session
 from db.models import CallReports, Whitelist

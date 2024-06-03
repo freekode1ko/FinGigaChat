@@ -1,3 +1,5 @@
+"""Файл с константами для подписок по новостям по отрасли"""
+
 INDUSTRY_SUBS_MENU = 'industry_subscriptions_menu'
 
 GET_MY_SUBS = 'get_industry_subs'
