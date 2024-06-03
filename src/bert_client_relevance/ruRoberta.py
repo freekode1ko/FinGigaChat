@@ -7,14 +7,29 @@ from log.logger_base import selector_logger
 
 logger = selector_logger(LOG_FILE, LOG_LEVEL)
 
-logger.info('Загрузка модели с Huggingface')
-
-Roberta = ORTModelForSequenceClassification.from_pretrained(MODEL_PATH)
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-
-logger.info('Модель загружена')
-
 MAX_INPUT_LENGTH = 512
+
+N_ATTEMPTS = 5
+
+
+def load_model() -> tuple[any, any]:
+    """"
+    Обработчик ошибки загрузки модели
+    :return: Возвращает загруженную модель и токенайзер.
+    """
+
+    logger.info('Старт загрузки модели с Huggingface')
+    for _ in range(N_ATTEMPTS):
+        try:
+            Roberta = ORTModelForSequenceClassification.from_pretrained(MODEL_PATH)
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+            logger.info('Модель загружена')
+            return Roberta, tokenizer
+        except Exception as e:
+            logger.info(f'Ошибка загрузки модели с Huggingface: {e}')
+
+
+Roberta, tokenizer = load_model()
 
 
 async def get_prediction_cpu(text: str) -> list[float]:

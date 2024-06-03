@@ -369,7 +369,7 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
     # если не смогли получить ответ от сервиса, или классификация на сервере некорректна, то используем локальную модель
-    return binary_model.predict_proba(clean_text) if probs[0] < 0 else probs
+    return list(binary_model.predict_proba([clean_text])[0]) if probs[0] < 0 else probs
 
 
 def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
