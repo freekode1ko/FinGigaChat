@@ -38,7 +38,7 @@ def restart_container(logger: Logger.logger = None) -> None:
         error_msg = f'Ошибка сервера при перезапуске контейнера с именем {container_name}: %s'
         print(error_msg % e)
         logger.error(error_msg, e)
-    except Exception as e:
+    except docker_errors.DockerException as e:
         error_msg = f'При перезапуске контейнера с именем {container_name} произошла ошибка: %s'
         print(error_msg % e)
         logger.error(error_msg, e)
@@ -62,7 +62,7 @@ def stop_container(logger: Logger.logger = None) -> None:
         error_msg = f'Ошибка сервера при остановке контейнера с именем {container_name}: %s'
         print(error_msg % e)
         logger.error(error_msg, e)
-    except Exception as e:
+    except docker_errors.DockerException as e:
         error_msg = f'При остановке контейнера с именем {container_name} произошла ошибка: %s'
         print(error_msg % e)
         logger.error(error_msg, e)
@@ -93,7 +93,7 @@ def run_container(logger: Logger.logger = None) -> None:
         error_msg = f'Ошибка сервера при запуске контейнера с параметрами {config.SELENIUM_RUN_KWARGS}: %s'
         print(error_msg % e)
         logger.error(error_msg, e)
-    except Exception as e:
+    except docker_errors.DockerException as e:
         error_msg = f'При запуске контейнера с параметрами {config.SELENIUM_RUN_KWARGS} произошла ошибка: %s'
         print(error_msg % e)
         logger.error(error_msg, e)
@@ -120,7 +120,7 @@ def get_driver(logger: Logger.logger = None, connect_attempt_number: int = 1) ->
         firefox_options.add_argument('--disable-gpu')
         firefox_options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Remote(command_executor=config.SELENIUM_COMMAND_EXECUTOR, options=firefox_options)
-    except Exception as e:
+    except docker_errors.DockerException as e:
         logger.error('При подключении к selenium произошла ошибка: %s', e)
         time.sleep(10)
         return get_driver(logger, connect_attempt_number + 1)

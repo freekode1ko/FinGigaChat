@@ -96,8 +96,7 @@ class ResearchParser:
         for row in text_rows:
             if row.isupper():
                 break
-            else:
-                new_text_rows.append(row)
+            new_text_rows.append(row)
 
         return '\n\n'.join(new_text_rows)
 
@@ -149,30 +148,29 @@ class ResearchParser:
             reviews_elements = [elem for elem in reviews_elements if 'Ежемесячный обзор' not in elem.text]
             self._logger.info('Ежедневный экономический отчет найден')
             return reviews_elements[:count]
-        else:
-            # TODO: если наладится поиск по поисковой строке, то переделать
-            reviews_elements = []
-            start = 0
 
-            while len(reviews_elements) < count:
-                # find review by name and add it
-                elements = self.driver.find_elements('class name', 'title.fading-container')
-                for element in elements[start:]:
-                    if name in element.text:
-                        reviews_elements.append(element)
+        # TODO: если наладится поиск по поисковой строке, то переделать
+        reviews_elements = []
+        start = 0
 
-                if len(reviews_elements) >= count:
-                    break
-                else:
-                    # load more reviews
-                    self._logger.info('Загрузка большего числа отчетов')
-                    button_show_more = self.driver.find_element('id', 'loadMorePublications')
-                    button_show_more.click()
-                    self.__sleep_some_time(3, 6)
+        while len(reviews_elements) < count:
+            # find review by name and add it
+            elements = self.driver.find_elements('class name', 'title.fading-container')
+            for element in elements[start:]:
+                if name in element.text:
+                    reviews_elements.append(element)
 
-                start = len(elements) - 1
-            self._logger.info(f'Отчет {name} найден')
-            return reviews_elements[:count]
+            if len(reviews_elements) >= count:
+                break
+            # load more reviews
+            self._logger.info('Загрузка большего числа отчетов')
+            button_show_more = self.driver.find_element('id', 'loadMorePublications')
+            button_show_more.click()
+            self.__sleep_some_time(3, 6)
+
+            start = len(elements) - 1
+        self._logger.info(f'Отчет {name} найден')
+        return reviews_elements[:count]
 
     def get_date_and_text_of_review(self, element: wb.remote.webelement.WebElement, type_of_review: str) -> (str, str):
         """
@@ -219,8 +217,13 @@ class ResearchParser:
         return date, text
 
     def get_reviews(
-            self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1,
-            type_of_review: str = ''
+            self,
+            url_part: str,
+            tab: str,
+            title: str,
+            name_of_review: str = '',
+            count_of_review: int = 1,
+            type_of_review: str = '',
     ) -> list[tuple]:
         """
         Get data of reviews from CIB Research
@@ -505,6 +508,8 @@ class ResearchParser:
         old = [f for f in os.listdir(pdf_dir) if value in f]
         if filename is not None and filename.exists():
             return
+        if filename is None:
+            raise ResearchError('Не удалось получить файл для отчета по индустрии')
 
         # time.sleep(5)
         self.__sleep_some_time(5.0, 6.0)
@@ -517,7 +522,7 @@ class ResearchParser:
         with open(filename, 'wb') as file:
             file.write(response.content)
 
-        if old.__len__() > 0:
+        if len(old):
             os.remove(os.path.join(pdf_dir, old[0]))
 
     def get_industry_reviews(self) -> None:
@@ -860,10 +865,10 @@ class ResearchAPIParser:
             self._logger.info('Weekly Pulse отчет собран')
             print('Weekly Pulse отчет собран')
             return
-        else:
-            old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
-            if len(old) > 0:
-                os.remove(os.path.join(weekly_dir, old[0]))
+
+        old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
+        if len(old) > 0:
+            os.remove(os.path.join(weekly_dir, old[0]))
 
         # Перемещаем скачанный файл в папку с данными по викли пульсу
         report_data['filepath'].replace(filename)
