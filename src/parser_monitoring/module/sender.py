@@ -19,12 +19,9 @@ class SendToMonitoring:
         """
         Отправить статусы парсеров в сервис мониторинга
 
-        Args:
-            data:       Статусы парсеров
-            **kwargs:   Доп параметры для отправки post-запроса
-
-        Returns:
-            Возвращает результат отправки запроса
+        :param data:    Статусы парсеров
+        :param kwargs:  Доп параметры для отправки post-запроса (все допустимые, кроме url, headers, json)
+        :return:        Возвращает результат отправки запроса
         """
         json_data = [i.model_dump(mode='json') for i in data]
         if config.monitoring_api_url != '/{}':
