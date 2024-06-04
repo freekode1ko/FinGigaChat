@@ -1,12 +1,16 @@
+import os
+
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from constants import analytics as callback_prefixes
+from constants import analytics as callback_prefixes, constants
+from db.api.research import research_db
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import send_or_edit, user_in_whitelist
+from module import formatter
+from utils.base import send_or_edit, user_in_whitelist, bot_send_msg
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -69,3 +73,45 @@ async def main_menu_command(message: types.Message) -> None:
         await main_menu(message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+@router.callback_query(callbacks.GetFullResearch.filter())
+async def get_full_version_of_research(callback_query: types.CallbackQuery, callback_data: callbacks.GetFullResearch) -> None:
+    """
+    Получить полную версию отчета
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data: содержит дополнительную информацию по отчету
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    research = await research_db.get(callback_data.research_id)
+    formatted_msg_txt = formatter.ResearchFormatter.format({
+        'header': research.header,
+        'text': research.text,
+        'publication_date': research.publication_date,
+        'report_id': research.report_id,
+    })
+
+    await bot_send_msg(callback_query.bot, chat_id, formatted_msg_txt)
+
+    # Если есть файл - отправляем
+    if research.filepath and os.path.exists(research.filepath):
+        file = types.FSInputFile(research.filepath)
+        msg_txt = f'Полная версия отчета: <b>{research.header}</b>'
+        await callback_query.message.answer_document(
+            document=file,
+            caption=msg_txt,
+            parse_mode='HTML',
+            protect_content=True,
+        )
+
+    try:
+        await callback_query.message.delete()
+    except Exception:
+        pass
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

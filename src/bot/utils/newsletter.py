@@ -17,7 +17,6 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 import module.data_transformer as dt
 from configs import config
-from constants import constants
 from db import parser_source, message
 from db.api.research import research_db
 from db.api.research_section import research_section_db
@@ -25,6 +24,7 @@ from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
 from db.database import engine
 from db.whitelist import get_users_subscriptions
+from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
 from module.article_process import ArticleProcess
@@ -269,21 +269,17 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
 
     for _, research in research_df.iterrows():
         user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
-        formatted_msg_txt = formatter.ResearchFormatter.format(research)
-        is_shorter_than_max_len = len(formatted_msg_txt) <= constants.TELEGRAM_MESSAGE_MAX_LEN
 
-        # Если отчет не влезает с одно сбщ, то не отправляем текст отчета, а только файл
-        if is_shorter_than_max_len:
-            msg = await bot.send_message(user_id, formatted_msg_txt, protect_content=True, parse_mode='HTML')
-            sent_msg_list.append(msg)
-
-        # Если есть файл - отправляем
-        if research['filepath'] and os.path.exists(research['filepath']):
+        # Если есть текст, то чисто тайтл и кнопку.
+        # Если есть текст и файл, то тайтл и кнопку.
+        if research['text']:
+            formatted_msg_txt = formatter.ResearchFormatter.format_min(research)
+            keyboard = anal_keyboards.get_full_research_kb(research['id'])
+            msg = await bot.send_message(user_id, formatted_msg_txt, reply_markup=keyboard, protect_content=False, parse_mode='HTML')
+        # Если есть файл, но нет текста - тайтл с файлом
+        elif research['filepath'] and os.path.exists(research['filepath']):
             file = types.FSInputFile(research['filepath'])
-            msg_txt = (
-                f'Полная версия отчета: <b>{research["header"]}</b>' if is_shorter_than_max_len
-                else f'<b>{research["header"]}</b>'
-            )
+            msg_txt = f'<b>{research["header"]}</b>'
             msg = await bot.send_document(
                 document=file,
                 chat_id=user_id,
@@ -291,8 +287,10 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
                 parse_mode='HTML',
                 protect_content=True,
             )
-            sent_msg_list.append(msg)
+        else:
+            continue
 
+        sent_msg_list.append(msg)
         user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
         await asyncio.sleep(1.1)
 
