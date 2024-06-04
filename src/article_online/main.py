@@ -82,7 +82,7 @@ def regular_func():
     df_article = get_article()
     logger.info(f'Получено всего {len(df_article)} новостей')
     print(f'Получено всего {len(df_article)} новостей')
-    # Берем последнюю тысячу еовостей для обработки
+    # Берем первую тысячу новостей для обработки
     df_article = df_article[:MAX_NEWS_BATCH_SIZE]
 
     if not df_article.empty:

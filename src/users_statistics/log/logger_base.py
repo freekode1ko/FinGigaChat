@@ -1,4 +1,4 @@
-
+"""Модификация базового логгера"""
 import logging
 import os
 from logging.handlers import RotatingFileHandler
@@ -10,12 +10,16 @@ MAX_BYTES = 10 * 1024 * 1024
 
 
 class Logger:
+    """Модифицированный класс логера"""
+
     logger = logging.getLogger(__name__)
 
-    def __init__(self, log_name: str, level: int):
+    def __init__(self, log_name: str, level: int) -> None:
         """
-        :param log_name: В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
-        :param level: Установить уровень логирования
+        Инициализация логгера
+
+        :param log_name:    В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
+        :param level:       Установить уровень логирования
         """
         self.log_dir = 'logs/{}/{}.log'.format(log_name, log_name)
         self.log_format = LOG_FORMAT
@@ -25,13 +29,13 @@ class Logger:
         logging.basicConfig(format=self.log_format, datefmt=self.log_datefmt, level=level, handlers=[self.handler])
 
 
-def selector_logger(module_logger: str, level: int = log_lvl):
+def selector_logger(module_logger: str, level: int = log_lvl) -> Logger.logger:
     """
     Селектор для логера
 
     :param module_logger: Имя файла с точкой входа для логирования
     :param level: уровень логирования
-    return Класс логера
+    :return: Класс логера
     """
     logs_path = os.path.join('logs', module_logger)
     if not os.path.exists(logs_path):

@@ -1,3 +1,4 @@
+"""Модель таблицы commodity_pricing"""
 from sqlalchemy import Column, Double, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -5,9 +6,7 @@ Base = declarative_base()
 
 
 class CommodityPricing(Base):
-    """
-    Class for commodity_pricing table interaction
-    """
+    """Класс для взаимодействия с таблицей commodity_pricing"""
 
     __tablename__ = 'commodity_pricing'
 
