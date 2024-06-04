@@ -51,7 +51,7 @@ async def audio_to_text(message: Message) -> str:
 
         path_to_file_wav = config.TMP_VOICE_FILE_DIR / f'{file_id}.wav'
 
-        process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])  # noqa:D200
+        process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])  # noqa:D200, F841
 
         r = sr.Recognizer()
         voice_message = sr.AudioFile(str(path_to_file_wav))

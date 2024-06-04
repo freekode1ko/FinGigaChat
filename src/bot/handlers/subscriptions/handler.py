@@ -6,7 +6,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from constants import subscriptions as callback_prefixes
 from keyboards.subscriptions import constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import user_in_whitelist, send_or_edit
+from utils.base import send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -40,6 +40,7 @@ async def news_subs_menu(callback_query: types.CallbackQuery) -> None:
 async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню подписок
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_subscriptions_menu_kb()

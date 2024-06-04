@@ -1,3 +1,4 @@
+"""Файл с хендлерами аналитики"""
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -28,6 +29,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню аналитики
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()

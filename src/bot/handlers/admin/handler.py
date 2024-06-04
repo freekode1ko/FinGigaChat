@@ -1,3 +1,4 @@
+"""Файл с админскими хендлерами"""
 import json
 from typing import Union
 
@@ -30,6 +31,8 @@ router.message.middleware(ChatActionMiddleware())  # on every message for admin 
 
 
 class AdminStates(StatesGroup):
+    """Состояния для админа"""
+
     link = State()
     link_change_summary = State()
     link_to_delete = State()
@@ -372,6 +375,7 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 
 @router.message(Command('dailynews'))
 async def dailynews(message: types.Message) -> None:
+    """Рассылка по команде dailynews"""
     if await is_admin_user(message.from_user.model_dump_json()):
         await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
         user_logger.warning('Завершена рассылка от админа')

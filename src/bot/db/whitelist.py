@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с models.whitelist"""
 import pandas as pd
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as insert_pg
@@ -21,6 +22,11 @@ def is_user_email_exist(user_id: int) -> bool:
 
 
 async def get_users_subscriptions() -> pd.DataFrame:
+    """
+    Получить подписки пользователя
+
+    :return: подписки
+    """
     async with database.async_session() as session:
         stmt = select(
             models.Whitelist.user_id,

@@ -44,11 +44,11 @@ async def send_news_with_next_button(
         articles_limit: int,
 ) -> None:
     """
-    Отправка новостей по клиенту/сырью/отрасли (reply_msg).
+    Отправка новостей по клиенту, сырью b отрасли (reply_msg).
 
     :param bot: Объект телеграм бота aiogram.Bot
     :param chat_id: Чат, в который нужно отправить новости
-    :param reply_msg: Новости, разделенные \n\n
+    :param reply_msg: Новости, разделенные
     :param subject_id: id клиента или сырья, или отрасли
     :param subject: название таблицы объекта (client, commodity, industry)  FIXME Enum
     :param next_news_offset: Данные для формирование кнопки Еще новости
@@ -125,7 +125,6 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
 @router.message(Command('newsletter'))
 async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
-
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
@@ -199,6 +198,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
 async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: ArticleProcess) -> None:
     """
     Отправляет сообщение с ссылкой на invaigator клиента
+
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_id: id клиента (client.id)
     :param ap_obj: Объект, который ищет и форматирует новости
@@ -271,6 +271,7 @@ async def get_subject_news(
 ) -> None:
     """
     Получение имени subject и отправка новостей по нему
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Хранит id объекта, по которому вынимаются новости
     :param subject_db_api: Интерфейс взаимодействия с таблицами клиентов/сырья/отраслей

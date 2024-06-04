@@ -1,3 +1,4 @@
+"""Файл с хендлерами макро обзора"""
 import calendar
 import datetime
 

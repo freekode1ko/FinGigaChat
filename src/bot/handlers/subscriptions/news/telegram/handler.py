@@ -11,8 +11,8 @@ from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
 from handlers.subscriptions.handler import router, subs_menu_end
-from log.bot_logger import user_logger
 from keyboards.subscriptions.news.telegram import callbacks as callback_factory, constructors as keyboards
+from log.bot_logger import user_logger
 from utils.base import get_page_data_and_info, send_or_edit, user_in_whitelist
 
 

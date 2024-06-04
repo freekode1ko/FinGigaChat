@@ -1,4 +1,4 @@
-from handlers.subscriptions.news import client
-from handlers.subscriptions.news import commodity
-from handlers.subscriptions.news import industry
-from handlers.subscriptions.news import telegram
+from handlers.subscriptions.news import client  # noqa:F401
+from handlers.subscriptions.news import commodity  # noqa:F401
+from handlers.subscriptions.news import industry  # noqa:F401
+from handlers.subscriptions.news import telegram  # noqa:F401

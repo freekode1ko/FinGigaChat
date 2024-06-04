@@ -33,37 +33,37 @@ emoji = copy.deepcopy(config.dict_of_emoji)
 class CallbacksModule(Protocol):
 
     @property
-    def Menu(self) -> Type[CallbackData]: ...
+    def Menu(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def GetUserSubs(self) -> Type[CallbackData]: ...
+    def GetUserSubs(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def ChangeUserSubs(self) -> Type[CallbackData]: ...
+    def ChangeUserSubs(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def DeleteUserSub(self) -> Type[CallbackData]: ...
+    def DeleteUserSub(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def PrepareDeleteAllSubs(self) -> Type[CallbackData]: ...
+    def PrepareDeleteAllSubs(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def DeleteAllSubs(self) -> Type[CallbackData]: ...
+    def DeleteAllSubs(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def SelectSubs(self) -> Type[CallbackData]: ...
+    def SelectSubs(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def WriteSubs(self) -> Type[CallbackData]: ...
+    def WriteSubs(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def ShowIndustry(self) -> Type[CallbackData]: ...
+    def ShowIndustry(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def WhatInThisIndustry(self) -> Type[CallbackData]: ...
+    def WhatInThisIndustry(self) -> Type[CallbackData]: ...  # noqa:E704
 
     @property
-    def AddAllSubsByDomain(self) -> Type[CallbackData]: ...
+    def AddAllSubsByDomain(self) -> Type[CallbackData]: ...  # noqa:E704
 
 
 class NewsHandler:

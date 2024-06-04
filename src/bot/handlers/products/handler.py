@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from aiogram import Router, types, F
+from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
@@ -14,7 +14,7 @@ from db.api.product_group import product_group_db
 from handlers.products import callbacks
 from handlers.products import keyboards
 from log.bot_logger import user_logger
-from utils.base import send_or_edit, user_in_whitelist, send_pdf
+from utils.base import send_or_edit, send_pdf, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -38,6 +38,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню продукты
+
     :param message: types.CallbackQuery | types.Message
     """
     product_groups = await product_group_db.get_all()

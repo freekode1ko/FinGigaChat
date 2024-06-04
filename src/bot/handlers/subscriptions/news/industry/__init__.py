@@ -1,1 +1,1 @@
-from handlers.subscriptions.news.industry import handler
+from handlers.subscriptions.news.industry import handler  # noqa:F401

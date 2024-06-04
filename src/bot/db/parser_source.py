@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с парсингом"""
 import datetime
 
 from sqlalchemy import text

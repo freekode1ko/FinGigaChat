@@ -7,10 +7,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from sqlalchemy import insert, update
+from sqlalchemy import insert, select, update
 
 from configs import config
-from db.call_reports import *
+from db.call_reports import get_all_dates_for_client_report, get_all_sorted_clients_for_user
+from db.models import CallReports
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
 from handlers.call_reports.callbackdata import CRCreateNew, CRMainMenu, CRMenusEnum
 from log.bot_logger import logger
@@ -218,9 +219,11 @@ class CallReport:
         await self.session.commit()
         self.description = description
 
-    async def get_pages(self) -> None:
+    async def get_pages(self) -> tuple[int, int]:
         """
         Функция для получения страниц call report'а для правильного возврата в меню выбора даты
+
+        :return: tuple[int, int]
         """
         dates = await get_all_dates_for_client_report(self.user_id, self.client)
         clients = await get_all_sorted_clients_for_user(self.user_id)

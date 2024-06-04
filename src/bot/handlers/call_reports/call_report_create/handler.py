@@ -20,6 +20,7 @@ class CallReportsStates(StatesGroup):
 
     enter_clint_name -> enter_date -> enter_text_message
     """
+
     enter_clint_name = State()
     enter_date = State()
     enter_description = State()

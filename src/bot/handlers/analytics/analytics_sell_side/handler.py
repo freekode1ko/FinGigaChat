@@ -346,8 +346,8 @@ async def data_mart_body(message: types.Message) -> None:
     # Денежное предложение
     for table in tables:
         table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = (
-            'Денежное предложение '
-            + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+            'Денежное предложение ' +
+            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
         )
     # Средняя процентная ставка
     for table in tables:

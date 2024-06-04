@@ -1,15 +1,13 @@
-from typing import Type, Optional
+from typing import Optional
 
-import pandas as pd
 from aiogram import types
-from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
 from constants.products import state_support
-from handlers.products import callbacks
 from db import models
+from handlers.products import callbacks
 
 
 def get_sub_menu_kb(
@@ -19,6 +17,7 @@ def get_sub_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ продукт 1 ]
     ...
     [ продукт n ]
@@ -61,6 +60,7 @@ def get_sub_menu_kb(
 def get_menu_kb(groups: list[models.ProductGroup]) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Hot offers ]
     [ Продуктовая полка ]
     [ Господдержка ]

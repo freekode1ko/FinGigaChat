@@ -1,4 +1,4 @@
-from enum import IntEnum, auto
+from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData
 
@@ -33,6 +33,7 @@ class ProductsMenusEnum(IntEnum):
 
 class ProductsMenuData(CallbackData, prefix=MENU):
     """Данные для меню продуктов"""
+
     menu: ProductsMenusEnum = ProductsMenusEnum.main_menu
     format_type: FormatType = FormatType.group_files
     group_id: int = 0
