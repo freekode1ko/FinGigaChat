@@ -1,6 +1,4 @@
-"""
-Вспомогательные функции для просмотра call report'ов
-"""
+"""Вспомогательные функции для просмотра call report'ов"""
 from aiogram.types import Message
 
 from configs import config

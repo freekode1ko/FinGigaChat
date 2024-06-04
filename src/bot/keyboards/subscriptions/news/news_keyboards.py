@@ -27,6 +27,7 @@ class BaseKeyboard:
     def get_prepare_subs_delete_all_kb(self) -> InlineKeyboardMarkup:
         """
         Формирует Inline клавиатуру вида:
+
         [ Да ][ Нет ]
         [   назад   ]
         """
@@ -39,6 +40,7 @@ class BaseKeyboard:
     def get_back_to_subscriptions_menu_kb(self) -> InlineKeyboardMarkup:
         """
         Формирует Inline клавиатуру вида:
+
         [   назад в меню   ]
         """
         keyboard = InlineKeyboardBuilder()
@@ -51,6 +53,7 @@ class BaseKeyboard:
     def get_subscriptions_menu_kb(self) -> InlineKeyboardMarkup:
         """
         Формирует Inline клавиатуру вида:
+
         [ Просмотреть подписки ]
         [ Добавить новые подписки  ]
         [ Удалить все подписки ]
@@ -126,6 +129,8 @@ class BaseKeyboard:
             max_pages: int,
     ) -> InlineKeyboardMarkup:
         """
+        Формирует Inline клавиатуру вида:
+
         [ item 1 ][x]
         ...
         [ item N ][x]
@@ -158,6 +163,8 @@ class BaseKeyboard:
             max_pages: int,
     ) -> InlineKeyboardMarkup:
         """
+        Формирует Inline клавиатуру вида:
+
         [ item 1 ]
         ...
         [ item N ]
@@ -182,6 +189,8 @@ class BaseKeyboard:
 
     def get_subjects_kb(self, page_data: pd.DataFrame, current_page: int, max_pages: int) -> InlineKeyboardMarkup:
         """
+        Формирует Inline клавиатуру вида:
+
         [][ item 1 ]
         ...
         [][ item N ]

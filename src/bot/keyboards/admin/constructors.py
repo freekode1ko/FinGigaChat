@@ -4,16 +4,16 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import admin as callback_prefixes
 from constants import constants
-from keyboards.admin import callbacks
 from db.message_type import message_types
+from keyboards.admin import callbacks
 
 
 def get_message_types_kb() -> InlineKeyboardMarkup:
     """
     Создает клавиатуру типов сообщений
-    Отмена удаляет данное сообщение, если прошло менее 48 часов, либо заменяет текст и клавиатуру
 
-    return: Клавиатура с кнопками
+    Отмена удаляет данное сообщение, если прошло менее 48 часов, либо заменяет текст и клавиатуру
+    :return: Клавиатура с кнопками
             1) Тип рассылки 1
             N) Тип рассылки N
             N+1) отмена

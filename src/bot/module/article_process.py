@@ -21,9 +21,9 @@ from configs.config import (
 )
 from constants.enums import SubjectType
 from constants.quotes import COMMODITY_MARKS
-from db.database import engine
 from db.api.client import client_db
 from db.api.commodity import commodity_db
+from db.database import engine
 from log.logger_base import Logger
 
 CONDITION_TOP = (

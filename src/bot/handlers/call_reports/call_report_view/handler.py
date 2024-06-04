@@ -1,6 +1,4 @@
-"""
-Handlers для просмотра call report'ов
-"""
+"""Handlers для просмотра call report'ов"""
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup

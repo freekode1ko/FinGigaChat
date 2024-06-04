@@ -1,6 +1,4 @@
-"""
-Набор функций для создания кнопок при просмотре call report'ов
-"""
+"""Набор функций для создания кнопок при просмотре call report'ов"""
 import copy
 
 from aiogram.types import InlineKeyboardButton

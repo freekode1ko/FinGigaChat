@@ -13,6 +13,7 @@ class ChatGPT:
     def ask_chat_gpt(self, text: str, prompt: str = ''):
         """
         Make summarization or make answer by ChatGPT
+
         :param prompt: system prompt to ChatGPT
         :param text: text
         :return: ChatGPT answer as object requests.models.Response

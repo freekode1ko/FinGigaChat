@@ -1,6 +1,4 @@
-"""
-Handlers для выбора call report'ов
-"""
+"""Handlers для выбора call report'ов"""
 import copy
 
 from aiogram import F, Router, types
@@ -10,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs import config
 from db.api.client import client_db
-from db.call_reports import get_all_sorted_clients_for_user, get_all_dates_for_client_report
+from db.call_reports import get_all_dates_for_client_report, get_all_sorted_clients_for_user
 from handlers.call_reports.call_reports import CallReport
-from handlers.call_reports.callbackdata import CRChoiceReportView, CRMenusEnum, CRMainMenu, CRCreateNew, CRViewAndEdit
+from handlers.call_reports.callbackdata import CRChoiceReportView, CRCreateNew, CRMainMenu, CRMenusEnum, CRViewAndEdit
 from handlers.clients import callback_data_factories
 
 router = Router()
@@ -114,7 +112,7 @@ async def call_reports_handler_my_reports_date(
     sub_menu = None
     if isinstance(callback_data, callback_data_factories.ClientsMenuData):
         client_info = await client_db.get(callback_data.client_id)
-        client_name = client_info["name"]
+        client_name = client_info['name']
         sub_menu = callback_data.pack()
         callback_data = CRChoiceReportView(
             menu=CRMenusEnum.date_choice,

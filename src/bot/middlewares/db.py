@@ -1,7 +1,5 @@
-"""
-Мидлвейр для запросов к БД
-"""
-from typing import Callable, Any, Awaitable
+"""Мидлвейр для запросов к БД"""
+from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject

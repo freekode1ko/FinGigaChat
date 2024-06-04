@@ -14,6 +14,7 @@ from keyboards.subscriptions.news.telegram import callbacks as telegram_callback
 def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: str) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Да ][ Нет ]
     [   назад   ]
     """
@@ -27,6 +28,7 @@ def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: st
 def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Новости ]
     [ Аналитика  ]
     [ Завершить  ]
@@ -41,6 +43,7 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
 def get_news_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Подписки на клиентов, сырье, отрасли ]
     [ Подписки на телеграм-каналы  ]
     [ Назад  ]

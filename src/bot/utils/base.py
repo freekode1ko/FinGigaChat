@@ -2,11 +2,11 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta, date
+import re
+from datetime import date, datetime, timedelta
 from math import ceil
 from pathlib import Path
 from typing import Optional
-import re
 
 import pandas as pd
 from aiogram import Bot, types
@@ -15,11 +15,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
-from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
+from configs.config import PAGE_ELEMENTS_COUNT, PATH_TO_SOURCES
 from constants import constants
 from constants.constants import research_footer
 from db import models
-from db.database import engine, async_session
+from db.database import async_session, engine
 from log.logger_base import Logger
 
 
@@ -72,7 +72,13 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
             msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
-            msg = await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_document(
+                document=file,
+                chat_id=user_id,
+                caption=message_text,
+                parse_mode='HTML',
+                protect_content=True
+            )
     else:
         msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
@@ -208,11 +214,13 @@ async def __sent_photo_and_msg(
 
 def __replacer(data: str) -> str:
     """
+    Форматирование текста
+
     Если '.' больше чем 1 в числовом значении фин.показателя
     и первый объект равен 0, то форматируем так '{}.{}{}'(*data_list)
 
     :param data: Значение из ячейки таблицы с фин.показателями
-    return Форматированный текст
+    :return: Форматированный текст
     """
     data_list = data.split('.')
     if len(data_list) > 2:
@@ -232,7 +240,6 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
     :param minute_to_send: минуты, в которые нужно отправить рассылку
     return время ожидания перед рассылкой
     """
-
     # получаем текущее датувремя и день недели
     current_datetime = datetime.now()
     current_weekday = current_datetime.isoweekday()
@@ -324,7 +331,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
         )
     else:
         handbook = pd.read_sql_query(
-            "SELECT client_alternative.other_name AS object, "
+            'SELECT client_alternative.other_name AS object, '
             'client.industry_id, industry.name AS industry_name FROM client_alternative '
             'INNER JOIN client ON client_alternative.client_id = client.id '
             'INNER JOIN industry ON client.industry_id = industry.id',
@@ -357,6 +364,8 @@ def get_page_data_and_info(
         page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> tuple[pd.DataFrame, str, int]:
     """
+    Получение информации о странице
+
     1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
     2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
     3)Вычисляет кол-во страниц

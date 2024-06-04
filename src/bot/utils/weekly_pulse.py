@@ -1,4 +1,4 @@
-from aiogram import types, Bot
+from aiogram import Bot, types
 
 from configs import config
 from constants.constants import sample_of_img_title

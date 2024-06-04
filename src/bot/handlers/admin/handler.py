@@ -14,18 +14,13 @@ import keyboards.admin.constructors as keyboards
 from configs import config
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
 from db.database import engine
-from db.message import get_messages_by_type, delete_messages, add_all
+from db.message import add_all, delete_messages, get_messages_by_type
 from db.message_type import message_types
-from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
+from keyboards.admin.callbacks import ApproveDeleteMessageByType, DeleteMessageByType
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
-from utils.base import (
-    is_admin_user,
-    file_cleaner,
-    send_msg_to,
-    user_in_whitelist,
-)
+from utils.base import file_cleaner, is_admin_user, send_msg_to, user_in_whitelist
 from utils.newsletter import subscriptions_newsletter
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
@@ -77,7 +72,6 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     """
-    message_jsn = json.loads(message.model_dump_json())
     if message.content_type == types.ContentType.TEXT:
         file_type = 'text'
         file_name = None

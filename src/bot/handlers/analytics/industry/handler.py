@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from aiogram import types, F
+from aiogram import F, types
 
 from db.api.industry import get_industry_analytic_files, industry_db
 from handlers.analytics.handler import router

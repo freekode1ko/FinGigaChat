@@ -1,20 +1,18 @@
-"""
-Файл с главным меню и классом для работы с call report'ами
-"""
+"""Файл с главным меню и классом для работы с call report'ами"""
 import datetime
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from sqlalchemy import update, insert
+from sqlalchemy import insert, update
 
 from configs import config
 from db.call_reports import *
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
-from handlers.call_reports.callbackdata import CRMainMenu, CRCreateNew, CRMenusEnum
+from handlers.call_reports.callbackdata import CRCreateNew, CRMainMenu, CRMenusEnum
 from log.bot_logger import logger
 from utils.base import user_in_whitelist
 
@@ -102,14 +100,12 @@ async def call_reports_close(
     :param callback_data: Объект, содержащий дополнительную информацию
     """
     await callback_query.message.edit_text(
-        "Меню протоколов встреч закрыто."
+        'Меню протоколов встреч закрыто.'
     )
 
 
 class CallReport:
-    """
-    Класс для создания, изменения и получения call report'ов
-    """
+    """Класс для создания, изменения и получения call report'ов"""
 
     def __init__(self, session):
         self.session = session

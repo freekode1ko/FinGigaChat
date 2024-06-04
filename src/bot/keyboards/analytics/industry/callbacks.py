@@ -1,4 +1,4 @@
-from enum import IntEnum, auto
+from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData
 
@@ -16,6 +16,7 @@ class MenuEnum(IntEnum):
 
 class Menu(CallbackData, prefix=callback_prefixes.MENU):
     """Данные для колбэков в меню отраслейвой аналитики"""
+
     menu: MenuEnum = MenuEnum.main_menu
     industry_id: int | None = None
     industry_type: IndustryTypes = IndustryTypes.default

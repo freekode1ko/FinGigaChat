@@ -17,11 +17,14 @@ def get_pagination_kb(
         reverse: bool = False,
 ) -> InlineKeyboardMarkup:
     """
+    Формирует Inline клавиатуру вида:
+
     [action (action_callback)][ item_name 1 (item_callback) ]
     ...
     [action (action_callback)][ item_name N (item_callback) ]
     [<-][ Назад ][->]
     [ Завершить ]
+
     :param page_data: DataFrame[name, item_callback[, action, action_callback]]
     :param current_page: Номер страницы. Нужен для формирования callback_data
     :param max_pages: Всего страниц

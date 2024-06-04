@@ -6,12 +6,13 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import quotes, constants
+from constants import constants, quotes
 
 
 def get_sub_menu_kb(item_df: pd.DataFrame, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]
@@ -47,6 +48,7 @@ def get_sub_menu_kb(item_df: pd.DataFrame, callback_factory: Type[CallbackData])
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ FX ]
     [ FI ]
     [ Equity ]

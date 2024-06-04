@@ -4,16 +4,16 @@ from aiogram import F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
+from constants.constants import DELETE_CROSS, SELECTED, UNSELECTED
 from db import models
 from db.api.telegram_channel import telegram_channel_db
-from log.bot_logger import user_logger
-from constants.constants import DELETE_CROSS, UNSELECTED, SELECTED
 from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
 from handlers.subscriptions.handler import router, subs_menu_end
+from log.bot_logger import user_logger
 from keyboards.subscriptions.news.telegram import callbacks as callback_factory, constructors as keyboards
-from utils.base import user_in_whitelist, get_page_data_and_info, send_or_edit
+from utils.base import get_page_data_and_info, send_or_edit, user_in_whitelist
 
 
 @router.callback_query(callback_factory.TelegramSubsMenuData.filter(

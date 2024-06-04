@@ -13,6 +13,7 @@ from keyboards.base import get_pagination_kb
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Выбрать клиента из списка подписок ]
     [ Выбрать другого клиента ]
     [ Завершить ]
@@ -48,6 +49,8 @@ def get_clients_list_kb(
         subscribed: bool,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для клиентов
+
     [ item 1 ]
     ...
     [ item N ]
@@ -98,6 +101,8 @@ def get_client_menu_kb(
         with_back_button: bool = True,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для клиента
+
     [ Новости ]
     [ Аналитика публичных рынков ] [если публичный]
     [ Отраслевая аналитика ]
@@ -208,6 +213,7 @@ def get_news_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитика sell-side ]
     [ Отраслевая аналитика ]
     [ Завершить ]
@@ -318,6 +324,8 @@ def get_products_menu_kb(
         subscribed: bool,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для продуктов
+
     [ hot offers ]
     [ Назад ]
     [ Завершить ]
@@ -363,6 +371,7 @@ def client_analytical_indicators_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитические обзоры ]
     [ P&L модель ]
     [ Модель баланса ]

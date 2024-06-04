@@ -1,6 +1,4 @@
-"""
-Вспомогательные функции при создании call report'ов
-"""
+"""Вспомогательные функции при создании call report'ов"""
 import os
 import subprocess
 from datetime import datetime
@@ -61,11 +59,11 @@ async def audio_to_text(message: Message) -> str:
             audio = r.record(source)
 
         try:
-            result = r.recognize_google(audio, language="ru_RU")
+            result = r.recognize_google(audio, language='ru_RU')
             logger.info(f'Call Report: Успешная обработка аудио через гугл для {message.chat.id}')
         except Exception as e:
             logger.error(f'Call Report: Не успешная обработка аудио через гугл для {message.chat.id} из-за {e}')
-            result = r.recognize_whisper(audio, model=config.WHISPER_MODEL, language="ru")
+            result = r.recognize_whisper(audio, model=config.WHISPER_MODEL, language='ru')
             logger.info(f'Call Report: Успешная обработка аудио через whisper для {message.chat.id}')
     except Exception as e:
         logger.error(f'Call Report: Не успешная обработка аудио для {message.chat.id} из-за {e}')

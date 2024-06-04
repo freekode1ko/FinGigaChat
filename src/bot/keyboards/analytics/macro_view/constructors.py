@@ -10,6 +10,7 @@ from keyboards.analytics.macro_view import callbacks
 def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]

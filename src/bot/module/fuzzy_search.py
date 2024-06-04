@@ -1,14 +1,12 @@
-"""
-Неточный поиск по клиентам, сырью, отраслям.
-"""
+"""Неточный поиск по клиентам, сырью, отраслям."""
 from typing import Optional
 
 import sqlalchemy as sa
 from fuzzywuzzy import process
 from sqlalchemy.orm import InstrumentedAttribute
 
-from db.database import engine, async_session
 from db import models
+from db.database import async_session
 from log.logger_base import Logger
 
 

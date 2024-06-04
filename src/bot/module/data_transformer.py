@@ -13,19 +13,21 @@ from utils.base import read_curdatetime
 
 class Transformer:
     @staticmethod
-    def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
+    def load_urls_as_list(path: str, filed_name: str) -> pd.DataFrame:
         """
         Get sources url from excel file
+
         :param path: path to .xlsx file
-        :param filedName: Column name where holding all urls
+        :param filed_name: Column name where holding all urls
         :return: return list with urls
         """
-        return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
+        return pd.read_excel(path)[['Алиас', 'Блок', filed_name]].values.tolist()
 
     @staticmethod
     def get_table_from_html(euro_standard: bool, html: str):
         """
         Take all tables from html code
+
         :param euro_standard: Bool value for separators of decimals and thousands
         :param html: HTML codes as text
         :return: list with DataFrames
@@ -39,6 +41,7 @@ class Transformer:
     def formatter(f):
         """
         Format value
+
         :param f: value to format
         :return: formatted value
         """
@@ -200,19 +203,16 @@ class Transformer:
     def unix_to_default(timestamp):
         """
         Transform unix-time to world-time
+
         :param timestamp: unix formatted timestamp
         """
-
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
         formatted_date = date_time.strftime('%Y-%m-%dT%H:%M:%S')
         return formatted_date
 
     @staticmethod
     def default_to_unix():
-        """
-        Transform world-time now to unix-time
-        """
-
+        """Transform world-time now to unix-time"""
         now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = int(date_time.timestamp())
@@ -230,7 +230,7 @@ class Newsletter:
 
     @classmethod
     def make_weekly_result(cls) -> tuple[str, str, list[Path]]:
-        """Создает текст для рассылки "Итоги недели" """
+        """Создает текст для рассылки 'Итоги недели'"""
         title = 'Итоги недели'
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
@@ -240,7 +240,7 @@ class Newsletter:
 
     @classmethod
     def make_weekly_event(cls) -> tuple[str, str, list[Path]]:
-        """Создает текст для рассылки "Что нас ждет на этой неделе?" """
+        """Создает текст для рассылки 'Что нас ждет на этой неделе?'"""
         title = 'Что нас ждет на этой неделе?'
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)

@@ -183,8 +183,9 @@ class ParsePresentationPDF:
     def get_fnames_by_type(cls, report_type=None) -> list[str]:
         """
         Возвращает список названий слайдов, сохраненных в виде png, для определенного типа report_type
+
         :param report_type: тип из Types
-        return: List[str]
+        :return: List[str]
         """
         s_meta = cls.get_slides_meta()
         return [f"{i['eng_name']}.png" for i in s_meta if i['report_type'] == report_type]
@@ -195,6 +196,7 @@ class ParsePresentationPDF:
     ) -> Optional[pandas.DataFrame]:
         """
         Возвращает найденную на слайде первую таблицу
+
         :param pdf_file: Имя презентации с расширением pdf
         :param page_number: Номер слайда (int, str)
         :param area: Область нахождения таблицы (по умолчанию весь слайд)
@@ -211,9 +213,11 @@ class ParsePresentationPDF:
     def parse(self, filename: str, slides_meta: Optional[Union[list[dict], Iterable[dict]]] = None) -> defaultdict:
         """
         Возвращает словарь, где ключом является заголовок слайда, а по заголовку содержится информация:
+
         page_number: номер слайда с заданным заголовком int, -1 если не найден
         text: текст слайда str
         table: таблица со слайда DataFrame или None
+
         :param filename: Путь к файлу, который необходимо распарсить
         :param slides_meta: Мета информация вынимаемых слайдов
         return: defaultdict[str: dict]

@@ -1,4 +1,4 @@
-from aiogram import F, types, Bot
+from aiogram import Bot, F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
