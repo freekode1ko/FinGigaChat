@@ -23,9 +23,9 @@ def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8')
     """
     Считывает константу из json-файла
 
-    Args:
-        file_name: Путь до файла относительно STATIC_ASSETS_PATH
-        encoding: Кодировка файла
+    :param file_name:   Путь до файла относительно STATIC_ASSETS_PATH
+    :param encoding:    Кодировка файла
+    :return:            Сериализованный JSON
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
 
