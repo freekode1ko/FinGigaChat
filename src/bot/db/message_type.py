@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с типами сообщений"""
 import pandas as pd
 
 from db import database

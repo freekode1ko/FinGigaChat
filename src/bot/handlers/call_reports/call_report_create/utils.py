@@ -44,7 +44,7 @@ async def audio_to_text(message: Message) -> str:
         file_id = message.voice.file_id
         audio_file = await message.bot.get_file(file_id)
 
-        audio_file_url = f"https://api.telegram.org/file/bot{config.api_token}/{audio_file.file_path}"
+        audio_file_url = f'https://api.telegram.org/file/bot{config.api_token}/{audio_file.file_path}'
         req = requests.get(audio_file_url)
         path_to_file_oga = config.TMP_VOICE_FILE_DIR / f'{file_id}.oga'
 
@@ -53,7 +53,7 @@ async def audio_to_text(message: Message) -> str:
 
         path_to_file_wav = config.TMP_VOICE_FILE_DIR / f'{file_id}.wav'
 
-        process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])
+        process = subprocess.run(['ffmpeg', '-i', str(path_to_file_oga), str(path_to_file_wav)])  # noqa:D200
 
         r = sr.Recognizer()
         voice_message = sr.AudioFile(str(path_to_file_wav))

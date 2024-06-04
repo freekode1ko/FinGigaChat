@@ -1,6 +1,4 @@
-"""
-Модели таблиц всех сервисов
-"""
+"""Модели таблиц всех сервисов"""
 import datetime
 
 import sqlalchemy as sa
@@ -8,6 +6,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
+    Date,
     DateTime,
     DOUBLE_PRECISION,
     Float,
@@ -17,10 +16,9 @@ from sqlalchemy import (
     JSON,
     String,
     Table,
-    Text,
-    Date,
+    Text
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
 from constants import enums

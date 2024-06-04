@@ -1,5 +1,5 @@
 import json
-from typing import Union, List
+from typing import Union
 
 import pandas as pd
 from aiogram import F, Router, types
@@ -13,7 +13,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import keyboards.admin.constructors as keyboards
 from configs import config
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
-from db import database
 from db.database import engine
 from db.message import get_messages_by_type, delete_messages, add_all
 from db.message_type import message_types
@@ -105,7 +104,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
-    saved_messages: List[dict] = []
+    saved_messages: list[dict] = []
     newsletter_type = 'default'
     successful_sending = 0
     for user_id in users_ids:
@@ -309,6 +308,7 @@ async def delete_article(message: types.Message, state: FSMContext) -> None:
 async def continue_delete_article(message: types.Message, state: FSMContext) -> None:
     """
     Проверка, что действие по удалению новости не случайное и выбор причины удаления (снижения значимости)
+
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     """

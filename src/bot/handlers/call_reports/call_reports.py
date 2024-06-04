@@ -14,7 +14,7 @@ from sqlalchemy import update, insert
 from configs import config
 from db.call_reports import *
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
-from handlers.call_reports.callbackdata import CRMainMenu, CRCreateNew, CRChoiceReportView, CRMenusEnum
+from handlers.call_reports.callbackdata import CRMainMenu, CRCreateNew, CRMenusEnum
 from log.bot_logger import logger
 from utils.base import user_in_whitelist
 

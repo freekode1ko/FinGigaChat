@@ -399,6 +399,7 @@ def next_weekday(d: date | datetime, weekday: int) -> date | datetime:
 def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: int = 0) -> datetime:
     """
     Вычисляет ближайшую дату_время относительно переданной по заданным параметрам
+
     next_weekday_time(datetime(2024, 1, 1, 12, 0), 0, 15, 30) -> datetime(2024, 1, 1, 15, 30)
     next_weekday_time(datetime(2024, 1, 1, 16, 0), 0, 15, 30) -> datetime(2024, 1, 8, 15, 30)
 
@@ -440,6 +441,7 @@ async def send_or_edit(
 ) -> None:
     """
     Отправляет новое сообщение, если message это types.Message
+
     Изменяет текущее сообщение, если message это types.CallbackQuery
 
     :param message: Объект сообщения или callback
@@ -465,6 +467,7 @@ async def send_pdf(
 ) -> bool:
     """
     Отправка сообщения перед файлами
+
     Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
 
     Если файлов нет, то return False и ничего не отправляет

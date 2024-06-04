@@ -4,8 +4,7 @@
 from aiogram.types import Message
 
 from configs import config
-from handlers.call_reports.call_report_view.keyboards import get_keyboard_for_view_call_report, \
-    get_keyboard_for_edit_call_report  # get_keyboard_for_edit_call_report, \
+from handlers.call_reports.call_report_view.keyboards import get_keyboard_for_edit_call_report, get_keyboard_for_view_call_report
 from handlers.call_reports.call_reports import CallReport
 from handlers.call_reports.callbackdata import CRMenusEnum
 from module.email_send import SmtpSend
@@ -56,7 +55,6 @@ async def call_report_view_answer(
     :param edit_message: Параметр для указания нужно ли редактировать сообщение или отправить новое
     :param custom_send_mail_button: Параметр отвечающий за название кнопки отправки call report'а на почту
     """
-
     text = (
         'Протокол встречи:\n'
         f'Клиент: {report.client}\n'

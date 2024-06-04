@@ -9,18 +9,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.call_reports import get_user_email_async
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
-from handlers.call_reports.call_report_view.utils import call_report_view_answer, send_to_mail, call_report_edit_answer
+from handlers.call_reports.call_report_view.utils import call_report_edit_answer, call_report_view_answer, send_to_mail
 from handlers.call_reports.call_reports import CallReport
-from handlers.call_reports.callbackdata import CRViewAndEdit, CRMenusEnum
+from handlers.call_reports.callbackdata import CRMenusEnum, CRViewAndEdit
 from log.bot_logger import logger
 
 router = Router()
 
 
 class CallReportsEditStates(StatesGroup):
-    """
-    Состояние для редактирования call report'ов
-    """
+    """Состояние для редактирования call report'ов"""
+
     edit_clint_name = State()
     edit_date = State()
     edit_text_message = State()
