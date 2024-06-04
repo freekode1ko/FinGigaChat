@@ -96,7 +96,7 @@ def create_client_industry_dict() -> dict:
 
     :return: Словарь индустрий клиентов.
     """
-    query = ('select industry.name as industry_name, client.name as client_name from client'
+    query = ('select industry.name as industry_name, client.name as client_name from client '
              'join industry on client.industry_id = industry.id')
 
     df = pd.read_sql(query, engine)
