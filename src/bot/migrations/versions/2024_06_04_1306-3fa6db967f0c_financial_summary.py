@@ -1,8 +1,8 @@
 """empty message
 
 Revision ID: 3fa6db967f0c
-Revises: 378aac2e1b79
-Create Date: 2024-05-29 12:06:29.483279
+Revises: 259565411b58
+Create Date: 2024-06-04 12:06:29.483279
 
 """
 from typing import Sequence, Union
@@ -15,7 +15,7 @@ from migrations.data import financial_summary
 
 # revision identifiers, used by Alembic.
 revision: str = '3fa6db967f0c'
-down_revision: Union[str, None] = '378aac2e1b79'
+down_revision: Union[str, None] = '259565411b58'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
