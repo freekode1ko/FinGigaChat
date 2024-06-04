@@ -1,6 +1,6 @@
+"""Конфиг для сервиса parser_monitoring"""
 import json
 import pathlib
-from typing import Union
 
 from environs import Env
 
@@ -18,9 +18,10 @@ STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
-def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
+def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8') -> list | dict | str:
     """
     Считывает константу из json-файла
+
     Args:
         file_name: Путь до файла относительно STATIC_ASSETS_PATH
         encoding: Кодировка файла
