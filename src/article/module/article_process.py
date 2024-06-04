@@ -1,3 +1,4 @@
+"""Обработчики новостей"""
 import datetime as dt
 import os
 from urllib.parse import unquote
@@ -7,23 +8,21 @@ from sqlalchemy import text
 
 from db.database import engine
 from log.logger_base import Logger
-from module.model_pipe import (
-    add_text_sum_column,
-    deduplicate,
-    model_func,
-    model_func_online,
-    gigachat_filtering,
-)
+from module import model_pipe
 
 
 class ArticleProcess:
-    def __init__(self, logger: Logger.logger):
+    """Класс обработчик новостей"""
+
+    def __init__(self, logger: Logger.logger) -> None:
+        """Инициализация обработчика новостей"""
         self._logger = logger
         self.engine = engine
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
     @staticmethod
-    def get_filename(dir_path):
+    def get_filename(dir_path: os.PathLike) -> str:
+        """Получить первый файл в переданной папке, если файла нет, то пустую строку"""
         list_of_files = [filename for filename in os.listdir(dir_path)]
         filename = '' if not list_of_files else list_of_files[0]
         return filename
@@ -31,21 +30,22 @@ class ArticleProcess:
     def load_file(self, filepath: str, type_of_article: str) -> pd.DataFrame:
         """
         Load and process articles file.
+
         :param filepath: file path to Excel file with articles
         :param type_of_article: type of article (client or commodity)
         :return: dataframe of articles
         """
         source_filter = (
-            '(www|realty|quote|pro|marketing).rbc.ru|.interfax(|-russia).ru|www.kommersant.ru|'
-            'www.vedomosti.ru|//tass.(ru|com)/|(realty.|//)ria.ru|/1prime.ru/|www.banki.ru|'
-            '(.|//)iz.ru/|//(|www.)ura.news|//(|www.)ru24.net|//(|www.)energyland.info|'
-            'www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|'
-            '//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|'
-            '//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|'
-            '//(|www.)pronedra.ru|metallplace.ru|rzd-partner.ru|morvesti.ru|morport.com|gudok.ru|'
-            'eprussia.ru|metallicheckiy-portal.ru|gmk.center|bigpowernews.ru|metaltorg.ru|new-retail.ru|'
-            'agroinvestor.ru|comnews.ru|telecomdaily.ru|vestnik-sviazy.ru|neftegaz.ru|chemicalnews.ru|'
-            'ru.tradingview.com|osnmedia.ru|forbes.ru|expert.ru|rupec.ru'
+            r'(www|realty|quote|pro|marketing).rbc.ru|.interfax(|-russia).ru|www.kommersant.ru|'
+            r'www.vedomosti.ru|//tass.(ru|com)/|(realty.|//)ria.ru|/1prime.ru/|www.banki.ru|'
+            r'(.|//)iz.ru/|//(|www.)ura.news|//(|www.)ru24.net|//(|www.)energyland.info|'
+            r'www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|'
+            r'//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|'
+            r'//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|'
+            r'//(|www.)pronedra.ru|metallplace.ru|rzd-partner.ru|morvesti.ru|morport.com|gudok.ru|'
+            r'eprussia.ru|metallicheckiy-portal.ru|gmk.center|bigpowernews.ru|metaltorg.ru|new-retail.ru|'
+            r'agroinvestor.ru|comnews.ru|telecomdaily.ru|vestnik-sviazy.ru|neftegaz.ru|chemicalnews.ru|'
+            r'ru.tradingview.com|osnmedia.ru|forbes.ru|expert.ru|rupec.ru'
         )  # TODO: дополнять
 
         if type_of_article == 'client':
@@ -100,7 +100,7 @@ class ArticleProcess:
 
     def throw_the_models(self, df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
         """Call model pipe func"""
-        df = model_func_online(self._logger, df) if online_flag else model_func(self._logger, df, name)
+        df = model_pipe.model_func_online(self._logger, df) if online_flag else model_pipe.model_func(self._logger, df, name)
         return df
 
     def drop_duplicate(self):
@@ -128,23 +128,25 @@ class ArticleProcess:
         articles_relevant = self.df_article[(self.df_article['client_score'] > 0) | (self.df_article['commodity_score'] > 0)]
         articles_not_relevant = self.df_article[(self.df_article['client_score'] <= 0) & (self.df_article['commodity_score'] <= 0)]
         # отдельно их дедублицируем
-        articles_relevant = deduplicate(self._logger, articles_relevant, old_articles)
-        articles_not_relevant = deduplicate(self._logger, articles_not_relevant, old_articles)
+        articles_relevant = model_pipe.deduplicate(self._logger, articles_relevant, old_articles)
+        articles_not_relevant = model_pipe.deduplicate(self._logger, articles_not_relevant, old_articles)
         # соединяем обратно в один батч
         self.df_article = pd.concat([articles_relevant, articles_not_relevant], ignore_index=True)
 
     def make_text_sum(self):
         """Call summary func"""
-        self.df_article = add_text_sum_column(self._logger, self.df_article)
-    
+        self.df_article = model_pipe.add_text_sum_column(self._logger, self.df_article)
+
     def apply_gigachat_filtering(self):
         """Применяем фильтрацию новостей с помощью gigachat"""
-        self.df_article = gigachat_filtering(self._logger, self.df_article)
+        self.df_article = model_pipe.gigachat_filtering(self._logger, self.df_article)
 
-    def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
+    def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame) -> None:
         """
         Merge df of client and commodity and drop duplicates
+
         And set it in self.df_article.
+
         :param df_client: df with client article
         :param df_commodity: df with commodity article
         """
@@ -178,10 +180,11 @@ class ArticleProcess:
     def save_tables(self) -> list:
         """
         Сохраняет новости, получает id сохраненных новостей из бд,
-        вызывает методы по сохранению таблиц отношений
-        return: список ссылок сохраненных новостей
-        """
 
+        вызывает методы по сохранению таблиц отношений
+
+        :return: список ссылок сохраненных новостей
+        """
         links_value = tuple(self.df_article['link'].apply(unquote))
         if not links_value:
             return []
@@ -225,6 +228,7 @@ class ArticleProcess:
     def _make_save_relation_article_table(self, name: str) -> None:
         """
         Make relation table and save it to database.
+
         :param name: name (client or commodity)
         """
         subject = pd.read_sql(f'SELECT * FROM {name}', con=self.engine).rename(columns={'id': f'{name}_id', 'name': name})
