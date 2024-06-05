@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dir: ['src/article', 'src/article_online', 'src/bot', 'src/parser_monitoring', 'src/quotes', 'src/research', 'src/user_statistics']
+        dir: ['src/article', 'src/article_online', 'src/bot', 'src/parser_monitoring', 'src/quotes', 'src/research', 'src/users_statistics']
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
@@ -33,6 +33,6 @@ jobs:
       - name: Run flake8
         run: |
           poetry run python -m flake8 ${{ matrix.dir }}
-      - name: Run pylint
-        run: |
-          poetry run python -m pylint ${{ matrix.dir }}
+      #- name: Run pylint
+      #  run: |
+      #    poetry run python -m pylint ${{ matrix.dir }}

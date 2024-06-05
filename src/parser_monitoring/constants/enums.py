@@ -1,12 +1,11 @@
+"""Модуль с Енумераторами сервиса"""
 from __future__ import annotations
 
 from enum import Enum
 
 
 class Environment(str, Enum):
-    """
-    Среда окружения, где запускаем код
-    """
+    """Среда окружения, где запускаем код"""
 
     STAGE = 'dev'
     PROD = 'prod'
@@ -14,10 +13,12 @@ class Environment(str, Enum):
     UNKNOWN = 'unknown'
 
     def is_local(self) -> bool:
+        """Является ли окружение локальным?"""
         return self in (Environment.UNKNOWN, Environment.LOCAL)
 
     @classmethod
     def from_str(cls, param: str) -> Environment:
+        """Получить объект енумератора из переданной строки"""
         try:
             return cls(param.lower())
         except ValueError:

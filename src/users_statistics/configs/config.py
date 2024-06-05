@@ -1,3 +1,4 @@
+"""Конфиг для сервиса users_statistics"""
 import pathlib
 
 from environs import Env

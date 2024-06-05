@@ -1,3 +1,4 @@
+"""Модуль парсера"""
 import random
 
 import requests as req
@@ -7,12 +8,17 @@ from log.logger_base import Logger
 
 
 class Dictlist(dict):
-    def __setitem__(self, key, value) -> dict:
+    """Словарь с переопределенными методами для работы со списками."""
+
+    def __setitem__(self, key, value) -> None:
         """
-        Overwrite default method setitem in class dict to append in list new urls
-        :param key: Where need to add
-        :param value: What need to add
-        :return: dict with appended value in list for selected key
+        Метод задания значения по ключу.
+
+        Задает список со значением value, если key отсутствует в словаре.
+        Добавляет значение value в список, если key присутсвует в словаре.
+
+        :param key:     Ключ (хешируемый объект)
+        :param value:   Значение, сохраняемое по ключу
         """
         try:
             self[key]
@@ -25,17 +31,16 @@ proxy = Dictlist()
 
 
 class Parser:
-    def __init__(self, logger: Logger.logger):
-        self._logger = logger
+    """Класс парсера"""
 
     user_agents = user_agents
 
+    def __init__(self, logger: Logger.logger) -> None:
+        """Инициализация парсера"""
+        self._logger = logger
+
     def get_proxy_addresses(self) -> None:
-        """
-        Method to get free proxy list from web
-        and load it to package variable
-        :return: None
-        """
+        """Метод получения списка бесплатных прокси и сохранение его с переменную proxy"""
         global proxy
         proxy['https'] = ['socks5h://193.23.50.38:10222']
         proxy['https'] = ['socks5h://135.125.212.24:10034']
@@ -45,17 +50,18 @@ class Parser:
 
     def get_html(self, url: str, session: req.sessions.Session):
         """
-        Method return html from requester page
+        Получение html страницы по переданному адресу
+
         :param session: request "user" session
-        :param url: Where to grab html code
-        :return: html code from page as string
+        :param url:     Where to grab html code
+        :return:        html code from page as string
         """
         euro_standard = False
         # http = random.choice(proxy['http'])
         https = random.choice(proxy['https'])
         # if type(http) == list:
         #     http = http[0]
-        if type(https) == list:
+        if type(https) is list:
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}

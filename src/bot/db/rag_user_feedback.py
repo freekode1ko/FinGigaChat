@@ -1,37 +1,91 @@
+"""Методы по взаимодействию с таблицей UserRagFeedback в БД."""
 import datetime
 
-from sqlalchemy import text
+from sqlalchemy import insert, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.database import engine
 from constants.enums import RetrieverType
+from db.models import RAGUserFeedback
 
 
-def add_rag_activity(chat_id: int,
-                     bot_msg_id: int,
-                     retriever_type: RetrieverType,
-                     date: datetime,
-                     query: str,
-                     response: str):
-    """Логирование использования RAG-системы"""
-    sql_query = text(
-        'INSERT INTO rag_user_feedback (chat_id, bot_msg_id, retriever_type, date, query, response) '
-        'VALUES (:chat_id, :bot_msg_id, :retriever_type, :date, :query, :response)'
+async def add_rag_activity(
+        session: AsyncSession,
+        chat_id: int,
+        bot_msg_id: int,
+        retriever_type: RetrieverType,
+        date: datetime,
+        query: str,
+        history_query: str,
+        history_response: str
+) -> None:
+    """
+    Логирование использования RAG-системы.
+
+    :param session:                 Асинхронная сессия базы данных.
+    :param chat_id:                 Id чата с пользователем.
+    :param bot_msg_id:              Id сообщения от бота.
+    :param retriever_type:          Тип ретривера.
+    :param date:                    Дата+время ответа сообщения от бота.
+    :param query:                   Запрос пользователя.
+    :param history_query:           Перефразированный на основе истории диалога с помощью GigaChat запрос пользователя.
+    :param history_response:        Ответ ретривера (сообщение от бота).
+    """
+    stmt = insert(RAGUserFeedback).values(
+        chat_id=chat_id,
+        bot_msg_id=bot_msg_id,
+        retriever_type=retriever_type.name,
+        date=date.replace(tzinfo=None),
+        query=query,
+        history_query=history_query,
+        history_response=history_response
     )
-    with engine.connect() as conn:
-        conn.execute(sql_query.bindparams(chat_id=chat_id,
-                                          bot_msg_id=bot_msg_id,
-                                          retriever_type=retriever_type.name,
-                                          date=date,
-                                          query=query,
-                                          response=response))
-        conn.commit()
+    await session.execute(stmt)
+    await session.commit()
 
 
-def update_user_reaction(chat_id: int, bot_msg_id: int, reaction: bool):
-    """Добавление обратной связи от пользователя по использованию RAG-системы"""
-    sql_query = text('UPDATE rag_user_feedback SET reaction=:reaction WHERE chat_id=:chat_id AND bot_msg_id=:bot_msg_id')
-    with engine.connect() as conn:
-        conn.execute(sql_query.bindparams(chat_id=chat_id,
-                                          bot_msg_id=bot_msg_id,
-                                          reaction=reaction))
-        conn.commit()
+async def update_response(
+        session: AsyncSession,
+        chat_id: int,
+        bot_msg_id: int,
+        response: str,
+        rephrase_query: str = ''
+) -> None:
+    """
+    Обновление ответа относительно запроса, поступающего в RAG.
+
+    :param session:          Асинхронная сессия базы данных.
+    :param chat_id:          Id чата с пользователем.
+    :param bot_msg_id:       Id сообщения от бота.
+    :param response:         Ответ ретривера (сообщение от бота).
+    :param rephrase_query:   Перефразированный с помощью GigaChat запрос пользователя.
+    """
+    if rephrase_query:
+        values = {'rephrase_query': rephrase_query, 'rephrase_response': response}
+    else:
+        values = {'response': response}
+
+    stmt = (
+        update(RAGUserFeedback).
+        where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == bot_msg_id).
+        values(values)
+    )
+    await session.execute(stmt)
+    await session.commit()
+
+
+async def update_user_reaction(session: AsyncSession, chat_id: int, bot_msg_id: int, reaction: bool) -> None:
+    """
+    Добавление обратной связи от пользователя по использованию RAG-системы.
+
+    :param session:     Асинхронная сессия базы данных.
+    :param chat_id:     Id чата с пользователем.
+    :param bot_msg_id:  Id сообщения от бота.
+    :param reaction:    Реакция пользователя на ответ RAG-системы (True/False).
+    """
+    stmt = (
+        update(RAGUserFeedback)
+        .where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == bot_msg_id)
+        .values(reaction=reaction)
+    )
+    await session.execute(stmt)
+    await session.commit()

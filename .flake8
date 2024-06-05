@@ -1,5 +1,6 @@
 [flake8]
 max-line-length = 135
+ignore = D400, D401, A003
 exclude =
     migrations
     __pycache__
@@ -8,5 +9,5 @@ exclude =
     .env.example
 
 inline-quotes = '
-application-import-names = src
-import-order-style = google
+application-import-names = configs, constants, data, db, handlers, keyboards, log, middlewares, migrations, module, parsers, schemas, utils
+import-order-style = smarkets

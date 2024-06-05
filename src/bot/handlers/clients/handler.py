@@ -1,3 +1,13 @@
+"""
+Обработчик меню клиентов.
+
+Позволяет получить различную информацию о клиенте:
+- новости
+- аналитика публичных рынков (для публичных клиентов)
+- отраслевая аналитик
+- продуктовые предложения
+- цифровая справка
+"""
 import datetime
 from pathlib import Path
 from typing import Optional
@@ -5,13 +15,16 @@ from typing import Optional
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
-from db import subscriptions as subscriptions_db_api
+from constants import constants
+from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product_group import product_group_db
+from db.api.research_type import research_type_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
 from handlers import products
@@ -20,12 +33,22 @@ from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
-from log.bot_logger import user_logger
+from log.bot_logger import user_logger, logger
 from module.article_process import FormatText
-from utils.base import send_or_edit, send_pdf, user_in_whitelist, get_page_data_and_info
+from module.fuzzy_search import FuzzyAlternativeNames
+from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
+
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
+
+
+class ChooseClient(StatesGroup):
+    """
+    Состояние для ввода имени клиента для более удобного поиска
+    """
+    choosing_from_all_not_subscribed_clients = State()
+    choosing_from_subscribed_clients = State()
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
@@ -46,6 +69,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню клиенты
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
@@ -97,13 +121,17 @@ async def main_menu_command(message: types.Message) -> None:
 async def clients_list(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
+        state: FSMContext,
 ) -> None:
     """
     Получение списка клиентов
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param state: Объект, который хранит состояние FSM для пользователя
     """
+    msg_text = ''
+
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
@@ -115,18 +143,66 @@ async def clients_list(
     clients = await client_db.get_all()
     client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
     if subscribed:
-        msg_text = 'Выберите клиента из списка ваших подписок'
+
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
+        await state.set_state(ChooseClient.choosing_from_subscribed_clients)
     else:
-        msg_text = 'Выберите клиента из общего списка'
-        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+        clients = clients.iloc[0:0]
+        await state.set_state(ChooseClient.choosing_from_all_not_subscribed_clients)
 
     page_data, page_info, max_pages = get_page_data_and_info(clients, page)
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
-    msg_text = f'{msg_text}\n<b>{page_info}</b>\n\n'
+
+    if subscribed:
+        msg_text = f'Выберите клиента из списка ваших подписок\n<b>{page_info}</b>\n\n'
+    msg_text += 'Для поиска введите сообщение с именем клиента.'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.message(ChooseClient.choosing_from_subscribed_clients)
+@router.message(ChooseClient.choosing_from_all_not_subscribed_clients)
+async def clients_subscriptions_list(
+        message: types.Message,
+        state: FSMContext,
+) -> None:
+    """
+    Поиск по клиентам, на которые пользователь подписаны
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state: Объект, который хранит состояние FSM для пользователя
+    """
+    subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
+
+    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    clients_id = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[models.ClientAlternative])
+    clients = await client_db.get_by_ids(clients_id)
+    client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
+
+    if subscribed:
+        clients = clients[clients['id'].isin(client_subscriptions['id'])]
+    else:
+        clients = clients[~clients['id'].isin(client_subscriptions['id'])]
+
+    if len(clients) > 1:
+        page_data, page_info, max_pages = get_page_data_and_info(clients)
+        keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, subscribed)
+        msg_text = 'Выберите клиента из списка'
+    elif len(clients) == 1:
+        client_name = clients['name'].iloc[0]
+        keyboard = keyboards.get_client_menu_kb(
+            clients['id'].iloc[0],
+            current_page=0,
+            subscribed=subscribed,
+            research_type_id=await get_research_type_id_by_name(client_name),
+        )
+        msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
+    else:
+        msg_text = 'Не нашелся, введите имя клиента по-другому'
+        keyboard = None
+
+    await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
@@ -215,9 +291,9 @@ async def get_client_analytic_indicators(
 
     research_type_id = callback_data.research_type_id
 
-    research_info = subscriptions_db_api.get_research_type_info(research_type_id)
+    research_info = await research_type_db.get(research_type_id)
 
-    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info["name"]}</b>?'
+    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(
         client_id=callback_data.client_id,
         current_page=callback_data.page,
@@ -419,24 +495,6 @@ async def get_client_select_period_menu(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     client_info = await client_db.get(callback_data.client_id)
-    periods = [   # FIXME стоит ли унести в константы уже?
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-    ]
     select_period_menu = select_period_menu or callback_data_factories.ClientsMenusEnum.news_by_period
     back_menu = back_menu or callback_data_factories.ClientsMenusEnum.client_news_menu
 
@@ -445,7 +503,7 @@ async def get_client_select_period_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=callback_data.research_type_id,
-        periods=periods,
+        periods=constants.GET_NEWS_PERIODS,
         select_period_menu=select_period_menu,
         back_menu=back_menu,
     )
@@ -499,11 +557,11 @@ async def get_client_news_by_period(
     days = callback_data.days_count
     client_info = await client_db.get(client_id)
 
-    to_date = datetime.date.today()
+    to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
     msg_text = f'Новости по клиенту <b>{client_info["name"].capitalize()}</b> за {days} дней\n'
-    articles = await client_db.get_articles_by_subject_id(client_id, from_date, to_date, order_by=Article.date.desc())
+    articles = await client_db.get_articles_by_subject_ids(client_id, from_date, to_date, order_by=Article.date.desc())
     if not articles:
         msg_text += 'отсутствуют'
         await callback_query.message.answer(msg_text, parse_mode='HTML')
@@ -514,7 +572,7 @@ async def get_client_news_by_period(
             FormatText(
                 title=article.title, date=article.date, link=article.link, text_sum=article.text_sum
             ).make_subject_text()
-            for article in articles
+            for article, _ in articles
         )
         frmt_msg += f'\n\n{all_articles}'
         await callback_query.message.answer(msg_text, parse_mode='HTML')

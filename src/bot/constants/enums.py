@@ -54,8 +54,8 @@ class ResearchSummaryType(Enum):
 
 class FIGroupType(Enum):
     bonds = 0, 'ОФЗ'
-    obligates = 1, 'Корпоративные облигации '
-    foreign_markets = 2, 'Зарубежные рынки '
+    # obligates = 1, 'Корпоративные облигации '
+    # foreign_markets = 2, 'Зарубежные рынки '
 
     def __init__(self, value, title):
         self._value_ = value
@@ -71,3 +71,11 @@ class IndustryTypes(IntEnum):
     default = auto()            # Все стандартные отрасли
     other = auto()              # Пункт прочее
     general_comments = auto()   # Пункт общий комментарий
+
+
+class SubjectType(str, Enum):
+    """Типы объектов, по которым собираются новости."""
+
+    client = 'client'
+    commodity = 'commodity'
+    industry = 'industry'

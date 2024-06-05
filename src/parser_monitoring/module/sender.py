@@ -1,5 +1,5 @@
+"""Модуль отправки данных на сервис мониторинг"""
 import time
-from typing import List
 from uuid import uuid4
 
 import requests
@@ -9,12 +9,20 @@ from schemas.parser import ParserStatusSend
 
 
 class SendToMonitoring:
+    """Класс отправки данных в мониторинг"""
 
     API_KEY: str = config.api_key
     SOURCE_SYSTEM: str = config.source_system
 
     @classmethod
-    def send(cls, data: List[ParserStatusSend], **kwargs) -> requests.Response:
+    def send(cls, data: list[ParserStatusSend], **kwargs) -> requests.Response:
+        """
+        Отправить статусы парсеров в сервис мониторинга
+
+        :param data:    Статусы парсеров
+        :param kwargs:  Доп параметры для отправки post-запроса (все допустимые, кроме url, headers, json)
+        :return:        Возвращает результат отправки запроса
+        """
         json_data = [i.model_dump(mode='json') for i in data]
         if config.monitoring_api_url != '/{}':
             r = requests.post(
