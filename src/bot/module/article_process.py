@@ -10,7 +10,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import pandas as pd
-from sqlalchemy import text, select
+from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
 
 from configs.config import (
@@ -22,9 +22,9 @@ from constants.enums import SubjectType
 from constants.quotes import COMMODITY_MARKS
 from db.api.client import client_db
 from db.api.commodity import commodity_db
-from db.database import engine, async_session
-from log.logger_base import Logger
+from db.database import async_session, engine
 from db.models import FinancialSummary
+from log.logger_base import Logger
 
 CONDITION_TOP = (
     "{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
@@ -164,6 +164,7 @@ class ArticleProcess:
     async def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
         """
         Получение финансовых показателей для клиента.
+
         :param client_id: id компании в таблице client
         :return: DF таблица финансовых показателей для клиента
         """

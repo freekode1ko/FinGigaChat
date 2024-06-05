@@ -26,7 +26,7 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import process_fin_table, bot_send_msg, user_in_whitelist
+from utils.base import bot_send_msg, process_fin_table, user_in_whitelist
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):

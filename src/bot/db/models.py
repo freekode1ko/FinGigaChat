@@ -130,7 +130,8 @@ class Industry(Base):
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
                 maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения отраслей')
+    display_order = Column(Integer(), server_default=sa.text('0'),
+                           nullable=False, comment='Порядок отображения отраслей')
 
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
@@ -411,8 +412,10 @@ class CommodityPricing(Base):
 class RelationClientArticle(Base):
     __tablename__ = 'relation_client_article'
 
-    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'),
+                       primary_key=True, nullable=False)
+    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'),
+                        primary_key=True, nullable=False)
     client_score = Column(Integer)
 
     article = relationship('Article', back_populates='relation_client_article')
@@ -422,8 +425,10 @@ class RelationClientArticle(Base):
 class RelationCommodityArticle(Base):
     __tablename__ = 'relation_commodity_article'
 
-    commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'),
+                          primary_key=True, nullable=False)
+    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'),
+                        primary_key=True, nullable=False)
     commodity_score = Column(Integer)
 
     article = relationship('Article', back_populates='relation_commodity_article')
@@ -434,8 +439,10 @@ class RelationTelegramArticle(Base):
     __tablename__ = 'relation_telegram_article'
     __table_args__ = {'comment': 'Связь новостей с telegram каналами'}
 
-    telegram_id = Column(ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
-    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    telegram_id = Column(ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'),
+                         primary_key=True, nullable=False)
+    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'),
+                        primary_key=True, nullable=False)
     telegram_score = Column(Integer)
 
     article = relationship('Article', back_populates='relation_telegram_article')
@@ -444,8 +451,10 @@ class RelationTelegramArticle(Base):
 
 t_user_telegram_subscription = Table(
     'user_telegram_subscription', metadata,
-    Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False),
-    Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True, nullable=False)
+    Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'),
+           primary_key=True, nullable=False),
+    Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'),
+           primary_key=True, nullable=False)
 )
 
 
@@ -512,7 +521,8 @@ class ResearchType(Base):
             'из enums.ResearchSummaryType (зависит формирование меню аналитики)'
         ),
     )
-    research_section_id = Column(ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    research_section_id = Column(ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'),
+                                 nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
 
@@ -528,7 +538,8 @@ class Research(Base):
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
     report_id = Column(String(64), nullable=False)
-    is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что отчет еще не рассылался пользователям')
+    is_new = Column(Boolean, server_default=sa.text('true'),
+                    comment='Указывает, что отчет еще не рассылался пользователям')
 
 
 class UserResearchSubscriptions(Base):
@@ -580,10 +591,12 @@ class FinancialSummary(Base):
     __tablename__ = 'financial_summary'
     __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
 
-    id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647,
+                                     cycle=False, cache=1), primary_key=True)
     sector_id = Column(Text, nullable=False, comment='ID сектора на cib research')
     company_id = Column(Text, nullable=False, comment='ID клиента на cib research')
-    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False, comment='ID клиента у нас в БД')
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'),
+                       nullable=False, comment='ID клиента у нас в БД')
     review_table = Column(Text, nullable=True, comment='Таблица с обзорной таблицей в формате dict')
     pl_table = Column(Text, nullable=True, comment='Таблица с P&L таблицей в формате dict')
     balance_table = Column(Text, nullable=True, comment='Таблица с балансной таблицей в формате dict')
