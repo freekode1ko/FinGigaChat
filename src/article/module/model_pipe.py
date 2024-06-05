@@ -6,14 +6,14 @@ import re
 from re import search
 from typing import Any, Optional
 
-import requests
 import pandas as pd
 import pymorphy2
+import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
-from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from configs import prompts
+from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from db.database import engine
 from log.logger_base import Logger
 from module import utils
@@ -351,15 +351,15 @@ def search_top_sources(link: Optional[str or Any], score: int) -> int:
 
 def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Logger.logger) -> list[float]:
     """
-    Получаем вероятности релевантности для текста новости клиента. Делаем гет запрос к модели roberta, в случае
-    неуспеха делаем предсказания с локальной моделью.
+    Получаем вероятности релевантности для текста новости клиента. Делаем гет запрос к модели roberta.
+
     :param text: текст новости.
     :param clean_text: очищенный текст новости.
     :param logger: экземпляр класса логер для логирования процесса.
     :return: список вероятностей релевантности.
     """
     # делаем запрос к модели roberta, обрезаем слишком большой инпут
-    params = {"query": text[:MAX_LEN_INPUT]}
+    params = {'query': text[:MAX_LEN_INPUT]}
     try:
         with requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60) as response:
             # достаем вероятности релевантности
