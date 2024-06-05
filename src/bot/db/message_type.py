@@ -47,7 +47,7 @@ class MessageType:
 
     @property
     def default(self) -> dict:
-        """Деволт"""
+        """Дефолт"""
         return self.__default
 
     @property

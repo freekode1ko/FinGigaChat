@@ -47,11 +47,11 @@ async def send_news_with_next_button(
         articles_limit: int,
 ) -> None:
     """
-    Отправка новостей по клиенту, сырью b отрасли (reply_msg).
+    Отправка новостей по клиенту, сырью и отрасли (reply_msg).
 
     :param bot: Объект телеграм бота aiogram.Bot
     :param chat_id: Чат, в который нужно отправить новости
-    :param reply_msg: Новости, разделенные
+    :param reply_msg: Новости, разделенные двойным переносом строки
     :param subject_id: id клиента или сырья, или отрасли
     :param subject: название таблицы объекта (client, commodity, industry)  FIXME Enum
     :param next_news_offset: Данные для формирование кнопки Еще новости

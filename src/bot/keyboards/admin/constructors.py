@@ -9,7 +9,7 @@ from db.message_type import message_types
 from keyboards.admin import callbacks
 
 
-def get_message_types_kb(**kwargs) -> InlineKeyboardMarkup:
+def get_message_types_kb() -> InlineKeyboardMarkup:
     """
     Создает клавиатуру типов сообщений
 
