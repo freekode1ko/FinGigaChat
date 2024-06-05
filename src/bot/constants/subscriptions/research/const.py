@@ -1,4 +1,4 @@
-"""Файл с константами для подписок по новостям по CIB"""
+"""Файл с константами для подписок на отчеты по CIB"""
 
 GET_CIB_RESEARCH_SUBS_MENU = 'research_subscriptions_menu'
 

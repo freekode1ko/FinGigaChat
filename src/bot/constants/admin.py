@@ -1,4 +1,4 @@
-"""Специальные команды для администраторов"""
+"""Префиксы колбеков для администраторов"""
 
 APPROVE_DELETE_NEWSLETTER_MESSAGES_BY_TYPE = 'approve_delete_messages_by_type'
 DELETE_NEWSLETTER_MESSAGES_BY_TYPE = 'delete_messages_by_type'
