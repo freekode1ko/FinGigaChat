@@ -26,7 +26,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
         async with self._async_session_maker() as session:
-            stmt = sa.update(self._table).values(is_new=False).where(self._table.is_new == True).returning(*self.fields)
+            stmt = sa.update(self._table).values(is_new=False).where(self._table.is_new == True).returning(*self.fields)  # noqa:E712
 
             data = await session.execute(stmt)
             await session.commit()

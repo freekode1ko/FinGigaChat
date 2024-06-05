@@ -1,10 +1,11 @@
+"""Парсинг виклипульса"""
 # importing required modules
 import os
 import re
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, Optional, Union
 
 import fitz
 import pandas
@@ -67,7 +68,7 @@ def get_page_table(
     # return tables[0] if tables else None
 
 
-def get_special_slides(filename: str, slides_meta: Union[List[dict], Iterable[dict]]) -> defaultdict:
+def get_special_slides(filename: str, slides_meta: Union[list[dict], Iterable[dict]]) -> defaultdict:
     slides_titles2data = defaultdict(default_slide_item)
 
     if not filename or not isinstance(filename, (str, Path)) or not os.path.isfile(filename) or not slides_meta:
@@ -110,9 +111,10 @@ class ParsePresentationPDF:
     """Обрабатывает файл презентации weekly pulse в pdf формате"""
 
     @staticmethod
-    def get_slides_meta() -> List[dict]:
+    def get_slides_meta() -> list[dict]:
         """
         Возвращает мета-информацию о слайдах, которые вынимаются из презентации weekly_pulse
+
         Мета-информация содержит следующий набор данных:
         title: Заголовок слайда, используется в качестве критерия для определения номера слайда
         eng_name: название слайда на английском, используется для сохранения слайда в виде png
@@ -179,11 +181,12 @@ class ParsePresentationPDF:
         return special_slides_meta
 
     @classmethod
-    def get_fnames_by_type(cls, report_type=None) -> List[str]:
+    def get_fnames_by_type(cls, report_type=None) -> list[str]:
         """
         Возвращает список названий слайдов, сохраненных в виде png, для определенного типа report_type
+
         :param report_type: тип из Types
-        return: List[str]
+        :return: List[str]
         """
         s_meta = cls.get_slides_meta()
         return [f"{i['eng_name']}.png" for i in s_meta if i['report_type'] == report_type]
@@ -194,6 +197,7 @@ class ParsePresentationPDF:
     ) -> Optional[pandas.DataFrame]:
         """
         Возвращает найденную на слайде первую таблицу
+
         :param pdf_file: Имя презентации с расширением pdf
         :param page_number: Номер слайда (int, str)
         :param area: Область нахождения таблицы (по умолчанию весь слайд)
@@ -207,12 +211,14 @@ class ParsePresentationPDF:
 
         return None
 
-    def parse(self, filename: str, slides_meta: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
+    def parse(self, filename: str, slides_meta: Optional[Union[list[dict], Iterable[dict]]] = None) -> defaultdict:
         """
         Возвращает словарь, где ключом является заголовок слайда, а по заголовку содержится информация:
+
         page_number: номер слайда с заданным заголовком int, -1 если не найден
         text: текст слайда str
         table: таблица со слайда DataFrame или None
+
         :param filename: Путь к файлу, который необходимо распарсить
         :param slides_meta: Мета информация вынимаемых слайдов
         return: defaultdict[str: dict]

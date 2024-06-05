@@ -1,3 +1,4 @@
+"""Клавиатуры по подпискам на каналы в телеграмме"""
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
@@ -6,13 +7,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants.subscriptions import const
 from db import models
-from keyboards.subscriptions.news.telegram import callbacks as callback_factory
 from keyboards.subscriptions import constructors
+from keyboards.subscriptions.news.telegram import callbacks as callback_factory
 
 
 def get_tg_info_kb(callback_data: callback_factory.TelegramSubsMenuData) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Подписаться/Удалить из подписок ]
     [   назад   ]
 
@@ -49,6 +51,7 @@ def get_tg_info_kb(callback_data: callback_factory.TelegramSubsMenuData) -> Inli
 def get_groups_kb(groups: list[models.TelegramGroup]) -> InlineKeyboardMarkup:
     """
     Формирует клавиатуру вида
+
     [ group.name ]
     [ ... ]
     [ group.name ]
@@ -85,6 +88,7 @@ def get_groups_kb(groups: list[models.TelegramGroup]) -> InlineKeyboardMarkup:
 def get_group_main_menu_kb(group_id: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Просмотреть подписки ]
     [ Изменить подписки    ]
     [ Удалить все подписки ]
@@ -132,6 +136,7 @@ def get_group_main_menu_kb(group_id: int) -> InlineKeyboardMarkup:
 def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, group_id: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ telegram channel name ][❌]
     [ telegram channel name ][❌]
     [ telegram channel name ][❌]
@@ -178,8 +183,8 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
     keyboard.add(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_factory.TelegramSubsMenuData(
-                menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
-                group_id=group_id,
+            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
+            group_id=group_id,
         ).pack(),
     ))
 
@@ -210,6 +215,7 @@ def get_sections_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ section.name ]
     [ ... ]
     [ section.name ]
@@ -253,6 +259,7 @@ def get_change_subscriptions_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [✅/🟩][ telegram_channel['name'] ]
     [✅/🟩][ ... ]
     [✅/🟩][ telegram_channel['name'] ]
@@ -307,6 +314,7 @@ def get_change_subscriptions_kb(
 def get_prepare_tg_subs_delete_all_kb(group_id: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Да ][ Нет ]
     [   назад   ]
     :param group_id: bot_telegram_group.id
@@ -329,6 +337,7 @@ def get_prepare_tg_subs_delete_all_kb(group_id: int) -> InlineKeyboardMarkup:
 def get_back_to_tg_subs_menu_kb(group_id: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [   назад в меню   ]
     :param group_id: bot_telegram_group.id
     """

@@ -317,6 +317,7 @@ async def research_subs_menu_end(callback_query: types.CallbackQuery) -> None:
 
 
 async def cib_research_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+    """Подписки на аналитические отчеты"""
     keyboard = keyboards.get_research_subscriptions_main_menu_kb()
     msg_text = 'Подписки на аналитические отчеты'
     await send_or_edit(message, msg_text, keyboard)

@@ -1,3 +1,5 @@
+"""Хендлеры для создания кол репортов"""
+
 from aiogram import Router
 
 from .handler import router as call_report_insert_router

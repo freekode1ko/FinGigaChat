@@ -1,3 +1,4 @@
+"""Модификация базового логгера"""
 import datetime
 import logging
 import os
@@ -15,12 +16,16 @@ MAX_BYTES = 10 * 1024 * 1024
 
 
 class Logger:
+    """Модифицированный класс логера"""
+
     logger = logging.getLogger(__name__)
 
-    def __init__(self, log_name: str, level: int):
+    def __init__(self, log_name: str, level: int) -> None:
         """
-        :param log_name: В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
-        :param level: Установить уровень логирования
+        Инициализация логгера
+
+        :param log_name:    В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
+        :param level:       Установить уровень логирования
         """
         self.log_dir = 'logs/{}/{}.log'.format(log_name, log_name)
         self.log_format = LOG_FORMAT
@@ -33,7 +38,8 @@ class Logger:
 class DBHandler(Handler):
     """Обработчик для сохранения журнальных сообщений в базу данных"""
 
-    def __init__(self, url_engine: str, level: int, log_format: str):
+    def __init__(self, url_engine: str, level: int, log_format: str) -> None:
+        """Иницилазиция обработчика"""
         super().__init__()
         self.engine = create_engine(url_engine, poolclass=NullPool)
         self.setLevel(level)
@@ -81,6 +87,7 @@ def selector_logger(module_logger: str, level: int = log_lvl) -> logging.Logger:
 
 
 def get_handler(url_engine, level: int = log_lvl) -> DBHandler:
+    """Получить обработчик для записи журнальных сообщений в базу данных"""
     return DBHandler(url_engine, level, LOG_FORMAT)
 
 

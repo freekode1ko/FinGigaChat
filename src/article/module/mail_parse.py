@@ -1,3 +1,5 @@
+"""Предоставляет интерфейсы для взаимодействия с почтой по STMP_SSL и IMAP4_SSL"""
+import datetime
 import email
 import imaplib
 import os
@@ -12,10 +14,11 @@ from module.article_process import ArticleProcess
 
 
 class ImapError(Exception):
-    pass
+    """Ошибка при работе с IMAP"""
 
 
 def clear_dir(dir_path) -> None:
+    """Очистить папку"""
     for filename in os.listdir(dir_path):
         file_path = os.path.join(dir_path, filename)
         try:
@@ -28,21 +31,22 @@ def clear_dir(dir_path) -> None:
 
 
 class SmtpSend:
-    """
-    Класс для работы с SMTP почтового сервера, для отправки писем
-    """
+    """Класс для работы с SMTP почтового сервера, для отправки писем"""
 
     def __init__(self):
+        """Инициализация отправителя сообщений по SMTP"""
         self.server = None
 
-    def get_connection(self, login: str, password: str, smtp_server: str, smtp_port: int):
+    def get_connection(self, login: str, password: str, smtp_server: str, smtp_port: int) -> None:
+        """Создать подключение к почте по SMTP_SSL"""
         self.server = smtplib.SMTP_SSL(smtp_server, smtp_port)
         self.server.login(login, password)
 
-    def close_connection(self):
+    def close_connection(self) -> None:
+        """Закрыть подключение к почте"""
         self.server.close()
 
-    def send_msg(self, sender: str, recipient: str, subject: str, message: str):
+    def send_msg(self, sender: str, recipient: str, subject: str, message: str) -> None:
         """
         Отправка письма через SMTP
 
@@ -62,31 +66,30 @@ class SmtpSend:
 
 
 class ImapParse:
-    """
-    Class for parse messages from mail.
-    """
+    """Class for parse messages from mail."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Инициализация парсера сообщений с почты"""
         self.imap = None
         self.msg = None
 
         self.client_box = 'inbox/client_box'
         self.commodity_box = 'inbox/commodity_box'
 
-    def get_connection(self, login, password, imap_server):
+    def get_connection(self, login, password, imap_server) -> None:
+        """Создать подключение по IMAP4_SSL"""
         self.imap = imaplib.IMAP4_SSL(imap_server)
         self.imap.login(login, password)
 
     def close_connection(self) -> None:
-        """
-        Close connection
-        """
+        """Close connection"""
         self.imap.close()
         self.imap.logout()
 
     def get_index_of_new_msg(self, type_of_article: str) -> int:
         """
         Get index of the newest message from the email box.
+
         :param type_of_article: box from where we will get messages
         :return: index of the newest message
         """
@@ -99,6 +102,7 @@ class ImapParse:
     def get_msg(self, index_of_new_msg) -> email.message.Message:
         """
         Get the newest message and parse a bytes email into a message object.
+
         :param index_of_new_msg: index of the newest message
         :return: a message object
         """
@@ -107,13 +111,13 @@ class ImapParse:
             return email.message_from_bytes(msg[0][1])
         raise ImapError('Some error with get new message.')
 
-    def get_and_download_attachment(self, folder_name: str) -> str:
+    def get_and_download_attachment(self, folder_name: os.PathLike) -> str:
         """
         Get attachment in email message and download it in folder.
-        :param folder_name: folder name where to save file
-        :return: filename from email message
-        """
 
+        :param folder_name: folder name where to save file
+        :return:            filename from email message
+        """
         old_filename = ArticleProcess.get_filename(folder_name)
 
         if self.msg.is_multipart():
@@ -135,9 +139,10 @@ class ImapParse:
         raise ImapError('Some error occurred while getting payload.')
 
     # no where use
-    def get_subject(self):
+    def get_subject(self) -> str:
         """
         Get subject of the newest message
+
         :return: subject of the message
         """
         subject, encoding = decode_header(self.msg['Subject'])[0]
@@ -145,9 +150,10 @@ class ImapParse:
             subject = subject.decode(encoding)
         return subject
 
-    def get_date(self):
+    def get_date(self) -> datetime.date:
         """
         Get date of the newest message
+
         :return: date of the message
         """
         date, encoding = decode_header(self.msg['Date'])[0]

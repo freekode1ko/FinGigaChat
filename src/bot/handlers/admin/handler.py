@@ -1,5 +1,6 @@
+"""Файл с админскими хендлерами"""
 import json
-from typing import Union, List
+from typing import Union
 
 import pandas as pd
 from aiogram import F, Router, types
@@ -13,20 +14,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import keyboards.admin.constructors as keyboards
 from configs import config
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
-from db import database
 from db.database import engine
-from db.message import get_messages_by_type, delete_messages, add_all
+from db.message import add_all, delete_messages, get_messages_by_type
 from db.message_type import message_types
-from keyboards.admin.callbacks import DeleteMessageByType, ApproveDeleteMessageByType
+from keyboards.admin.callbacks import ApproveDeleteMessageByType, DeleteMessageByType
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
-from utils.base import (
-    is_admin_user,
-    file_cleaner,
-    send_msg_to,
-    user_in_whitelist,
-)
+from utils.base import file_cleaner, is_admin_user, send_msg_to, user_in_whitelist
 from utils.newsletter import subscriptions_newsletter
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
@@ -36,6 +31,8 @@ router.message.middleware(ChatActionMiddleware())  # on every message for admin 
 
 
 class AdminStates(StatesGroup):
+    """Состояния для админа"""
+
     link = State()
     link_change_summary = State()
     link_to_delete = State()
@@ -78,7 +75,6 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     """
-    message_jsn = json.loads(message.model_dump_json())
     if message.content_type == types.ContentType.TEXT:
         file_type = 'text'
         file_name = None
@@ -105,7 +101,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     await state.clear()
     users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
     users_ids = users['user_id'].tolist()
-    saved_messages: List[dict] = []
+    saved_messages: list[dict] = []
     newsletter_type = 'default'
     successful_sending = 0
     for user_id in users_ids:
@@ -309,6 +305,7 @@ async def delete_article(message: types.Message, state: FSMContext) -> None:
 async def continue_delete_article(message: types.Message, state: FSMContext) -> None:
     """
     Проверка, что действие по удалению новости не случайное и выбор причины удаления (снижения значимости)
+
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: конечный автомат о состоянии
     """
@@ -378,6 +375,7 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 
 @router.message(Command('dailynews'))
 async def dailynews(message: types.Message) -> None:
+    """Рассылка по команде dailynews"""
     if await is_admin_user(message.from_user.model_dump_json()):
         await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
         user_logger.warning('Завершена рассылка от админа')
@@ -501,4 +499,3 @@ async def back_to_delete_newsletter_msg_menu(callback_query: types.CallbackQuery
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await delete_newsletter_menu(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-

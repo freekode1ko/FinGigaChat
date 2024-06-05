@@ -1,3 +1,5 @@
+"""Файл с константы для аналитики (отрасль)"""
+
 from configs import config
 
 MENU = 'analytics_industry_menu'

@@ -1,3 +1,4 @@
+"""Функция для суммаризации от chat gpt"""
 from configs.prompts import SUMMARIZATION_PROMPT
 from module.chatgpt import ChatGPT
 

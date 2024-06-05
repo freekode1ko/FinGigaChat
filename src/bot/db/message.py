@@ -1,11 +1,9 @@
+"""Запросы к бд связанные с сообщениями"""
 import inspect
-from datetime import datetime, timedelta
-from typing import List
 
 import pandas as pd
 from sqlalchemy import text
 
-from configs import config
 from db import database
 from db.message_type import message_types
 
@@ -15,8 +13,8 @@ __table_name__ = 'message'
 
 def get_messages_by_type(message_type_id: int):
     """
-    Возвращает список id сообщений grouped by user_id с указанным типом message_type_id,
-    которые были отправлены за последние 48 часов
+    Возвращает список id сообщений grouped by user_id с указанным типом message_type_id,которые были отправлены за последние 48 часов
+
     (https://core.telegram.org/bots/api#deletemessage)
 
     :param message_type_id: id типа сообщения из таблицы message_type
@@ -29,14 +27,6 @@ def get_messages_by_type(message_type_id: int):
     )
 
     return pd.read_sql_query(query, con=database.engine)
-
-
-def get_messages_by_user_id(user_id: int):
-    pass
-
-
-def get_messages_by_function_name(function_name: str):
-    pass
 
 
 def add_message(user_id: int, message_id: int, message_type: str = None, function_name: str = None) -> int:
@@ -80,7 +70,7 @@ def add_message(user_id: int, message_id: int, message_type: str = None, functio
     return result
 
 
-def add_all(messages: List[dict], function_name: str = None) -> None:
+def add_all(messages: list[dict], function_name: str = None) -> None:
     """
     Сохраняет в базу все сообщения из списка messages
 
@@ -118,7 +108,7 @@ def add_all(messages: List[dict], function_name: str = None) -> None:
         conn.commit()
 
 
-def delete_messages(user_id: int, message_ids: List[int]) -> None:
+def delete_messages(user_id: int, message_ids: list[int]) -> None:
     """
     Удаляет запись в БД о сообщении, где user_id=user_id AND message_id=message_id
 

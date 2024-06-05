@@ -15,7 +15,7 @@ from typing import Optional
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
@@ -33,7 +33,7 @@ from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
-from log.bot_logger import user_logger, logger
+from log.bot_logger import logger, user_logger
 from module.article_process import FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
@@ -44,9 +44,8 @@ router.message.middleware(ChatActionMiddleware())  # on every message use chat a
 
 
 class ChooseClient(StatesGroup):
-    """
-    Состояние для ввода имени клиента для более удобного поиска
-    """
+    """Состояние для ввода имени клиента для более удобного поиска"""
+
     choosing_from_all_not_subscribed_clients = State()
     choosing_from_subscribed_clients = State()
 

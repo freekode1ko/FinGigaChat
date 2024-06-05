@@ -1,3 +1,4 @@
+"""Хендлер подписок на новости на телеграм каналы"""
 from aiogram import Router
 from aiogram.utils.chat_action import ChatActionMiddleware
 

@@ -1,3 +1,5 @@
+"""Файл с хендлераим AI"""
+
 from aiogram import Router
 from aiogram.utils.chat_action import ChatActionMiddleware
 

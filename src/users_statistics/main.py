@@ -1,3 +1,8 @@
+"""
+Точка входа для сервиса сбора статистики по пользователям.
+
+Собирает статистику использования бота в пн в 9 утра.
+"""
 import time
 import warnings
 from datetime import date, timedelta
@@ -7,7 +12,7 @@ import schedule
 
 from configs import config
 from log.logger_base import Logger, selector_logger
-from module.statistics import UserStatistics
+from module.users_statistics import UserStatistics
 
 
 def get_file_name_with_date(base_file_name: str, dop_info: str = '') -> Path:
