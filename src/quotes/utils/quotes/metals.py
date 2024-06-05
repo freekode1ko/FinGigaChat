@@ -1,12 +1,12 @@
 import re
 
-from lxml import html
 import pandas as pd
+from lxml import html
 import requests as req
 from sqlalchemy import text
 
-from db import database
 from configs import config
+from db import database
 from utils.quotes.base import QuotesGetter
 
 

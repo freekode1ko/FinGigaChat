@@ -7,8 +7,8 @@ import requests as req
 from sqlalchemy import text
 
 from configs import config
-from db import database
 import module.crawler as crawler
+from db import database
 import module.data_transformer as dt
 
 
