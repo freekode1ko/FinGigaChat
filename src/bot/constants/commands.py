@@ -37,10 +37,10 @@ PUBLIC_COMMANDS: list[dict] = [
         'command': 'knowledgebase',
         'description': 'Спросить у Базы Знаний',
     },
-    {
-        'command': 'get_tg_news',
-        'description': 'Сводка новостей из telegram каналов по отраслям',
-    },
+    # {
+    #     'command': 'get_tg_news',
+    #     'description': 'Сводка новостей из telegram каналов по отраслям',
+    # },
     {
         'command': 'help',
         'description': 'Информация о боте',
