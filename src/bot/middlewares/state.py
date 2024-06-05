@@ -46,7 +46,7 @@ class StateMiddleware(BaseMiddleware):
         if last_activity_date and raw_state:
             last_activity_date = dt.datetime.strptime(last_activity_date, BASE_DATETIME_FORMAT)
             diff = dt.datetime.utcnow() - last_activity_date
-            if diff.seconds > STATE_TIMEOUT.seconds:
+            if diff > STATE_TIMEOUT:
                 return None
         return raw_state
 
@@ -55,7 +55,7 @@ class StateMiddleware(BaseMiddleware):
             handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
             event: TelegramObject,
             data: dict[str, Any]
-    ):
+    ) -> Any:
         """
         Сбрасывать состояние, если после последнего сообщения бота прошло > STATE_TIMEOUT или пользователь написал команду.
 
@@ -67,13 +67,11 @@ class StateMiddleware(BaseMiddleware):
 
         if event.message and event.message.text.startswith('/') and raw_state:
             data['raw_state'] = None
-            await handler(event, data)
-            return
+            return await handler(event, data)
 
         user_id = self.get_user_id(event)
         if not user_id:
-            await handler(event, data)
-            return
+            return await handler(event, data)
 
         data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state)
         await handler(event, data)
