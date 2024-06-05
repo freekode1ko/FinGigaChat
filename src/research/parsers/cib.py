@@ -1,3 +1,10 @@
+"""
+Модуль парсинга портала CIB Research.
+
+Парсит аналитические отчеты по отраслям и клиентам.
+Парсит weekly pulse.
+Парсит фин. показатели.
+"""
 import asyncio
 import copy
 import datetime
@@ -13,15 +20,15 @@ import requests
 import selenium
 import selenium.webdriver as wb
 from aiohttp import ClientSession
-from aiohttp.web_exceptions import HTTPNoContent, HTTPUnauthorized
+from aiohttp.web_exceptions import HTTPNoContent
 from asyncpg.pool import Pool as asyncpgPool
 from bs4 import BeautifulSoup
 from pdf2image import convert_from_path
 from PIL import Image
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 
 from configs import config
 from db import parser_source
@@ -32,11 +39,10 @@ from utils.selenium_utils import get_driver
 
 
 class ResearchParser:
-    """
-    Class for parse pages from CIB Research
-    """
+    """Класс для парсинга страниц с портала CIB Research"""
 
-    def __init__(self, driver, logger: Logger.logger):
+    def __init__(self, driver: WebDriver, logger: Logger.logger) -> None:
+        """Инициализация парсера портала CIB Research"""
         home_page = config.research_base_url[:-1]  # 'https://research.sberbank-cib.com'
         login = config.research_cred[0]
         password = config.research_cred[1]
@@ -46,13 +52,15 @@ class ResearchParser:
         self.home_page = home_page
         self.auth(login, password)
 
-    def __sleep_some_time(self, start: float = 1.0, end: float = 2.0):
+    def __sleep_some_time(self, start: float = 1.0, end: float = 2.0) -> None:
         """
         Send user emulator to sleep.
+
         Fake user delay and wait to load HTML elements
-        :param start: Wait from...
-        :param end: Wait to...
-        :return: None
+
+        :param start:   Wait from...
+        :param end:     Wait to...
+        :return:        None
         """
         sleep_time = random.uniform(start, end)
         self._logger.info(f'Уходим в ожидание на: {sleep_time}')
@@ -61,12 +69,12 @@ class ResearchParser:
     def process_bonds_exchange_text(self, text_rows, start, end=None) -> str:
         """
         Get necessary part of the money review.
-        :param text_rows: rows of text of money review
-        :param start: word to start with
-        :param end: word to end with
-        :return: part of text
-        """
 
+        :param text_rows:   rows of text of money review
+        :param start:       word to start with
+        :param end:         word to end with
+        :return:            part of text
+        """
         text = '\n\n'.join(text_rows)
         pattern = rf'{start}(.*?)$' if end is None else rf'{start}(.*?)(?=\s*{end})'
         match = re.search(pattern, text, flags=re.DOTALL)
@@ -79,24 +87,21 @@ class ResearchParser:
     def process_commodity_text(text_rows: list[str]) -> str:
         """
         Get necessary part of the commodity review.
-        :param text_rows: rows of text of money review
-        :return: part of text
-        """
 
+        :param text_rows:   rows of text of money review
+        :return:            part of text
+        """
         # TODO: for summarization WHILE for without summarization
         new_text_rows = []
         for row in text_rows:
             if row.isupper():
                 break
-            else:
-                new_text_rows.append(row)
+            new_text_rows.append(row)
 
         return '\n\n'.join(new_text_rows)
 
     def auth(self, login, password) -> None:
-        """
-        Authorization in Sberbank CIB Research
-        """
+        """Авторизация в CIB Research"""
         self._logger.info('Авторизация на Sberbank CIB Research')
         self.driver.get(self.home_page)
         login_field = self.driver.find_element('xpath', "//input[@type='text']")
@@ -110,11 +115,12 @@ class ResearchParser:
         self.__sleep_some_time(5.0, 6.0)
         # time.sleep(5)
 
-    def find_tab(self, tab: str):
+    def find_tab(self, tab: str) -> WebElement:
         """
-        Find necessary tab by text
-        :param tab: name of tab where place reviews
-        :return: web element or error if element didn't find
+        Поиск необходимой вкладки по тексту
+
+        :param tab: название вкладки, где находятся отчеты
+        :return:    WebElement или ошибка, если не получилось найти элемент
         """
         self._logger.info(f'Поиск вкладки {tab}')
         li_elements = self.driver.find_elements('tag name', 'li')
@@ -123,15 +129,15 @@ class ResearchParser:
         if li_element is None:
             self._logger.warning(f'Вкладка {tab} не найдена')
             raise ResearchError('Did not find necessary tab')
-        else:
-            return li_element
+        return li_element
 
     def find_reviews_by_name(self, name: str, count: int) -> list:
         """
         Find reviews elements by review's name.
-        :param name: name of the review for filter
-        :param count: necessary count of reviews
-        :return: list of reviews' elements
+
+        :param name:    name of the review for filter
+        :param count:   necessary count of reviews
+        :return:        list of reviews' elements
         """
         self._logger.info(f'Поиск отчета {name}')
         # if no name for filter take top reviews
@@ -142,34 +148,34 @@ class ResearchParser:
             reviews_elements = [elem for elem in reviews_elements if 'Ежемесячный обзор' not in elem.text]
             self._logger.info('Ежедневный экономический отчет найден')
             return reviews_elements[:count]
-        else:
-            # TODO: если наладится поиск по поисковой строке, то переделать
-            reviews_elements = []
-            start = 0
 
-            while len(reviews_elements) < count:
-                # find review by name and add it
-                elements = self.driver.find_elements('class name', 'title.fading-container')
-                for element in elements[start:]:
-                    if name in element.text:
-                        reviews_elements.append(element)
+        # TODO: если наладится поиск по поисковой строке, то переделать
+        reviews_elements = []
+        start = 0
 
-                if len(reviews_elements) >= count:
-                    break
-                else:
-                    # load more reviews
-                    self._logger.info('Загрузка большего числа отчетов')
-                    button_show_more = self.driver.find_element('id', 'loadMorePublications')
-                    button_show_more.click()
-                    self.__sleep_some_time(3, 6)
+        while len(reviews_elements) < count:
+            # find review by name and add it
+            elements = self.driver.find_elements('class name', 'title.fading-container')
+            for element in elements[start:]:
+                if name in element.text:
+                    reviews_elements.append(element)
 
-                start = len(elements) - 1
-            self._logger.info(f'Отчет {name} найден')
-            return reviews_elements[:count]
+            if len(reviews_elements) >= count:
+                break
+            # load more reviews
+            self._logger.info('Загрузка большего числа отчетов')
+            button_show_more = self.driver.find_element('id', 'loadMorePublications')
+            button_show_more.click()
+            self.__sleep_some_time(3, 6)
+
+            start = len(elements) - 1
+        self._logger.info(f'Отчет {name} найден')
+        return reviews_elements[:count]
 
     def get_date_and_text_of_review(self, element: wb.remote.webelement.WebElement, type_of_review: str) -> (str, str):
         """
         Get and clean text of the review.
+
         :param type_of_review: type of review which need process
         :param element: web element of the review
         :return: clear text of the review
@@ -211,11 +217,17 @@ class ResearchParser:
         return date, text
 
     def get_reviews(
-            self, url_part: str, tab: str, title: str, name_of_review: str = '', count_of_review: int = 1,
-            type_of_review: str = ''
+            self,
+            url_part: str,
+            tab: str,
+            title: str,
+            name_of_review: str = '',
+            count_of_review: int = 1,
+            type_of_review: str = '',
     ) -> list[tuple]:
         """
         Get data of reviews from CIB Research
+
         :param url_part: link for page where locate the reviews
         :param tab: name of tab where locate the reviews
         :param title: title of the page where locate the reviews
@@ -224,7 +236,6 @@ class ResearchParser:
         :param type_of_review: type of review for text processing
         :return: data of reviews [(title, date, text)]
         """
-
         # open page
         url = f'{self.home_page}/group/guest/{url_part}'
         self._logger.info(f'Открываем страницу {url}')
@@ -257,6 +268,7 @@ class ResearchParser:
     def get_company_html_page(self, url_part: str):
         """
         Get page about company in html format
+
         :param url_part: id company for search by url
         :return: page in html format
         """
@@ -267,12 +279,12 @@ class ResearchParser:
 
         return page_html
 
-    def get_key_econ_ind_table(self):
+    def get_key_econ_ind_table(self) -> pd.DataFrame:
         """
         Get page about company in html format
+
         :return: table in DataFrame format
         """
-
         url = f'{self.home_page}/group/guest/econ'
         self._logger.info(f'Открываем страницу о ключевых показателях компании: {url}')
         self.driver.implicitly_wait(5)
@@ -348,18 +360,19 @@ class ResearchParser:
         df_new = df[cols]
         numeric_cols = []
         for col in df_new.columns:
-            if re.match('^\d+(\.\d+)?[Ee]?$', col):
+            if re.match(r'^\d+(\.\d+)?[Ee]?$', col):
                 numeric_cols.append(col)
         df_new = df[['id'] + ['name'] + numeric_cols + ['alias']].copy()
 
         return df_new
 
-    def __get_client_fin_indicators(self, page_html, company):
+    def __get_client_fin_indicators(self, page_html, company: str) -> pd.DataFrame:
         """
         Get singe company financial indicators table
-        :param page_html: html page of company
-        :param company: company name
-        :return: table in DataFrame format
+
+        :param page_html:   html page of company
+        :param company:     company name
+        :return:            table in DataFrame format
         """
         self._logger.info(f'Получение таблицы финансовых показателей для компании: {company}')
         soup = BeautifulSoup(page_html, 'html.parser')
@@ -387,7 +400,7 @@ class ResearchParser:
         df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
 
         numeric_cols = df.columns[df.columns.str.match(r'^\d{4}')].tolist()[:5]
-        df_new = df.loc[:, numeric_cols]
+        # df_new = df.loc[:, numeric_cols]
         df_new = df[['name'] + numeric_cols + ['alias']].copy()
         df_new['company'] = company.lower()
         return df_new
@@ -395,6 +408,7 @@ class ResearchParser:
     def get_companies_financial_indicators_table(self):
         """
         Get financial indicators' table for all companies
+
         :return: table in dataframe format
         """
         self._logger.info('Получение таблиц с фин.показателями для всех компаний')
@@ -434,11 +448,12 @@ class ResearchParser:
 
         return result
 
-    def get_emulator_cookies(self, driver) -> requests.Session():
+    def get_emulator_cookies(self, driver: WebDriver) -> requests.Session():
         """
         Sets selenium session params to requests.Session() object
+
         :param driver: driver to retrieve session params
-        :return session:
+        :return: session
         """
         self._logger.info('Загрузка и установка параметров драйвера для selenium')
         cookies = driver.get_cookies()
@@ -455,21 +470,20 @@ class ResearchParser:
             session.cookies.set(cookie['name'], cookie['value'])
         return session
 
-    def __get_industry_pdf(self, id, value):
+    def __get_industry_pdf(self, id_: str, value: str) -> None:
         """
         Get pdf for industry review
-        :param id: id of industry in SberResearch
-        :param value: name of industry in SberResearch
+
+        :param id_:     id of industry in SberResearch
+        :param value:   name of industry in SberResearch
         """
         pdf_dir = config.PATH_TO_SOURCES / 'reviews'
         self._logger.info(f'Скачивание отчета по индустриям с Research в {pdf_dir}')
-        url = config.industry_base_url.format(id)
+        url = config.industry_base_url.format(id_)
         filename = None
-        date = None
-        old = []
         self.driver.get(url)
         self.__sleep_some_time(10.0, 12.0)
-        reviews = self.driver.find_element(By.XPATH, '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
+        self.driver.find_element(By.XPATH, '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
         self.__sleep_some_time(10.0, 12.0)
         reviews_rows = self.driver.find_elements(By.XPATH, f"//div[contains(@title, '{value}')]")
         reviews_size = len(reviews_rows)
@@ -494,6 +508,8 @@ class ResearchParser:
         old = [f for f in os.listdir(pdf_dir) if value in f]
         if filename is not None and filename.exists():
             return
+        if filename is None:
+            raise ResearchError('Не удалось получить файл для отчета по индустрии')
 
         # time.sleep(5)
         self.__sleep_some_time(5.0, 6.0)
@@ -506,13 +522,11 @@ class ResearchParser:
         with open(filename, 'wb') as file:
             file.write(response.content)
 
-        if old.__len__() > 0:
+        if len(old):
             os.remove(os.path.join(pdf_dir, old[0]))
 
-    def get_industry_reviews(self):
-        """
-        Get all industry reviews
-        """
+    def get_industry_reviews(self) -> None:
+        """Get all industry reviews"""
         self._logger.info('Сборка отчетов по индустриям (отрасли)')
         print('Сборка отчетов по индустриям (отрасли)')
         industry_reviews = config.industry_reviews
@@ -530,11 +544,10 @@ class ResearchParser:
 
 
 class ResearchAPIParser:
-    """
-    Class for parse pages from API CIB Research
-    """
+    """Класс парсера страниц с портала CIB Research"""
 
     def __init__(self, logger: Logger.logger, postgres_conn: asyncpgPool) -> None:
+        """Инициализация парсера страниц с портала CIB Research"""
         self.postgres_conn = postgres_conn
         self._logger = logger
 
@@ -549,31 +562,36 @@ class ResearchAPIParser:
         self.home_page = config.HOME_PAGE
 
         self.cookies = {
-            "JSESSIONID": config.CIB_JSESSIONID,
-            "LOGIN": config.CIB_LOGIN,
-            "PASSWORD": config.CIB_PASSWORD,
-            "ID": config.CIB_ID,
-            "REMEMBER_ME": 'true',
+            'JSESSIONID': config.CIB_JSESSIONID,
+            'LOGIN': config.CIB_LOGIN,
+            'PASSWORD': config.CIB_PASSWORD,
+            'ID': config.CIB_ID,
+            'REMEMBER_ME': 'true',
         }
         self.update_cookies()
 
     @staticmethod
     def crop_image(img: Image, left: int = 70, top: int = 40, right: int = 1350, bottom: int = 1290) -> Image:
+        """Обрезка картинки"""
         return img.crop((left, top, right, bottom))
 
     def update_cookies(self) -> None:
-        """
-        Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы
-        """
+        """Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы"""
         self._logger.info('Начало обновления куков')
         with requests.get(
-                url='https://research.sberbank-cib.com/group/guest/strat?p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&p_p_lifecycle=2&p_p_state=normal&p_p_mode=view&p_p_resource_id=getPublications&p_p_cacheability=cacheLevelPage',
+                url=('https://research.sberbank-cib.com/group/guest/strat?'
+                     'p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&'
+                     'p_p_lifecycle=2&'
+                     'p_p_state=normal&'
+                     'p_p_mode=view&'
+                     'p_p_resource_id=getPublications&'
+                     'p_p_cacheability=cacheLevelPage'),
                 cookies=self.cookies,
                 verify=False,
         ) as req:
             if req.status_code == 200 and 'JSESSIONID' in req.cookies:
                 self.cookies['JSESSIONID'] = req.cookies['JSESSIONID']
-                self._logger.info("Куки успешно обновлены")
+                self._logger.info('Куки успешно обновлены')
             elif req.status_code == 200:
                 self._logger.info('CIB: Куки не нуждаются в обновлении')
             else:
@@ -582,9 +600,9 @@ class ResearchAPIParser:
     async def get_pages_to_parse_from_db(self) -> list[dict[str, int | str | dict | list]]:
         """
         Метод возвращает список источников, из которых необходимо взять отчеты
+
         return: возвращает список источников с доп параметрами
         """
-
         async with self.postgres_conn.acquire() as connection:
             all_sources = await connection.fetch(
                 'SELECT research_type.id, parser_source.source, parser_source.params, '
@@ -607,10 +625,10 @@ class ResearchAPIParser:
     def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
         """
         Метод приводящий из "04 мар. 24" в питоновский date
-        :param cib_date: строка с датой из новости CIB
-        return дата в питоновском формате
-        """
 
+        :param cib_date: строка с датой из новости CIB
+        :return:         дата в питоновском формате
+        """
         year = int('20' + cib_date[-2:])
         month = self.month_dict[cib_date[3:6]]
         day = int(cib_date[:2])
@@ -623,6 +641,7 @@ class ResearchAPIParser:
     ) -> bool:
         """
         Метод для определения подходит ли отчет для парсинга на основе регулярок из разделов
+
         :param header: Заголовок отчета
         :param starts_with: Список регулярных выражений для проверки новости
         return Булевое значение говорящее о том что новость подошла или нет
@@ -634,6 +653,7 @@ class ResearchAPIParser:
     async def report_exist_in_db(self, report_id: str) -> bool:
         """
         Проверка о том загружен ли отчет в БД или нет
+
         :param report_id: уникальный айди отчета
         :return: булевое значение с ифнормацией о том есть отчет или нет
         """
@@ -646,6 +666,7 @@ class ResearchAPIParser:
     async def save_report_to_db(self, report: dict) -> None:
         """
         Метод для сохранения отчетов в базу данных
+
         :param report: Отчет
         """
         async with self.postgres_conn.acquire() as connection:
@@ -659,7 +680,8 @@ class ResearchAPIParser:
             await connection.execute(
                 (
                     f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, report_id)'
-                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', '{publication_date}', '{report_id}')"
+                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', "
+                    f"'{publication_date}', '{report_id}')"
                 )
             )
 
@@ -672,13 +694,13 @@ class ResearchAPIParser:
     ) -> dict[str, int | str | datetime.datetime | datetime.date | Path | None]:
         """
         Метод для выгрузки новости по айди из разделов
+
         :param report_id: айди отчета
         :param session: сессия aiohttp
         :param params: словарь с параметрами страницы
         :param save_report: сохранять ли полученный отчет в БД
         :returns: dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]
         """
-
         self._logger.info('CIB: задача для получения отчета начата: %s', report_id)
 
         async with session.get(
@@ -693,7 +715,7 @@ class ResearchAPIParser:
 
         self._logger.info('CIB: сохранение отчета: %s', report_id)
 
-        date = self.cib_date_to_normal_date(str(report_html.find('span', class_="date").text).strip())
+        date = self.cib_date_to_normal_date(str(report_html.find('span', class_='date').text).strip())
         report_texts = []
         for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
             # Удаляем все ссылки
@@ -713,7 +735,7 @@ class ResearchAPIParser:
                 if req.status == 200:
 
                     file_path = config.PATH_TO_REPORTS / f'{report_id}.pdf'
-                    with open(file_path, "wb") as f:
+                    with open(file_path, 'wb') as f:
                         while True:
                             chunk = await req.content.readany()
                             if not chunk:
@@ -745,6 +767,7 @@ class ResearchAPIParser:
     ) -> list[dict[str, int | str | datetime.datetime | datetime.date | Path | None]]:
         """
         Метод для получений айди новостей из разделов
+
         :param params: Параметры для выгрузки отчетов
         :param session: сессия aiohttp
         :param check_existing: Делать ли проверку на то, что report_id есть в БД
@@ -774,7 +797,7 @@ class ResearchAPIParser:
                     )
                     content = await req.text()
                     status_code = req.status
-                except Exception as e:
+                except Exception:
                     continue
             if status_code == 200 and len(content) > self.content_len:
                 break
@@ -783,18 +806,18 @@ class ResearchAPIParser:
             raise HTTPNoContent
 
         # loop = asyncio.get_event_loop()
-        reports = BeautifulSoup(content, 'html.parser').find_all("tr")
+        reports = BeautifulSoup(content, 'html.parser').find_all('tr')
         reports = [(reports[i], reports[i + 1]) for i in range(0, len(reports), 2)]
 
         self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
 
         new_reports = []
         for report in reports:
-            report_name = str(report[1].find_next("div", class_="title").text).strip()
+            report_name = str(report[1].find_next('div', class_='title').text).strip()
             if not self.is_suitable_report(report_name, params['starts_with']):
                 continue
 
-            element_with_id = str(report[0].find_next("div", class_="hidden publication-id").text)
+            element_with_id = str(report[0].find_next('div', class_='hidden publication-id').text)
             if not element_with_id:
                 continue
 
@@ -808,6 +831,7 @@ class ResearchAPIParser:
     async def parse_weekly_pulse(self, session) -> None:
         """
         Получение отчета Weekly Pulse
+
         :param session: сессия aiohttp
         """
         self._logger.info('Сборка Weekly Pulse')
@@ -841,10 +865,10 @@ class ResearchAPIParser:
             self._logger.info('Weekly Pulse отчет собран')
             print('Weekly Pulse отчет собран')
             return
-        else:
-            old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
-            if len(old) > 0:
-                os.remove(os.path.join(weekly_dir, old[0]))
+
+        old = [f for f in os.listdir(weekly_dir) if 'Research' in f]
+        if len(old) > 0:
+            os.remove(os.path.join(weekly_dir, old[0]))
 
         # Перемещаем скачанный файл в папку с данными по викли пульсу
         report_data['filepath'].replace(filename)
@@ -889,9 +913,7 @@ class ResearchAPIParser:
         print('Weekly review готов')
 
     async def parse_pages(self) -> None:
-        """
-        Стартовая точка, метод который запускает весь парсинг отчетов
-        """
+        """Стартовая точка, метод который запускает весь парсинг отчетов"""
         self._logger.info('CIB: Начало парсинга CIB')
 
         pages_list = await self.get_pages_to_parse_from_db()

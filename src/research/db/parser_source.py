@@ -1,5 +1,7 @@
+"""Интерфейс для взаимодействия с таблицами источниками для парсинга"""
 import datetime
 import json
+from typing import Any
 
 from sqlalchemy import text
 
@@ -25,11 +27,13 @@ def update_get_datetime(source_name: str) -> None:
         conn.commit()
 
 
-def get_source_data(source_name: str, column: str) -> datetime.datetime:
+def get_source_data(source_name: str, column: str) -> Any:
     """
     Метод получения времени сбора данных research с источника
+
     :param source_name: Имя собираемых данных
-    :param column: Имя столбца БД, данные из которого вынимаются
+    :param column:      Имя столбца БД, данные из которого вынимаются
+    :returns:           Значение в колонке column по источнику source_name
     """
     query = text(
         f'SELECT {column} '
@@ -47,15 +51,19 @@ def get_source_data(source_name: str, column: str) -> datetime.datetime:
 def get_source_last_update_datetime(source_name: str) -> datetime.datetime:
     """
     Метод получения времени сбора данных research с источника
+
     :param source_name: Имя собираемых данных
+    :returns:           Время последней сборки данных с источника source_name
     """
     return get_source_data(source_name, column='last_update_datetime')
 
 
-def get_source(source_name: str) -> datetime.datetime:
+def get_source(source_name: str) -> str:
     """
     Метод получения ссылки источника
+
     :param source_name: Имя собираемых данных
+    :returns:           Ссылка на источник
     """
     return get_source_data(source_name, column='source')
 
@@ -63,8 +71,9 @@ def get_source(source_name: str) -> datetime.datetime:
 def get_research_type_source_by_name(source_name: str) -> dict[str, int | str | dict | list]:
     """
     Метод получения данных из таблицы parser_source по имени источника
+
     :param source_name: Имя собираемых данных
-    :returns: dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]
+    :returns:           dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]
     """
     query = text(
         f'SELECT source, params, alt_names, before_link, response_format '

@@ -1,14 +1,17 @@
+"""Модуль сбора статистики по пользователям"""
 from datetime import date
 from pathlib import Path
 
 import pandas as pd
-from sqlalchemy import NullPool, create_engine
+from sqlalchemy import create_engine, NullPool
 
 from configs import config
 
 
 class UserStatistics:
-    def __init__(self):
+    """Класс сборщика статистики использования бота пользователями"""
+
+    def __init__(self) -> None:
         """Объект для сбора статистики по пользователям"""
         self.engine = create_engine(config.psql_engine, poolclass=NullPool)  # FIXME унести в класс работы с БД
 
@@ -30,8 +33,9 @@ class UserStatistics:
 
         запрос на все действия(активные+пассивные) пользователя
         пассивные оцениваются, как 0
-        :param from_date: - указывает начало периода, с которого будет собираться статистика (включительно)
-        :param to_date: - указывает конец периода, до которого будет собираться статистика (включительно)
+        :param from_date:   указывает начало периода, с которого будет собираться статистика (включительно)
+        :param to_date:     указывает конец периода, до которого будет собираться статистика (включительно)
+        :returns:           DataFrame[telegram_user_name, user_log.user_id, date, qty_of_prompts]
         """
         query = (
             f'SELECT whitelist.username AS telegram_user_name, user_log.user_id, '
@@ -64,8 +68,7 @@ class UserStatistics:
 
     def collect_bot_usage_over_period(self, file_name: Path, from_date: date = date.min, to_date: date = date.max) -> None:
         """
-        Формирует статистику использования бота и сохраняет ее в config.STATISTICS_PATH
-        в файле file_name в формате xlsx
+        Формирует статистику использования бота и сохраняет ее в config.STATISTICS_PATH в файле file_name в формате xlsx
 
         :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH с данными собранной статистики
         :param from_date: - указывает начало периода, с которого будет собираться статистика (включительно)
@@ -76,8 +79,7 @@ class UserStatistics:
 
     def collect_users_data(self, file_name: Path) -> None:
         """
-        Формирует справочник пользователей и сохраняет его в config.STATISTICS_PATH
-        в файле file_name в формате xlsx
+        Формирует справочник пользователей и сохраняет его в config.STATISTICS_PATH в файле file_name в формате xlsx
 
         :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH со списков пользователей системы
         """

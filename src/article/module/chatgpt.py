@@ -1,3 +1,4 @@
+"""Предоставляет интерфейс для общения с chatGPT"""
 import openai
 
 from configs.config import api_key_gpt
@@ -7,12 +8,16 @@ from configs.config import api_key_gpt
 
 
 class ChatGPT:
+    """Класс общения с chatGPT"""
+
     def __init__(self):
+        """Инициализация обработчика взаимодействий с chatGPT"""
         openai.api_key = api_key_gpt
 
     def ask_chat_gpt(self, text: str, prompt: str = ''):
         """
         Make summarization or make answer by ChatGPT
+
         :param prompt: system prompt to ChatGPT
         :param text: text
         :return: ChatGPT answer as object requests.models.Response
