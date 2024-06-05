@@ -23,6 +23,7 @@ from log.bot_logger import logger
 from log.sentry import init_sentry
 from middlewares.db import DatabaseMiddleware
 from middlewares.logger import LoggingMiddleware
+from middlewares.state import StateMiddleware
 from utils.base import (
     next_weekday_time, wait_until,
 )
@@ -110,6 +111,8 @@ async def start_bot():
     dp.update.middleware(DatabaseMiddleware(session_maker=async_session_maker))
     # Добавляем мидлварю для логирования
     dp.update.middleware(LoggingMiddleware(logger=logger))
+    # Добавляем мидлварю для снятия состояния спустя N кол-во минут неактивности пользователя
+    dp.update.middleware(StateMiddleware())
 
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
     await bot.delete_webhook(drop_pending_updates=True)
