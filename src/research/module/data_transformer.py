@@ -1,3 +1,4 @@
+"""Модуль по обработке данных"""
 import pandas as pd
 
 from constants import constants
@@ -5,6 +6,7 @@ from log.logger_base import Logger
 
 
 class Transformer:
+    """Класс для обработки табличных данных"""
     def __init__(self, logger: Logger.logger):
         self._logger = logger
         self.tables_handbook = constants.TABLES_HANDBOOK
@@ -38,7 +40,7 @@ class Transformer:
                 cleaned_columns = self.filter_list(table.columns.values)  # очистка от ненужных колонок
                 table = table[cleaned_columns].iloc[1:, :]  # отброс наименования таблицы
                 table.rename(columns={cleaned_columns[0]: ''}, inplace=True)
-                table[cleaned_columns[1:]] = table[cleaned_columns[1:]].replace('\.', ',', regex=True)
+                table[cleaned_columns[1:]] = table[cleaned_columns[1:]].replace('.', ',', regex=True)
                 self._logger.debug(f'Запись очищенных данных таблицы: {self.tables_handbook[table_num]}')
                 company_filter = metadata_df.company_id == company_id
                 metadata_df.loc[company_filter, self.tables_handbook[table_num]] = [table.to_dict()]

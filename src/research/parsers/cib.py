@@ -34,9 +34,9 @@ from sqlalchemy import select
 from configs import config
 from db import parser_source
 from db.database import async_session, engine
-from db.models import ResearchType, ParserSource, FinancialSummary
+from db.models import FinancialSummary, ParserSource, ResearchType
 from log.logger_base import Logger
-from module import weekly_pulse_parse, data_transformer
+from module import data_transformer, weekly_pulse_parse
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
@@ -617,9 +617,7 @@ class ResearchAPIParser:
                     ParserSource.alt_names,
                     ParserSource.before_link,
                     ParserSource.response_format.label('request_method'),
-                )
-                    .select_from(ResearchType)
-                    .join(ParserSource)
+                ).select_from(ResearchType).join(ParserSource)
             )
             return [_._asdict() for _ in all_sources]
 
@@ -942,6 +940,7 @@ class ResearchAPIParser:
     async def save_fin_summary(df: pd.DataFrame) -> None:
         """
         Сохранение финансовых показателей по клиентам в БД
+
         :param df: pandas.DataFrame() с таблицей для записи в бд
         """
         df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
@@ -970,9 +969,7 @@ class ResearchAPIParser:
         """
 
     async def get_fin_summary(self) -> None:
-        """
-        Стартовая точка для парсинга финансовых показателей по клиентам
-        """
+        """Стартовая точка для парсинга финансовых показателей по клиентам"""
         self._logger.info('Чтение таблицы financial_summary')
         # columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
         # metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
