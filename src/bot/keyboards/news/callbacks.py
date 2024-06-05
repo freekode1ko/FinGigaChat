@@ -1,3 +1,4 @@
+"""Клавиатуры для новостей"""
 from aiogram.filters.callback_data import CallbackData
 
 

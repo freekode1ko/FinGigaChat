@@ -1,3 +1,4 @@
+"""CallbackData по подпискам на каналы в телеграмме"""
 from enum import auto, IntEnum
 from typing import Optional
 

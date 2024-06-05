@@ -1,12 +1,15 @@
+"""Разделитель текста"""
 import re
 
 
 class SentenceSplitter:
+    """Класс для разделения текста"""
 
     sentence_end_characters = r'(\.\.\.)|(\. )|[!?]'
 
     @classmethod
     def split_text_by_sentences(cls, txt: str) -> list[str]:
+        """Разделить текст на выражения"""
         sentences = []
         sentence_start = 0
         for match_obj in re.finditer(cls.sentence_end_characters, txt):
@@ -17,6 +20,7 @@ class SentenceSplitter:
 
     @classmethod
     def split_text_by_chunks(cls, txt: str, chunk_size: int, delimiter: str = '\n\n') -> list[str]:
+        """Разделить текст на чанки"""
         if len(txt) < chunk_size:
             return [txt]
 

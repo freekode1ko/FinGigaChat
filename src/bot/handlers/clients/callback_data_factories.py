@@ -1,3 +1,4 @@
+"""CallbackData клиентов"""
 from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData

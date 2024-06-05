@@ -1,3 +1,4 @@
+"""CallbackData на новости с тг каналов"""
 from aiogram.filters.callback_data import CallbackData
 
 from constants import industry as callback_prefixes

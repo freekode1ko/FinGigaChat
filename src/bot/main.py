@@ -76,6 +76,7 @@ async def passive_newsletter(
 
 
 async def set_bot_commands() -> None:
+    """Выставление команд в боте"""
     commands = []
 
     for command in PUBLIC_COMMANDS:
@@ -86,6 +87,7 @@ async def set_bot_commands() -> None:
 
 
 async def start_bot():
+    """Функция для запуска бота"""
     # Устанавливаем список актуальных команд
     await set_bot_commands()
 
@@ -115,6 +117,7 @@ async def start_bot():
 
 
 async def main():
+    """Точка входа для приложения"""
     init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
 

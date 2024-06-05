@@ -1,9 +1,12 @@
+"""Колбеки для аналитики"""
 from aiogram.filters.callback_data import CallbackData
 
 from constants.analytics import analytics_sell_side as callback_prefixes
 
 
 class Menu(CallbackData, prefix=callback_prefixes.MENU):
+    """CallbackData для меню"""
+
     pass
 
 

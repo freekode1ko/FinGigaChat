@@ -10,6 +10,7 @@ from configs.config import (
 
 
 def singleton(cls):
+    """Сингелтон"""
     instances = {}
 
     def get_instance(*args, **kwargs):
@@ -28,10 +29,12 @@ class BaseClient:
         self.session = ClientSession(base_url, connector=TCPConnector(verify_ssl=False), trust_env=True)
 
     async def close(self):
+        """Закрытие соединения"""
         if not self.session.closed:
             await self.session.close()
 
     async def recreate(self):
+        """Пересоздание соединения"""
         await self.close()
         self.session = ClientSession(self.base_url, connector=TCPConnector(verify_ssl=False), trust_env=True)
 

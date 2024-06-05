@@ -1,3 +1,4 @@
+"""CallbackData по подпискам на CIB"""
 from aiogram.filters.callback_data import CallbackData
 
 from constants.subscriptions import research as callback_prefixes
@@ -63,5 +64,7 @@ class CIBResearchSubAction(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_S
 
 
 class UpdateSubOnCIBResearch(CallbackData, prefix=callback_prefixes.UPDATE_CIB_RESEARCH_SUB):
+    """Обновление подписки на отчет"""
+
     cib_type_id: int
     need_add: bool

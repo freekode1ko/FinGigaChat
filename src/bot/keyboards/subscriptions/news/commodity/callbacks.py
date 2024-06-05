@@ -1,3 +1,4 @@
+"""CallbackData по подпискам на новости по сырьевым товарам"""
 from aiogram.filters.callback_data import CallbackData
 
 from constants.subscriptions.news import commodity as callback_prefixes

@@ -1,3 +1,4 @@
+"""Работа с SMTP"""
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -14,11 +15,13 @@ class SmtpSend:
         self.port = port
 
     def __enter__(self):
+        """Контекстный менеджер для отправления писем"""
         self.server = smtplib.SMTP_SSL(self.host, self.port)
         self.server.login(self.login, self.password)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Контекстный менеджер для отправления писем"""
         self.server.close()
 
     def send_msg(self, sender: str, recipient: str, subject: str, message: str):

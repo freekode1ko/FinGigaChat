@@ -1,3 +1,4 @@
+"""Логер и его инициализация"""
 from configs import config
 from log.logger_base import get_db_logger, get_handler, selector_logger
 

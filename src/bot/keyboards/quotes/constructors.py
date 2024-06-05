@@ -1,3 +1,4 @@
+"""Клавиатуры для котировок"""
 from typing import Type
 
 import pandas as pd

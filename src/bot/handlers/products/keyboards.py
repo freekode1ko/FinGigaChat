@@ -1,3 +1,4 @@
+"""Клавиатуры дял меню продуктов"""
 from typing import Optional
 
 from aiogram import types

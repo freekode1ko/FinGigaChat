@@ -1,3 +1,4 @@
+"""Работа с sentry"""
 import logging
 
 import sentry_sdk

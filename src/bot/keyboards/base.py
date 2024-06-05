@@ -1,3 +1,4 @@
+"""Базовые клавиатуры"""
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup

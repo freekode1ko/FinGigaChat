@@ -1,3 +1,4 @@
+"""CallbackData для на новости по клиентам"""
 from aiogram.filters.callback_data import CallbackData
 
 from constants.subscriptions.news import client as callback_prefixes

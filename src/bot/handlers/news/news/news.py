@@ -1,3 +1,4 @@
+"""Хендлеры новостей новостей новостей"""
 from aiogram import Bot, F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -29,6 +30,8 @@ from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
+    """CallbackData для следующей новости"""
+
     subject: str
     subject_id: int
     offset: int

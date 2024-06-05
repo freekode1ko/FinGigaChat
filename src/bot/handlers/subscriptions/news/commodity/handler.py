@@ -1,3 +1,4 @@
+"""Хендлеры подписок на новости сырьевые товары"""
 from aiogram.fsm.state import State, StatesGroup
 
 from db import models
@@ -10,6 +11,8 @@ from keyboards.subscriptions.news.commodity.constructors import keyboard
 
 
 class CommoditySubscriptionsStates(StatesGroup):
+    """Состояние для подписок по сырьевым товарам"""
+
     commodity_user_subscriptions = State()
 
 

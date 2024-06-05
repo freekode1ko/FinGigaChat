@@ -1,3 +1,4 @@
+"""Функции для работы с викли пульсом"""
 from aiogram import Bot, types
 
 from configs import config
@@ -12,6 +13,7 @@ def __get_weekly_pulse_parse_datetime() -> str:
 
 
 async def key_rate_dynamics_table(bot: Bot, chat_id: int) -> None:
+    """Отправка прогноза динамики ключевой ставки"""
     title = 'Прогноз динамики ключевой ставки'
     data_source = 'SberCIB Investment Research'
     png_path = config.PATH_TO_SOURCES / 'weeklies' / 'key_rate_dynamics_table.png'
@@ -24,6 +26,7 @@ async def key_rate_dynamics_table(bot: Bot, chat_id: int) -> None:
 
 
 async def exc_rate_prediction_table(bot: Bot, chat_id: int) -> None:
+    """Отправка прогноза валютных курсов"""
     title = 'Прогноз валютных курсов'
     data_source = 'SberCIB Investment Research'
     png_path = config.PATH_TO_SOURCES / 'weeklies' / 'exc_rate_prediction_table.png'

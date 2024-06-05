@@ -1,3 +1,4 @@
+"""Клавиатуры для отрасли"""
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup

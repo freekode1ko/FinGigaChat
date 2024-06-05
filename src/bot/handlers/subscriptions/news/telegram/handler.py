@@ -1,3 +1,4 @@
+"""Файл с хендлерами подписок на новости на телеграм каналы"""
 from typing import Union
 
 from aiogram import F, types
@@ -30,6 +31,7 @@ async def end_menu(callback_query: types.CallbackQuery, state: FSMContext) -> No
 
 
 async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+    """Меню для подписок по телеграм каналы"""
     groups = await telegram_group_db.get_all()
     keyboard = keyboards.get_groups_kb(groups)
     msg_text = 'Выберите подборку телеграм-каналов'

@@ -1,3 +1,4 @@
+"""data transformer"""
 import datetime
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from utils.base import read_curdatetime
 
 
 class Transformer:
+    """Класс Transformer"""
+
     @staticmethod
     def load_urls_as_list(path: str, filed_name: str) -> pd.DataFrame:
         """
@@ -78,6 +81,7 @@ class Transformer:
         ax=None,
         **kwargs,
     ):
+        """Рендеринг"""
         data = data.fillna('-')
         if title is None:
             title = name
@@ -226,6 +230,7 @@ class Newsletter:
 
     @classmethod
     def get_newsletter_dict(cls) -> dict[str, str]:
+        """Получение данных для рассылок"""
         return cls.__newsletter_dict
 
     @classmethod

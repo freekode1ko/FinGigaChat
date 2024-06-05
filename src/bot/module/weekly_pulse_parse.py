@@ -1,3 +1,4 @@
+"""Парсинг виклипульса"""
 # importing required modules
 import os
 import re

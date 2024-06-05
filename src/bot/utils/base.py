@@ -1,3 +1,4 @@
+"""Файл с дополнительными функциями"""
 import asyncio
 import json
 import logging
@@ -312,6 +313,7 @@ def translate_subscriptions_to_object_id(object_dict: dict, subscriptions: list)
 
 
 async def get_industries_id(handbook: pd.DataFrame) -> list:
+    """Получение айди отраслей"""
     handbooks = []
     industry_ids = handbook['industry_id'].tolist()
     for industry_id in list(set(industry_ids)):
@@ -320,6 +322,7 @@ async def get_industries_id(handbook: pd.DataFrame) -> list:
 
 
 async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger) -> list:
+    """Получение айди отраслей"""
     logger.info(f'Сборка справочника для *{chat_id}* на тему {subject}')
 
     if (subject == 'client') or (subject == 'commodity'):
@@ -387,10 +390,12 @@ def get_page_data_and_info(
 
 
 def wrap_callback_data(data: str) -> str:
+    """Замена : на ;"""
     return data.replace(':', ';')
 
 
 def unwrap_callback_data(data: str) -> str:
+    """Замена ; на :"""
     return data.replace(';', ':')
 
 

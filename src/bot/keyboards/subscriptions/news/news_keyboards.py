@@ -1,3 +1,4 @@
+"""Клавиатуры по подпискам на новости"""
 from typing import Type
 
 import pandas as pd
@@ -13,6 +14,7 @@ from keyboards.subscriptions import constructors
 
 
 class BaseKeyboard:
+    """Базовая клавиатура по подпискам на новости"""
 
     def __init__(
             self,
@@ -86,6 +88,7 @@ class BaseKeyboard:
         return keyboard.as_markup()
 
     def change_subs_menu(self) -> InlineKeyboardMarkup:
+        """Меню изменение подписок"""
         keyboard = InlineKeyboardBuilder()
         if self.can_write_subs:
             keyboard.row(types.InlineKeyboardButton(
@@ -107,6 +110,7 @@ class BaseKeyboard:
         return keyboard.as_markup()
 
     def show_industry_kb(self) -> InlineKeyboardMarkup:
+        """Клавиатура по отрасли"""
         keyboard = InlineKeyboardBuilder()
         keyboard.row(types.InlineKeyboardButton(
             text='Показать готовые подборки',

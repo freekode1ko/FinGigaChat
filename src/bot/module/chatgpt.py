@@ -1,3 +1,4 @@
+"""Работа с chat GPT"""
 import openai
 
 from configs.config import api_key_gpt
@@ -7,6 +8,8 @@ from configs.config import api_key_gpt
 
 
 class ChatGPT:
+    """Класс для работы с chat GPT"""
+
     def __init__(self):
         openai.api_key = api_key_gpt
 

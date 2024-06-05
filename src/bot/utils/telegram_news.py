@@ -1,3 +1,4 @@
+"""Функции для работы с новостями по тг каналам"""
 import collections
 
 import pandas as pd

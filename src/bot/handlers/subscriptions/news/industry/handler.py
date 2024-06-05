@@ -1,3 +1,4 @@
+"""Файл с хендлерами подписок на новости по отраслям"""
 from aiogram.fsm.state import State, StatesGroup
 
 from db import models
@@ -10,6 +11,8 @@ from keyboards.subscriptions.news.industry.constructors import keyboard
 
 
 class IndustrySubscriptionsStates(StatesGroup):
+    """Состояние для подписок по отраслям"""
+
     industry_user_subscriptions = State()
 
 

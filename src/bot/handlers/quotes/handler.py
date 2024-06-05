@@ -1,3 +1,4 @@
+"""Файл хендлеров котировок"""
 import re
 
 import numpy as np

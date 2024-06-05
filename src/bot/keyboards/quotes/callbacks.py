@@ -1,3 +1,4 @@
+"""Клавиатуры для котировок"""
 from aiogram.filters.callback_data import CallbackData
 
 from constants import quotes as callback_prefixes
