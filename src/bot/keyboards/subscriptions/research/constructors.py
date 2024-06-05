@@ -1,5 +1,6 @@
 """
 Формирует клавиатуры для меню подписок на аналитические отчеты.
+
 Главное меню.
 Меню просмотра своих подписок.
 Меню изменения своих подписок.
@@ -20,12 +21,13 @@ from constants.subscriptions import research as callback_prefixes
 from db import models
 from keyboards.subscriptions import constructors
 from keyboards.subscriptions.research import callbacks
-from utils.base import wrap_callback_data, unwrap_callback_data
+from utils.base import unwrap_callback_data, wrap_callback_data
 
 
 def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Просмотреть подписки ]
     [ Изменить подписки    ]
     [ Удалить все подписки ]
@@ -58,6 +60,7 @@ def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
 def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ domain/research ][❌]
     [ domain/research ][❌]
     [ domain/research ][❌]
@@ -110,6 +113,7 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
 def get_research_type_info_kb(cib_research_type_id: int, is_subscribed: bool, back: str) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Подписаться/Удалить из подписок ]
     [   назад   ]
 
@@ -134,6 +138,7 @@ def get_research_type_info_kb(cib_research_type_id: int, is_subscribed: bool, ba
 def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]
@@ -174,6 +179,7 @@ def get_research_sections_by_group_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Раздел 1 ]
     ...
     [ Раздел n ]
@@ -227,6 +233,7 @@ def get_research_types_by_section_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [][ отчет 1 ]
     ...
     [][ отчет n ]
@@ -267,6 +274,7 @@ def get_research_types_by_section_menu_kb(
 def get_research_subs_approve_delete_all_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Да ][ Нет ]
     [   назад   ]
     """
@@ -280,6 +288,7 @@ def get_research_subs_approve_delete_all_kb() -> InlineKeyboardMarkup:
 def get_back_to_research_subs_main_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [   назад в меню   ]
     """
     keyboard = InlineKeyboardBuilder()

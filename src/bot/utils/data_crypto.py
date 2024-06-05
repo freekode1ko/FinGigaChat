@@ -1,10 +1,14 @@
+"""Работа с AES"""
 import base64
 import hashlib
+
 from Crypto import Random
 from Crypto.Cipher import AES
 
 
 class AESCrypther(object):
+    """Класс для работы с AES"""
+
     def __init__(self, key: str):
         self.block_size = AES.block_size
         self.key = hashlib.sha256(key.encode()).digest()
@@ -33,7 +37,7 @@ class AESCrypther(object):
 
     def _padlock(self, data):
         return data + (self.block_size - len(data) % self.block_size) * \
-               chr(self.block_size - len(data) % self.block_size)
+            chr(self.block_size - len(data) % self.block_size)
 
     @staticmethod
     def _unpad(s):

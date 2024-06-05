@@ -1,3 +1,5 @@
+"""Файл с константами для подписок по новостям по клиентам"""
+
 CLIENT_SUBS_MENU = 'client_subscriptions_menu'
 
 GET_MY_SUBS = 'get_client_subs'
@@ -14,6 +16,3 @@ SHOW_INDUSTRY_CLIENTS = 'client_showmeindustry'
 WHAT_IN_THIS_INDUSTRY = 'client_whatinthisindustry'
 
 ADD_ALL_CLIENT_SUBS_BY_DOMAIN = 'client_add_all_subs_by_domain'
-
-
-

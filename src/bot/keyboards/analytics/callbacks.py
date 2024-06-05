@@ -5,10 +5,10 @@ from constants import analytics as callback_prefixes
 
 
 class AnalyticsMenu(CallbackData, prefix=callback_prefixes.MENU):
-    """Главное меню Аналитики"""
+    """CallbackData для Главное меню Аналитики"""
 
 
 class GetFullResearch(CallbackData, prefix=callback_prefixes.GET_FULL_RESEARCH):
-    """Колбэк данные для кнопки получения полной версии отчета"""
+    """CallbackData для кнопки получения полной версии отчета"""
 
     research_id: int

@@ -1,4 +1,5 @@
-from enum import IntEnum, auto
+"""CallbackData клиентов"""
+from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData
 
@@ -8,6 +9,7 @@ MENU = 'clients_menu'
 
 class ClientsMenusEnum(IntEnum):
     """Уровни меню клиенты"""
+
     main_menu = auto()
     end_menu = auto()
 
@@ -48,6 +50,7 @@ class ClientsMenusEnum(IntEnum):
 
 class ClientsMenuData(CallbackData, prefix=MENU):
     """Меню клиенты"""
+
     menu: ClientsMenusEnum
     subscribed: bool = True
     client_id: int = 0

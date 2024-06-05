@@ -1,3 +1,4 @@
+"""Функции и классы для создания логеров"""
 import datetime
 import logging
 import os
@@ -15,10 +16,14 @@ MAX_BYTES = 10 * 1024 * 1024
 
 
 class Logger:
+    """Логер"""
+
     logger = logging.getLogger(__name__)
 
     def __init__(self, log_name: str, level: int):
         """
+        Инит
+
         :param log_name: В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
         :param level: Установить уровень логирования
         """
@@ -90,6 +95,7 @@ def selector_logger(module_logger: str, level: int = log_lvl):
 
 
 def get_handler(url_engine, level: int = log_lvl) -> DBHandler:
+    """Получить хендлер"""
     return DBHandler(url_engine, level, LOG_FORMAT)
 
 

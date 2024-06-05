@@ -1,3 +1,5 @@
+"""Константы"""
+
 from configs import config
 
 

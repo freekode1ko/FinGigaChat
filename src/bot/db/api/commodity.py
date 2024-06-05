@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с commodity"""
 from db.api.subject_interface import SubjectInterface
 from db.models import Commodity, CommodityAlternative, RelationCommodityArticle
 

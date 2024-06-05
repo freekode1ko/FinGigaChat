@@ -14,7 +14,7 @@ import pandas as pd
 from sqlalchemy import case, ColumnElement, func, select
 from sqlalchemy.orm import InstrumentedAttribute
 
-from configs.config import TOP_NEWS_COUNT, OTHER_NEWS_COUNT
+from configs.config import OTHER_NEWS_COUNT, TOP_NEWS_COUNT
 from db import database
 from db.models import Article, Base
 
@@ -185,7 +185,7 @@ class SubjectInterface:
         :param offset_val:  Сколько сначала нужно пропустить новостей.
         :return:            Список с атрибутами новостей [title, date, link, text_sum].
         """
-        subject_id_col, _,  score_col = self.table_relation_article.__table__.columns
+        subject_id_col, _, score_col = self.table_relation_article.__table__.columns
         new_score = self._get_new_score_col(score_col)
 
         base_stmt = (

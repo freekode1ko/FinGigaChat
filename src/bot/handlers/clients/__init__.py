@@ -1,1 +1,3 @@
-from handlers.clients.handler import router
+"""Хендлеры клиентов"""
+
+from handlers.clients.handler import router  # noqa:F401

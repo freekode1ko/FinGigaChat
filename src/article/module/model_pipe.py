@@ -8,10 +8,12 @@ from typing import Any, Optional
 
 import pandas as pd
 import pymorphy2
+import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
 from configs import prompts
+from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from db.database import engine
 from log.logger_base import Logger
 from module import utils
@@ -86,6 +88,8 @@ STOCK_WORDS = [
 
 TOP_SOURCES = '(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)'
 
+MAX_LEN_INPUT = 6000
+
 morph = pymorphy2.MorphAnalyzer()
 
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
@@ -99,6 +103,9 @@ commodity_rating_system_dict = utils.modify_commodity_rating_system_dict(commodi
 
 CLIENT_NAMES_DICT = utils.create_alternative_names_dict(client_names)
 CLIENT_INDUSTRY_DICT = utils.create_client_industry_dict()
+
+with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+    binary_model = pickle.load(f)
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
@@ -342,26 +349,48 @@ def search_top_sources(link: Optional[str or Any], score: int) -> int:
     return score
 
 
-def rate_client(df, rating_dict, threshold: float = 0.5) -> pd.DataFrame:
+def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Logger.logger) -> list[float]:
+    """
+    Получаем вероятности релевантности для текста новости клиента. Делаем гет запрос к модели roberta.
+
+    :param text: текст новости.
+    :param clean_text: очищенный текст новости.
+    :param logger: экземпляр класса логер для логирования процесса.
+    :return: список вероятностей релевантности.
+    """
+    # делаем запрос к модели roberta, обрезаем слишком большой инпут
+    params = {'query': text[:MAX_LEN_INPUT]}
+    try:
+        with requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60) as response:
+            # достаем вероятности релевантности
+            response.raise_for_status()
+            probs = list(map(float, str(response.content)[2:-1].split(':')))
+    except (requests.RequestException, ValueError) as e:
+        logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
+        probs = [-1, -1]
+    # если не смогли получить ответ от сервиса, или классификация на сервере некорректна, то используем локальную модель
+    return list(binary_model.predict_proba([clean_text])[0]) if probs[0] < 0 else probs
+
+
+def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
 
     :param rating_dict: dict with rating
     :param df: Pandas DF. Pandas DF with current news batch.
+    :param logger: экземпляр класса логер для логирования процесса.
     :param threshold: limit relevant for binary model
     :return: Pandas DF. Current news batch DF with added column 'client_labels'
     """
-    # read binary classification model (relevant or not)
-    with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-        binary_model = pickle.load(f)
-
     # predict relevance and adding a column with relevance label (1 or 0)
-    probs = binary_model.predict_proba(df['cleaned_data'])
+    logger.info('Старт обработки новостей клиентов на релевантность')
+    probs = df.apply(lambda row: get_prediction_bert_client_relevance(
+        row['text'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
+    logger.info('Окончание обработки новостей клиентов на релевантность')
     df['relevance'] = [
         int(pair[1] > down_threshold('client', df['client'].iloc[index].split(';'), threshold))
         for index, pair in enumerate(probs)
     ]
-
     # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
     df['client_labels'] = df.apply(lambda x:
                                    5 if max((json.loads(x['client_impact'])).values(), default=0) > 2 else 2, axis=1)
@@ -554,7 +583,7 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     # make rating for article
     logger.debug('Сортировка новостей о клиентах')
-    df = rate_client(df, client_rating_system_dict)
+    df = rate_client(df, client_rating_system_dict, logger)
     logger.debug('Сортировка новостей о товарах')
     df = rate_commodity(df, commodity_rating_system_dict)
 
