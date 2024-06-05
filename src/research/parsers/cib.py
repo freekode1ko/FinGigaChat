@@ -943,30 +943,7 @@ class ResearchAPIParser:
 
         :param df: pandas.DataFrame() с таблицей для записи в бд
         """
-        df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
-        # TODO: переписать под ORM
-        """
-        test 
-        with engine.connect() as conn:
-            for row in df.iterrows():
-                insert_stmt = insert(FinancialSummary).values(sector_id=row[1][0],
-                                                              company_id=row[1][1],
-                                                              client_id=row[1][2],
-                                                              review_table=row[1][3],
-                                                              pl_table=row[1][4],
-                                                              balance_table=row[1][5],
-                                                              money_table=row[1][6])
-                upsert_stmt = insert_stmt.on_conflict_do_update(
-                    index_elements=['sector_id', 'company_id', 'client_id'],
-                    set_={'review_table': insert_stmt.excluded.review_table,
-                          'pl_table': insert_stmt.excluded.pl_table,
-                          'balance_table': insert_stmt.excluded.balance_table,
-                          'money_table': insert_stmt.excluded.money_table}
-                )
-
-                conn.execute(upsert_stmt)
-            conn.commit()
-        """
+        df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)  # TODO: переписать под ORM
 
     async def get_fin_summary(self) -> None:
         """Стартовая точка для парсинга финансовых показателей по клиентам"""

@@ -7,6 +7,7 @@ from log.logger_base import Logger
 
 class Transformer:
     """Класс для обработки табличных данных"""
+
     def __init__(self, logger: Logger.logger):
         self._logger = logger
         self.tables_handbook = constants.TABLES_HANDBOOK
