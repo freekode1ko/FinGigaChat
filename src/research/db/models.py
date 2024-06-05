@@ -155,8 +155,8 @@ t_key_eco = Table(
 
 class MessageType(Base):
     __tablename__ = 'message_type'
-    __table_args__ = {'comment': 'Справочник типов отправленных сообщений (пассивная рассылка, '
-                'ответ на запрос такой-то)'}
+    __table_args__ = {'comment': 'Справочник типов отправленных сообщений '
+                                 '(пассивная рассылка, ответ на запрос такой-то)'}
 
     id = Column(Integer, primary_key=True, )
     name = Column(String(64), nullable=False)
