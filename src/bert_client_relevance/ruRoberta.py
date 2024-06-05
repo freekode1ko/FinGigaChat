@@ -12,7 +12,7 @@ MAX_INPUT_LENGTH = 512
 N_ATTEMPTS = 5
 
 
-def load_model() -> tuple[any, any]:
+def load_model() -> tuple[ORTModelForSequenceClassification, AutoTokenizer]:
     """"
     Обработчик ошибки загрузки модели
     :return: Возвращает загруженную модель и токенайзер.
@@ -21,21 +21,21 @@ def load_model() -> tuple[any, any]:
     logger.info('Старт загрузки модели с Huggingface')
     for _ in range(N_ATTEMPTS):
         try:
-            Roberta = ORTModelForSequenceClassification.from_pretrained(MODEL_PATH)
-            tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+            model = ORTModelForSequenceClassification.from_pretrained(MODEL_PATH)
+            auto_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
             logger.info('Модель загружена')
-            return Roberta, tokenizer
+            return model, auto_tokenizer
         except Exception as e:
             logger.info(f'Ошибка загрузки модели с Huggingface: {e}')
 
 
-Roberta, tokenizer = load_model()
-
-
-async def get_prediction_cpu(text: str) -> list[float]:
+async def get_prediction_cpu(text: str, model: ORTModelForSequenceClassification,
+                             tokenizer: AutoTokenizer) -> list[float]:
     """
     Получаем вероятности от модели принадлежности текста новости релевантости или нерелевантности.
     :param text: текст новости
+    :param model: модель
+    :param tokenizer: токенизатор
     :return: вероятности от модели
     """
 
@@ -44,7 +44,7 @@ async def get_prediction_cpu(text: str) -> list[float]:
         inputs = tokenizer(text, padding=True, truncation=True, max_length=MAX_INPUT_LENGTH, return_tensors="pt")
         # получаем предсказания модели
         with torch.inference_mode():
-            outputs = Roberta(**inputs)
+            outputs = model(**inputs)
         # достаем вероятности из логитов
         probs = outputs[0].softmax(1)
         # возвращаем вероятности
@@ -56,11 +56,14 @@ async def get_prediction_cpu(text: str) -> list[float]:
     return results
 
 
-async def get_prediction_batch_cpu(texts: list[str], batch_size: int = 4) -> list[list[float]]:
+async def get_prediction_batch_cpu(texts: list[str], model: ORTModelForSequenceClassification, tokenizer: AutoTokenizer,
+                                   batch_size: int = 4) -> list[list[float]]:
     """
     TODO: Переписать обработку текстов по батчам, с учетом нормального паддинга. Пока работает не совсем корректно
     Получаем вероятности от модели принадлежности текстов новостей релевантости или нерелевантности.
     :param texts: список текстов новостей.
+    :param model: модель
+    :param tokenizer: токенизатор
     :param batch_size: размер батча
     :return: вероятности от модели для каждой новости в формате строки вида: 'prob1_0:prob1_1;prob2_0:prob2_1'
     """
@@ -68,7 +71,8 @@ async def get_prediction_batch_cpu(texts: list[str], batch_size: int = 4) -> lis
     try:
         # токенизируем и обрезаем текст новости до максимального входа
         inputs = torch.tensor([tokenizer.encode(text, padding='max_length', truncation=True,
-                                         max_length=MAX_INPUT_LENGTH, add_special_tokens=True) for text in texts])
+                                                max_length=MAX_INPUT_LENGTH,
+                                                add_special_tokens=True) for text in texts])
     except Exception as e:
         logger.error(f"Ошибка при токенизации: {e}")
         return [[-1, -1] for _ in range(len(texts))]
@@ -80,7 +84,7 @@ async def get_prediction_batch_cpu(texts: list[str], batch_size: int = 4) -> lis
             amount = len(texts)
             for i in range(0, amount, batch_size):
                 batch = inputs[i: min(i + batch_size, amount), :]
-                outputs = Roberta(batch)
+                outputs = model(batch)
                 probs += [outputs.logits[j, :].softmax(0) for j in range(len(batch))]
         # возвращаем вероятности
         results = [list(prob.detach().numpy()) for prob in probs]

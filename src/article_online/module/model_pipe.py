@@ -359,13 +359,14 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
     :param logger: экземпляр класса логер для логирования процесса.
     :return: список вероятностей релевантности.
     """
+    # делаем запрос к модели roberta, обрезаем слишком большой инпут
+    params = {"query": text[:MAX_LEN_INPUT]}
     try:
-        # делаем запрос к модели roberta, обрезаем слишком большой инпут
-        params = {"query": text[:MAX_LEN_INPUT]}
-        response = requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60).content
-        # достаем вероятности релевантности
-        probs = list(map(float, str(response)[2:-1].split(':')))
-    except Exception as e:
+        with requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60) as response:
+            # достаем вероятности релевантности
+            response.raise_for_status()
+            probs = list(map(float, str(response.content)[2:-1].split(':')))
+    except (requests.RequestException, ValueError) as e:
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
     # если не смогли получить ответ от сервиса, или классификация на сервере некорректна, то используем локальную модель
