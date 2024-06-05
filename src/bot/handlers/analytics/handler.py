@@ -1,16 +1,18 @@
+"""Обработчики для меню Аналитика"""
 import os
 
 from aiogram import F, Router, types
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from constants import analytics as callback_prefixes, constants
+from constants import analytics as callback_prefixes
 from db.api.research import research_db
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import formatter
-from utils.base import send_or_edit, user_in_whitelist, bot_send_msg
+from utils.base import bot_send_msg, send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -32,6 +34,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню аналитики
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
@@ -89,12 +92,7 @@ async def get_full_version_of_research(callback_query: types.CallbackQuery, call
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     research = await research_db.get(callback_data.research_id)
-    formatted_msg_txt = formatter.ResearchFormatter.format({
-        'header': research.header,
-        'text': research.text,
-        'publication_date': research.publication_date,
-        'report_id': research.report_id,
-    })
+    formatted_msg_txt = formatter.ResearchFormatter.format(research)
 
     await bot_send_msg(callback_query.bot, chat_id, formatted_msg_txt)
 
@@ -111,7 +109,7 @@ async def get_full_version_of_research(callback_query: types.CallbackQuery, call
 
     try:
         await callback_query.message.delete()
-    except Exception:
+    except TelegramAPIError:
         pass
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

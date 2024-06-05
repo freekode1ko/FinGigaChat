@@ -17,7 +17,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 import module.data_transformer as dt
 from configs import config
-from db import parser_source, message
+from db import message, parser_source
 from db.api.research import research_db
 from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db

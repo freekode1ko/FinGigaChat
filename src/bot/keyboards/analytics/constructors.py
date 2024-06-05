@@ -1,3 +1,4 @@
+"""Клавиатуры для главного меню в Меню Аналитика"""
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -12,6 +13,7 @@ from keyboards.analytics.industry import callbacks as industry_callbacks
 def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]
@@ -33,6 +35,7 @@ def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитика публичных рынков ]
     [ Отраслевая аналитика ]
     [ macro_view.TITLE ]
