@@ -1,29 +1,32 @@
+"""Предоставляет интерфейс для взаимодействия с GigaChat"""
 import json
+import warnings
 from logging import Logger
 from uuid import uuid4
-import warnings
 
 import requests as req
 
-from configs.config import giga_oauth_url, giga_chat_url, giga_scope, giga_model, giga_credentials
+from configs.config import giga_chat_url, giga_credentials, giga_model, giga_oauth_url, giga_scope
 
 warnings.filterwarnings('ignore')
 
 
 class GigaChat:
+    """Класс общения с GigaChat"""
+
     oauth_url = giga_oauth_url
     chat_url = giga_chat_url
     scope = giga_scope
     model = giga_model
 
     def __init__(self, logger: Logger):
+        """Инициализация обработчика взаимодействий с GigaChat"""
         self._credentials = giga_credentials
         self.token = self.get_user_token()
         self.logger = logger
 
     def get_user_token(self) -> str:
         """Получение токена доступа к модели GigaChat"""
-
         headers = {
             'Authorization': f'Basic {self._credentials}',
             'RqUID': str(uuid4()),
@@ -37,11 +40,11 @@ class GigaChat:
     def post_giga_query(self, text: str, prompt: str = '') -> str:
         """
         Получение ответа от модели GigaChat
+
         :param text: токен доступа к модели
         :param prompt: системный промпт
-        return ответ модели
+        :return ответ модели
         """
-
         headers = {
             'Authorization': f'Bearer {self.token}',
             'Content-Type': 'application/json',
@@ -72,4 +75,3 @@ class GigaChat:
                                  f'KeyError (некорректная выдача ответа GigaChat), '
                                  f'ответ после переформирования запроса')
         return giga_answer
-

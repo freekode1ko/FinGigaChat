@@ -1,4 +1,5 @@
-from enum import IntEnum, auto
+"""CallbackData кол репортов"""
+from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData
 
@@ -7,6 +8,8 @@ separator = ';'
 
 
 class CRMenusEnum(IntEnum):
+    """Emun`сы для меню кол репортов"""
+
     main = auto()
     close = auto()
 
@@ -28,14 +31,20 @@ class CRMenusEnum(IntEnum):
 
 
 class CRMainMenu(CallbackData, prefix=prefix, sep=separator):
+    """CallbackData для меню главного меню"""
+
     menu: CRMenusEnum = CRMenusEnum.main
 
 
 class CRCreateNew(CallbackData, prefix=prefix, sep=separator):
+    """CallbackData для создания нового кол репорта"""
+
     menu: CRMenusEnum = CRMenusEnum.create_new
 
 
 class CRChoiceReportView(CallbackData, prefix=prefix, sep=separator):
+    """CallbackData для просмотра нового кол репорта"""
+
     menu: CRMenusEnum = CRMenusEnum.client_choice
     client: str | None = None
     client_page: int = 0
@@ -44,6 +53,8 @@ class CRChoiceReportView(CallbackData, prefix=prefix, sep=separator):
 
 
 class CRViewAndEdit(CallbackData, prefix=prefix, sep=separator):
+    """CallbackData для редактирования и просмотра кол репортов"""
+
     menu: CRMenusEnum | None = None
     return_menu: CRMenusEnum = CRMenusEnum.main
     report_id: int | None = None

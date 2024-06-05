@@ -1,11 +1,9 @@
-"""
-Точка входа для запуска бота🤡
-"""
+"""Точка входа для запуска бота🤡"""
 import asyncio
 import datetime
 import time
 import warnings
-from typing import Callable, Any
+from typing import Any, Callable
 
 import pandas as pd
 from aiogram import Bot, Dispatcher
@@ -15,18 +13,18 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
-from db.database import engine, async_session as async_session_maker
+from db.database import async_session as async_session_maker, engine
 from handlers import (
-    admin, ai, analytics, common, telegram_sections, news, quotes, referencebook, subscriptions, products, call_reports, clients
+    admin, ai, analytics, call_reports, clients, common, news, products, quotes, referencebook, subscriptions, telegram_sections
 )
 from log.bot_logger import logger
 from log.sentry import init_sentry
 from middlewares.db import DatabaseMiddleware
 from middlewares.logger import LoggingMiddleware
+from utils import newsletter, sessions
 from utils.base import (
     next_weekday_time, wait_until,
 )
-from utils import newsletter, sessions
 
 storage = MemoryStorage()
 bot = Bot(token=config.api_token)
@@ -78,6 +76,7 @@ async def passive_newsletter(
 
 
 async def set_bot_commands() -> None:
+    """Выставление команд в боте"""
     commands = []
 
     for command in PUBLIC_COMMANDS:
@@ -88,6 +87,7 @@ async def set_bot_commands() -> None:
 
 
 async def start_bot():
+    """Функция для запуска бота"""
     # Устанавливаем список актуальных команд
     await set_bot_commands()
 
@@ -117,6 +117,7 @@ async def start_bot():
 
 
 async def main():
+    """Точка входа для приложения"""
     init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
 
@@ -140,7 +141,7 @@ async def main():
 
         for param in passive_newsletter_params['params']:
             send_time = param['send_time']
-            send_time_dt = datetime.datetime.strptime(send_time, "%H:%M")
+            send_time_dt = datetime.datetime.strptime(send_time, '%H:%M')
 
             loop.create_task(passive_newsletter(
                 newsletter_weekday=param['weekday'],
@@ -164,4 +165,4 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("bot was terminated")
+        print('bot was terminated')

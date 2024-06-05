@@ -1,3 +1,4 @@
+"""Клавиатуры клиентов"""
 from typing import Any, Optional
 
 import pandas as pd
@@ -13,6 +14,7 @@ from keyboards.base import get_pagination_kb
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Выбрать клиента из списка подписок ]
     [ Выбрать другого клиента ]
     [ Завершить ]
@@ -48,6 +50,8 @@ def get_clients_list_kb(
         subscribed: bool,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для клиентов
+
     [ item 1 ]
     ...
     [ item N ]
@@ -60,13 +64,13 @@ def get_clients_list_kb(
     """
     page_data['name'] = page_data['name'].str.capitalize()
     page_data['item_callback'] = page_data['id'].apply(
-            lambda x: callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.client_menu,
-                client_id=x,
-                page=current_page,
-                subscribed=subscribed,
-            ).pack()
-        )
+        lambda x: callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.client_menu,
+            client_id=x,
+            page=current_page,
+            subscribed=subscribed,
+        ).pack()
+    )
     return get_pagination_kb(
         page_data,
         current_page,
@@ -98,6 +102,8 @@ def get_client_menu_kb(
         with_back_button: bool = True,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для клиента
+
     [ Новости ]
     [ Аналитика публичных рынков ] [если публичный]
     [ Отраслевая аналитика ]
@@ -208,6 +214,7 @@ def get_news_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитика sell-side ]
     [ Отраслевая аналитика ]
     [ Завершить ]
@@ -318,6 +325,8 @@ def get_products_menu_kb(
         subscribed: bool,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для продуктов
+
     [ hot offers ]
     [ Назад ]
     [ Завершить ]
@@ -363,6 +372,7 @@ def client_analytical_indicators_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитические обзоры ]
     [ P&L модель ]
     [ Модель баланса ]
@@ -438,4 +448,3 @@ def client_analytical_indicators_kb(
         ).pack(),
     ))
     return keyboard.as_markup()
-

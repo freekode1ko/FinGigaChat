@@ -1,30 +1,24 @@
+"""Файл хендлеров котировок"""
 import re
 
-from aiogram import Router, types, F
+import numpy as np
+import pandas as pd
+from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
-import numpy as np
-import pandas as pd
 from sqlalchemy import text
 
 from configs import config
 from configs.config import PATH_TO_SOURCES
+from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
-from constants import quotes as callback_prefixes, enums
 from db.database import engine
-from keyboards.quotes import constructors as keyboards, callbacks
+from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
 from utils import weekly_pulse
-from utils.base import (
-    __replacer,
-    __sent_photo_and_msg,
-    read_curdatetime,
-    user_in_whitelist,
-    send_or_edit,
-)
-
+from utils.base import __replacer, __sent_photo_and_msg, read_curdatetime, send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -46,6 +40,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню Котировки
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
@@ -106,7 +101,16 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    await exchange_info_command(callback_query.message)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+
+async def exchange_info_command(message: types.Message) -> None:
+    """
+    Вывод в чат информации по котировкам связанной с валютой и их курсом
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     png_path = PATH_TO_SOURCES / 'img' / 'exc_table.png'
     exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
     exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
@@ -139,7 +143,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     data_source = 'investing.com'
     curdatetime = read_curdatetime()
     await __sent_photo_and_msg(
-        callback_query.message,
+        message,
         photo,
         day,
         month,
@@ -149,9 +153,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
 
     fx_predict = pd.read_excel(PATH_TO_SOURCES / 'tables' / 'fx_predict.xlsx').rename(columns={'базовый сценарий': ' '})
     transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0, col_width=1.5, title=title)
-    await weekly_pulse.exc_rate_prediction_table(callback_query.bot, chat_id)
-
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
 
 @router.callback_query(callbacks.FI.filter())
@@ -229,7 +231,16 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    await metal_info_command(callback_query.message)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+
+async def metal_info_command(message: types.Message) -> None:
+    """
+    Вывод в чат информации по котировкам связанной с сырьем (комодами)
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
         'JOIN relation_commodity_metals rcm ON rcm.name_from_source=metals."Metals" '
@@ -259,10 +270,8 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     title = 'Сырьевые товары'
     data_source = 'LME, Bloomberg, investing.com'
     await __sent_photo_and_msg(
-        callback_query.message, photo, day, title=sample_of_img_title.format(title, data_source, read_curdatetime())
+        message, photo, day, title=sample_of_img_title.format(title, data_source, read_curdatetime())
     )
-
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 async def not_realized_function(callback_query: types.CallbackQuery) -> None:
@@ -300,7 +309,16 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    await bonds_info_command(callback_query.message)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+
+async def bonds_info_command(message: types.Message) -> None:
+    """
+    Вывод в чат информации по котировкам связанной с облигациями
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     columns = ['Название', 'Доходность', 'Изм, %']
     bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
     bonds = bonds[columns].dropna(axis=0)
@@ -319,15 +337,13 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     title = 'Доходность ОФЗ'
     data_source = 'investing.com'
     await __sent_photo_and_msg(
-        callback_query.message,
+        message,
         photo,
         day,
         month,
         protect_content=False,
         title=sample_of_img_title.format(title, data_source, read_curdatetime()),
     )
-
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 # ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
@@ -343,7 +359,16 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    await economy_info_command(callback_query.message)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+
+async def economy_info_command(message: types.Message) -> None:
+    """
+    Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
     rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
     rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -383,7 +408,7 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     data_source = 'ЦБ стран мира'
     curdatetime = read_curdatetime()
     await __sent_photo_and_msg(
-        callback_query.message, photo, day, month, protect_content=False,
+        message, photo, day, month, protect_content=False,
         title=sample_of_img_title.format(title, data_source, curdatetime)
     )
 
@@ -411,7 +436,7 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     photo = types.FSInputFile(png_path)
     title = 'Инфляция в России'
     data_source = 'ЦБ РФ'
-    await callback_query.message.answer_photo(
+    await message.answer_photo(
         photo,
         caption=sample_of_img_title.format(title, data_source, curdatetime),
         parse_mode='HTML',
@@ -431,8 +456,7 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
 
     rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
     rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
-    await callback_query.message.answer(rates_message, parse_mode='HTML', protect_content=False)
-    await weekly_pulse.key_rate_dynamics_table(callback_query.bot, chat_id)
+    await message.answer(rates_message, parse_mode='HTML', protect_content=False)
+    await weekly_pulse.key_rate_dynamics_table(message.bot, message.chat.id)
     msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
-    await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=False)
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await message.answer(msg_text, parse_mode='HTML', protect_content=False)

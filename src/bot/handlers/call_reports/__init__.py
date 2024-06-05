@@ -1,3 +1,4 @@
+"""Хендлеры CIB"""
 from aiogram import Router
 
 from .call_report_create import router as call_report_insert_router

@@ -10,6 +10,7 @@ from configs.config import (
 
 
 def singleton(cls):
+    """Сингелтон"""
     instances = {}
 
     def get_instance(*args, **kwargs):
@@ -28,10 +29,12 @@ class BaseClient:
         self.session = ClientSession(base_url, connector=TCPConnector(verify_ssl=False), trust_env=True)
 
     async def close(self):
+        """Закрытие соединения"""
         if not self.session.closed:
             await self.session.close()
 
     async def recreate(self):
+        """Пересоздание соединения"""
         await self.close()
         self.session = ClientSession(self.base_url, connector=TCPConnector(verify_ssl=False), trust_env=True)
 
@@ -39,6 +42,7 @@ class BaseClient:
 @singleton
 class GigaOauthClient(BaseClient):
     """Клиент для получения токена GigaChat."""
+
     def __init__(self):
         super().__init__(giga_oauth_url)
 
@@ -46,6 +50,7 @@ class GigaOauthClient(BaseClient):
 @singleton
 class GigaChatClient(BaseClient):
     """Клиент для получения ответа от GigaChat."""
+
     def __init__(self):
         super().__init__(giga_chat_url)
 
@@ -53,6 +58,7 @@ class GigaChatClient(BaseClient):
 @singleton
 class RagQaBankerClient(BaseClient):
     """Клиент для получения ответа от RAG по новостям."""
+
     def __init__(self):
         super().__init__(BASE_QA_BANKER_URL)
 
@@ -60,5 +66,6 @@ class RagQaBankerClient(BaseClient):
 @singleton
 class RagStateSupportClient(BaseClient):
     """Клиент для получения ответа от RAG по господдержке."""
+
     def __init__(self):
         super().__init__(BASE_STATE_SUPPORT_URL)

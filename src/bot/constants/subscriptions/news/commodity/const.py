@@ -1,3 +1,5 @@
+"""Файл с константами для подписок по новостям по commodity"""
+
 COMMODITY_SUBS_MENU = 'commodity_subscriptions_menu'
 
 GET_MY_SUBS = 'get_commodity_subs'
@@ -14,6 +16,3 @@ SHOW_INDUSTRY_COMMODITIES = 'commodity_showmeindustry'
 WHAT_IN_THIS_INDUSTRY = 'commodity_whatinthisindustry'
 
 ADD_ALL_COMMODITY_SUBS_BY_DOMAIN = 'commodity_add_all_subs_by_domain'
-
-
-

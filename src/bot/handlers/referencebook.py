@@ -1,3 +1,4 @@
+"""Работа со справочником"""
 import pandas as pd
 from aiogram import F, Router, types
 from aiogram.filters import Command
@@ -6,9 +7,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from log.bot_logger import logger, user_logger
 from constants.constants import handbook_prefix
-from utils.base import show_ref_book_by_request, user_in_whitelist, bot_send_msg
+from log.bot_logger import logger, user_logger
+from utils.base import bot_send_msg, show_ref_book_by_request, user_in_whitelist
 
 # logger = logging.getLogger(__name__)
 router = Router()
@@ -16,11 +17,14 @@ router.message.middleware(ChatActionMiddleware())  # on every message for admin 
 
 
 class RefBookStates(StatesGroup):
+    """Состояния для справочника"""
+
     please_add_this = State()
 
 
 @router.message(Command('referencebook'))
 async def reference_book(message: types.Message) -> None:
+    """Команда справочник"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     if await user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
@@ -37,6 +41,7 @@ async def reference_book(message: types.Message) -> None:
 
 @router.callback_query(F.data.startswith('ref_books'))
 async def ref_books(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    """Cправочник"""
     await state.set_state(RefBookStates.please_add_this)
     from_user = callback_query.from_user
     chat_id, user_first_name = from_user.id, from_user.first_name
@@ -85,6 +90,7 @@ async def ref_books(callback_query: types.CallbackQuery, state: FSMContext) -> N
 
 @router.callback_query(RefBookStates.please_add_this, F.data.startswith('isthisall'))
 async def isthisall(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+    """Вопрос про все ли в справочнике"""
     from_user = callback_query.from_user
     chat_id, user_first_name = from_user.id, from_user.first_name
     callback_data = callback_query.data.split(':')
@@ -107,6 +113,7 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext) -> N
 
 @router.message(RefBookStates.please_add_this)
 async def continue_isthisall(message: types.Message, state: FSMContext) -> None:
+    """Продолжение вопрос про все ли в справочнике"""
     await state.update_data(please_add_this=message.text)  # FIXME зачем оно такое?
     data = await state.get_data()
     user_logger.info(f"Пользовать {message.from_user.full_name} просит добавить в справочник: {data.get('please_add_this')}")

@@ -1,11 +1,10 @@
+"""Файл с хендлерами отрасли"""
 from pathlib import Path
 
 import pandas as pd
-from aiogram import types, F
-from aiogram.utils.media_group import MediaGroupBuilder
+from aiogram import F, types
 
-from constants import constants
-from db.api.industry import industry_db, get_industry_analytic_files
+from db.api.industry import get_industry_analytic_files, industry_db
 from handlers.analytics.handler import router
 from keyboards.analytics.industry import callbacks, constructors as keyboards
 from log.bot_logger import user_logger

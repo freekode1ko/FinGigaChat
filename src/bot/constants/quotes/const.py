@@ -1,4 +1,4 @@
-from constants import enums
+"""Файл с константами для quotes"""
 
 MENU = 'quotes_menu'
 END_MENU = 'end_quotes_menu'
@@ -12,12 +12,12 @@ ECO = 'eco'
 GET_FI_ITEM_DATA = 'get_fi_item_data'
 
 COMMODITY_MARKS = {
-            'price': 'Цена',
-            'day': 'Δ День',
-            'week': 'Δ Неделя',
-            'month': 'Δ Месяц',
-            'year': 'Δ Год'
-        }
+    'price': 'Цена',
+    'day': 'Δ День',
+    'week': 'Δ Неделя',
+    'month': 'Δ Месяц',
+    'year': 'Δ Год'
+}
 
 COMMODITY_TABLE_ELEMENTS = (
     'Нефть WTI',

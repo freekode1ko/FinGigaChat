@@ -1,9 +1,11 @@
+"""Константы для запуска приложения"""
 import json
 import pathlib
 from typing import Union
 
-from constants.enums import Environment
 from environs import Env
+
+from constants.enums import Environment
 
 env = Env()
 env.read_env()
@@ -24,6 +26,7 @@ DEBUG: bool = env.bool('DEBUG', default=False)
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
     Считывает константу из json-файла
+
     Args:
         file_name: Путь до файла относительно STATIC_ASSETS_PATH
         encoding: Кодировка файла

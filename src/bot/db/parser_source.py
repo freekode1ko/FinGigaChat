@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с парсингом"""
 import datetime
 
 from sqlalchemy import text
@@ -27,7 +28,9 @@ def update_get_datetime(source_name: str) -> None:
 def get_source_last_update_datetime(source_name: str) -> datetime.datetime:
     """
     Метод получения времени сбора данных research с источника
+
     :param source_name: Имя собираемых данных
+    :return: datetime
     """
     query = text(
         f'SELECT last_update_datetime '

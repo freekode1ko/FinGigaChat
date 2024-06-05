@@ -20,9 +20,9 @@ from configs.config import (
 )
 from constants.enums import SubjectType
 from constants.quotes import COMMODITY_MARKS
-from db.database import async_session, engine
 from db.api.client import client_db
 from db.api.commodity import commodity_db
+from db.database import engine, async_session
 from log.logger_base import Logger
 from db.models import FinancialSummary
 
@@ -423,10 +423,13 @@ class ArticleProcess:
 
 
 class ArticleProcessAdmin:
+    """Работа с новостями для админа"""
+
     def __init__(self):
         self.engine = engine
 
-    def get_article_id_by_link(self, link: str):
+    def get_article_id_by_link(self, link: str) -> Optional[int]:
+        """Получение айди новости по ссылке"""
         try:
             with self.engine.connect() as conn:
                 article_id = conn.execute(text(f"SELECT id FROM article WHERE link='{link}'")).fetchone()[0]
@@ -434,7 +437,8 @@ class ArticleProcessAdmin:
         except (TypeError, ProgrammingError):
             return
 
-    def get_article_text_by_link(self, link: str):
+    def get_article_text_by_link(self, link: str) -> Optional[str]:
+        """Получение текста новости по ссылке"""
         try:
             with self.engine.connect() as conn:
                 article = conn.execute(text(f"SELECT text, text_sum FROM article WHERE link='{link}'")).fetchone()
@@ -443,7 +447,8 @@ class ArticleProcessAdmin:
         except (TypeError, ProgrammingError):
             return '', ''
 
-    def get_article_by_link(self, link: str):
+    def get_article_by_link(self, link: str) -> Optional[dict]:
+        """Получение новости по ссылке"""
         dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
         dict_keys_client = ('Клиент', 'Балл по клиенту')
         dict_keys_commodity = ('Товар', 'Балл по товару')
@@ -498,6 +503,7 @@ class ArticleProcessAdmin:
             return e
 
     def change_score_article_by_id(self, article_id: int):
+        """Изменение оценки новости по айди"""
         try:
             with self.engine.connect() as conn:
                 query = 'update relation_{subject}_article set {subject}_score=0 where article_id={id}'

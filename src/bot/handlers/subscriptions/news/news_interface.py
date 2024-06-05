@@ -31,32 +31,44 @@ emoji = copy.deepcopy(config.dict_of_emoji)
 
 
 class CallbacksModule(Protocol):
+    """Вызываемые модули"""
 
     @property
-    def Menu(self) -> Type[CallbackData]: ...
+    def Menu(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def GetUserSubs(self) -> Type[CallbackData]: ...
+    def GetUserSubs(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def ChangeUserSubs(self) -> Type[CallbackData]: ...
+    def ChangeUserSubs(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def DeleteUserSub(self) -> Type[CallbackData]: ...
+    def DeleteUserSub(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def PrepareDeleteAllSubs(self) -> Type[CallbackData]: ...
+    def PrepareDeleteAllSubs(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def DeleteAllSubs(self) -> Type[CallbackData]: ...
+    def DeleteAllSubs(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def SelectSubs(self) -> Type[CallbackData]: ...
+    def SelectSubs(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def WriteSubs(self) -> Type[CallbackData]: ...
+    def WriteSubs(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def ShowIndustry(self) -> Type[CallbackData]: ...
+    def ShowIndustry(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def WhatInThisIndustry(self) -> Type[CallbackData]: ...
+    def WhatInThisIndustry(self) -> Type[CallbackData]: ...  # noqa:E704,D102
+
     @property
-    def AddAllSubsByDomain(self) -> Type[CallbackData]: ...
+    def AddAllSubsByDomain(self) -> Type[CallbackData]: ...  # noqa:E704,D102
 
 
 class NewsHandler:
+    """Новостной хендлер"""
 
     callbacks: Type[CallbacksModule]
 
@@ -101,6 +113,7 @@ class NewsHandler:
         self.subject_vin = subject_name_accusative  # 'клиентов'  # сырьевые товары | отрасли
 
     def setup(self):
+        """Сетап"""
         @self.router.callback_query(self.callbacks.ChangeUserSubs.filter())
         async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext) -> None:
             keyboard = self.keyboards.change_subs_menu()

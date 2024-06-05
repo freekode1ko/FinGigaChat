@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с клиентами"""
 import sqlalchemy as sa
 from sqlalchemy import text
 

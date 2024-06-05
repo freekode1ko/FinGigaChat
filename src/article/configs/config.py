@@ -1,6 +1,6 @@
+"""Конфиг для сервиса article"""
 import json
 import pathlib
-from typing import Union
 
 from environs import Env
 
@@ -19,14 +19,16 @@ DEBUG: bool = env.bool('DEBUG', default=False)
 giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 
 
-def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
+def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8') -> list | dict | str:
     """
     Считывает константу из json-файла
-    Args:
-        file_name: Путь до файла относительно STATIC_ASSETS_PATH
-        encoding: Кодировка файла
+
+    :param file_name:   Путь до файла относительно STATIC_ASSETS_PATH
+    :param encoding:    Кодировка файла
+    :return:            Сериализованный JSON
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
+
 
 SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
@@ -59,3 +61,5 @@ giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
 giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
+
+ROBERTA_CLIENT_RELEVANCE_LINK = 'http://bert_client_relevance_container:444/query'

@@ -1,13 +1,14 @@
+"""Файл с дополнительными функциями"""
 import asyncio
 import ast
 import json
 import logging
 import os
-from datetime import datetime, timedelta, date
+import re
+from datetime import date, datetime, timedelta
 from math import ceil
 from pathlib import Path
 from typing import Optional
-import re
 
 import pandas as pd
 from aiogram import Bot, types
@@ -16,11 +17,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
-from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
+from configs.config import PAGE_ELEMENTS_COUNT, PATH_TO_SOURCES
 from constants import constants
 from constants.constants import research_footer
 from db import models
-from db.database import engine, async_session
+from db.database import async_session, engine
 from log.logger_base import Logger
 
 
@@ -73,7 +74,13 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
             msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
-            msg = await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_document(
+                document=file,
+                chat_id=user_id,
+                caption=message_text,
+                parse_mode='HTML',
+                protect_content=True
+            )
     else:
         msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
@@ -161,10 +168,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     giga_ans = text
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
-            text_group.append(text[batch : batch + batch_size])
+            text_group.append(text[batch: batch + batch_size])
         for summ_part in text_group:
             await message.answer(
-                 '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
+                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
             )
     else:
         await message.answer(
@@ -209,11 +216,13 @@ async def __sent_photo_and_msg(
 
 def __replacer(data: str) -> str:
     """
+    Форматирование текста
+
     Если '.' больше чем 1 в числовом значении фин.показателя
     и первый объект равен 0, то форматируем так '{}.{}{}'(*data_list)
 
     :param data: Значение из ячейки таблицы с фин.показателями
-    return Форматированный текст
+    :return: Форматированный текст
     """
     data_list = data.split('.')
     if len(data_list) > 2:
@@ -233,7 +242,6 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
     :param minute_to_send: минуты, в которые нужно отправить рассылку
     return время ожидания перед рассылкой
     """
-
     # получаем текущее датувремя и день недели
     current_datetime = datetime.now()
     current_weekday = current_datetime.isoweekday()
@@ -306,6 +314,7 @@ def translate_subscriptions_to_object_id(object_dict: dict, subscriptions: list)
 
 
 async def get_industries_id(handbook: pd.DataFrame) -> list:
+    """Получение айди отраслей"""
     handbooks = []
     industry_ids = handbook['industry_id'].tolist()
     for industry_id in list(set(industry_ids)):
@@ -314,6 +323,7 @@ async def get_industries_id(handbook: pd.DataFrame) -> list:
 
 
 async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger) -> list:
+    """Получение айди отраслей"""
     logger.info(f'Сборка справочника для *{chat_id}* на тему {subject}')
 
     if (subject == 'client') or (subject == 'commodity'):
@@ -325,7 +335,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
         )
     else:
         handbook = pd.read_sql_query(
-            "SELECT client_alternative.other_name AS object, "
+            'SELECT client_alternative.other_name AS object, '
             'client.industry_id, industry.name AS industry_name FROM client_alternative '
             'INNER JOIN client ON client_alternative.client_id = client.id '
             'INNER JOIN industry ON client.industry_id = industry.id',
@@ -397,6 +407,8 @@ def get_page_data_and_info(
         page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> tuple[pd.DataFrame, str, int]:
     """
+    Получение информации о странице
+
     1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
     2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
     3)Вычисляет кол-во страниц
@@ -418,10 +430,12 @@ def get_page_data_and_info(
 
 
 def wrap_callback_data(data: str) -> str:
+    """Замена : на ;"""
     return data.replace(':', ';')
 
 
 def unwrap_callback_data(data: str) -> str:
+    """Замена ; на :"""
     return data.replace(';', ':')
 
 
@@ -439,6 +453,7 @@ def next_weekday(d: date | datetime, weekday: int) -> date | datetime:
 def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: int = 0) -> datetime:
     """
     Вычисляет ближайшую дату_время относительно переданной по заданным параметрам
+
     next_weekday_time(datetime(2024, 1, 1, 12, 0), 0, 15, 30) -> datetime(2024, 1, 1, 15, 30)
     next_weekday_time(datetime(2024, 1, 1, 16, 0), 0, 15, 30) -> datetime(2024, 1, 8, 15, 30)
 
@@ -480,6 +495,7 @@ async def send_or_edit(
 ) -> None:
     """
     Отправляет новое сообщение, если message это types.Message
+
     Изменяет текущее сообщение, если message это types.CallbackQuery
 
     :param message: Объект сообщения или callback
@@ -505,6 +521,7 @@ async def send_pdf(
 ) -> bool:
     """
     Отправка сообщения перед файлами
+
     Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
 
     Если файлов нет, то return False и ничего не отправляет

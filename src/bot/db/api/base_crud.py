@@ -1,7 +1,9 @@
-import logging
-from typing import Any, Type, Optional, TypeVar, Protocol, Generic
+"""Классы для CRUD"""
 
-from sqlalchemy import select, delete, update
+import logging
+from typing import Any, Generic, Optional, Protocol, Type, TypeVar
+
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import InstrumentedAttribute
 
 from db import database
@@ -9,10 +11,11 @@ from db import database
 
 class BaseProtocol(Protocol):
     """Base protocol that ORM model should follow."""
-    id: int
+
+    id: int  # noqa:A003
 
 
-Orm = TypeVar("Orm", bound=BaseProtocol)
+Orm = TypeVar('Orm', bound=BaseProtocol)
 
 
 class BaseCRUD(Generic[Orm]):
@@ -23,6 +26,7 @@ class BaseCRUD(Generic[Orm]):
     def __init__(self, table: Type[Orm], order: InstrumentedAttribute, logger: logging.Logger) -> None:
         """
         Объект, предоставляющего интерфейс для взаимодействия с таблицей table
+
         :param table: Класс ORM sqlalchemy, представляющий таблицу в БД
         :param order: Используется для выражения ORDER BY
         :param logger: Логгер (синхронный)
@@ -38,8 +42,10 @@ class BaseCRUD(Generic[Orm]):
     async def create(self, item: Orm) -> Optional[Orm]:
         """
         Добавляет с БД запись о новом объекте
+
         поле id генерируется автоматически
         Если одно из полей item будет нарушать любое ограничение таблицы self._table, то вернется None
+
         :param item: Объект ORM sqlalchemy, у которого заданы значения обязательных столбцов таблицы
         :returns: Возвращает либо сам объект, который был добавлен в БД, либо None
         """
@@ -57,8 +63,8 @@ class BaseCRUD(Generic[Orm]):
 
     async def get(self, _id: int) -> Optional[Orm]:
         """
-        Возвращает объект ORM sqlalchemy, если _id присутствует в таблице self._table
-        Иначе возвращает None
+        Возвращает объект ORM sqlalchemy, если _id присутствует в таблице self._table иначе возвращает None
+
         :param _id: значение primary key таблицы self._table, по которому вынимается запись из таблицы
         :returns: Возвращает либо сам объект, который есть в БД, либо None
         """
@@ -69,6 +75,7 @@ class BaseCRUD(Generic[Orm]):
     async def get_all(self) -> list[Orm]:
         """
         Выгрузка всех объектов ORM sqlalchemy из таблицы self._table
+
         :returns: список объектов ORM sqlalchemy
         """
         async with self._async_session_maker() as session:
@@ -78,6 +85,7 @@ class BaseCRUD(Generic[Orm]):
     async def update(self, _id: int, update_dict: dict[str, Any]) -> Optional[Orm]:
         """
         Обновляет обновляет данные в БД в таблице self.table по id == _id
+
         :param _id: id объекта, который необходимо обновить
         :param update_dict: данные для обновления в виде словаря, где ключ это название обновляемой колонки
         :returns: Возвращает либо сам объект, который есть в БД, либо None
@@ -97,6 +105,7 @@ class BaseCRUD(Generic[Orm]):
     async def delete(self, _id: int) -> bool:
         """
         Удаляет объект с id == _id, если _id присутствует в таблице self._table
+
         :returns: Возвращает True, если объект был удален, иначе False
         """
         async with self._async_session_maker() as session:

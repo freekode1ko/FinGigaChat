@@ -1,4 +1,5 @@
-from aiogram.fsm.state import StatesGroup, State
+"""Файл с хендлерами подписок на новости по клиентам"""
+from aiogram.fsm.state import State, StatesGroup
 
 from db import models
 from db.api.client import client_db
@@ -10,6 +11,8 @@ from keyboards.subscriptions.news.client.constructors import keyboard
 
 
 class ClientSubscriptionsStates(StatesGroup):
+    """Состояние для подписок по клиента"""
+
     client_user_subscriptions = State()
 
 

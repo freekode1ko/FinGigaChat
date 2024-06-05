@@ -1,3 +1,4 @@
+"""Запросы к бд связанные с группой продуктов"""
 from typing import Optional
 
 from sqlalchemy import select
@@ -13,6 +14,7 @@ class ProductGroupCRUD(BaseCRUD[models.ProductGroup]):
     async def get_by_latin_name(self, latin_name: str) -> Optional[models.ProductGroup]:
         """
         Позволяет получить группу продуктов по ее имени на латинице
+
         :param latin_name: имя группы на латинице
         :returns: Возвращает либо сам объект, который есть в БД, либо None
         """
