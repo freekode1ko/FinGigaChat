@@ -195,7 +195,7 @@ async def select_period_to_get_researches(
     )
 
     back_callback = (
-            back_callback or callbacks.GetCIBSectionResearches(section_id=research_info.research_section_id).pack()
+        back_callback or callbacks.GetCIBSectionResearches(section_id=research_info.research_section_id).pack()
     )
 
     keyboard = keyboards.get_select_period_kb(
@@ -346,8 +346,8 @@ async def data_mart_body(message: types.Message) -> None:
     # Денежное предложение
     for table in tables:
         table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'] = (
-                'Денежное предложение '
-                + table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
+            'Денежное предложение ' +
+            table.loc[table['alias'].str.contains('Денежное предложение'), 'Экономические показатели'].str.lower()
         )
     # Средняя процентная ставка
     for table in tables:
@@ -360,17 +360,17 @@ async def data_mart_body(message: types.Message) -> None:
     # рубль/доллар
     for table in tables:
         table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] = (
-                table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
+            table.loc[table['alias'].str.contains('рубль/доллар'), 'Экономические показатели'] + ', $/руб'
         )
     # ИПЦ
     for table in tables:
         table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] = (
-                table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
+            table.loc[table['alias'].str.contains('ИПЦ'), 'Экономические показатели'] + ', ИПЦ'
         )
     # ИЦП
     for table in tables:
         table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] = (
-                table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
+            table.loc[table['alias'].str.contains('ИЦП'), 'Экономические показатели'] + ', ИЦП'
         )
     # Юралз
     for table in tables:

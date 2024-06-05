@@ -1,3 +1,5 @@
+"""Файл с константами для подписок по новостям по отрасли"""
+
 INDUSTRY_SUBS_MENU = 'industry_subscriptions_menu'
 
 GET_MY_SUBS = 'get_industry_subs'
@@ -14,6 +16,3 @@ SHOW_INDUSTRY_INDUSTRIES = 'industry_showmeindustry'
 WHAT_IN_THIS_INDUSTRY = 'industry_whatinthisindustry'
 
 ADD_ALL_INDUSTRY_SUBS_BY_DOMAIN = 'industry_add_all_subs_by_domain'
-
-
-

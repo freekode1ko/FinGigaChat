@@ -1,30 +1,24 @@
+"""Файл хендлеров котировок"""
 import re
 
-from aiogram import Router, types, F
+import numpy as np
+import pandas as pd
+from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
-import numpy as np
-import pandas as pd
 from sqlalchemy import text
 
 from configs import config
 from configs.config import PATH_TO_SOURCES
+from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
-from constants import quotes as callback_prefixes, enums
 from db.database import engine
-from keyboards.quotes import constructors as keyboards, callbacks
+from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
 from utils import weekly_pulse
-from utils.base import (
-    __replacer,
-    __sent_photo_and_msg,
-    read_curdatetime,
-    user_in_whitelist,
-    send_or_edit,
-)
-
+from utils.base import __replacer, __sent_photo_and_msg, read_curdatetime, send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -46,6 +40,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню Котировки
+
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()

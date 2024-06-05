@@ -1,13 +1,11 @@
-"""
-Handlers для создания call report'ов
-"""
-from aiogram import Router, F
+"""Handlers для создания call report'ов"""
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from handlers.call_reports.call_report_create.utils import validate_and_parse_date, audio_to_text
+from handlers.call_reports.call_report_create.utils import audio_to_text, validate_and_parse_date
 from handlers.call_reports.call_report_view.utils import call_report_view_answer
 from handlers.call_reports.call_reports import CallReport
 from handlers.call_reports.callbackdata import CRCreateNew, CRMenusEnum
@@ -19,8 +17,10 @@ router = Router()
 class CallReportsStates(StatesGroup):
     """
     Состояния при создании call report'ов
+
     enter_clint_name -> enter_date -> enter_text_message
     """
+
     enter_clint_name = State()
     enter_date = State()
     enter_description = State()

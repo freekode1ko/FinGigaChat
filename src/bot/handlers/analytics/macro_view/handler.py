@@ -1,3 +1,4 @@
+"""Файл с хендлерами макро обзора"""
 import calendar
 import datetime
 
@@ -8,7 +9,7 @@ from constants.analytics import macro_view
 from handlers.analytics.handler import router
 from keyboards.analytics.macro_view import callbacks
 from log.bot_logger import user_logger
-from utils.base import send_pdf, previous_weekday_date
+from utils.base import previous_weekday_date, send_pdf
 
 
 @router.callback_query(callbacks.Menu.filter())

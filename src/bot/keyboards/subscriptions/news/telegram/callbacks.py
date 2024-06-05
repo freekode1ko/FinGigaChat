@@ -1,4 +1,5 @@
-from enum import IntEnum, auto
+"""CallbackData по подпискам на каналы в телеграмме"""
+from enum import auto, IntEnum
 from typing import Optional
 
 from aiogram.filters.callback_data import CallbackData
@@ -9,6 +10,7 @@ MENU = 'tg_subs'
 
 class TelegramSubsMenusEnum(IntEnum):
     """Уровни меню подписок на тг каналы"""
+
     # Выбор тг группы
     main_menu = auto()
     # Завершение работы с меню
@@ -37,6 +39,7 @@ class TelegramSubsMenusEnum(IntEnum):
 
 class TelegramSubsMenuData(CallbackData, prefix=MENU):
     """Меню подписок на тг каналы"""
+
     menu: TelegramSubsMenusEnum
     group_id: int = 0
     section_id: int = 0

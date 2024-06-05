@@ -1,13 +1,11 @@
-"""
-Набор функций для создания кнопок при просмотре call report'ов
-"""
+"""Набор функций для создания кнопок при просмотре call report'ов"""
 import copy
 
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from configs import config
-from handlers.call_reports.callbackdata import CRMenusEnum, CRViewAndEdit, CRMainMenu
+from handlers.call_reports.callbackdata import CRMainMenu, CRMenusEnum, CRViewAndEdit
 
 emoji = copy.deepcopy(config.dict_of_emoji)
 
@@ -98,7 +96,6 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum, 
     :param sub_menu: Меню возврата в clients menu
     :return: Клавиатура
     """
-
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(

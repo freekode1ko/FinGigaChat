@@ -26,6 +26,13 @@ async def get_industry_analytic_files(
         industry_id: Optional[int] = None,
         industry_type: Optional[enums.IndustryTypes] = None,
 ) -> list[IndustryDocuments]:
+    """
+    Получить файл аналитики по отрасли
+
+    :param industry_id: айди отрасли
+    :param  industry_type: тип отрасли
+    :return: список документов
+    """
     if industry_id is None and industry_type is None:
         return []
 

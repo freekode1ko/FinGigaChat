@@ -1,5 +1,6 @@
 """
 Формирует клавиатуры для меню аналитики публичных рынков.
+
 Главное меню.
 Меню разделов в группе.
 Меню отчетов в разделе.
@@ -15,7 +16,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import analytics, enums, constants
+from constants import analytics, constants, enums
 from db import models
 from keyboards.analytics import constructors
 from keyboards.analytics.analytics_sell_side import callbacks
@@ -24,6 +25,7 @@ from keyboards.analytics.analytics_sell_side import callbacks
 def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]
@@ -48,6 +50,7 @@ def get_sections_by_group_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Раздел 1 ]
     ...
     [ Раздел n ]
@@ -86,6 +89,7 @@ def get_research_types_by_section_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [][ отчет 1 ]
     ...
     [][ отчет n ]
@@ -131,7 +135,7 @@ def get_research_types_by_section_menu_kb(
             summary_type=item['summary_type'],
         )
 
-        button_txt = item["name"]
+        button_txt = item['name']
         keyboard.row(types.InlineKeyboardButton(text=button_txt, callback_data=research_type_callback.pack()))
 
     keyboard.row(types.InlineKeyboardButton(
@@ -219,6 +223,7 @@ def get_select_period_kb(
 def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Справка ]
     [ Аналитические обзоры ]
     [ P&L модель ]
