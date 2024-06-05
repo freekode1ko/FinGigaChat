@@ -61,3 +61,5 @@ giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
 giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
+
+ROBERTA_CLIENT_RELEVANCE_LINK = 'http://bert_client_relevance:444/query'

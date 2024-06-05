@@ -34,6 +34,9 @@ services:
         depends_on:
             - database
             - bot
+            - bert_client_relevance
+        networks:
+            - localnetwork
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -54,6 +57,9 @@ services:
         depends_on:
             - database
             - bot
+            - bert_client_relevance
+        networks:
+            - localnetwork
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -108,6 +114,26 @@ services:
         depends_on:
             - database
             - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
+    bert_client_relevance:
+        build:
+            context: ./src/bert_client_relevance
+            dockerfile: Dockerfile
+        container_name: bert_client_relevance_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - "444:444"
+        networks:
+            - localnetwork
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 444"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -210,6 +236,10 @@ services:
             - ./data:/code/data
             - ./sources:/code/sources/
         restart: always
+
+networks:
+  localnetwork:
+    name: localnetwork
 
 volumes:
   redis_data:
