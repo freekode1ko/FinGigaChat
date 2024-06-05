@@ -17,7 +17,7 @@ class StateMiddleware(BaseMiddleware):
     @staticmethod
     def get_user_id(event: TelegramObject) -> int:
         """
-        Получение пользовательского id.
+        Получить пользовательский id.
 
         :param event:   Объект Telegram, содержащий информацию о пользователе и его действиях в боте.
         :return:        ID пользователя или 0 в случае ошибки.
@@ -28,14 +28,14 @@ class StateMiddleware(BaseMiddleware):
             try:
                 user_id = event.callback_query.from_user.id
             except Exception as e:
-                logger.error(f'{type(e)}: не удалось получить id пользователя в ActivityMiddleware: {e}')
+                logger.error(f'{type(e).__name__}: не удалось получить id пользователя в StateMiddleware: {e}')
                 user_id = 0
         return user_id
 
     @staticmethod
-    async def set_raw_state(user_id: int, raw_state: State | None) -> State | None:
+    async def update_raw_state_if_timeout(user_id: int, raw_state: State | None) -> State | None:
         """
-        Обновление состояния в None, если после последнего сообщения бота прошло > STATE_TIMEOUT.
+        Обновить состояния в None, если после последнего сообщения бота прошло > STATE_TIMEOUT.
 
         :param user_id:     ID пользователя.
         :param raw_state:   Значение состояния.
@@ -46,7 +46,7 @@ class StateMiddleware(BaseMiddleware):
         if last_activity_date and raw_state:
             last_activity_date = dt.datetime.strptime(last_activity_date, BASE_DATETIME_FORMAT)
             diff = dt.datetime.utcnow() - last_activity_date
-            if diff.seconds > STATE_TIMEOUT:
+            if diff.seconds > STATE_TIMEOUT.seconds:
                 return None
         return raw_state
 
@@ -57,8 +57,7 @@ class StateMiddleware(BaseMiddleware):
             data: dict[str, Any]
     ):
         """
-        Сбрасывает состояние, в котором находится пользователь, если после последнего сообщения бота прошло > STATE_TIMEOUT.
-        Или пользователь написал команду.
+        Сбрасывать состояние, если после последнего сообщения бота прошло > STATE_TIMEOUT или пользователь написал команду.
 
         :param handler: Обработчик.
         :param event:   Событие.
@@ -76,7 +75,7 @@ class StateMiddleware(BaseMiddleware):
             await handler(event, data)
             return
 
-        data['raw_state'] = await self.set_raw_state(user_id, raw_state)
+        data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state)
         await handler(event, data)
         activity_data = dt.datetime.utcnow().strftime(BASE_DATETIME_FORMAT)
         await update_last_activity(user_id, activity_data)
