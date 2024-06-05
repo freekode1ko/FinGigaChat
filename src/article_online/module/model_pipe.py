@@ -359,6 +359,7 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
     :param logger: экземпляр класса логер для логирования процесса.
     :return: список вероятностей релевантности.
     """
+
     # делаем запрос к модели roberta, обрезаем слишком большой инпут
     params = {"query": text[:MAX_LEN_INPUT]}
     try:
