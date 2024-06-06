@@ -14,3 +14,4 @@ import-order-style = smarkets
 
 per-file-ignores =
     src/bot/db/models.py:D101
+    src/bot/configs/prompts.py:W291,E501
