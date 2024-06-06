@@ -15,22 +15,18 @@ class StateMiddleware(BaseMiddleware):
     """Класс, реализующий выход из состояния при определенных условиях."""
 
     @staticmethod
-    def get_user_id(event: TelegramObject) -> int:
+    def get_user_id(event: TelegramObject) -> int | None:
         """
         Получить пользовательский id.
 
         :param event:   Объект Telegram, содержащий информацию о пользователе и его действиях в боте.
-        :return:        ID пользователя или 0 в случае ошибки.
+        :return:        ID пользователя или None в случае неуспешного получения ID.
         """
-        if event.message is not None:
-            user_id = event.message.from_user.id
-        else:
-            try:
-                user_id = event.callback_query.from_user.id
-            except Exception as e:
-                logger.error(f'{type(e).__name__}: не удалось получить id пользователя в StateMiddleware: {e}')
-                user_id = 0
-        return user_id
+        user = getattr(event.message, 'from_user', None) or getattr(event.callback_query, 'from_user', None)
+        if user:
+            return user.id
+        logger.error(f'Не удалось получить id пользователя в StateMiddleware, event: {event}')
+        return None
 
     @staticmethod
     async def update_raw_state_if_timeout(user_id: int, raw_state: State | None) -> State | None:
@@ -70,7 +66,7 @@ class StateMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         user_id = self.get_user_id(event)
-        if not user_id:
+        if user_id is None:
             return await handler(event, data)
 
         data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state)
