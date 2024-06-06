@@ -37,7 +37,7 @@ async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = 
     """
     batches = []
     current_batch = prefix
-    max_batch_length = 4096
+    max_batch_length = constants.TELEGRAM_MESSAGE_MAX_LEN
     messages: list[types.Message] = []
 
     for paragraph in msg.split(delimiter):
