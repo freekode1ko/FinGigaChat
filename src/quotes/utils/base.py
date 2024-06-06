@@ -1,3 +1,4 @@
+"""Модуль для сохранения даты последней сборки котировок"""
 from datetime import datetime
 
 import pandas as pd

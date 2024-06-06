@@ -1,8 +1,9 @@
+"""Модуль для получения и обработки данных по металлам (сырью/комодам)."""
 import re
 
+import requests as req
 from lxml import html
 import pandas as pd
-import requests as req
 from sqlalchemy import text
 
 from db import database
@@ -11,6 +12,7 @@ from utils.quotes.base import QuotesGetter
 
 
 class MetalsGetter(QuotesGetter):
+    """Класс для получения и обработки данных по металлам (сырью/комодам)."""
     NAME = 'metals'
 
     LBS_IN_T = 2204.62  # фунты в тонны
@@ -24,7 +26,7 @@ class MetalsGetter(QuotesGetter):
     # TODO: ненужно? + удалить из parser_source
     @staticmethod
     def get_extra_data() -> list:
-        """По этим данным не удалется получить таблицы стандартным способом"""
+        """По этим данным не удалятся получить таблицы стандартным способом"""
         with database.engine.connect() as conn:
             query = text(
                 'SELECT sg.name, p.id, p.response_format, p.source '
@@ -40,6 +42,12 @@ class MetalsGetter(QuotesGetter):
 
     @staticmethod
     def filter(table_row: list) -> bool:
+        """
+        Проверяет, является ли строка таблицы строкой с данными по металлам (сырью/комодам).
+
+        :param table_row: Строка таблицы для проверки
+        :return: True, если строка содержит данные по металлам (сырью/комодам), False в противном случае.
+        """
         page = QuotesGetter.get_source_page_from_table_row(table_row)
         pages = ['LMCADS03:COM', 'U7*0', 'commodities', 'coal-(api2)-cif-ara-futures-historical-data']
         return table_row[0] == 'Металлы' and page in pages
@@ -115,6 +123,13 @@ class MetalsGetter(QuotesGetter):
         return [metal_name, price, None, date]
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> tuple[pd.DataFrame, set]:
+        """
+        Предобрабатывает таблицы данных и создает итоговый DataFrame с данными по металлам.
+
+        :param tables: Список таблиц данных.
+        :param session: Сессия для выполнения HTTP-запросов.
+        :return: Кортеж, содержащий DataFrame с данными по металлам и множество идентификаторов обработанных таблиц.
+        """
         preprocessed_ids = set()
         group_name = self.get_group_name()
         U7_full, metals_full, metals_from_html_full = [], [], []
@@ -148,7 +163,12 @@ class MetalsGetter(QuotesGetter):
         return big_table, preprocessed_ids
 
     def from_lbs_to_ton(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Преобразует цену на комоды из фунтов в тонны"""
+        """
+        Преобразует цену на комоды из фунтов в тонны
+
+        :param df: DataFrame с данными по металлам.
+        :return: DataFrame Обновленный DataFrame с преобразованными ценами.
+        """
         commodities_in_lbs = [commodity['name']
                               for com_list in self.TRADING_DATA_TABLE.values()
                               for commodity in com_list

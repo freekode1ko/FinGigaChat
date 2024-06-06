@@ -12,6 +12,7 @@ class Transformer:
     def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
         """
         Get sources url from excel file
+
         :param path: path to .xlsx file
         :param filedName: Column name where holding all urls
         :return: return list with urls
@@ -22,6 +23,7 @@ class Transformer:
     def get_table_from_html(euro_standard: bool, html: str):
         """
         Take all tables from html code
+
         :param euro_standard: Bool value for separators of decimals and thousands
         :param html: HTML codes as text
         :return: list with DataFrames
@@ -35,6 +37,7 @@ class Transformer:
     def unix_to_default(timestamp):
         """
         Transform unix-time to world-time
+
         :param timestamp: unix formatted timestamp
         """
 
@@ -44,9 +47,7 @@ class Transformer:
 
     @staticmethod
     def default_to_unix():
-        """
-        Transform world-time now to unix-time
-        """
+        """Transform world-time now to unix-time"""
 
         now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
@@ -65,7 +66,7 @@ class Newsletter:
 
     @classmethod
     def make_weekly_result(cls):
-        """Создает текст для рассылки "Итоги недели" """
+        """Создает текст для рассылки 'Итоги недели'"""
         title = 'Итоги недели'
         weekly_dir = os.path.join(config.path_to_source, 'weeklies')
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)

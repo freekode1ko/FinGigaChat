@@ -114,6 +114,7 @@ class ParsePresentationPDF:
         """
         Возвращает мета-информацию о слайдах, которые вынимаются из презентации weekly_pulse
         Мета-информация содержит следующий набор данных:
+
         title: Заголовок слайда, используется в качестве критерия для определения номера слайда
         eng_name: название слайда на английском, используется для сохранения слайда в виде png
         crop: флаг необходимости обрезки сохраненного изображения
@@ -182,6 +183,7 @@ class ParsePresentationPDF:
     def get_fnames_by_type(cls, report_type=None) -> List[str]:
         """
         Возвращает список названий слайдов, сохраненных в виде png, для определенного типа report_type
+
         :param report_type: тип из Types
         return: List[str]
         """
@@ -194,6 +196,7 @@ class ParsePresentationPDF:
     ) -> Optional[pandas.DataFrame]:
         """
         Возвращает найденную на слайде первую таблицу
+
         :param pdf_file: Имя презентации с расширением pdf
         :param page_number: Номер слайда (int, str)
         :param area: Область нахождения таблицы (по умолчанию весь слайд)
@@ -210,6 +213,7 @@ class ParsePresentationPDF:
     def parse(self, filename: str, slides_meta: Optional[Union[List[dict], Iterable[dict]]] = None) -> defaultdict:
         """
         Возвращает словарь, где ключом является заголовок слайда, а по заголовку содержится информация:
+
         page_number: номер слайда с заданным заголовком int, -1 если не найден
         text: текст слайда str
         table: таблица со слайда DataFrame или None

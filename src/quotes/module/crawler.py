@@ -9,7 +9,8 @@ from log.logger_base import Logger
 class Dictlist(dict):
     def __setitem__(self, key, value) -> dict:
         """
-        Overwrite default method setitem in class dict to append in list new urls
+        Overwrite default method setitem in class dict to append in list new urls.
+
         :param key: Where need to add
         :param value: What need to add
         :return: dict with appended value in list for selected key
@@ -34,6 +35,7 @@ class Parser:
         """
         Method to get free proxy list from web
         and load it to package variable
+
         :return: None
         """
         global proxy
@@ -46,6 +48,7 @@ class Parser:
     def get_html(self, url: str, session: req.sessions.Session):
         """
         Method return html from requester page
+
         :param session: request "user" session
         :param url: Where to grab html code
         :return: html code from page as string

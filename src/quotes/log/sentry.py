@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 def init_sentry(dsn: str) -> None:
     """
     Устанавливает интеграцию с Sentry
+
     dsn: DSN Sentry для интеграции (выдается при создании проекта в Sentry)
     """
 

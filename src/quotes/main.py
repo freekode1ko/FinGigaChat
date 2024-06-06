@@ -44,9 +44,7 @@ def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
     help='Периодичность сборки котировок\n' 's - секунды\n' 'm - минуты (значение по умолчанию)\n' 'h - часы\n' 'd - дни',
 )
 def main(period):
-    """
-    Сборщик котировок
-    """
+    """Сборщик котировок"""
     sentry.init_sentry(dsn=config.SENTRY_QUOTES_PARSER_DSN)
     try:
         period, scale, scale_txt = get_period(period)

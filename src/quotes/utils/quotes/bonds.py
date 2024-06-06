@@ -1,4 +1,5 @@
-from typing import Tuple, List
+"""Модуль для обработки котировок облигаций."""
+from typing import List, Tuple
 
 import pandas as pd
 import requests as req
@@ -7,21 +8,41 @@ from utils.quotes.base import QuotesGetter
 
 
 class BondsGetter(QuotesGetter):
+    """Класс для получения и обработки данных котировок облигаций."""
     NAME: str = 'bonds'
 
     bonds_kot_columns: List[str] = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']
 
     @staticmethod
     def filter(table_row: list) -> bool:
+        """
+        Проверяет, является ли строка таблицы строкой с данными по облигациям.
+
+        :param table_row: Строка таблицы для проверки.
+        :return: True, если строка содержит данные по облигациям, False в противном случае.
+        """
         return table_row[0] == 'Облигации' and table_row[2] == 'Блок котировки'
 
     def bond_block(self, table_bonds: list) -> pd.DataFrame:
+        """
+        Обрабатывает блок данных по облигациям и создает DataFrame.
+
+        :param table_bonds: Список данных по облигациям.
+        :return: DataFrame с обработанными данными по облигациям.
+        """
         bonds_kot = pd.DataFrame(columns=self.bonds_kot_columns)
         bonds_kot = pd.concat([bonds_kot, table_bonds[4]])
         self.logger.info(f'Таблица Облигации (Котировки) {table_bonds[3]} собрана')
         return bonds_kot
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[pd.DataFrame, set]:
+        """
+        Предобрабатывает таблицы данных и создает итоговый DataFrame с котировками облигаций.
+
+        :param tables: Список таблиц данных.
+        :param session: Сессия для выполнения HTTP-запросов.
+        :return: Кортеж, содержащий DataFrame с данными по облигациям и множество идентификаторов обработанных таблиц.
+        """
         preprocessed_ids = set()
         group_name = self.get_group_name()
         bonds_kot = pd.DataFrame(columns=self.bonds_kot_columns)

@@ -19,6 +19,8 @@ class Logger:
 
     def __init__(self, log_name: str, level: int):
         """
+        Метод инициализации класса для логирования.
+
         :param log_name: В какой файл писать. Если запуск установлен из main.py -> log_name=='Main'
         :param level: Установить уровень логирования
         """

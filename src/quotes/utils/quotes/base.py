@@ -1,3 +1,4 @@
+""""""
 import datetime
 from abc import ABC, abstractmethod
 from typing import Any, Tuple, Union
@@ -6,13 +7,14 @@ import pandas as pd
 import requests as req
 from sqlalchemy import text
 
-from configs import config
-from db import database
 import module.crawler as crawler
 import module.data_transformer as dt
+from configs import config
+from db import database
 
 
 class QuotesGetter(ABC):
+    """Класс для получения источников данных"""
     NAME = 'base quotes getter class'
 
     def __init__(self, logger):
@@ -85,6 +87,7 @@ class QuotesGetter(ABC):
 
     @classmethod
     def get_group_name(cls) -> str:
+        """Возвращает имя группы котировок"""
         return cls.NAME
 
     @staticmethod
@@ -100,7 +103,7 @@ class QuotesGetter(ABC):
 
         :param tables: Таблицы, собранные с источников данных по котировкам
         :param session: requests Сессия
-        return: Кортеж из результата, который надо сохранить, и множества id источников, с которых удалось собрать данные
+        return: Кортеж из результата, для сохранения и множества id источников, с которых удалось собрать данные
         """
         pass
 
