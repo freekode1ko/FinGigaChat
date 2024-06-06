@@ -69,7 +69,7 @@ def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> dict[str, s
         names_pattern_base += r'( |\. |, |\) )'
         names_patter_upper = r'( |\. |, |\) )|'.join(clear_alt_names_upper)
         names_patter_upper += r'( |\. |, |\) )'
-        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+',  r'\+')
+        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+', r'\+')
 
     return alter_names_dict
 
