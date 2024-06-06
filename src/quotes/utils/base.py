@@ -10,7 +10,7 @@ def read_curdatetime() -> datetime:
     """
     Чтение даты последней сборки из базы данных
 
-    return Дата последней сборки
+    :return: Дата последней сборки
     """
     curdatetime = pd.read_sql_query('SELECT * FROM "date_of_last_build"', con=engine)
     return curdatetime['date_time'][0]

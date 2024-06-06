@@ -1,8 +1,8 @@
 """Модуль для получения и обработки данных по металлам (сырью/комодам)."""
 import re
 
-import requests as req
 import pandas as pd
+import requests as req
 from lxml import html
 from sqlalchemy import text
 
