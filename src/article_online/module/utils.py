@@ -1,12 +1,15 @@
+"""Доп функции для обработки новостей"""
 import pandas as pd
+
 from db.database import engine
 
 
 def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str, str]:
     """
     Создает регулярные выражения для коммодов.
-    :param: alt_names: таблица с комодами и их альтернативными названиями.
-    :return: dict с названиями для поиска регуляркой.
+
+    :param: alt_names: Таблица с комодами и их альтернативными названиями.
+    :return:           Словарь с названиями для поиска регуляркой.
     """
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
@@ -21,9 +24,10 @@ def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str
 
 def add_endings(clear_names_list: list[str]) -> list[str]:
     """
-    Добавляет окончания к именам клиента в списке альтернативных имен
-    :param: clear_names_list: список имен клиентов.
-    :return: Измененный список имен клиентов.
+    Добавляет окончания к именам клиента в списке альтернативных имен.
+
+    :param clear_names_list:   Список имен клиентов.
+    :return:                   Измененный список имен клиентов.
     """
     vowels = 'ауоыэяюиеь'
     english_vowels = 'aeiouy'
@@ -48,8 +52,9 @@ def add_endings(clear_names_list: list[str]) -> list[str]:
 def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> dict[str, str]:
     """
     Создает регулярные выражения для клиентов.
-    :param: alt_names: таблица с клиентами и их альтернативными названиями.
-    :return: dict с названиями для поиска регуляркой.
+
+    :param alt_names:   Таблица с клиентами и их альтернативными названиями.
+    :return:            Словарь с названиями для поиска регуляркой.
     """
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
@@ -60,13 +65,11 @@ def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> dict[str, s
         clear_alt_names = add_endings(clear_alt_names)
         clear_alt_names_upper = add_endings([el.upper() for el in clear_alt_names])
 
-        names_pattern_base = '( |\. |, |\) )|'.join(clear_alt_names)
-        names_pattern_base += '( |\. |, |\) )'
-        names_patter_upper = '( |\. |, |\) )|'.join(clear_alt_names_upper)
-        names_patter_upper += '( |\. |, |\) )'
-        alter_names_dict[
-            key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+',
-                                                                          '\+')
+        names_pattern_base = r'( |\. |, |\) )|'.join(clear_alt_names)
+        names_pattern_base += r'( |\. |, |\) )'
+        names_patter_upper = r'( |\. |, |\) )|'.join(clear_alt_names_upper)
+        names_patter_upper += r'( |\. |, |\) )'
+        alter_names_dict[key] = f'({names_pattern_base}|{names_patter_upper})'.replace('+',  r'\+')
 
     return alter_names_dict
 
@@ -74,8 +77,9 @@ def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> dict[str, s
 def create_alternative_names_dict(alt_names: pd.DataFrame) -> dict:
     """
     Создает словарь с альтернативными названиями клиентов.
-    :param alt_names: pd.DataFrame с альтернативными названиями клиентов.
-    :return: словарь с названиями клиентов.
+
+    :param alt_names:   pd.DataFrame с альтернативными названиями клиентов.
+    :return:            Словарь с названиями клиентов.
     """
     alter_names_dict = dict()
     table_subject_list = alt_names.values.tolist()
@@ -89,24 +93,25 @@ def create_alternative_names_dict(alt_names: pd.DataFrame) -> dict:
 def create_client_industry_dict() -> dict:
     """
     Создает словарь с названиями индустрий клиента.
+
     :return: Словарь индустрий клиентов.
     """
-    query = '''
-    select industry.name as industry_name, client.name as client_name from client
-    join industry on client.industry_id = industry.id
-    '''
+    query = (
+        'select industry.name as industry_name, client.name as client_name from client '
+        'join industry on client.industry_id = industry.id'
+    )
     df = pd.read_sql(query, engine)
-    client_industry_dict = dict()
     df.index = df['client_name'].str.lower().str.strip()
     client_industry_dict = df['industry_name'].to_dict()
     return client_industry_dict
 
 
-def modify_commodity_rating_system_dict(commodity_rating_system_dict: dict) -> dict:
+def modify_commodity_rating_system_dict(commodity_rating_system_dict: list[dict]) -> list[dict]:
     """
     Изменяет словарь с названиями коммодов в нужном формате.
-    :param commodity_rating_system_dict: словарь с названиями коммодов.
-    :return: измененный словарь с названиями коммодов.
+
+    :param commodity_rating_system_dict: Словарь с названиями коммодов.
+    :return:                             Измененный словарь с названиями коммодов.
     """
     for group in commodity_rating_system_dict:
         group['key words'] = ','.join(f' {word.strip().lower()}' for word in group['key words'].split(','))

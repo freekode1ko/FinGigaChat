@@ -1,3 +1,4 @@
+"""Модуль инициализации Sentry."""
 import logging
 
 import sentry_sdk
@@ -11,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 def init_sentry(dsn: str) -> None:
     """
-    Устанавливает интеграцию с Sentry
-    dsn: DSN Sentry для интеграции (выдается при создании проекта в Sentry)
-    """
+    Устанавливает интеграцию с Sentry.
 
+    dsn: DSN Sentry для интеграции (выдается при создании проекта в Sentry).
+    """
     if config.ENV.is_local() and not config.SENTRY_FORCE_LOCAL:
         return
 
