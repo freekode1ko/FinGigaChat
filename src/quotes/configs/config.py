@@ -1,7 +1,7 @@
 """Константы для запуска приложения"""
 import json
 import pathlib
-from typing import List, Union
+from typing import Union
 
 from environs import Env
 
@@ -43,7 +43,7 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-user_agents: List[str] = read_asset_from_json(file_name='user_agents.json')
+user_agents: list[str] = read_asset_from_json(file_name='user_agents.json')
 
 path_to_source = './sources'
 

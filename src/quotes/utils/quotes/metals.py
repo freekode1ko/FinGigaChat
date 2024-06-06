@@ -27,7 +27,7 @@ class MetalsGetter(QuotesGetter):
     # TODO: ненужно? + удалить из parser_source
     @staticmethod
     def get_extra_data() -> list:
-        """По этим данным не удалятся получить таблицы стандартным способом"""
+        """По этим данным не удается получить таблицы стандартным способом"""
         with database.engine.connect() as conn:
             query = text(
                 'SELECT sg.name, p.id, p.response_format, p.source '

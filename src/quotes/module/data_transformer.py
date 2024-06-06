@@ -12,15 +12,15 @@ class Transformer:
     """Класс для выполнения различных операций по преобразованию данных."""
 
     @staticmethod
-    def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
+    def load_urls_as_list(path: str, filed_name: str) -> pd.DataFrame:
         """
         Загрузить список ссылок из Excel
 
         :param path: Путь до .xlsx файла
-        :param filedName: Название колонки где хранится все ссылки
+        :param filed_name: Название колонки, где хранится все ссылки
         :return: Список ссылок
         """
-        return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
+        return pd.read_excel(path)[['Алиас', 'Блок', filed_name]].values.tolist()
 
     @staticmethod
     def get_table_from_html(euro_standard: bool, html: str):

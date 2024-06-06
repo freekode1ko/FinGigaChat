@@ -42,11 +42,7 @@ class Parser:
     user_agents = user_agents
 
     def get_proxy_addresses(self) -> None:
-        """
-        Метод получения списка доступных прокси и их загрузка
-
-        :return: None
-        """
+        """Метод получения списка доступных прокси и их загрузка"""
         global proxy
         proxy['https'] = ['socks5h://193.23.50.38:10222']
         proxy['https'] = ['socks5h://135.125.212.24:10034']
@@ -67,7 +63,7 @@ class Parser:
         https = random.choice(proxy['https'])
         # if type(http) == list:
         #     http = http[0]
-        if type(https) is list:
+        if isinstance(https, list):
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}
