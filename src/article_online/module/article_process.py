@@ -56,12 +56,12 @@ class ArticleProcess:
                 f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(df)}')
         return df
 
-    def preprocess_article_online(self, df: pd.DataFrame):
+    def preprocess_article_online(self, df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         """
-        Preprocess articles dataframe and set df.
+        Предобработать поступившие новости.
 
-        :param df: df with articles
-        :return: dataframe of articles
+        :param df:  Датафрейм с новостями от GigaParsers.
+        :return:    Обработанный датафрейм с поступившими новостями и id этих новостей.
         """
         new_name_columns = {'url': 'link', 'title': 'title', 'created_at': 'date', 'content': 'text'}
         columns = ['link', 'title', 'date', 'text']
@@ -106,10 +106,10 @@ class ArticleProcess:
 
     def get_tg_articles(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Вынимает новости, которые связаны с тг-каналами, добавляет колонку с telegram_id
+        Вынимает новости, которые связаны с тг-каналами, добавляет колонку с telegram_id.
 
-        :param df: DataFrame с предобработанными данными новостей (link, title, date, text, [id])
-        :return: DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id)
+        :param df:  DataFrame с предобработанными данными новостей (link, title, date, text, [id]).
+        :return:    DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id).
         """
         query = 'SELECT id, link FROM telegram_channel;'
         tg_channels_df = pd.read_sql(query, con=self.engine)
@@ -130,22 +130,22 @@ class ArticleProcess:
     @staticmethod
     def update_tg_articles(saved_tg_articles: pd.DataFrame, all_tg_articles: pd.DataFrame) -> pd.DataFrame:
         """
-        Соединение DataFrame сохраненных тг-новостей со всеми тг-новостями
+        Соединение DataFrame сохраненных тг-новостей со всеми тг-новостями.
 
-        :param saved_tg_articles: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
-        :param all_tg_articles: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
-        :return: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :param saved_tg_articles:   DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :param all_tg_articles:     DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :return:                    DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
         """
         saved_tg_articles = saved_tg_articles[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
         all_tg_articles = all_tg_articles[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
         return pd.concat([saved_tg_articles, all_tg_articles]).drop_duplicates('link').reset_index()
 
     def throw_the_models(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Call model pipe func"""
+        """Обработать датафрейм с помощью моделей."""
         return model_func_online(self._logger, df)
 
-    def drop_duplicate(self):
-        """Call func to delete similar articles"""
+    def drop_duplicate(self) -> None:
+        """Удалить дубли между поступившими новостями и новостями из базы данных."""
         dt_now = dt.datetime.now()
         old_query = (
             f'SELECT a.id, a.date,'
@@ -174,11 +174,11 @@ class ArticleProcess:
         # соединяем обратно в один батч
         self.df_article = pd.concat([articles_relevant, articles_not_relevant], ignore_index=True)
 
-    def make_text_sum(self):
-        """Call summary func"""
+    def make_text_sum(self) -> None:
+        """Вызвать функцию по суммаризации новостей."""
         self.df_article = add_text_sum_column(self._logger, self.df_article)
 
-    def apply_gigachat_filtering(self):
+    def apply_gigachat_filtering(self) -> None:
         """Применяем фильтрацию новостей с помощью gigachat"""
         self.df_article = gigachat_filtering(self._logger, self.df_article)
 
@@ -223,9 +223,9 @@ class ArticleProcess:
 
     def _make_save_relation_article_table(self, name: str) -> None:
         """
-        Make relation table and save it to database.
+        Создать таблицы отношений и сохранить их в базу данных.
 
-        :param name: name (client or commodity)
+        :param name: Объект (клиент или коммод).
         """
         subject = pd.read_sql(f'SELECT * FROM {name}', con=self.engine).rename(columns={'id': f'{name}_id', 'name': name})
         # make in-between df about article id and client data
