@@ -1,4 +1,4 @@
-""""""
+"""Модуль с набором иструментов для работы с источниками данных"""
 import datetime
 from abc import ABC, abstractmethod
 from typing import Any, Tuple, Union
