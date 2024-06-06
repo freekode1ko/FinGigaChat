@@ -11,10 +11,9 @@ import pandas as pd
 import pymorphy2
 import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sqlalchemy import create_engine, text
-from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 
-from configs.config import psql_engine, ROBERTA_CLIENT_RELEVANCE_LINK
+from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from configs.prompts import (
     CLIENT_MESSAGE_PROMPT,
     CLIENT_SYSTEM_PROMPT,
@@ -100,9 +99,9 @@ MAX_LEN_INPUT = 6000
 morph = pymorphy2.MorphAnalyzer()
 
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
-commodity_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
+commodity_names_ = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
 alter_client_names_dict = utils.get_alternative_names_pattern_client(client_names)
-alter_commodity_names_dict = utils.get_alternative_names_pattern_commodity(commodity_names)
+alter_commodity_names_dict = utils.get_alternative_names_pattern_commodity(commodity_names_)
 
 client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
 commodity_rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
@@ -112,7 +111,10 @@ CLIENT_NAMES_DICT = utils.create_alternative_names_dict(client_names)
 CLIENT_INDUSTRY_DICT = utils.create_client_industry_dict()
 
 with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-    binary_model = pickle.load(f)
+    client_binary_model = pickle.load(f)
+
+with open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+    commodity_binary_model = pickle.load(f)
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
@@ -132,20 +134,20 @@ def find_bad_gas(names: str, clean_text: str) -> str:
     return names
 
 
-def check_gazprom(names: str, names_impact: dict, aricle_text: str) -> str:
+def check_gazprom(names: str, names_impact: dict, article_text: str) -> str:
     """
     Убрать "газпром" из присвоения новости, если в новости упоминается "газпром нефть".
 
     :param names:           Имена клиентов, которые были найдены в новости.
     :param names_impact:    Словарь с именами клиентов и количеством их упоминаний в тексте новости.
-    :param aricle_text:            Оригинальный текст новости.
+    :param article_text:            Оригинальный текст новости.
     :return:                Строку с именами (без "газпрома", если "газпром нефть" есть в новости).
     """
-    aricle_text = aricle_text.replace('"', '')
+    article_text = article_text.replace('"', '')
     names_list = names.split(';')
     names_impact_list = list(eval(names_impact).keys())
     if 'газпром' in names and 'газпром нефть' in names_impact_list:
-        if not search('газпром(?! нефт[ьи])', aricle_text):
+        if not search('газпром(?! нефт[ьи])', article_text):
             try:
                 names_list.remove('газпром')
                 names = ';'.join(names_list)
@@ -189,8 +191,7 @@ def get_names_pattern(names: str, type_of_article: str):
     return names_pattern
 
 
-def find_stock(title: str, names: str, clean_text: str, labels: str,
-               type_of_article: str = 'client') -> str:
+def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_article: str = 'client') -> str:
     """
     Processing news about stock
 
@@ -244,33 +245,6 @@ def clean_data(article_text: str) -> str:
     return clean_text
 
 
-def find_names(article_text, alt_names_dict, rule_flag: bool = False) -> tuple[str, str]:
-    """
-    Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
-
-    :param article_text: str. Current string in which we search for names.
-    :param alt_names_dict: Pandas DF. Pandas DF with columns with names neeeded to be found. In one row all names - alternatives.
-    :param rule_flag: bool. Flag shows that it commodity text or not.
-    :return: str. String with found names separated with ; symbol.
-    """
-    article_text = article_text.replace('"', '')
-    names_dict = {}
-    for key, alt_names in alt_names_dict.items():
-        alt_names = alt_names.replace('"', '')
-        re_findall = re.findall(alt_names, article_text)
-        if re_findall:
-            key_name = key.lower().strip()
-            names_dict[key_name] = len(re_findall)
-    impact_json = json.dumps(names_dict, ensure_ascii=False)
-    if rule_flag:
-        max_count = max(names_dict.values(), default=None)
-        if max_count and max_count != 1:
-            return ';'.join([key for key, val in names_dict.items() if
-                             val == max_count]), impact_json
-        return '', impact_json
-    return ';'.join(names_dict.keys()), impact_json
-
-
 def find_names_online(article_title: str, article_text: str, alt_names_dict: dict) -> tuple[str, str]:
     """
     Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
@@ -311,11 +285,10 @@ def find_names_online(article_title: str, article_text: str, alt_names_dict: dic
     return names, impact_json
 
 
-def down_threshold(engine, type_of_article, names, threshold) -> float:
+def down_threshold(type_of_article: str, names: list[str], threshold: float) -> float:
     """
     Down threshold if new contains rare subject
 
-    :param engine: engine to database
     :param type_of_article: client or commodity
     :param names: list with names of different subjects
     :param threshold: float value, limit of relevance
@@ -340,17 +313,8 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
     return threshold
 
 
-def search_keywords(relevance, subject, clean_text, labels, rating_dict):
-    """
-    Найти ключевые слова.
-
-    :param relevance:
-    :param subject:
-    :param clean_text:      Лемматизированный текст.
-    :param labels:
-    :param rating_dict:
-    :return:
-    """
+def search_keywords(relevance, subject: str, clean_text: str, labels: str, rating_dict: list[dict]):
+    """Найти ключевые слова."""
     if not subject:
         labels = '-1'
     elif not relevance:
@@ -362,7 +326,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
             if search(keywords_pattern, clean_text):
                 label = str(group['label'])
                 labels += f';{label}'
-        # after deranking labels score should still be positive
+        # after reranking labels score should still be positive
         if len(labels) > 1:
             labels = str(max(1, sum(map(int, labels.split(';')))))
 
@@ -383,17 +347,17 @@ def search_top_sources(link: Optional[str or Any], score: int) -> int:
     return score
 
 
-def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Logger.logger) -> list[float]:
+def get_prediction_bert_client_relevance(article_text: str, clean_text: str, logger: Logger.logger) -> list[float]:
     """
     Получить вероятности релевантности для текста новости клиента.
 
-    :param text:        Текст новости.
-    :param clean_text:  Очищенный текст новости.
-    :param logger:      Экземпляр класса логгер для логирования процесса.
-    :return:            Список вероятностей релевантности.
+    :param article_text:        Текст новости.
+    :param clean_text:          Очищенный текст новости.
+    :param logger:              Экземпляр класса логгер для логирования процесса.
+    :return:                    Список вероятностей релевантности.
     """
     # делаем запрос к модели roberta, обрезаем слишком большой инпут
-    params = {'query': text[:MAX_LEN_INPUT]}
+    params = {'query': article_text[:MAX_LEN_INPUT]}
     try:
         with requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60) as response:
             # достаем вероятности релевантности
@@ -403,10 +367,10 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
     # если не смогли получить ответ от сервиса, или классификация на сервере некорректна, то используем локальную модель
-    return list(binary_model.predict_proba([clean_text])[0]) if probs[0] < 0 else probs
+    return list(client_binary_model.predict_proba([clean_text])[0]) if probs[0] < 0 else probs
 
 
-def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
+def rate_client(df: pd.DataFrame, rating_dict: list[dict], logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
 
@@ -422,7 +386,7 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
         row['text'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
     logger.info('Окончание обработки новостей клиентов на релевантность')
     df['relevance'] = [
-        int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
+        int(pair[1] > down_threshold('client', df['client'].iloc[index].split(';'), threshold))
         for index, pair in enumerate(probs)
     ]
     # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
@@ -451,7 +415,7 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
     return df
 
 
-def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
+def rate_commodity(df: pd.DataFrame, rating_dict: list[dict], threshold=0.5) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
 
@@ -460,17 +424,12 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
     :param threshold : float. Threshold on binary commodity relevance model.
     :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
     """
-    with open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-        binary_model = pickle.load(f)
-
-    probs = binary_model.predict_proba(df['cleaned_data'])
+    probs = commodity_binary_model.predict_proba(df['cleaned_data'])
 
     res = []
-    engine = create_engine(psql_engine, poolclass=NullPool)
     for index, pair in enumerate(probs):
         commodity_names = df['commodity'].iloc[index].split(';')
-        local_threshold = down_threshold(engine, 'commodity', commodity_names,
-                                         threshold)
+        local_threshold = down_threshold('commodity', commodity_names, threshold)
         res.append(1 if (pair[1]) > local_threshold else 0)
     df['relevance'] = res
 
@@ -568,12 +527,9 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     logger.debug('Нахождение товаров в тексте новости')
     df[['commodity', 'commodity_impact']] = df.apply(
-        lambda row: pd.Series(
-            find_names_online(row['title'], row['cleaned_data'],
-                              alter_commodity_names_dict)), axis=1
+        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1
     )
-    df['commodity'] = df.apply(
-        lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
+    df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
 
     # make rating for article
     logger.debug('Сортировка новостей о клиентах')
@@ -582,10 +538,8 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df['client_score'] = df['client_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
-    df['commodity_score'] = df['commodity_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['client_score'] = df['client_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
     df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
@@ -593,8 +547,7 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_text_sum_column(logger: Logger.logger,
-                        df: pd.DataFrame) -> pd.DataFrame:
+def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
     giga_chat = GigaChat(logger)
@@ -605,9 +558,12 @@ def add_text_sum_column(logger: Logger.logger,
     return df
 
 
-def deduplicate(logger: Logger.logger, df: pd.DataFrame,
-                df_previous: pd.DataFrame,
-                threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(
+        logger: Logger.logger,
+        df: pd.DataFrame,
+        df_previous: pd.DataFrame,
+        threshold: float = 0.35
+) -> pd.DataFrame:
     """
     Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
 
@@ -716,8 +672,7 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame,
     return df
 
 
-def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str,
-                                logger: Logger.logger) -> str:
+def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
     """
     Фильтрует новости по клиентам и комодам с помощью Gigachat.
 
