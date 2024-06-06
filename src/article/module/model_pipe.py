@@ -17,7 +17,6 @@ from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from db.database import engine
 from log.logger_base import Logger
 from module import utils
-from module.chatgpt import ChatGPT
 from module.gigachat import GigaChat
 
 
@@ -713,28 +712,6 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     logger.info(f'Количество новостей после удаления дублей - {len(df)}')
 
     return df
-
-
-def summarization_by_chatgpt(full_text: str) -> str:
-    """Make summary by chatgpt"""
-    # TODO: do by langchain
-    batch_size = 4000
-    text_batches = []
-    new_text_sum = ''
-    if len(full_text + prompts.summarization_prompt) > batch_size:
-        while len(full_text + prompts.summarization_prompt) > batch_size:
-            point_index = full_text[:batch_size].rfind('.')
-            text_batches.append(full_text[: point_index + 1])
-            full_text = full_text[point_index + 1:]
-    else:
-        text_batches = [full_text]
-
-    for batch in text_batches:
-        gpt = ChatGPT()
-        query_to_gpt = gpt.ask_chat_gpt(text=batch, prompt=prompts.summarization_prompt)
-        new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
-
-    return new_text_sum
 
 
 def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:

@@ -3,7 +3,6 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-
 from configs.config import log_lvl
 
 LOG_FORMAT = '%(asctime)s,%(msecs)d %(levelname)-8s [%(module)s:%(lineno)d in %(funcName)s] %(message)s'
