@@ -1,3 +1,4 @@
+"""Набор инструментов для получения данных из различных источников и обработка даты"""
 import datetime
 import os
 
@@ -11,22 +12,22 @@ class Transformer:
     @staticmethod
     def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
         """
-        Get sources url from excel file
+        Загрузить список ссылок из Excel
 
-        :param path: path to .xlsx file
-        :param filedName: Column name where holding all urls
-        :return: return list with urls
+        :param path: Путь до .xlsx файла
+        :param filedName: Название колонки где хранится все ссылки
+        :return: Список ссылок
         """
         return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
 
     @staticmethod
     def get_table_from_html(euro_standard: bool, html: str):
         """
-        Take all tables from html code
+        Получение всех таблиц из html
 
-        :param euro_standard: Bool value for separators of decimals and thousands
-        :param html: HTML codes as text
-        :return: list with DataFrames
+        :param euro_standard: Использовать европейский стандарт разделителя в числах?
+        :param html: HTML как string
+        :return: Список таблиц со страницы
         """
         # if euro_standard:
         #     return pd.read_html(html)
@@ -36,9 +37,9 @@ class Transformer:
     @staticmethod
     def unix_to_default(timestamp):
         """
-        Transform unix-time to world-time
+        Преобразовать UNIX-время в мировой стандарт времени
 
-        :param timestamp: unix formatted timestamp
+        :param timestamp: Временная отметка в формате UNIX
         """
 
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
@@ -47,7 +48,7 @@ class Transformer:
 
     @staticmethod
     def default_to_unix():
-        """Transform world-time now to unix-time"""
+        """Преобразовать мировое время в UNIX-формат"""
 
         now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')

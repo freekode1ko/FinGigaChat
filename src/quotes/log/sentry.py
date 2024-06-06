@@ -1,3 +1,4 @@
+"""Модуль интегации с sentry для отброса в него логов"""
 import logging
 
 import sentry_sdk

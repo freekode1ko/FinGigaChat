@@ -1,4 +1,4 @@
-# importing required modules
+"""Модуль для парсинга презентаций в формате PDF."""
 import os
 import re
 from collections import defaultdict
@@ -17,6 +17,7 @@ PERCENT_HEIGHT_OF_USEFUL_INFO = 94
 
 
 def default_slide_item() -> dict:
+    """Возвращает словарь с начальным значением для информации о слайде."""
     return {
         'page_number': -1,
         'text': '',
@@ -25,6 +26,12 @@ def default_slide_item() -> dict:
 
 
 def crop_slide_text(text: str) -> str:
+    """
+    Обрезает текст слайда, удаляя первые две и последние пять строк.
+
+    :param text: Исходный текст слайда.
+    :return: Обрезанный текст слайда.
+    """
     if not isinstance(text, str):
         return ''
 
@@ -43,6 +50,13 @@ def __is_needed_slide_inner(criteria: str, slide_text: str) -> bool:
 
 
 def is_needed_slide(criteria: str, slide_text: str) -> bool:
+    """
+    Проверяет, соответствует ли слайд заданным критериям.
+
+    :param criteria: Критерии для проверки.
+    :param slide_text: Текст слайда.
+    ::return: True, если слайд соответствует критериям, False в противном случае.
+    """
     try:
         return __is_needed_slide_inner(criteria, __crop_text_upto_header(slide_text))
     except Exception:
@@ -53,6 +67,15 @@ def is_needed_slide(criteria: str, slide_text: str) -> bool:
 def get_page_table(
     pdf_file: str, page_number: Union[str, int], area: Optional[Union[list, tuple]] = None, relative_area: bool = False
 ) -> Optional[pandas.DataFrame]:
+    """
+    Извлекает таблицу с указанной страницы PDF файла. (Не активен на данный момент)
+
+    :param pdf_file: Путь к файлу PDF
+    :param page_number: Номер страницы PDF файла.
+    :param area: Область страницы для извлечения таблицы. Defaults to None.
+    :param relative_area: Использовать относительную область. Defaults to False.
+    :return: DataFrame с таблицей, если она найдена, иначе None.
+    """
     return None
     # try:
     #     import tabula  # pip install tabula-py
@@ -68,6 +91,13 @@ def get_page_table(
 
 
 def get_special_slides(filename: str, slides_meta: Union[List[dict], Iterable[dict]]) -> defaultdict:
+    """
+    Извлекает специальные слайды из PDF файла на основе метаданных.
+
+    :param filename: Путь к файлу PDF
+    :param slides_meta: Метаданные для поиска специальных слайдов.
+    :return: Словарь с данными по слайдам, где ключ - заголовок слайда, а значение - данные слайда.
+    """
     slides_titles2data = defaultdict(default_slide_item)
 
     if not filename or not isinstance(filename, (str, Path)) or not os.path.isfile(filename) or not slides_meta:

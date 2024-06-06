@@ -1,3 +1,4 @@
+"""Набор инструментов для сборки данных с WEB-источников"""
 import random
 
 import requests as req
@@ -9,11 +10,11 @@ from log.logger_base import Logger
 class Dictlist(dict):
     def __setitem__(self, key, value) -> dict:
         """
-        Overwrite default method setitem in class dict to append in list new urls.
+        Перегружает стандартный метод setitem в классе словаря на добавление в список новой ссылки
 
-        :param key: Where need to add
-        :param value: What need to add
-        :return: dict with appended value in list for selected key
+        :param key: Где нужно добавить значение
+        :param value: Что нужно добавить
+        :return: Словарь с добавленным значениям по выбранному ключу
         """
         try:
             self[key]
@@ -26,15 +27,21 @@ proxy = Dictlist()
 
 
 class Parser:
+    """Класс для парсинга данных."""
+
     def __init__(self, logger: Logger.logger):
+        """
+        Инициализирует экземпляр класса Parser.
+
+        :param logger: Логгер для записи действий и ошибок.
+        """
         self._logger = logger
 
     user_agents = user_agents
 
     def get_proxy_addresses(self) -> None:
         """
-        Method to get free proxy list from web
-        and load it to package variable
+        Метод получения списка доступных прокси и их загрузка
 
         :return: None
         """
@@ -47,11 +54,11 @@ class Parser:
 
     def get_html(self, url: str, session: req.sessions.Session):
         """
-        Method return html from requester page
+        Метод получения html страницы
 
-        :param session: request "user" session
-        :param url: Where to grab html code
-        :return: html code from page as string
+        :param session: Получение сессии якобы пользователя
+        :param url: Адрес страницы
+        :return: html страницы как string
         """
         euro_standard = False
         # http = random.choice(proxy['http'])

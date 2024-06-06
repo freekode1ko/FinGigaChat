@@ -1,3 +1,4 @@
+"""Модуль содержащий в себе методы логирования."""
 import datetime
 import logging
 import os
@@ -15,6 +16,7 @@ MAX_BYTES = 10 * 1024 * 1024
 
 
 class Logger:
+    """Класс для логирования."""
     logger = logging.getLogger(__name__)
 
     def __init__(self, log_name: str, level: int):

@@ -1,3 +1,4 @@
+"""Константы для запуска приложения"""
 import json
 import pathlib
 from typing import Dict, List, Union
