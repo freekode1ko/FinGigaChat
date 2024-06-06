@@ -10,6 +10,7 @@ from utils.quotes.base import QuotesGetter
 
 class EcoGetter(QuotesGetter):
     """Класс для получения и обработки данных об экономике."""
+
     NAME = 'eco'
 
     world_bet_columns: List[str] = ['Country', 'Last', 'Previous', 'Reference', 'Unit']
@@ -98,6 +99,12 @@ class EcoGetter(QuotesGetter):
         return (eco_stake, world_bet, rus_infl), preprocessed_ids
 
     def save(self, data: Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]) -> None:
+        """
+        Сохраняет данные в базы данных.
+
+        :param data: Кортеж, содержащий три DataFrame: экономические ставки, мировые ставки, российская инфляция.
+        :return: None
+        """
         eco_stake, world_bet, rus_infl = data
 
         eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=database.engine)

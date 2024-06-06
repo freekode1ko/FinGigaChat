@@ -8,9 +8,11 @@ from log.logger_base import Logger
 
 
 class Dictlist(dict):
+    """Класс словаря, в котором значения хранятся в виде списков."""
+
     def __setitem__(self, key, value) -> dict:
         """
-        Перегружает стандартный метод setitem в классе словаря на добавление в список новой ссылки
+        Перегружает стандартный метод __setitem__ в классе словаря, чтобы добавлять значение в список.
 
         :param key: Где нужно добавить значение
         :param value: Что нужно добавить
@@ -65,7 +67,7 @@ class Parser:
         https = random.choice(proxy['https'])
         # if type(http) == list:
         #     http = http[0]
-        if type(https) == list:
+        if type(https) is list:
             https = https[0]
         # proxies = {'http': http, 'https': https}
         proxies = {'https': https}

@@ -9,6 +9,8 @@ from module import weekly_pulse_parse as wp_parse
 
 
 class Transformer:
+    """Класс для выполнения различных операций по преобразованию данных."""
+
     @staticmethod
     def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
         """
@@ -41,7 +43,6 @@ class Transformer:
 
         :param timestamp: Временная отметка в формате UNIX
         """
-
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
         formatted_date = date_time.strftime('%Y-%m-%dT%H:%M:%S')
         return formatted_date
@@ -49,7 +50,6 @@ class Transformer:
     @staticmethod
     def default_to_unix():
         """Преобразовать мировое время в UNIX-формат"""
-
         now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = int(date_time.timestamp())
@@ -63,6 +63,7 @@ class Newsletter:
 
     @classmethod
     def get_newsletter_dict(cls):
+        """Возвращает словарь с типами рассылок и их описаниями."""
         return cls.__newsletter_dict
 
     @classmethod
@@ -77,7 +78,7 @@ class Newsletter:
 
     @classmethod
     def make_weekly_event(cls):
-        """Создает текст для рассылки "Что нас ждет на этой неделе?" """
+        """Создает текст для рассылки 'Что нас ждет на этой неделе?'"""
         title = 'Что нас ждет на этой неделе?'
         weekly_dir = os.path.join(config.path_to_source, 'weeklies')
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)

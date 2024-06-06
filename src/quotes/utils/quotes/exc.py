@@ -10,6 +10,7 @@ from utils.quotes.base import QuotesGetter
 
 class ExcGetter(QuotesGetter):
     """Класс для получения и обработки данных об обменных курсах."""
+
     NAME = 'exc'
 
     fx_columns: List[str] = ['Валюта', 'Курс']

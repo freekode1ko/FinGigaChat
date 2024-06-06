@@ -7,8 +7,8 @@ import warnings
 import click
 
 from configs import config
-from log.logger_base import selector_logger, Logger
 from log import sentry
+from log.logger_base import Logger, selector_logger
 from utils.cli_utils import get_period
 from utils.quotes import get_groups
 
@@ -49,11 +49,7 @@ def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
     default=config.COLLECT_PERIOD,
     show_default=True,
     type=str,
-    help='Периодичность сборки котировок\n' 
-         's - секунды\n' 
-         'm - минуты (значение по умолчанию)\n' 
-         'h - часы\n' 
-         'd - дни',
+    help='Периодичность сборки котировок\ns - секунды\nm - минуты (значение по умолчанию)\nh - часы\nd - дни',
 )
 def main(period):
     """Сборщик котировок"""

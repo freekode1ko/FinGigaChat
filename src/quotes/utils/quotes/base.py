@@ -15,6 +15,7 @@ from db import database
 
 class QuotesGetter(ABC):
     """Класс для получения источников данных"""
+
     NAME = 'base quotes getter class'
 
     def __init__(self, logger):
@@ -33,9 +34,11 @@ class QuotesGetter(ABC):
 
     def get_tables(self, session: req.sessions.Session) -> list:
         """
-        Выгружает источники для подгруппы котировок
-        Вынимает таблицы с источников
-        Возвращает список источников и собранных для них таблиц
+        Выгружает источники для подгруппы котировок, вынимает таблицы с источников
+        и возвращает список источников и собранных для них таблиц
+
+        :param session: Сессия для выполнения HTTP-запросов.
+        :return: Список источников и собранных для них таблиц.
         """
         all_tables = []
         group_name = self.get_group_name()

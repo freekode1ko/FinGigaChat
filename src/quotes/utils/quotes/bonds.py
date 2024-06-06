@@ -9,6 +9,7 @@ from utils.quotes.base import QuotesGetter
 
 class BondsGetter(QuotesGetter):
     """Класс для получения и обработки данных котировок облигаций."""
+
     NAME: str = 'bonds'
 
     bonds_kot_columns: List[str] = ['Название', 'Доходность', 'Осн,', 'Макс,', 'Мин,', 'Изм,', 'Изм, %', 'Время']

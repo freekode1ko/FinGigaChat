@@ -17,6 +17,7 @@ MAX_BYTES = 10 * 1024 * 1024
 
 class Logger:
     """Класс для логирования."""
+
     logger = logging.getLogger(__name__)
 
     def __init__(self, log_name: str, level: int):
@@ -85,6 +86,7 @@ def selector_logger(module_logger: str, level: int = log_lvl):
 
 
 def get_handler(url_engine, level: int = log_lvl) -> DBHandler:
+    """Создает обработчик для сохранения логов в базу данных"""
     return DBHandler(url_engine, level, LOG_FORMAT)
 
 

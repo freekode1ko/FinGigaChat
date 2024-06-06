@@ -2,17 +2,18 @@
 import re
 
 import requests as req
-from lxml import html
 import pandas as pd
+from lxml import html
 from sqlalchemy import text
 
-from db import database
 from configs import config
+from db import database
 from utils.quotes.base import QuotesGetter
 
 
 class MetalsGetter(QuotesGetter):
     """Класс для получения и обработки данных по металлам (сырью/комодам)."""
+
     NAME = 'metals'
 
     LBS_IN_T = 2204.62  # фунты в тонны
