@@ -1,26 +1,25 @@
+"""Обрабатывает новости с помощью моделей."""
+
+import datetime as dt
 import json
 import pickle
 import re
 from re import search
-from typing import Dict, Optional, Any
+from typing import Any, Optional
 
-import requests
 import pandas as pd
 import pymorphy2
+import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sqlalchemy import create_engine, text
-from sqlalchemy.pool import NullPool
+from sqlalchemy import text
 
-from configs.config import psql_engine, ROBERTA_CLIENT_RELEVANCE_LINK
-from configs.prompts import summarization_prompt, CLIENT_SYSTEM_PROMPT, CLIENT_MESSAGE_PROMPT, \
-    COMMODITY_SYSTEM_PROMPT, COMMODITY_MESSAGE_PROMPT
+from configs import prompts
+from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from db.database import engine
-from module.chatgpt import ChatGPT
-from module.gigachat import GigaChat
 from log.logger_base import Logger
-from module.utils import *
+from module import utils
+from module.gigachat import GigaChat
 
-import datetime as dt
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
@@ -48,7 +47,7 @@ STOCK_WORDS = [
     'дайджест',
     'открытие рынок',
     'закрытие рынок',
-    'комметарий рынок',
+    'комментарий рынок',
     'утренний обзор',
     'вечерний обзор',
     'главный анонс',
@@ -87,32 +86,39 @@ STOCK_WORDS = [
     ' село ',
 ]
 
-TOP_SOURCES = "(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)"
+TOP_SOURCES = '(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)|(ria.ru)|(t.me)'
 
 MAX_LEN_INPUT = 6000
 
 morph = pymorphy2.MorphAnalyzer()
 
 client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
-commodity_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
-alter_client_names_dict = get_alternative_names_pattern_client(client_names)
-alter_commodity_names_dict = get_alternative_names_pattern_commodity(
-    commodity_names)
+commodity_names_ = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
+alter_client_names_dict = utils.get_alternative_names_pattern_client(client_names)
+alter_commodity_names_dict = utils.get_alternative_names_pattern_commodity(commodity_names_)
 
-client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict(
-    'records')
-commodity_rating_system_dict = pd.read_excel(
-    COMMODITY_RATING_FILE_PATH).to_dict('records')
-commodity_rating_system_dict = modify_commodity_rating_system_dict(commodity_rating_system_dict)
+client_rating_system_dict = pd.read_excel(CLIENT_RATING_FILE_PATH).to_dict('records')
+commodity_rating_system_dict = pd.read_excel(COMMODITY_RATING_FILE_PATH).to_dict('records')
+commodity_rating_system_dict = utils.modify_commodity_rating_system_dict(commodity_rating_system_dict)
 
-CLIENT_NAMES_DICT = create_alternative_names_dict(client_names)
-CLIENT_INDUSTRY_DICT = create_client_industry_dict()
+CLIENT_NAMES_DICT = utils.create_alternative_names_dict(client_names)
+CLIENT_INDUSTRY_DICT = utils.create_client_industry_dict()
 
 with open(CLIENT_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-    binary_model = pickle.load(f)
+    client_binary_model = pickle.load(f)
+
+with open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
+    commodity_binary_model = pickle.load(f)
 
 
 def find_bad_gas(names: str, clean_text: str) -> str:
+    """
+    Удалить имя "газ" из присвоения новости, если газ присутствует в паттернах.
+
+    :param names:       Имена коммодов, которые были найдены в новости.
+    :param clean_text:  Лемматизированный текст.
+    :return:            Строку с именами (без газа, если газ нашелся в паттернах).
+    """
     if 'газ' in names:
         if search('магазин|газета|парниковый|углекислый| сектор газ ',
                   clean_text):
@@ -122,12 +128,20 @@ def find_bad_gas(names: str, clean_text: str) -> str:
     return names
 
 
-def check_gazprom(names: str, names_impact: Dict, text: str) -> str:
-    text = text.replace('"', '')
+def check_gazprom(names: str, names_impact: dict, article_text: str) -> str:
+    """
+    Убрать "газпром" из присвоения новости, если в новости упоминается "газпром нефть".
+
+    :param names:           Имена клиентов, которые были найдены в новости.
+    :param names_impact:    Словарь с именами клиентов и количеством их упоминаний в тексте новости.
+    :param article_text:            Оригинальный текст новости.
+    :return:                Строку с именами (без "газпрома", если "газпром нефть" есть в новости).
+    """
+    article_text = article_text.replace('"', '')
     names_list = names.split(';')
     names_impact_list = list(eval(names_impact).keys())
     if 'газпром' in names and 'газпром нефть' in names_impact_list:
-        if not search('газпром(?! нефт[ьи])', text):
+        if not search('газпром(?! нефт[ьи])', article_text):
             try:
                 names_list.remove('газпром')
                 names = ';'.join(names_list)
@@ -139,6 +153,7 @@ def check_gazprom(names: str, names_impact: Dict, text: str) -> str:
 def get_names_pattern(names: str, type_of_article: str):
     """
     Make pattern with alternative names
+
     :param names: names which were founded in article
     :param type_of_article: client or commodity
     :return: pattern which included alternative names
@@ -170,10 +185,10 @@ def get_names_pattern(names: str, type_of_article: str):
     return names_pattern
 
 
-def find_stock(title: str, names: str, clean_text: str, labels: str,
-               type_of_article: str = 'client') -> str:
+def find_stock(title: str, names: str, clean_text: str, labels: str, type_of_article: str = 'client') -> str:
     """
     Processing news about stock
+
     :param title: title of article
     :param names: names that which found in article
     :param clean_text: text in normal view
@@ -198,17 +213,18 @@ def find_stock(title: str, names: str, clean_text: str, labels: str,
         return labels
 
 
-def clean_data(text: str) -> str:
+def clean_data(article_text: str) -> str:
     """
     Takes string, - erase symbols excluding letters from it, lemmatize, stop-words cleaning and lower case casting.
-    :param text: str. String to clean.
+
+    :param article_text: str. String to clean.
     :return: str. Current cleaned string.
     """
     #  cleaning from symbols excluding letters and casting to lower case
-    text = re.sub('[^\w\s]', '', text)
-    text = re.sub('[-+?\d+]', '', text)
-    text = text.lower()
-    text_list = re.split('\s', text)
+    article_text = re.sub(r'[^\w\s]', '', article_text)
+    article_text = re.sub(r'[-+?\d+]', '', article_text)
+    article_text = article_text.lower()
+    text_list = re.split(r'\s', article_text)
     text_list = list(filter(None, text_list))
     #  lemmatization
     lemma = []
@@ -223,36 +239,10 @@ def clean_data(text: str) -> str:
     return clean_text
 
 
-def find_names(article_text, alt_names_dict, rule_flag: bool = False):
+def find_names_online(article_title: str, article_text: str, alt_names_dict: dict) -> tuple[str, str]:
     """
     Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
-    :param article_text: str. Current string in which we search for names.
-    :param alt_names_dict: Pandas DF. Pandas DF with columns with names neeeded to be found. In one row all names - alternatives.
-    :param rule_flag: bool. Flag shows that it commodity text or not.
-    :return: str. String with found names separated with ; symbol.
-    """
-    # TODO: убрать удаление кавычек, когда перейдем на свой парсинг
-    article_text = article_text.replace('"', '')
-    names_dict = {}
-    for key, alt_names in alt_names_dict.items():
-        alt_names = alt_names.replace('"', '')
-        re_findall = re.findall(alt_names, article_text)
-        if re_findall:
-            key_name = key.lower().strip()
-            names_dict[key_name] = len(re_findall)
-    impact_json = json.dumps(names_dict, ensure_ascii=False)
-    if rule_flag:
-        max_count = max(names_dict.values(), default=None)
-        if max_count and max_count != 1:
-            return ';'.join([key for key, val in names_dict.items() if
-                             val == max_count]), impact_json
-        return '', impact_json
-    return ';'.join(names_dict.keys()), impact_json
 
-
-def find_names_online(article_title, article_text, alt_names_dict):
-    """
-    Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
     :param article_title: str. Current string in which we search for names.
     :param article_text: str. Current string in which we search for names.
     :param alt_names_dict: Pandas DF. Pandas DF with columns with names needed to be found. In one row all names - alternatives.
@@ -289,10 +279,10 @@ def find_names_online(article_title, article_text, alt_names_dict):
     return names, impact_json
 
 
-def down_threshold(engine, type_of_article, names, threshold) -> float:
+def down_threshold(type_of_article: str, names: list[str], threshold: float) -> float:
     """
     Down threshold if new contains rare subject
-    :param engine: engine to database
+
     :param type_of_article: client or commodity
     :param names: list with names of different subjects
     :param threshold: float value, limit of relevance
@@ -313,12 +303,12 @@ def down_threshold(engine, type_of_article, names, threshold) -> float:
             count = conn.execute(query_count.bindparams(subject_name=subject_name)).fetchone()
             counts_dict[subject_name] = count
     min_count = min(counts_dict.values())
-    threshold = threshold - minus_threshold if min_count[
-                                                   0] <= min_count_article_val else threshold
+    threshold = threshold - minus_threshold if min_count[0] <= min_count_article_val else threshold
     return threshold
 
 
-def search_keywords(relevance, subject, clean_text, labels, rating_dict):
+def search_keywords(relevance: int, subject: str, clean_text: str, labels: str, rating_dict: list[dict]) -> str:
+    """Найти ключевые слова."""
     if not subject:
         labels = '-1'
     elif not relevance:
@@ -330,7 +320,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
             if search(keywords_pattern, clean_text):
                 label = str(group['label'])
                 labels += f';{label}'
-        # after deranking labels score should still be positive
+        # after reranking labels score should still be positive
         if len(labels) > 1:
             labels = str(max(1, sum(map(int, labels.split(';')))))
 
@@ -340,6 +330,7 @@ def search_keywords(relevance, subject, clean_text, labels, rating_dict):
 def search_top_sources(link: Optional[str or Any], score: int) -> int:
     """
     Raise score for article if found top sources
+
     :param link: link of article
     :param score: current score of article
     :return: new score of article
@@ -350,18 +341,17 @@ def search_top_sources(link: Optional[str or Any], score: int) -> int:
     return score
 
 
-def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Logger.logger) -> list[float]:
+def get_prediction_bert_client_relevance(article_text: str, clean_text: str, logger: Logger.logger) -> list[float]:
     """
-    Получаем вероятности релевантности для текста новости клиента. Делаем гет запрос к модели roberta, в случае
-    неуспеха делаем предсказания с локальной моделью.
-    
-    :param text: текст новости.
-    :param clean_text: очищенный текст новости.
-    :param logger: экземпляр класса логер для логирования процесса.
-    :return: список вероятностей релевантности.
+    Получить вероятности релевантности для текста новости клиента.
+
+    :param article_text:        Текст новости.
+    :param clean_text:          Очищенный текст новости.
+    :param logger:              Экземпляр класса логгер для логирования процесса.
+    :return:                    Список вероятностей релевантности.
     """
     # делаем запрос к модели roberta, обрезаем слишком большой инпут
-    params = {"query": text[:MAX_LEN_INPUT]}
+    params = {'query': article_text[:MAX_LEN_INPUT]}
     try:
         with requests.get(ROBERTA_CLIENT_RELEVANCE_LINK, params=params, timeout=60) as response:
             # достаем вероятности релевантности
@@ -371,12 +361,13 @@ def get_prediction_bert_client_relevance(text: str, clean_text: str, logger: Log
         logger.error(f'Не удалось выполнить запрос к модели roberta: {e}')
         probs = [-1, -1]
     # если не смогли получить ответ от сервиса, или классификация на сервере некорректна, то используем локальную модель
-    return list(binary_model.predict_proba([clean_text])[0]) if probs[0] < 0 else probs
+    return list(client_binary_model.predict_proba([clean_text])[0]) if probs[0] < 0 else probs
 
 
-def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
+def rate_client(df: pd.DataFrame, rating_dict: list[dict], logger: Logger.logger, threshold: float = 0.5) -> pd.DataFrame:
     """
     Takes Pandas DF with current news batch and makes predictions over them.
+
     :param rating_dict: dict with rating
     :param df: Pandas DF. Pandas DF with current news batch.
     :param logger: экземпляр класса логер для логирования процесса.
@@ -389,7 +380,7 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
         row['text'], row['cleaned_data'], logger) if len(row['client']) > 0 else [1, 0], axis=1)
     logger.info('Окончание обработки новостей клиентов на релевантность')
     df['relevance'] = [
-        int(pair[1] > down_threshold(engine, 'client', df['client'].iloc[index].split(';'), threshold))
+        int(pair[1] > down_threshold('client', df['client'].iloc[index].split(';'), threshold))
         for index, pair in enumerate(probs)
     ]
     # each one get 2 points if found client and 5 points if client is mentioned 3 times and more
@@ -418,26 +409,21 @@ def rate_client(df, rating_dict, logger: Logger.logger, threshold: float = 0.5) 
     return df
 
 
-def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
+def rate_commodity(df: pd.DataFrame, rating_dict: list[dict], threshold=0.5) -> pd.DataFrame:
     """
     Taking a current news batch to rate. Adding new columns with found labels from commodity rate system.
+
     :param df: Pandas DF. Pandas DF with current news batch.
     :param rating_dict: dict with rating
     :param threshold : float. Threshold on binary commodity relevance model.
     :return: Pandas DF. Current news batch DF with added column 'commodity_labels'
     """
-
-    with open(COM_BINARY_CLASSIFICATION_MODEL_PATH, 'rb') as f:
-        binary_model = pickle.load(f)
-
-    probs = binary_model.predict_proba(df['cleaned_data'])
+    probs = commodity_binary_model.predict_proba(df['cleaned_data'])
 
     res = []
-    engine = create_engine(psql_engine, poolclass=NullPool)
     for index, pair in enumerate(probs):
         commodity_names = df['commodity'].iloc[index].split(';')
-        local_threshold = down_threshold(engine, 'commodity', commodity_names,
-                                         threshold)
+        local_threshold = down_threshold('commodity', commodity_names, threshold)
         res.append(1 if (pair[1]) > local_threshold else 0)
     df['relevance'] = res
 
@@ -459,30 +445,28 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
 def union_name(p_row: str, r_row: str) -> str:
     """
     Union names
+
     :param p_row: row with names from polyanalyst
     :param r_row: row with names from models (regular exception)
-    return: str with union names from the all rows
+    :return: str with union names from the all rows
     """
     p_set = set(el.strip() for el in p_row.split(';')) if p_row else set()
     r_set = set(el.strip() for el in r_row.split(';')) if r_row else set()
     common_set = p_set.union(r_set)
-
     return ';'.join(common_set)
 
 
-def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat,
-                          content: str) -> str:
+def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, content: str) -> str:
     """
     Создание краткой версии новостного текста с помощью GigaChat
+
     :param logger: экземпляр класса логер для логирования процесса
     :param giga_chat: экземпляр класса GigaChat
     :param content: текст новости
     :return: суммаризированный текст
     """
-
     try:
-        giga_answer = giga_chat.get_giga_answer(text=content,
-                                                prompt=summarization_prompt)
+        giga_answer = giga_chat.get_giga_answer(text=content, prompt=prompts.summarization_prompt)
     except Exception as e:
         logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
@@ -512,66 +496,14 @@ def change_bad_summary(logger: Logger.logger, row: pd.Series) -> str:
         return first_sentence
 
 
-def model_func(logger: Logger.logger, df: pd.DataFrame,
-               type_of_article: str) -> pd.DataFrame:
-    """
-    Нахождение имен объектов в тексте новости и назначение баллов значимости новости
-    :param logger: экземпляр класса логер для логирования процесса
-    :param df: датафрейм с новостями
-    :param type_of_article: тип новости (client или commodity)
-    :return: датафрейм с найденными в новостях объектами и баллами значимости
-    """
-
-    logger.debug('Приведение текста новостей в нормальную форму')
-    df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
-
-    logger.debug(f'Нахождение {type_of_article} в тексте новости')
-
-    if type_of_article == 'client':
-        df[['found_client', 'client_impact']] = df['text'].apply(
-            lambda x: pd.Series(find_names(x, alter_client_names_dict)))
-
-        df[type_of_article] = df.apply(
-            lambda row: union_name(row['client'], row['found_client']), axis=1)
-        df[type_of_article] = df.apply(
-            lambda row: check_gazprom(row['client'], row['client_impact'],
-                                      row['text']), axis=1)
-
-        logger.debug('Сортировка новостей о клиентах')
-        df = rate_client(df, client_rating_system_dict)
-
-    else:
-        df[['found_commodity', 'commodity_impact']] = df['cleaned_data'].apply(
-            lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True))
-        )
-
-        df['found_commodity'] = df.apply(
-            lambda row: find_bad_gas(row['found_commodity'],
-                                     row['cleaned_data']), axis=1)
-        df[type_of_article] = df['found_commodity']
-
-        logger.debug('Сортировка новостей о товарах')
-        df = rate_commodity(df, commodity_rating_system_dict)
-
-    # суммирование баллов значимости
-    df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
-
-    # удаление ненужных колонок
-    df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'],
-            inplace=True)
-
-    return df
-
-
 def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """
     Нахождение имен объектов в тексте новости и назначение баллов значимости новости
+
     :param logger: экземпляр класса логер для логирования процесса
     :param df: датафрейм с новостями
     :return: датафрейм с найденными в новостях объектами и баллами значимости
     """
-
     logger.debug('Приведение текста новостей в нормальную форму')
     df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
 
@@ -588,12 +520,9 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     logger.debug('Нахождение товаров в тексте новости')
     df[['commodity', 'commodity_impact']] = df.apply(
-        lambda row: pd.Series(
-            find_names_online(row['title'], row['cleaned_data'],
-                              alter_commodity_names_dict)), axis=1
+        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)), axis=1
     )
-    df['commodity'] = df.apply(
-        lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
+    df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
 
     # make rating for article
     logger.debug('Сортировка новостей о клиентах')
@@ -602,10 +531,8 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df['client_score'] = df['client_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
-    df['commodity_score'] = df['commodity_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['client_score'] = df['client_labels'].map(lambda x: sum(map(int, x.split(';'))))
+    df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(map(int, x.split(';'))))
 
     # удаление ненужных колонок
     df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
@@ -613,8 +540,7 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_text_sum_column(logger: Logger.logger,
-                        df: pd.DataFrame) -> pd.DataFrame:
+def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """Make summary for dataframe with articles"""
     logger.debug('Создание саммари')
     giga_chat = GigaChat(logger)
@@ -625,11 +551,15 @@ def add_text_sum_column(logger: Logger.logger,
     return df
 
 
-def deduplicate(logger: Logger.logger, df: pd.DataFrame,
-                df_previous: pd.DataFrame,
-                threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(
+        logger: Logger.logger,
+        df: pd.DataFrame,
+        df_previous: pd.DataFrame,
+        threshold: float = 0.35
+) -> pd.DataFrame:
     """
     Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
+
     :param logger: экземпляр класса логер для логирования процесса
     :param df: датафрейм с только что полученными новостями
     :param df_previous: датафрейс с новостями из БД
@@ -645,15 +575,11 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame,
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
 
     # сортируем батч новостей по кол-ву клиентов и товаров, а также по баллам значимости
-    df['count_client'] = df['client'].map(
-        lambda x: len(x.split(sep=';')) if (
-                    isinstance(x, str) and x) else 0)
-    df['count_commodity'] = df['commodity'].map(
-        lambda x: len(x.split(sep=';')) if (
-                    isinstance(x, str) and x) else 0)
+    df['count_client'] = df['client'].map(lambda x: len(x.split(sep=';')) if (isinstance(x, str) and x) else 0)
+    df['count_commodity'] = df['commodity'].map(lambda x: len(x.split(sep=';')) if (isinstance(x, str) and x) else 0)
     df = df.sort_values(
-        by=['count_client', 'count_commodity', 'client_score',
-            'commodity_score'], ascending=[False, False, False, False]
+        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'],
+        ascending=[False, False, False, False]
     ).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
@@ -688,7 +614,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame,
         for previous_pos in range(actual_pos):
             current_threshold = threshold
             flag_found_same = False  # флаг нахождения в новостях одинаковых клиентов
-            # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе (чем выше граница, тем сложнее посчитать новость уникальной)
+            # если новость из старого батча и лежит в БД больше 2 дней, то + 0.2 к границе
+            # (чем выше граница, тем сложнее посчитать новость уникальной)
             if previous_pos < start:
                 time_passed = (dt_now - df_previous['date'][
                     previous_pos]).total_seconds()
@@ -738,31 +665,10 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame,
     return df
 
 
-def summarization_by_chatgpt(full_text: str):
-    # TODO: do by langchain
-    """Make summary by chatgpt"""
-    batch_size = 4000
-    text_batches = []
-    new_text_sum = ''
-    if len(full_text + summarization_prompt) > batch_size:
-        while len(full_text + summarization_prompt) > batch_size:
-            point_index = full_text[:batch_size].rfind('.')
-            text_batches.append(full_text[: point_index + 1])
-            full_text = full_text[point_index + 1:]
-    else:
-        text_batches = [full_text]
-    for batch in text_batches:
-        gpt = ChatGPT()
-        query_to_gpt = gpt.ask_chat_gpt(text=batch, prompt=summarization_prompt)
-        new_text_sum = new_text_sum + query_to_gpt.choices[0].message.content
-
-    return new_text_sum
-
-
-def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str,
-                                logger: Logger.logger) -> str:
+def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
     """
     Фильтрует новости по клиентам и комодам с помощью Gigachat.
+
     :param names: Список клиентов или комодов полученных с помощью регулярки.
     :param text_sum: Суммаризованный текст новости.
     :param giga_chat : Gigachat.
@@ -773,13 +679,12 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
     result = []
     for name in names:
         if str(name):
-            if name_type == "client":
-                system_prompt = CLIENT_SYSTEM_PROMPT
-                message = CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name],
-                                                       text_sum)
+            if name_type == 'client':
+                system_prompt = prompts.CLIENT_SYSTEM_PROMPT
+                message = prompts.CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name], text_sum)
             else:
-                system_prompt = COMMODITY_SYSTEM_PROMPT
-                message = COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
+                system_prompt = prompts.COMMODITY_SYSTEM_PROMPT
+                message = prompts.COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
             try:
                 giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
                 # пытаемся получить метку от гигачата с учетом разных форматов его ответа.
@@ -795,39 +700,42 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
                 # совсем не по формату, обрабатываем этот случай дальше
                 else:
                     giga_label = '-1'
-            except Exception as e:
-                logger.error("Не удалось получить ответ от Gigachat. Наименование:{}; "
-                             "Суммаризация: {}".format(name, text_sum))
+            except Exception:
+                logger.error('Не удалось получить ответ от Gigachat. Наименование:{}; '
+                             'Суммаризация: {}'.format(name, text_sum))
                 giga_label = '1'
             if giga_label == '1':
                 result.append(name)
                 continue
             if giga_label != '0' and giga_label != '1':
-                logger.error("Не удалось получить ответ от Gigachat в нужном формате. Наименование: {}; "
-                             "Суммаризация: {}; Ответ: {}".format(name, text_sum, giga_answer))
+                logger.error(
+                    'Не удалось получить ответ от Gigachat в нужном формате. Наименование: {}; '
+                    'Суммаризация: {}'.format(name, text_sum)
+                )
                 result.append(name)
     return ';'.join(result)
 
 
 def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     """
-    Фильтрация новостей по клиентам и комодам гигачатом
+    Фильтрация новостей по клиентам и комодам гигачатом.
+
     :param logger: logger
     :param df: датафрейм с новостями
     :return: датафрейм с новостями и измененными клиентами
     """
-    logger.debug("Старт фильтрации новостей с GigaChat")
+    logger.debug('Старт фильтрации новостей с GigaChat')
     # инициализируем гигачат
     giga_chat = GigaChat(logger)
 
     # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
-    logger.debug("Фильтрация клиентов")
+    logger.debug('Фильтрация клиентов')
     df['client'] = df.apply(lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'],
                                                                   giga_chat, 'client', logger), axis=1)
 
     # обрабатываем комоды. Для каждого найденного коммода проверяем, что он действительно подходит к новости
-    logger.debug("Фильтрация комодов")
+    logger.debug('Фильтрация комодов')
     df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list(x['commodity'].split(';'), x['text_sum'],
                                                                      giga_chat, 'commodity', logger), axis=1)
-    logger.debug("Окончена фильтрация новостей с GigaChat")
+    logger.debug('Окончена фильтрация новостей с GigaChat')
     return df

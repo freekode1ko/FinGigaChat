@@ -1,6 +1,6 @@
+"""Модуль обработки новостей."""
 import datetime as dt
 import json
-import os
 from typing import Optional
 from urllib.parse import unquote
 
@@ -13,109 +13,32 @@ from log.logger_base import Logger
 from module.model_pipe import (
     add_text_sum_column,
     deduplicate,
-    model_func,
-    model_func_online,
     gigachat_filtering,
-)
-
-TIME_LIVE_ARTICLE = 100
-NOT_RELEVANT_EXPRESSION = ['читайте также', 'беспилотник', 'смотрите']
-CONDITION_TOP = (
-    "{condition_word} CURRENT_DATE - {table}.date < '15 day' AND "
-    "({table}.link SIMILAR TO '%(www|realty|quote|pro|marketing).rbc%' "
-    "OR {table}.link SIMILAR TO '%.interfax(|-russia).ru%' "
-    "OR {table}.link SIMILAR TO '%www.kommersant.ru%' "
-    "OR {table}.link SIMILAR TO '%www.vedomosti.ru%' "
-    "OR {table}.link SIMILAR TO '%www.forbes.ru%' "
-    "OR {table}.link SIMILAR TO '%(.|//)iz.ru/%' "
-    "OR {table}.link SIMILAR TO '%//tass.(ru|com)%' "
-    "OR {table}.link SIMILAR TO '%(realty.|//)ria.ru%')"
+    model_func_online,
 )
 
 
 class ArticleProcess:
+    """Класс обработчик новостей"""
+
     def __init__(self, logger: Logger.logger):
+        """
+        Инициализация объекта обработчика новостей.
+
+        :param logger: Объект логгера.
+        """
         self._logger = logger
         self.engine = create_engine(psql_engine, poolclass=NullPool)
         self.df_article = pd.DataFrame()  # original dataframe with data about article
 
-    @staticmethod
-    def get_filename(dir_path):
-        list_of_files = [filename for filename in os.listdir(dir_path)]
-        filename = '' if not list_of_files else list_of_files[0]
-        return filename
-
-    def load_file(self, filepath: str, type_of_article: str) -> pd.DataFrame:
-        """
-        Load and process articles file.
-        :param filepath: file path to Excel file with articles
-        :param type_of_article: type of article (client or commodity)
-        :return: dataframe of articles
-        """
-        source_filter = (
-            '(www|realty|quote|pro|marketing).rbc.ru|.interfax(|-russia).ru|www.kommersant.ru|'
-            'www.vedomosti.ru|//tass.(ru|com)/|(realty.|//)ria.ru|/1prime.ru/|www.banki.ru|'
-            '(.|//)iz.ru/|//(|www.)ura.news|//(|www.)ru24.net|//(|www.)energyland.info|'
-            'www.atomic-energy.ru|//(|www.)novostimira24.ru|//(|www.)eadaily.com|'
-            '//(|www.)glavk.net|//(|www.)rg.ru|russian.rt.com|//(|www.)akm.ru|//(|www.)metaldaily.ru|'
-            '//\w{0,10}(|.)aif.ru|//(|www.)nsn.fm|//(|www.)yamal-media.ru|//(|www.)life.ru|'
-            '//(|www.)pronedra.ru|metallplace.ru|rzd-partner.ru|morvesti.ru|morport.com|gudok.ru|'
-            'eprussia.ru|metallicheckiy-portal.ru|gmk.center|bigpowernews.ru|metaltorg.ru|new-retail.ru|'
-            'agroinvestor.ru|comnews.ru|telecomdaily.ru|vestnik-sviazy.ru|neftegaz.ru|chemicalnews.ru|'
-            'ru.tradingview.com|osnmedia.ru|forbes.ru|expert.ru|rupec.ru'
-        )  # TODO: дополнять
-
-        if type_of_article == 'client':
-            new_name_columns = {
-                'url': 'link',
-                'title': 'title',
-                'date': 'date',
-                'New Topic Confidence': 'coef',
-                'text': 'text',
-                'text Summary Summary': 'text_sum',
-                'Company_name': 'client',
-            }
-            columns = ['link', 'title', 'date', 'text', 'client']
-        else:
-            new_name_columns = {'url': 'link', 'title': 'title', 'date': 'date', 'text': 'text', 'Металл': 'commodity'}
-            columns = ['link', 'title', 'date', 'text', 'commodity']
-
-        df_subject = pd.read_csv(filepath, index_col=False).rename(columns=new_name_columns)
-        df_subject = df_subject[columns]
-
-        self._logger.info(f'Получено {len(df_subject)} {type_of_article} новостей')
-        df_subject = df_subject[~df_subject['link'].str.contains(source_filter)]
-        self._logger.info(f'Убраны некоторые источники, количество новостей - {len(df_subject)}')
-
-        df_subject['text'] = df_subject['text'].str.replace('«', '"')
-        df_subject['text'] = df_subject['text'].str.replace('»', '"')
-        df_subject['text'] = df_subject['text'].str.replace('$', ' $')
-        df_subject['date'] = df_subject['date'].apply(lambda x: dt.datetime.strptime(x, '%m/%d/%Y %H:%M:%S %p'))
-        df_subject['title'] = df_subject['title'].apply(lambda x: None if x == '0' else x)
-        df_subject['title'] = df_subject['title'].apply(lambda x: x.replace('$', ' $') if isinstance(x, str) else x)
-        df_subject[type_of_article] = df_subject[type_of_article].str.lower()
-        try:
-            df_subject = (
-                df_subject.groupby('link')
-                .apply(
-                    lambda x: pd.Series(
-                        {
-                            'title': x['title'].iloc[0],
-                            'date': x['date'].iloc[0],
-                            'text': x['text'].iloc[0],
-                            type_of_article: ';'.join(x[type_of_article]),
-                        }
-                    )
-                )
-                .reset_index()
-            )
-            self._logger.info(f'Объединение новостей по одинаковым ссылкам, количество новостей - {len(df_subject)}')
-        except Exception as e:
-            self._logger.error('Ошибка при объединении ссылок: %s', e)
-
-        return df_subject
-
     def clear_from_duplicates(self, df: pd.DataFrame, links_value: Optional[tuple[str]] = None) -> pd.DataFrame:
+        """
+        Очистить поступившие новости от уже содержащихся в базе данных.
+
+        :param df:          Датафрейм с атрибутами новостей.
+        :param links_value: Кортеж из ссылок на новости.
+        :return:            Датафрейм без старых новостей.
+        """
         if links_value is None:
             links_value = tuple(df['link'].apply(unquote))
 
@@ -133,11 +56,12 @@ class ArticleProcess:
                 f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(df)}')
         return df
 
-    def preprocess_article_online(self, df: pd.DataFrame):
+    def preprocess_article_online(self, df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         """
-        Preprocess articles dataframe and set df.
-        :param df: df with articles
-        :return: dataframe of articles
+        Предобработать поступившие новости.
+
+        :param df:  Датафрейм с новостями от GigaParsers.
+        :return:    Обработанный датафрейм с поступившими новостями и id этих новостей.
         """
         new_name_columns = {'url': 'link', 'title': 'title', 'created_at': 'date', 'content': 'text'}
         columns = ['link', 'title', 'date', 'text']
@@ -167,7 +91,9 @@ class ArticleProcess:
         try:
             df = (
                 df.groupby('link')
-                .apply(lambda x: pd.Series({'title': x['title'].iloc[0], 'date': x['date'].iloc[0], 'text': x['text'].iloc[0]}))
+                .apply(lambda x: pd.Series(
+                    {'title': x['title'].iloc[0], 'date': x['date'].iloc[0], 'text': x['text'].iloc[0]}
+                ))
                 .reset_index()
             )
 
@@ -180,10 +106,10 @@ class ArticleProcess:
 
     def get_tg_articles(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Вынимает новости, которые связаны с тг-каналами, добавляет колонку с telegram_id
+        Вынимает новости, которые связаны с тг-каналами, добавляет колонку с telegram_id.
 
-        :param df: DataFrame с предобработанными даннымы новостей (link, title, date, text, [id])
-        return: DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id)
+        :param df:  DataFrame с предобработанными данными новостей (link, title, date, text, [id]).
+        :return:    DataFrame с новостями только из списка телеграмм каналов (link, title, date, text, id, telegram_id).
         """
         query = 'SELECT id, link FROM telegram_channel;'
         tg_channels_df = pd.read_sql(query, con=self.engine)
@@ -204,23 +130,22 @@ class ArticleProcess:
     @staticmethod
     def update_tg_articles(saved_tg_articles: pd.DataFrame, all_tg_articles: pd.DataFrame) -> pd.DataFrame:
         """
-        Соединение DataFrame сохраненных тг-новостей со всеми тг-новостями
+        Соединение DataFrame сохраненных тг-новостей со всеми тг-новостями.
 
-        :param saved_tg_articles: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
-        :param all_tg_articles: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
-        return: DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :param saved_tg_articles:   DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :param all_tg_articles:     DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
+        :return:                    DataFrame[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
         """
         saved_tg_articles = saved_tg_articles[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
         all_tg_articles = all_tg_articles[['id', 'link', 'title', 'date', 'text', 'telegram_id']]
         return pd.concat([saved_tg_articles, all_tg_articles]).drop_duplicates('link').reset_index()
 
-    def throw_the_models(self, df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
-        """Call model pipe func"""
-        df = model_func_online(self._logger, df) if online_flag else model_func(self._logger, df, name)
-        return df
+    def throw_the_models(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Обработать датафрейм с помощью моделей."""
+        return model_func_online(self._logger, df)
 
-    def drop_duplicate(self):
-        """Call func to delete similar articles"""
+    def drop_duplicate(self) -> None:
+        """Удалить дубли между поступившими новостями и новостями из базы данных."""
         dt_now = dt.datetime.now()
         old_query = (
             f'SELECT a.id, a.date,'
@@ -249,84 +174,20 @@ class ArticleProcess:
         # соединяем обратно в один батч
         self.df_article = pd.concat([articles_relevant, articles_not_relevant], ignore_index=True)
 
-    def make_text_sum(self):
-        """Call summary func"""
+    def make_text_sum(self) -> None:
+        """Вызвать функцию по суммаризации новостей."""
         self.df_article = add_text_sum_column(self._logger, self.df_article)
 
-    def apply_gigachat_filtering(self):
+    def apply_gigachat_filtering(self) -> None:
         """Применяем фильтрацию новостей с помощью gigachat"""
         self.df_article = gigachat_filtering(self._logger, self.df_article)
 
-    def delete_old_article(self):
-        """Delete from db article if there are 10 articles for each subject"""
-        count_to_keep = 30
-        query_delete = (
-            f'delete from article where id not in ( '
-            f'select distinct article_id from '
-            f'(select *, row_number() over(partition by client_id order by a.date desc, client_score desc) rn '
-            f'from relation_client_article r '
-            f'join article a on r.article_id = a.id) t1 '
-            f'where rn <= {count_to_keep} and t1.client_score > 0 '
-            f'UNION '
-            f'select distinct article_id from '
-            f'(select *, row_number() over(partition by commodity_id order by a.date desc, commodity_score desc) rn '
-            f'from relation_commodity_article r '
-            f'join article a on r.article_id = a.id) t1 '
-            f'where rn <= {count_to_keep} and t1.commodity_score > 0)'
-        )
-        with self.engine.connect() as conn:
-            len_before = conn.execute(text('SELECT COUNT(id) FROM article')).fetchone()
-            conn.execute(text(query_delete))
-            conn.commit()
-            len_after = conn.execute(text('SELECT COUNT(id) FROM article')).fetchone()
-            self._logger.info(f'Удалено {len_before[0] - len_after[0]} новостей')
-            dt_now = dt.datetime.now()
-            conn.execute(text(f"DELETE FROM article WHERE '{dt_now}' - date > '{TIME_LIVE_ARTICLE} day'"))
-            conn.commit()
-            len_finish = conn.execute(text('SELECT COUNT(id) FROM article')).fetchone()
-            self._logger.info(f'Удалено {len_after[0] - len_finish[0]} новостей с датой публикации больше 100 дней назад')
+    def save_tables(self) -> list[str]:
+        """
+        Сохранить новости, получить id сохраненных новостей из бд, вызвать методы по сохранению таблиц отношений.
 
-    def merge_client_commodity_article(self, df_client: pd.DataFrame, df_commodity: pd.DataFrame):
+        :return: Список ссылок сохраненных новостей.
         """
-        Merge df of client and commodity and drop duplicates
-        And set it in self.df_article.
-        :param df_client: df with client article
-        :param df_commodity: df with commodity article
-        """
-        # find common link in client and commodity article, and take client from these article
-        df_link_client = df_client[['link', 'client', 'client_impact', 'client_score']][df_client['link'].isin(df_commodity['link'])]
-        # make df bases on common links, which contains client and commodity name
-        df_client_commodity = df_commodity.merge(df_link_client, on='link')
-        # remove from df_client and df_commodity common links
-        df_commodity = df_commodity[~df_commodity['link'].isin(df_link_client['link'])]
-        df_client = df_client[~df_client['link'].isin(df_link_client['link'])]
-        # concat all df in one, so there are no duplicates and contain all data
-        df_article = pd.concat([df_client, df_commodity, df_client_commodity], ignore_index=True)
-        self.df_article = df_article[
-            [
-                'link',
-                'title',
-                'date',
-                'text',
-                'client',
-                'commodity',
-                'client_impact',
-                'commodity_impact',
-                'client_score',
-                'commodity_score',
-                'cleaned_data',
-            ]
-        ]
-        self._logger.info(f'Количество одинаковых новостей в выгрузках по клиентам и товарам - {len(df_client_commodity)}')
-        self._logger.info(f'Количество новостей после объединения выгрузок - {len(df_article)}')
-
-    def save_tables(self) -> list:
-        """
-        Сохраняет новости, получает id сохраненных новостей из бд,
-        вызывает методы по сохранению таблиц отношений
-        return: список ссылок сохраненных новостей
-        """
-
         links_value = tuple(self.df_article['link'].apply(unquote))
         if not links_value:
             return []
@@ -362,8 +223,9 @@ class ArticleProcess:
 
     def _make_save_relation_article_table(self, name: str) -> None:
         """
-        Make relation table and save it to database.
-        :param name: name (client or commodity)
+        Создать таблицы отношений и сохранить их в базу данных.
+
+        :param name: Объект (клиент или коммод).
         """
         subject = pd.read_sql(f'SELECT * FROM {name}', con=self.engine).rename(columns={'id': f'{name}_id', 'name': name})
         # make in-between df about article id and client data
@@ -382,7 +244,8 @@ class ArticleProcess:
 
     def save_tg_tables(self) -> list:
         """
-        Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами
+        Сохраняет self.df_article, как новости из тг-каналов, связывая их с тг-каналами.
+
         return: список ссылок сохраненных новостей
         """
         subject = 'telegram'
