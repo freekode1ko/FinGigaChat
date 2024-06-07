@@ -14,13 +14,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
 from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
-from configs.prompts import (
-    CLIENT_MESSAGE_PROMPT,
-    CLIENT_SYSTEM_PROMPT,
-    COMMODITY_MESSAGE_PROMPT,
-    COMMODITY_SYSTEM_PROMPT,
-    summarization_prompt,
-)
+from configs import prompts
 from db.database import engine
 from log.logger_base import Logger
 from module import utils
@@ -313,7 +307,7 @@ def down_threshold(type_of_article: str, names: list[str], threshold: float) -> 
     return threshold
 
 
-def search_keywords(relevance, subject: str, clean_text: str, labels: str, rating_dict: list[dict]):
+def search_keywords(relevance: int, subject: str, clean_text: str, labels: str, rating_dict: list[dict]) -> str:
     """Найти ключевые слова."""
     if not subject:
         labels = '-1'
@@ -472,8 +466,7 @@ def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, content: s
     :return: суммаризированный текст
     """
     try:
-        giga_answer = giga_chat.get_giga_answer(text=content,
-                                                prompt=summarization_prompt)
+        giga_answer = giga_chat.get_giga_answer(text=content, prompt=prompts.summarization_prompt)
     except Exception as e:
         logger.error('Ошибка при создании саммари: %s', e)
         print(f'Ошибка при создании саммари: {e}')
@@ -687,12 +680,12 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
     for name in names:
         if str(name):
             if name_type == 'client':
-                system_prompt = CLIENT_SYSTEM_PROMPT
-                message = CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name],
+                system_prompt = prompts.CLIENT_SYSTEM_PROMPT
+                message = prompts.CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name],
                                                        text_sum)
             else:
-                system_prompt = COMMODITY_SYSTEM_PROMPT
-                message = COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
+                system_prompt = prompts.COMMODITY_SYSTEM_PROMPT
+                message = prompts.COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
             try:
                 giga_answer = giga_chat.get_giga_answer(text=message, prompt=system_prompt)
                 # пытаемся получить метку от гигачата с учетом разных форматов его ответа.

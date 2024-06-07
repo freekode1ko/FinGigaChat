@@ -18,7 +18,7 @@ MINUTE = 60
 MINUTES_TO_SLEEP = 10
 
 
-def try_post_n_times(n: int, **kwargs) -> requests.Response | requests.RequestException | ConnectionError:
+def try_post_n_times(n: int, **kwargs) -> requests.Response:
     """
     Отправляет post запрос при помощи requests, совершает n-1 попыток с перехватом ошибки.
 

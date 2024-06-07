@@ -110,8 +110,8 @@ def modify_commodity_rating_system_dict(commodity_rating_system_dict: list[dict]
     """
     Изменяет словарь с названиями коммодов в нужном формате.
 
-    :param commodity_rating_system_dict: Словарь с названиями коммодов.
-    :return:                             Измененный словарь с названиями коммодов.
+    :param commodity_rating_system_dict: Список словарей с названиями коммодов.
+    :return:                             Список измененных словарей с названиями коммодов.
     """
     for group in commodity_rating_system_dict:
         group['key words'] = ','.join(f' {word.strip().lower()}' for word in group['key words'].split(','))
