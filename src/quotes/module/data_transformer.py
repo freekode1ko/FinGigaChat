@@ -1,11 +1,7 @@
 """Набор инструментов для получения данных из различных источников и обработка даты"""
 import datetime
-import os
 
 import pandas as pd
-
-from configs import config
-from module import weekly_pulse_parse as wp_parse
 
 
 class Transformer:
@@ -54,34 +50,3 @@ class Transformer:
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = int(date_time.timestamp())
         return str(unix_timestamp)
-
-
-class Newsletter:
-    """Создает текста для рассылок"""
-
-    __newsletter_dict = dict(weekly_result='Основные события прошедшей недели', weekly_event='Календарь и прогнозы текущей недели')
-
-    @classmethod
-    def get_newsletter_dict(cls):
-        """Возвращает словарь с типами рассылок и их описаниями."""
-        return cls.__newsletter_dict
-
-    @classmethod
-    def make_weekly_result(cls):
-        """Создает текст для рассылки 'Итоги недели'"""
-        title = 'Итоги недели'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
-        slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
-        return title, newsletter, img_path_list
-
-    @classmethod
-    def make_weekly_event(cls):
-        """Создает текст для рассылки 'Что нас ждет на этой неделе?'"""
-        title = 'Что нас ждет на этой неделе?'
-        weekly_dir = os.path.join(config.path_to_source, 'weeklies')
-        slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)
-        img_path_list = [os.path.join(weekly_dir, i) for i in slides_fnames]
-        newsletter = f'<b>{title}</b>\n' f''
-        return title, newsletter, img_path_list
