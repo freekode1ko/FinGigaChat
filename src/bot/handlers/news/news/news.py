@@ -129,9 +129,8 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
         await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0], logger)
 
         return True  # Создание таблицы успешно
-    else:
-        logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
-        return False
+    logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
+    return False
 
 
 @router.message(Command('newsletter'))

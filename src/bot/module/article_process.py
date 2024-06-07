@@ -181,8 +181,7 @@ class ArticleProcess:
             metadata_df.columns = metadata_df.keys()
 
             return metadata_df
-        else:
-            return pd.DataFrame()
+        return pd.DataFrame()
 
     @staticmethod
     def _make_place_number(mark: str | int | float | None) -> str | None:
