@@ -1,4 +1,5 @@
 """Файл с дополнительными функциями"""
+import ast
 import asyncio
 import json
 import logging
@@ -343,22 +344,61 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
     return await get_industries_id(handbook)
 
 
-async def __create_fin_table(message: types.Message, client_name: str, client_fin_table: pd.DataFrame) -> None:
+async def __create_fin_table(message: types.Message, client_name: str,
+                             table_type: str, client_fin_table: pd.DataFrame) -> None:
     """
     Формирование таблицы под финансовые показатели и запись его изображения
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_name: Наименование клиента финансовых показателей
+    :param table_type: Название вкладки для таблицы
     :param client_fin_table: Таблица финансовых показателей
     """
     transformer = dt.Transformer()
-    client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
+    client_fin_table = client_fin_table.rename(columns={'': 'Финансовые показатели'})
+    for i, row in client_fin_table.iterrows():
+        if row['Финансовые показатели'] in row[client_fin_table.keys().to_list()[1:]].values:
+            if not row['Финансовые показатели']:
+                client_fin_table.drop(index=i, inplace=True)
+            else:
+                client_fin_table.loc[i] = pd.Series(
+                    {'Финансовые показатели': client_fin_table.loc[i]['Финансовые показатели']})
+    client_fin_table.where(pd.notnull(client_fin_table), '')
+
     transformer.render_mpl_table(
-        client_fin_table, 'financial_indicator', header_columns=0, col_width=4, title='', alias=client_name.strip().upper(), fin=True
+        client_fin_table, 'financial_indicator', header_columns=0, col_width=4,
+        title='', alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
     )
     png_path = PATH_TO_SOURCES / 'img' / 'financial_indicator_table.png'
     photo = types.FSInputFile(png_path)
     await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+
+
+async def process_fin_table(message: types.Message, client_name: str,
+                            table_type: str, table_data: str,
+                            logger: Logger.logger = None) -> None:
+    """
+    Создание и отправка таблицы как изображения
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_name: Наименование клиента
+    :param table_type: Название темы таблицы
+    :param table_data: Таблица финансовых показателей в формате str
+    :param logger: Логгер
+    return None
+    """
+    logger = logger or logging.getLogger('bot_runner')
+    table_data = table_data.replace(' NaN', '""')
+    if table_data:
+        try:
+            df = pd.DataFrame(data=ast.literal_eval(table_data))
+        except ValueError:
+            logger.error(f'Ошибка при создании таблицы финансовых показателей для {client_name}, не верный данных')
+            return None
+        await __create_fin_table(message, client_name, table_type, df)
+        logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
+    else:
+        logger.info(f'Не найдены данные для {table_type} таблицы клиента: {client_name}')
 
 
 def get_page_data_and_info(

@@ -2,6 +2,7 @@
 import re
 
 import pandas as pd
+from lxml import html
 import requests as req
 from lxml import html
 from sqlalchemy import text

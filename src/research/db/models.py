@@ -1,14 +1,12 @@
-"""Модели таблиц всех сервисов"""
+"""Модели таблиц сервисов"""
 import datetime
 
-import sqlalchemy as sa
 from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
     Date,
     DateTime,
-    DOUBLE_PRECISION,
     Float,
     ForeignKey,
     Identity,
@@ -21,23 +19,20 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
-from constants import enums
-
 Base = declarative_base()
 metadata = Base.metadata
-mapper_registry = sa.orm.registry(metadata=metadata)
 
 
 class Article(Base):
     __tablename__ = 'article'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    link = Column(Text, nullable=False, comment='Ссылка на новость')
-    date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
-    text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
-    title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
-    text_sum = Column(Text, comment='Сформированная гигачатом сводка по новости')
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    link = Column(Text, nullable=False)
+    date = Column(DateTime, nullable=False)
+    text_ = Column('text', Text, nullable=False)
+    title = Column(Text)
+    text_sum = Column(Text)
 
     article_name_impact = relationship('ArticleNameImpact', back_populates='article')
     relation_client_article = relationship('RelationClientArticle', back_populates='article')
@@ -65,6 +60,15 @@ t_bonds = Table(
     Column('5', Float(53)),
     Column('6', Float(53))
 )
+
+
+class Chat(Base):
+    __tablename__ = 'chat'
+
+    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    name = Column(Text, nullable=False)
+    type = Column(Text, nullable=False)
 
 
 t_date_of_last_build = Table(
@@ -102,7 +106,7 @@ t_eco_stake = Table(
 t_exc = Table(
     'exc', metadata,
     Column('Валюта', Text),
-    Column('Курс', DOUBLE_PRECISION(precision=53))
+    Column('Курс', Text)
 )
 
 
@@ -128,14 +132,13 @@ class Industry(Base):
     __tablename__ = 'industry'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
-    display_order = Column(Integer(), server_default=sa.text('0'),
-                           nullable=False, comment='Порядок отображения отраслей')
 
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
     industry_alternative = relationship('IndustryAlternative', back_populates='industry')
+    telegram_channel = relationship('TelegramChannel', back_populates='industry')
 
 
 t_key_eco = Table(
@@ -152,9 +155,8 @@ t_key_eco = Table(
 
 class MessageType(Base):
     __tablename__ = 'message_type'
-    __table_args__ = {
-        'comment': 'Справочник типов отправленных сообщений (пассивная рассылка, ответ на запрос такой-то)'
-    }
+    __table_args__ = {'comment': 'Справочник типов отправленных сообщений '
+                                 '(пассивная рассылка, ответ на запрос такой-то)'}
 
     id = Column(Integer, primary_key=True, )
     name = Column(String(64), nullable=False)
@@ -167,8 +169,8 @@ class MessageType(Base):
 t_metals = Table(
     'metals', metadata,
     Column('Metals', Text),
-    Column('Price', DOUBLE_PRECISION(precision=53)),
-    Column('Day', DOUBLE_PRECISION(precision=53)),
+    Column('Price', Text),
+    Column('Day', Text),
     Column('%', Text),
     Column('Weekly', Text),
     Column('Monthly', Text),
@@ -236,6 +238,15 @@ t_report_exc_mon = Table(
 )
 
 
+t_report_industry = Table(
+    'report_industry', metadata,
+    Column('title', Text),
+    Column('text', Text),
+    Column('date', Text),
+    Column('send_flag', Boolean)
+)
+
+
 t_report_met_day = Table(
     'report_met_day', metadata,
     Column('0', Text),
@@ -247,7 +258,7 @@ t_report_met_day = Table(
 t_user_log = Table(
     'user_log', metadata,
     Column('id', BigInteger, Identity(always=True, start=1, increment=1, minvalue=1,
-           maxvalue=9223372036854775807, cycle=False, cache=1), nullable=False),
+                                      maxvalue=9223372036854775807, cycle=False, cache=1), nullable=False),
     Column('level', Text, nullable=False),
     Column('date', DateTime, nullable=False),
     Column('file_name', Text),
@@ -266,7 +277,8 @@ class Whitelist(Base):
     full_name = Column(Text)
     user_type = Column(Text)
     user_status = Column(Text)
-    user_email = Column(Text, server_default=sa.text("''::text"))
+    user_email = Column(Text)
+    subscriptions = Column(Text)
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
@@ -288,10 +300,9 @@ class Client(Base):
     __tablename__ = 'client'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
-    navi_link = Column(Text, nullable=True, server_default='')
-    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
+    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'))
 
     industry = relationship('Industry', back_populates='client')
     client_alternative = relationship('ClientAlternative', back_populates='client')
@@ -302,9 +313,9 @@ class Commodity(Base):
     __tablename__ = 'commodity'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     name = Column(Text, nullable=False)
-    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
+    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'))
 
     industry = relationship('Industry', back_populates='commodity')
     commodity_alternative = relationship('CommodityAlternative', back_populates='commodity')
@@ -316,9 +327,9 @@ class IndustryAlternative(Base):
     __tablename__ = 'industry_alternative'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_name = Column(Text)
+    other_names = Column(Text)
 
     industry = relationship('Industry', back_populates='industry_alternative')
 
@@ -361,12 +372,11 @@ class TelegramChannel(Base):
     __table_args__ = {'comment': 'Справочник telegram каналов, из которых вынимаются новости'}
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(128), nullable=False, comment='Название телеграм канала')
-    link = Column(String(255), nullable=False, comment='Ссылка на телеграм канал')
-    section_id = Column(ForeignKey('bot_telegram_section.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False,
-                        comment='Связь телеграм канала с разделом (например, отрасль "Недвижимость")')
+    name = Column(String(128), nullable=False)
+    link = Column(String(255), nullable=False)
+    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
-    section = relationship('TelegramSection', back_populates='telegram_channel')
+    industry = relationship('Industry', back_populates='telegram_channel')
     user = relationship('Whitelist', secondary='user_telegram_subscription', back_populates='telegram')
     relation_telegram_article = relationship('RelationTelegramArticle', back_populates='telegram')
 
@@ -375,9 +385,9 @@ class ClientAlternative(Base):
     __tablename__ = 'client_alternative'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_name = Column(Text)
+    other_names = Column(Text)
 
     client = relationship('Client', back_populates='client_alternative')
 
@@ -386,9 +396,9 @@ class CommodityAlternative(Base):
     __tablename__ = 'commodity_alternative'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    other_name = Column(Text)
+    other_names = Column(Text)
 
     commodity = relationship('Commodity', back_populates='commodity_alternative')
 
@@ -397,7 +407,7 @@ class CommodityPricing(Base):
     __tablename__ = 'commodity_pricing'
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                  maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     subname = Column(Text, nullable=False)
     unit = Column(Text)
@@ -458,28 +468,17 @@ t_user_telegram_subscription = Table(
 )
 
 
-class UserTelegramSubscriptions:
-    pass
-
-
-mapper_registry.map_imperatively(UserTelegramSubscriptions, t_user_telegram_subscription)
-
-
 class RAGUserFeedback(Base):
     __tablename__ = 'rag_user_feedback'
     __table_args__ = {'comment': 'Обратная связь от пользователей по работе с RAG-системой'}
 
-    chat_id = Column(BigInteger, primary_key=True, comment='ID чата с пользователем')
-    bot_msg_id = Column(BigInteger, primary_key=True, comment='ID сообщения бота')
-    retriever_type = Column(String(16), nullable=False, comment='Тип ретривера: новости, господдержка, гигачат')
-    reaction = Column(Boolean, comment='Обратная связь от пользователя: True - положительная, False - отрицательная')
-    date = Column(DateTime, default=datetime.datetime.now, comment='Дата сообщения от бота')
-    query = Column(Text, nullable=False, comment='Запрос пользователя')
-    response = Column(Text, comment='Ответ на запрос пользователя')
-    history_query = Column(Text, comment='Перефразированный на истории диалога запрос пользователя')
-    history_response = Column(Text, comment='Ответ на перефразированный на истории диалога запрос пользователя')
-    rephrase_query = Column(Text, comment='Перефразированный запрос пользователя')
-    rephrase_response = Column(Text, comment='Ответ на перефразированный запрос пользователя')
+    chat_id = Column(BigInteger, primary_key=True)
+    bot_msg_id = Column(BigInteger, primary_key=True)
+    retriever_type = Column(String(16), nullable=False)
+    reaction = Column(Boolean)
+    date = Column(DateTime, default=datetime.datetime.now)
+    query = Column(Text, nullable=False)
+    response = Column(Text)
 
 
 class ResearchGroup(Base):
@@ -496,13 +495,7 @@ class ResearchSection(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
-    display_order = Column(Integer, nullable=True, server_default='0')
     dropdown_flag = Column(Boolean, server_default='true')
-    section_type = Column(
-        Integer,
-        server_default=str(enums.ResearchSectionType.default.value),
-        comment='тип раздела из enums.ResearchSectionType (зависит формирование меню аналитики)',
-    )
     research_group_id = Column(ForeignKey('research_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
 
@@ -513,14 +506,6 @@ class ResearchType(Base):
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
     description = Column(Text, nullable=True, server_default='')
-    summary_type = Column(
-        Integer,
-        server_default=str(enums.ResearchSummaryType.periodic.value),
-        comment=(
-            'тип формирования сводки отчетов CIB Research '
-            'из enums.ResearchSummaryType (зависит формирование меню аналитики)'
-        ),
-    )
     research_section_id = Column(ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'),
                                  nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
@@ -537,9 +522,8 @@ class Research(Base):
     text = Column(Text, nullable=False)
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
-    report_id = Column(String(64), nullable=False)
-    is_new = Column(Boolean, server_default=sa.text('true'),
-                    comment='Указывает, что отчет еще не рассылался пользователям')
+    news_id = Column(BigInteger, nullable=False)
+    is_new = Column(Boolean, server_default='true', comment='Указывает, что новость еще не рассылалась пользователям')
 
 
 class UserResearchSubscriptions(Base):
@@ -560,39 +544,12 @@ t_relation_commodity_metals = Table(
 )
 
 
-class UserMeeting(Base):
-    __tablename__ = 'user_meeting'
-    __table_args__ = {'comment': 'Перечень встреч пользователей'}
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    theme = Column(Text, nullable=False, default='Напоминание', comment='Тема встречи')
-    date_create = Column(DateTime, comment='Время создания встречи (UTC)')
-    date_start = Column(DateTime, nullable=False, comment='Время начала встречи (UTC)')
-    date_end = Column(DateTime, nullable=False, comment='Время окончания встречи (UTC)')
-    timezone = Column(Integer, comment='Таймзона пользователя во время использования web app', nullable=False)
-    notify_count = Column(Integer, server_default=sa.text('0'), comment='Количество отправленных напоминаний')
-    description = Column(Text, comment='Описание встречи')
-
-
-class CallReports(Base):
-    __tablename__ = 'bot_call_reports'
-    __table_args__ = {'comment': 'Записи call reports'}
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'),
-                     primary_key=True, comment='Айди пользователя')
-    client = Column(String(255), nullable=False, comment='Клиент')
-    report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
-    description = Column(Text, nullable=False, comment='Отчет по встрече')
-
-
 class FinancialSummary(Base):
     __tablename__ = 'financial_summary'
     __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
 
-    id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1, maxvalue=2147483647,
-                                     cycle=False, cache=1), primary_key=True)
+    id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1,
+                                     maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     sector_id = Column(Text, nullable=False, comment='ID сектора на cib research')
     company_id = Column(Text, nullable=False, comment='ID клиента на cib research')
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'),
@@ -601,115 +558,3 @@ class FinancialSummary(Base):
     pl_table = Column(Text, nullable=True, comment='Таблица с P&L таблицей в формате dict')
     balance_table = Column(Text, nullable=True, comment='Таблица с балансной таблицей в формате dict')
     money_table = Column(Text, nullable=True, comment='Таблица с таблицей денежных потоков в формате dict')
-
-
-class UserClientSubscriptions(Base):
-    __tablename__ = 'user_client_subscription'
-    __table_args__ = {'comment': 'Справочник подписок пользователей на клиентов'}
-
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-
-
-class UserCommoditySubscriptions(Base):
-    __tablename__ = 'user_commodity_subscription'
-    __table_args__ = {'comment': 'Справочник подписок пользователей на сырьевые товары'}
-
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-
-
-class UserIndustrySubscriptions(Base):
-    __tablename__ = 'user_industry_subscription'
-    __table_args__ = {'comment': 'Справочник подписок пользователей на отрасли'}
-
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-
-
-class IndustryDocuments(Base):
-    __tablename__ = 'bot_industry_documents'
-    __table_args__ = {'comment': 'Справочник файлов отраслевой аналитики'}
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
-    file_name = Column(String(255), nullable=False, comment='Имя файла')
-    file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
-    description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
-    industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'),
-                         primary_key=False, nullable=True, comment='id отрасли')
-    industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
-                           comment='тип отрасли')
-
-
-class ProductGroup(Base):
-    __tablename__ = 'bot_product_group'
-    __table_args__ = (
-        sa.UniqueConstraint('name', name='group_name'),
-        {'comment': 'Справочник групп продуктов (продуктовая полка, hot offers)'},
-    )
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
-    name = Column(String(255), nullable=False, comment='Имя группы')
-    name_latin = Column(String(255), nullable=False, comment='Имя группы eng')
-    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
-                         comment='Описание группы (текст меню тг)')
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-
-
-class Product(Base):
-    __tablename__ = 'bot_product'
-    __table_args__ = (
-        sa.UniqueConstraint('name', 'group_id', name='product_name_in_group'),
-        {'comment': 'Справочник продуктов (кредит, GM, ...)'},
-    )
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
-    name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
-    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
-                         comment='Текст сообщения, которое выдается при нажатии на продукт')
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-    group_id = Column(ForeignKey('bot_product_group.id', ondelete='CASCADE', onupdate='CASCADE'),
-                      primary_key=False, nullable=False, comment='id группы продукта')
-
-
-class ProductDocument(Base):
-    __tablename__ = 'bot_product_document'
-    __table_args__ = {'comment': 'Справочник файлов продуктов'}
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
-    file_path = Column(Text(), nullable=False, comment='Путь к файлу в системе')
-    name = Column(String(255), nullable=False, comment='Наименование документа или продуктового предложения')
-    description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
-    product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
-                        primary_key=False, nullable=False, comment='id категории продукта')
-
-
-class TelegramGroup(Base):
-    __tablename__ = 'bot_telegram_group'
-    __table_args__ = {'comment': 'Справочник групп, выделенных среди разделов по телеграм каналам'}
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id группы в базе')
-    name = Column(String(255), nullable=False, comment='Наименование группы')
-    general_name = Column(String(255), nullable=False, comment='Наименование группы для меню новостей')
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-    is_show_all_channels = Column(Boolean(), nullable=False, server_default=sa.text("'false'::boolean"),
-                                  comment='Указывает, показывать ли сразу все тг каналы, '
-                                          'которые косвено связаны с данной группой')
-
-    telegram_section = relationship('TelegramSection', back_populates='telegram_group')
-
-
-class TelegramSection(Base):
-    __tablename__ = 'bot_telegram_section'
-    __table_args__ = {'comment': 'Справочник разделов, выделенных среди телеграм каналов'}
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id раздела в базе')
-    name = Column(String(255), nullable=False, comment='Наименование раздела')
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-    group_id = Column(ForeignKey('bot_telegram_group.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=False,
-                      nullable=False, comment='id группы, к которой принадлежит раздел')
-    rag_name = Column(String(100), nullable=False, server_default='',
-                      comment='Название секции для создания документов в RAG-сервисе')
-
-    telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
-    telegram_channel = relationship('TelegramChannel', back_populates='section')
