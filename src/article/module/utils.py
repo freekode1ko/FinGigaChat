@@ -8,7 +8,7 @@ def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str
     """
     Создает регулярные выражения для коммодов.
 
-    :param: alt_names: таблица с комодами и их альтернативными названиями.
+    :param alt_names: таблица с комодами и их альтернативными названиями.
     :return: dict с названиями для поиска регуляркой.
     """
     alter_names_dict = dict()
@@ -26,7 +26,7 @@ def add_endings(clear_names_list: list[str]) -> list[str]:
     """
     Добавляет окончания к именам клиента в списке альтернативных имен
 
-    :param: clear_names_list: список имен клиентов.
+    :param clear_names_list: список имен клиентов.
     :return: Измененный список имен клиентов.
     """
     vowels = 'ауоыэяюиеь'
@@ -53,7 +53,7 @@ def get_alternative_names_pattern_client(alt_names: pd.DataFrame) -> dict[str, s
     """
     Создает регулярные выражения для клиентов.
 
-    :param: alt_names: таблица с клиентами и их альтернативными названиями.
+    :param alt_names: таблица с клиентами и их альтернативными названиями.
     :return: dict с названиями для поиска регуляркой.
     """
     alter_names_dict = dict()
