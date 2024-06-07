@@ -1,6 +1,6 @@
+"""Константы для запуска приложения"""
 import json
 import pathlib
-from typing import List, Union
 
 from environs import Env
 
@@ -18,13 +18,13 @@ STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
 
-def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
+def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8') -> list | dict | str:
     """
-    Считывает константу из json-файла
+    Считывает константу из json файла
 
-    Args:
-        file_name: Путь до файла относительно STATIC_ASSETS_PATH
-        encoding: Кодировка файла
+    :param file_naFme: Имя файла или путь к файлу, который необходимо прочитать.
+    :param encoding: Кодировка файла. По умолчанию 'utf-8'.
+    :return:  Содержимое JSON файла в виде списка, словаря или строки.
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
 
@@ -42,7 +42,7 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-user_agents: List[str] = read_asset_from_json(file_name='user_agents.json')
+user_agents: list[str] = read_asset_from_json(file_name='user_agents.json')
 
 path_to_source = './sources'
 
