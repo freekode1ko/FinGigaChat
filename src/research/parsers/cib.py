@@ -29,11 +29,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from sqlalchemy import select
 
 from configs import config
 from db import parser_source
+from db.database import async_session, engine
+from db.models import FinancialSummary, ParserSource, ResearchType
 from log.logger_base import Logger
-from module import weekly_pulse_parse
+from module import data_transformer, weekly_pulse_parse
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
 
@@ -378,9 +381,9 @@ class ResearchParser:
         soup = BeautifulSoup(page_html, 'html.parser')
         table_soup = (
             soup.find('div', attrs={'class': 'report company-summary-financials'})
-            .find('div', attrs={'class': 'grid_container grid-bottom-border'})
-            .find('div', attrs={'class': 'table-scroll'})
-            .find('table', attrs={'class': 'grid container black right'})
+                .find('div', attrs={'class': 'grid_container grid-bottom-border'})
+                .find('div', attrs={'class': 'table-scroll'})
+                .find('table', attrs={'class': 'grid container black right'})
         )
 
         self._logger.info(f'Обработка найденной таблицы для компании {company}')
@@ -559,7 +562,7 @@ class ResearchAPIParser:
         self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
         self.month_dict = config.MONTH_NAMES_DICT
 
-        self.home_page = config.HOME_PAGE
+        self.home_page = config.research_base_url[:-1]
 
         self.cookies = {
             'JSESSIONID': config.CIB_JSESSIONID,
@@ -579,13 +582,15 @@ class ResearchAPIParser:
         """Метод для обновления JSESSIONID в куках, для того чтобы проходили все запросы"""
         self._logger.info('Начало обновления куков')
         with requests.get(
-                url=('https://research.sberbank-cib.com/group/guest/strat?'
-                     'p_p_id=cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn&'
-                     'p_p_lifecycle=2&'
-                     'p_p_state=normal&'
-                     'p_p_mode=view&'
-                     'p_p_resource_id=getPublications&'
-                     'p_p_cacheability=cacheLevelPage'),
+                url=f'{self.home_page}/group/guest/strat',
+                params={
+                    'p_p_id': 'cibstrategypublictaionportlet_WAR_cibpublicationsportlet_INSTANCE_lswn',
+                    'p_p_lifecycle': '2',
+                    'p_p_state': 'normal',
+                    'p_p_mode': 'view',
+                    'p_p_resource_id': 'getPublications',
+                    'p_p_cacheability': 'cacheLevelPage',
+                },
                 cookies=self.cookies,
                 verify=False,
         ) as req:
@@ -603,24 +608,18 @@ class ResearchAPIParser:
 
         return: возвращает список источников с доп параметрами
         """
-        async with self.postgres_conn.acquire() as connection:
-            all_sources = await connection.fetch(
-                'SELECT research_type.id, parser_source.source, parser_source.params, '
-                'parser_source.alt_names, parser_source.before_link, parser_source.response_format '
-                'FROM research_type INNER JOIN parser_source ON parser_source.id=research_type.source_id'
+        async with async_session() as session:
+            all_sources = await session.execute(
+                select(
+                    ResearchType.id,
+                    ParserSource.source.label('url'),
+                    ParserSource.params,
+                    ParserSource.alt_names,
+                    ParserSource.before_link,
+                    ParserSource.response_format.label('request_method'),
+                ).select_from(ResearchType).join(ParserSource)
             )
-            pages = [
-                {
-                    'research_type_id': source['id'],
-                    'url': source['source'],
-                    'params': source['params'] or {},
-                    'starts_with': source['alt_names'],
-                    'before_link': source['before_link'],
-                    'request_method': source['response_format']
-                }
-                for source in all_sources
-            ]
-            return pages
+            return [_._asdict() for _ in all_sources]
 
     def cib_date_to_normal_date(self, cib_date: str) -> datetime.date:
         """
@@ -715,7 +714,8 @@ class ResearchAPIParser:
 
         self._logger.info('CIB: сохранение отчета: %s', report_id)
 
-        date = self.cib_date_to_normal_date(str(report_html.find('span', class_='date').text).strip())
+        date = self.cib_date_to_normal_date(str(report_html.find('span',
+                                                                 class_='date').text).strip())
         report_texts = []
         for paragraph_tag in report_html.find('div', class_='summaryContent').find_all('p'):
             # Удаляем все ссылки
@@ -809,7 +809,8 @@ class ResearchAPIParser:
         reports = BeautifulSoup(content, 'html.parser').find_all('tr')
         reports = [(reports[i], reports[i + 1]) for i in range(0, len(reports), 2)]
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], str(len(reports)))
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'],
+                          str(len(reports)))
 
         new_reports = []
         for report in reports:
@@ -934,3 +935,71 @@ class ResearchAPIParser:
             await loop.create_task(self.parse_weekly_pulse(session))
 
         self._logger.info('CIB: Конец парсинга CIB')
+
+    @staticmethod
+    async def save_fin_summary(df: pd.DataFrame) -> None:
+        """
+        Сохранение финансовых показателей по клиентам в БД
+
+        :param df: pandas.DataFrame() с таблицей для записи в бд
+        """
+        df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)  # TODO: переписать под ORM
+
+    async def get_fin_summary(self) -> None:
+        """Стартовая точка для парсинга финансовых показателей по клиентам"""
+        self._logger.info('Чтение таблицы financial_summary')
+        # columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
+        # metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
+        query = select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
+                       FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
+                       FinancialSummary.balance_table, FinancialSummary.money_table)
+        async with async_session() as session:
+            metadata = await session.execute(query)
+            metadata = metadata.fetchall()
+        metadata_df = pd.DataFrame(metadata)
+        metadata_df.columns = metadata_df.keys()
+
+        self._logger.info('Очистка прошлых записей в таблице financial_summary')
+
+        sectors_id = metadata_df.drop_duplicates(subset=['sector_id'])['sector_id'].tolist()
+        metadata_df[['review_table', 'pl_table', 'balance_table', 'money_table']] = None
+        tf = data_transformer.Transformer(self._logger)
+        df_parts = pd.DataFrame(columns=metadata_df.columns)
+
+        async with ClientSession() as session:
+            for sector_id in sectors_id:
+                self._logger.info(f'Обработка сектора {sector_id} для поиска фин. показателей')
+                # выберем блок из DF по обрабатываемому сектору
+                sector_df = metadata_df.loc[metadata_df['sector_id'] == sector_id]
+                for company_id in sector_df['company_id'].values.tolist():
+                    try:
+                        for i in range(config.POST_TO_SERVICE_ATTEMPTS):
+                            sector_page = await session.post(
+                                url=f'{self.home_page}/group/guest/companies?companyId={company_id}',
+                                verify_ssl=False, cookies=self.cookies)
+                            if sector_page.ok:
+                                break
+                            else:
+                                time.sleep(1)
+
+                        content = await sector_page.text()
+                        part = tf.process_fin_summary_table(content, company_id, sector_df)
+                        df_parts = pd.concat([part, df_parts], ignore_index=True)
+                    except HTTPNoContent as e:
+                        self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
+                    except Exception as e:
+                        self._logger.error('CIB: Ошибка при работе с CIB: %s', e)
+                self._logger.info(f'Сектор {sector_id} с фин. показателями обработан')
+
+        self._logger.info('Запись таблицы financial_summary')
+        df_parts.dropna(subset=['review_table', 'pl_table', 'balance_table', 'money_table'], inplace=True)
+        df_parts.drop_duplicates(subset=['company_id', 'client_id'], inplace=True)
+        df_parts.sort_values(by=['sector_id', 'company_id'], ascending=[True, True]).reset_index(drop=True,
+                                                                                                 inplace=True)
+        df_parts['review_table'] = df_parts['review_table'].apply(json.dumps)
+        df_parts['pl_table'] = df_parts['pl_table'].apply(json.dumps)
+        df_parts['balance_table'] = df_parts['balance_table'].apply(json.dumps)
+        df_parts['money_table'] = df_parts['money_table'].apply(json.dumps)
+        # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
+        await self.save_fin_summary(df_parts)
+        self._logger.info('Таблица financial_indicators записана')

@@ -250,6 +250,10 @@ def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> 
             ).pack(),
         },
         # {
+        #    'name': 'Обзор',
+        #    'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
+        # },
+        # {
         #     'name': 'P&L модель',
         #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
         # },
@@ -259,10 +263,6 @@ def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> 
         # },
         # {
         #     'name': 'Модель CF',
-        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        # },
-        # {
-        #     'name': 'Коэффициенты',
         #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
         # },
     ]

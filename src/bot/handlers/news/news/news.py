@@ -26,7 +26,7 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
+from utils.base import bot_send_msg, process_fin_table, user_in_whitelist
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
@@ -102,7 +102,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
         await call.message.edit_reply_markup()
 
         user_logger.info(
-            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} ' f'(всего {new_offset})'
+            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} (всего {new_offset})'
         )
 
 
@@ -116,13 +116,21 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     :param ap_obj: экземпляр класса ArticleProcess
     return значение об успешности создания таблицы
     """
-    client_name, client_fin_table = ap_obj.get_client_fin_indicators(s_id, msg_text.strip().lower())
-    if not client_fin_table.empty:
+    logger.info(f'НАЧАЛО Вывода таблицы с финансовыми показателями в виде фотокарточки для клиента {s_id}')
+    client_fin_tables = await ap_obj.get_client_fin_indicators(s_id)
+    client_name = msg_text.strip().lower()
+    if not client_fin_tables.empty:
         await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
-        await __create_fin_table(message, client_name, client_fin_table)
-        return True
-    else:
-        return False
+
+        # Создание и отправка таблиц
+        await process_fin_table(message, client_name, 'Обзор', client_fin_tables['review_table'][0], logger)
+        await process_fin_table(message, client_name, 'P&L', client_fin_tables['pl_table'][0], logger)
+        await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0], logger)
+        await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0], logger)
+
+        return True  # Создание таблицы успешно
+    logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
+    return False
 
 
 @router.message(Command('newsletter'))
@@ -243,7 +251,7 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     for subject_id in subject_ids:
         com_price, reply_msg = await ap_obj.process_user_alias(subject_id, subject)
 
-        return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
+        return_ans = await show_client_fin_table(message, subject_id, msg_text, ap_obj)
 
         if not reply_msg:
             continue

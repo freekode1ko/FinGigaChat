@@ -69,7 +69,7 @@ class Transformer:
         name,
         col_width=1.0,
         row_height=0.625,
-        font_size=14,
+        font_size=18,
         header_color='#000000',
         row_colors=['#030303', '#0E0E0E'],
         edge_color='grey',
@@ -127,7 +127,7 @@ class Transformer:
                     cell.set_facecolor(header_color)
                     cell.get_text().set_color('white')
                 else:
-                    cell.set_text_props(fontsize=18)
+                    cell.set_text_props(fontsize=font_size)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
                     if all(
