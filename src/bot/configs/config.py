@@ -1,4 +1,5 @@
 """Константы для запуска приложения"""
+import datetime as dt
 import json
 import pathlib
 from typing import Union
@@ -88,6 +89,7 @@ PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 USER_SUBSCRIPTIONS_LIMIT = 70
 DELETE_TG_MESSAGES_TIMEOUT = 5
+STATE_TIMEOUT = dt.timedelta(minutes=5)
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
