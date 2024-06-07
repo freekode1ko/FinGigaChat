@@ -21,11 +21,11 @@ DEBUG: bool = env.bool('DEBUG', default=False)
 
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
-    Считывает константу из json-файла
+    Считывает константу из json файла
 
-    Args:
-        file_name: Путь до файла относительно STATIC_ASSETS_PATH
-        encoding: Кодировка файла
+    :param file_name: Имя файла или путь к файлу, который необходимо прочитать.
+    :param encoding: Кодировка файла. По умолчанию 'utf-8'.
+    :return:  Содержимое JSON файла в виде списка, словаря или строки.
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
 
