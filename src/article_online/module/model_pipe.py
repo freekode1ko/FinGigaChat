@@ -13,8 +13,8 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
-from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from configs import prompts
+from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
 from db.database import engine
 from log.logger_base import Logger
 from module import utils
@@ -531,8 +531,8 @@ def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     df = rate_commodity(df, commodity_rating_system_dict)
 
     # суммирование баллов значимости
-    df['client_score'] = df['client_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
-    df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
+    df['client_score'] = df['client_labels'].map(lambda x: sum(map(int, x.split(';'))))
+    df['commodity_score'] = df['commodity_labels'].map(lambda x: sum(map(int, x.split(';'))))
 
     # удаление ненужных колонок
     df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
@@ -681,8 +681,7 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
         if str(name):
             if name_type == 'client':
                 system_prompt = prompts.CLIENT_SYSTEM_PROMPT
-                message = prompts.CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name],
-                                                       text_sum)
+                message = prompts.CLIENT_MESSAGE_PROMPT.format(name, CLIENT_NAMES_DICT[name], CLIENT_INDUSTRY_DICT[name], text_sum)
             else:
                 system_prompt = prompts.COMMODITY_SYSTEM_PROMPT
                 message = prompts.COMMODITY_MESSAGE_PROMPT.format(name, text_sum)
