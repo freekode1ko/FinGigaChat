@@ -12,7 +12,6 @@ from typing import Optional, Type
 import numpy as np
 import pandas as pd
 from aiogram import types
-from aiogram.enums import ChatAction
 from aiogram.filters.callback_data import CallbackData
 
 from configs import config
@@ -32,7 +31,8 @@ from log.bot_logger import user_logger, logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils import weekly_pulse
-from utils.base import __sent_photo_and_msg, process_fin_table
+from utils.base import __sent_photo_and_msg
+from utils.handler_utils import get_client_financial_indicators
 from utils.newsletter import send_researches_to_user
 
 
@@ -586,7 +586,7 @@ async def select_client_period(
 
 
 @router.callback_query(callbacks.GetFinancialIndicators.filter())
-async def get_client_financial_indicators(
+async def get_financial_indicators(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetFinancialIndicators,
 ) -> None:
@@ -596,33 +596,7 @@ async def get_client_financial_indicators(
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   Выбранный тип фин показателей и клиент
     """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_data.model_dump_json()
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-
-    client_id = callback_data.client_id
-    fin_indicator_type = callback_data.fin_indicator_type
-    client = await client_db.get(client_id)
-
-    ap_obj = ArticleProcess(logger)
-    client_fin_tables = await ap_obj.get_client_fin_indicators(client_id)
-    msg_text = f'По клиенту {client["name"]} отсутствуют финансовые показатели'
-    if not client_fin_tables.empty:
-        msg_text = client["name"]
-        await callback_query.bot.send_chat_action(chat_id, ChatAction.UPLOAD_PHOTO)
-
-        # Создание и отправка таблицы
-        await process_fin_table(
-            callback_query,
-            client["name"],
-            fin_indicator_type.table_name,
-            client_fin_tables[fin_indicator_type.name][0],
-            logger,
-        )
-
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
-    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
+    await get_client_financial_indicators(callback_query, callback_data.client_id, callback_data.fin_indicator_type)
 
 
 @router.callback_query(callbacks.NotImplementedFunctionality.filter())

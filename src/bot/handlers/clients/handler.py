@@ -34,10 +34,10 @@ from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import logger, user_logger
-from module.article_process import FormatText
+from module.article_process import FormatText, ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
-
+from utils.handler_utils import get_client_financial_indicators
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -292,12 +292,17 @@ async def get_client_analytic_indicators(
 
     research_info = await research_type_db.get(research_type_id)
 
+    # Проверяем, что есть фин показатели для клиента
+    ap_obj = ArticleProcess(logger)
+    client_fin_tables = await ap_obj.get_client_fin_indicators(callback_data.client_id)
+
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(
         client_id=callback_data.client_id,
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
+        with_financial_indicators=not client_fin_tables.empty,
     )
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -599,6 +604,22 @@ async def analytic_reports(
         select_period_menu=callback_data_factories.ClientsMenusEnum.get_anal_reports,
         back_menu=callback_data_factories.ClientsMenusEnum.analytic_indicators,
     )
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.financial_indicators
+))
+async def get_financial_indicators(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Отправка пользователю фин показателей по клиенту
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип фин показателей и клиент
+    """
+    await get_client_financial_indicators(callback_query, callback_data.client_id, callback_data.fin_indicator_type)
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
