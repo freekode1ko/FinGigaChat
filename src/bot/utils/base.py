@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
-from configs.config import PAGE_ELEMENTS_COUNT, PATH_TO_SOURCES
+from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants
 from constants.constants import research_footer
 from db import models

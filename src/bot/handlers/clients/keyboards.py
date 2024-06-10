@@ -406,12 +406,12 @@ def client_analytical_indicators_kb(
 
     extra_buttons = [
         {
-           'name': 'Обзор',
-           'callback_data': callback_data_factories.ClientsMenuData(
-               menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
-               client_id=client_id,
-               fin_indicator_type=FinancialIndicatorsType.review_table,
-           ).pack(),
+            'name': 'Обзор',
+            'callback_data': callback_data_factories.ClientsMenuData(
+                menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                client_id=client_id,
+                fin_indicator_type=FinancialIndicatorsType.review_table,
+            ).pack(),
         },
         {
             'name': 'P&L модель',

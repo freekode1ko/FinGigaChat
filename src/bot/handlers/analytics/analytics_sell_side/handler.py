@@ -27,7 +27,7 @@ from db.api.research_type import research_type_db
 from db.api.user_research_subscription import user_research_subscription_db
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
-from log.bot_logger import user_logger, logger
+from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils import weekly_pulse

@@ -7,7 +7,6 @@
 Меню аналитических показателей для клиентов.
 Меню выбора периода для выгрузки отчетов.
 """
-import datetime
 from typing import Type
 
 import pandas as pd
@@ -224,11 +223,11 @@ def client_analytical_indicators_kb(research_type_info: models.ResearchType, cli
 
     extra_buttons = [
         {
-           'name': 'Обзор',
-           'callback_data': callbacks.GetFinancialIndicators(
-               client_id=client_id,
-               fin_indicator_type=FinancialIndicatorsType.review_table,
-           ).pack(),
+            'name': 'Обзор',
+            'callback_data': callbacks.GetFinancialIndicators(
+                client_id=client_id,
+                fin_indicator_type=FinancialIndicatorsType.review_table,
+            ).pack(),
         },
         {
             'name': 'P&L модель',

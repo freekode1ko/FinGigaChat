@@ -34,7 +34,7 @@ from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import logger, user_logger
-from module.article_process import FormatText, ArticleProcess
+from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
 from utils.handler_utils import get_client_financial_indicators

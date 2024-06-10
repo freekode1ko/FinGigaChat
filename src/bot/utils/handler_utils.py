@@ -36,7 +36,7 @@ async def get_client_financial_indicators(
         # Создание и отправка таблицы
         await process_fin_table(
             callback_query,
-            client["name"],
+            client['name'],
             fin_indicator_type.table_name,
             client_fin_tables[fin_indicator_type.name][0],
             logger,
