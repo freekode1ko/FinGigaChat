@@ -507,7 +507,7 @@ async def get_client_select_period_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=callback_data.research_type_id,
-        periods=constants.GET_NEWS_PERIODS,
+        periods=constants.EXTENDED_GET_NEWS_PERIODS,
         select_period_menu=select_period_menu,
         back_menu=back_menu,
     )

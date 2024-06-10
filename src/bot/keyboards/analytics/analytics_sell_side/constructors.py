@@ -171,38 +171,7 @@ def get_select_period_kb(
     """
     keyboard = InlineKeyboardBuilder()
 
-    periods_list = [
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-        {
-            'text': 'За квартал',
-            'days': 90,  # average
-        },
-        {
-            'text': 'За полгода',
-            'days': 176,  # average
-        },
-        {
-            'text': 'За год',
-            'days': 365 if datetime.date.today().year % 4 else 366,  # average
-        },
-    ]
-
-    for period in periods_list:
+    for period in constants.EXTENDED_GET_NEWS_PERIODS:
         by_days = callback_factory(
             research_type_id=item_id,
             days_count=period['days'],
