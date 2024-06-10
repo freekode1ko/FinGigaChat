@@ -1,6 +1,5 @@
 """Интерфейс для взаимодействия с таблицами источниками для парсинга"""
 import datetime
-import json
 from typing import Any
 
 import sqlalchemy as sa
