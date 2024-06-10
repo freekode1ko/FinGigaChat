@@ -522,7 +522,7 @@ class Research(Base):
     text = Column(Text, nullable=False)
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
-    news_id = Column(BigInteger, nullable=False)
+    report_id = Column(String(64), nullable=False)
     is_new = Column(Boolean, server_default='true', comment='Указывает, что новость еще не рассылалась пользователям')
 
 
