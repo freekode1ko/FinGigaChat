@@ -344,7 +344,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
     return await get_industries_id(handbook)
 
 
-async def __create_fin_table(message: types.Message, client_name: str,
+async def __create_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
                              table_type: str, client_fin_table: pd.DataFrame) -> None:
     """
     Формирование таблицы под финансовые показатели и запись его изображения
@@ -371,10 +371,13 @@ async def __create_fin_table(message: types.Message, client_name: str,
     )
     png_path = PATH_TO_SOURCES / 'img' / 'financial_indicator_table.png'
     photo = types.FSInputFile(png_path)
-    await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+    if isinstance(message, types.Message):
+        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+    elif isinstance(message, types.CallbackQuery):
+        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
 
 
-async def process_fin_table(message: types.Message, client_name: str,
+async def process_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
                             table_type: str, table_data: str,
                             logger: Logger.logger = None) -> None:
     """

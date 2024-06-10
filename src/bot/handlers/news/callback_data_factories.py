@@ -18,11 +18,12 @@ tg section дает выбор - тг каналы или внешние ист�
 
 клиенты и сырье дают выбор поиска из подписок или остальных, после выбора клиента или сырья - выбор периода
 """
-from enum import auto, Enum, IntEnum
+from enum import auto, IntEnum
 from typing import Optional
 
 from aiogram.filters.callback_data import CallbackData
 
+from constants.enums import AutoEnum
 from db.api.client import client_db
 from db.api.commodity import commodity_db
 from db.api.industry import industry_db
@@ -33,45 +34,6 @@ from db.api.user_client_subscription import user_client_subscription_db
 from db.api.user_commodity_subscription import user_commodity_subscription_db
 
 MENU = 'news'
-
-
-class AutoEnum(Enum):
-    """
-    Родительский класс, который позволяет задать атрибуты у значений енумератора.
-
-    Атрибут value задается автоматически в зависимости от количества создаваемых значений енумератора.
-    Тажке позволяет производить сравнение value енумератора с int и получать значения енумератора по передаваемому int.
-    Например,
-
-    >>> class Test(AutoEnum):
-    ...    data1 = {'title': 'data1'}
-    ...    data2 = {'title': 'data2'}
-
-    >>> Test.data1 == '0'
-    True
-    >>> Test('0') == Test.data1
-    True
-    >>> Test.data1
-    """
-
-    def __new__(cls, *args):
-        """При создании экземпляра енумератора из всех переданных аргументов, лишь первый станет value"""
-        value = len(cls.__members__)
-        obj = object.__new__(cls)
-        obj._value_ = str(value)
-        return obj
-
-    def __eq__(self, obj) -> bool:
-        """Оператор равенства"""
-        if type(self) is type(obj):
-            return super().__eq__(obj)
-        return self.value == obj
-
-    def __ne__(self, obj) -> bool:
-        """Оператор неравенства"""
-        if type(self) is type(obj):
-            return super().__ne__(obj)
-        return self.value != obj
 
 
 class NewsItems(AutoEnum):

@@ -12,6 +12,7 @@ from typing import Optional, Type
 import numpy as np
 import pandas as pd
 from aiogram import types
+from aiogram.enums import ChatAction
 from aiogram.filters.callback_data import CallbackData
 
 from configs import config
@@ -19,6 +20,7 @@ from constants import enums
 from constants.analytics import analytics_sell_side
 from db import database
 from db.api import client as client_db_api
+from db.api.client import client_db
 from db.api.research import research_db
 from db.api.research_group import research_group_db
 from db.api.research_section import research_section_db
@@ -26,10 +28,11 @@ from db.api.research_type import research_type_db
 from db.api.user_research_subscription import user_research_subscription_db
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
-from log.bot_logger import user_logger
+from log.bot_logger import user_logger, logger
 from module import data_transformer as dt
+from module.article_process import ArticleProcess
 from utils import weekly_pulse
-from utils.base import __sent_photo_and_msg
+from utils.base import __sent_photo_and_msg, process_fin_table
 from utils.newsletter import send_researches_to_user
 
 
@@ -254,8 +257,16 @@ async def cib_client_analytical_indicators(
 
     research_info = await research_type_db.get(research_type_id)
 
+    # Ищем клиента по имени отчета
+    client = await client_db.get_by_name(research_info.name)
+
+    # Проверяем, что есть фин показатели для клиента
+    ap_obj = ArticleProcess(logger)
+    client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
+    client_id = 0 if client_fin_tables.empty else client['id']
+
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
-    keyboard = keyboards.client_analytical_indicators_kb(research_info)
+    keyboard = keyboards.client_analytical_indicators_kb(research_info, client_id)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
@@ -572,6 +583,46 @@ async def select_client_period(
             summary_type=callback_data.summary_type,
         ).pack(),
     )
+
+
+@router.callback_query(callbacks.GetFinancialIndicators.filter())
+async def get_client_financial_indicators(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetFinancialIndicators,
+) -> None:
+    """
+    Отправка пользователю фин показателей по клиенту
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип фин показателей и клиент
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.model_dump_json()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    client_id = callback_data.client_id
+    fin_indicator_type = callback_data.fin_indicator_type
+    client = await client_db.get(client_id)
+
+    ap_obj = ArticleProcess(logger)
+    client_fin_tables = await ap_obj.get_client_fin_indicators(client_id)
+    msg_text = f'По клиенту {client["name"]} отсутствуют финансовые показатели'
+    if not client_fin_tables.empty:
+        msg_text = client["name"]
+        await callback_query.bot.send_chat_action(chat_id, ChatAction.UPLOAD_PHOTO)
+
+        # Создание и отправка таблицы
+        await process_fin_table(
+            callback_query,
+            client["name"],
+            fin_indicator_type.table_name,
+            client_fin_tables[fin_indicator_type.name][0],
+            logger,
+        )
+
+    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
 @router.callback_query(callbacks.NotImplementedFunctionality.filter())

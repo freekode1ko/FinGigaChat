@@ -117,6 +117,18 @@ class SubjectInterface:
             data = result.scalar()
             return {c: getattr(data, c) for c in self.columns}
 
+    async def get_by_name(self, name: str) -> dict[str, Any]:
+        """
+        Возвращает словарь с данными по subject с id==_id
+
+        :returns: dict[все столбцы таблицы self.table]
+        """
+        async with database.async_session() as session:
+            stmt = select(self.table).where(func.lower(self.table.name) == name.lower())
+            result = await session.execute(stmt)
+            data = result.scalar()
+            return {c: getattr(data, c) for c in self.columns}
+
     async def get_articles_by_subject_ids(
             self,
             subject_ids: int | list[int],
