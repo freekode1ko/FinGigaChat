@@ -26,7 +26,7 @@ from handlers.news import callback_data_factories, keyboards, utils
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit, user_in_whitelist
+from utils.base import bot_send_msg, get_page_data_and_info, send_full_copy_of_message, send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -516,6 +516,8 @@ async def get_subject_news_by_period(
     """
     Получение новостей за выбранный период
 
+    Отправляет копию меню в конце, если были отправлены новости
+
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
@@ -557,6 +559,7 @@ async def get_subject_news_by_period(
             await callback_query.message.answer(msg_text, parse_mode='HTML')
             await bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
             await asyncio.sleep(1)
+        await send_full_copy_of_message(callback_query)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -570,6 +573,8 @@ async def get_industry_news_by_period(
 ) -> None:
     """
     Получение новостей за выбранный период
+
+    Отправляет копию меню в конце, если были отправлены новости
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
@@ -598,6 +603,7 @@ async def get_industry_news_by_period(
         await callback_query.message.answer(msg_text, parse_mode='HTML')
         msg = ArticleProcess.make_format_industry_msg(industry_article_df.values.tolist())
         await bot_send_msg(callback_query.bot, from_user.id, msg)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text += ' отсутствуют'
         await callback_query.message.answer(msg_text, parse_mode='HTML')

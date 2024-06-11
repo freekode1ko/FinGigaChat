@@ -16,7 +16,7 @@ from db.api.product_group import product_group_db
 from handlers.products import callbacks
 from handlers.products import keyboards
 from log.bot_logger import user_logger
-from utils.base import send_or_edit, send_pdf, user_in_whitelist
+from utils.base import send_full_copy_of_message, send_or_edit, send_pdf, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -91,6 +91,8 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
     """
     Получение pdf файлов по господдержке
 
+    Отправляет копию меню в конце, если были отправлены файлы
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
     """
@@ -102,6 +104,7 @@ async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_da
     msg_text = state_support.TITLE
     pdf_files = list(state_support.DATA_ROOT_PATH.iterdir())
     await send_pdf(callback_query, pdf_files, msg_text)
+    await send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -141,6 +144,8 @@ async def get_product_documents(callback_query: types.CallbackQuery, callback_da
     """
     Получение продуктовых предложений
 
+    Отправляет копию меню в конце, если были отправлены продуктовые предложения
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
     """
@@ -160,6 +165,8 @@ async def get_product_documents(callback_query: types.CallbackQuery, callback_da
             if not await send_pdf(callback_query, pdf_files, msg_text):
                 msg_text += '\nФункционал появится позднее'
                 await callback_query.message.answer(msg_text, parse_mode='HTML')
+            else:
+                await send_full_copy_of_message(callback_query)
         case callbacks.FormatType.individual_messages:
             if not documents:
                 msg_text += '\nФункционал появится позднее'
@@ -175,10 +182,11 @@ async def get_product_documents(callback_query: types.CallbackQuery, callback_da
 
                 if document_msg_text:
                     await callback_query.message.answer(document_msg_text, parse_mode='HTML')
-                else:
-                    await callback_query.message.answer('Функционал появится позднее')
 
                 if os.path.exists(document.file_path):
                     await callback_query.message.answer_document(types.FSInputFile(document.file_path))
+
+            if documents:
+                await send_full_copy_of_message(callback_query)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

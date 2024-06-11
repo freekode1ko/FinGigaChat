@@ -314,6 +314,8 @@ async def get_client_industry_analytics(
     """
     Получение файлов по отраслевой аналитике, к которой принадлежит клиент
 
+    Отправляет копию меню в конце, если были отправлены файлы
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
@@ -333,6 +335,8 @@ async def get_client_industry_analytics(
     if not await send_pdf(callback_query, files, msg_text, protect_content=True):
         msg_text += '\nФункционал появится позднее'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+    else:
+        await utils.base.send_full_copy_of_message(callback_query)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -544,6 +548,8 @@ async def get_client_news_by_period(
     """
     Получение новостей по клиенту за выбранный период
 
+    Отправляет копию меню в конце, если были отправлены новости
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
@@ -576,6 +582,7 @@ async def get_client_news_by_period(
         frmt_msg += f'\n\n{all_articles}'
         await callback_query.message.answer(msg_text, parse_mode='HTML')
         await utils.base.bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
+        await utils.base.send_full_copy_of_message(callback_query)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
