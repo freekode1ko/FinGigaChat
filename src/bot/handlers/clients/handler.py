@@ -166,12 +166,14 @@ async def clients_list(
 async def clients_subscriptions_list(
         message: types.Message,
         state: FSMContext,
+        logger: logging.Logger,
 ) -> None:
     """
     Поиск по клиентам, на которые пользователь подписаны
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: Объект, который хранит состояние FSM для пользователя
+    :param state:   Объект, который хранит состояние FSM для пользователя
+    :param logger:  логгер
     """
     subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
 
