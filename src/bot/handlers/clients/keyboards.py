@@ -404,43 +404,41 @@ def client_analytical_indicators_kb(
         },
     ]
 
-    extra_buttons = [
-        {
-            'name': 'Обзор',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.review_table,
-            ).pack(),
-        },
-        {
-            'name': 'P&L модель',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.pl_table,
-            ).pack(),
-        },
-        {
-            'name': 'Модель баланса',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.balance_table,
-            ).pack(),
-        },
-        {
-            'name': 'Модель CF',
-            'callback_data': callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.money_table,
-            ).pack(),
-        },
-    ]
-
     if with_financial_indicators:
-        buttons += extra_buttons
+        buttons += [
+            {
+                'name': 'Обзор',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.review_table,
+                ).pack(),
+            },
+            {
+                'name': 'P&L модель',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.pl_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель баланса',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.balance_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель CF',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.money_table,
+                ).pack(),
+            },
+        ]
 
     for item in buttons:
         keyboard.row(types.InlineKeyboardButton(

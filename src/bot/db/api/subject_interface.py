@@ -119,7 +119,7 @@ class SubjectInterface:
 
     async def get_by_name(self, name: str) -> dict[str, Any]:
         """
-        Возвращает словарь с данными по subject с id==_id
+        Возвращает словарь с данными по subject с name==name
 
         :returns: dict[все столбцы таблицы self.table]
         """

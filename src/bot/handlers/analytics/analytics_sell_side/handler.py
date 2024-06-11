@@ -5,6 +5,7 @@
 а также макроэкономические показатели, прогноз валютных курсов и прогноз по ключевой ставке
 """
 import datetime
+import logging
 import re
 import textwrap
 from typing import Optional, Type
@@ -27,7 +28,7 @@ from db.api.research_type import research_type_db
 from db.api.user_research_subscription import user_research_subscription_db
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
-from log.bot_logger import logger, user_logger
+from log.bot_logger import user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils import weekly_pulse
@@ -139,12 +140,14 @@ async def get_section_research_types_menu(
 async def get_cib_research_data(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        logger: logging.Logger,
 ) -> None:
     """
     Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param logger:          логгер
     """
     summary_type = callback_data.summary_type
 
@@ -154,7 +157,7 @@ async def get_cib_research_data(
         case enums.ResearchSummaryType.last_actual.value:
             await get_last_actual_research(callback_query, callback_data)
         case enums.ResearchSummaryType.analytical_indicators.value:
-            await cib_client_analytical_indicators(callback_query, callback_data)
+            await cib_client_analytical_indicators(callback_query, callback_data, logger)
         case enums.ResearchSummaryType.exc_rate_prediction_table.value:
             await exc_rate_weekly_pulse_table(callback_query, callback_data)
         case enums.ResearchSummaryType.key_rate_dynamics_table.value:
@@ -241,12 +244,14 @@ async def get_last_actual_research(
 async def cib_client_analytical_indicators(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        logger: logging.Logger,
 ) -> None:
     """
     Меню аналитических показателей по клиенту
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param logger:          логгер
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()

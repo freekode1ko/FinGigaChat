@@ -9,6 +9,7 @@
 - цифровая справка
 """
 import datetime
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -33,7 +34,7 @@ from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
-from log.bot_logger import logger, user_logger
+from log.bot_logger import user_logger
 from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
@@ -274,12 +275,14 @@ async def get_client_news_menu(
 async def get_client_analytic_indicators(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
+        logger: logging.Logger,
 ) -> None:
     """
     Меню аналитических показателей по клиенту, если есть research_type_id
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param logger:          логгер
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()

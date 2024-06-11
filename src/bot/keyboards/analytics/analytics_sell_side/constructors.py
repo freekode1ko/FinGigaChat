@@ -221,39 +221,37 @@ def client_analytical_indicators_kb(research_type_info: models.ResearchType, cli
         },
     ]
 
-    extra_buttons = [
-        {
-            'name': 'Обзор',
-            'callback_data': callbacks.GetFinancialIndicators(
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.review_table,
-            ).pack(),
-        },
-        {
-            'name': 'P&L модель',
-            'callback_data': callbacks.GetFinancialIndicators(
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.pl_table,
-            ).pack(),
-        },
-        {
-            'name': 'Модель баланса',
-            'callback_data': callbacks.GetFinancialIndicators(
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.balance_table,
-            ).pack(),
-        },
-        {
-            'name': 'Модель CF',
-            'callback_data': callbacks.GetFinancialIndicators(
-                client_id=client_id,
-                fin_indicator_type=FinancialIndicatorsType.money_table,
-            ).pack(),
-        },
-    ]
-
     if client_id:
-        buttons += extra_buttons
+        buttons += [
+            {
+                'name': 'Обзор',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.review_table,
+                ).pack(),
+            },
+            {
+                'name': 'P&L модель',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.pl_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель баланса',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.balance_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель CF',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.money_table,
+                ).pack(),
+            },
+        ]
 
     for item in buttons:
         keyboard.row(types.InlineKeyboardButton(
