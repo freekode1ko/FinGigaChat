@@ -113,6 +113,8 @@ class ArticleProcess:
         """
         query = 'SELECT id, link FROM telegram_channel;'
         tg_channels_df = pd.read_sql(query, con=self.engine)
+        # Очищаем ссылки от / в конце
+        tg_channels_df['link'] = tg_channels_df['link'].str.rstrip('/')
 
         if 'id' not in df.columns:
             df = df.assign(id=None)
@@ -288,5 +290,7 @@ class ArticleProcess:
 
             conn.execute(sql)
             conn.execute(delete_tmp_table_sql)
+            # На всякий случай пусть будет, хоть дроп таблицы и триггерит коммит
+            conn.commit()
 
         return article['link'].values.tolist()
