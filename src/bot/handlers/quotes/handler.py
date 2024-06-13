@@ -9,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy import text
 
+import utils.base
 from configs import config
 from configs.config import PATH_TO_SOURCES
 from constants import enums, quotes as callback_prefixes
@@ -18,7 +19,6 @@ from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
 from utils import weekly_pulse
-from utils.base import __replacer, __sent_photo_and_msg, read_curdatetime, send_or_edit, user_in_whitelist
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -52,7 +52,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
         'Commodities - товарный рынок. Узнайте последние цены на сырьевые товары (нефть, золото, медь и пр.)\n\n'
         'Ставки - актуальные процентные ставки\n\n'
     )
-    await send_or_edit(message, msg_text, keyboard)
+    await utils.base.send_or_edit(message, msg_text, keyboard)
 
 
 @router.callback_query(callbacks.QuotesMenu.filter())
@@ -81,7 +81,7 @@ async def main_menu_command(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await utils.base.user_in_whitelist(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await main_menu(message)
     else:
@@ -94,6 +94,8 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     """
     Вывод в чат информации по котировкам связанной с валютой и их курсом
 
+    Отправляет копию меню в конце, если были отправлены данные
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
     """
@@ -102,6 +104,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await exchange_info_command(callback_query.message)
+    await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -141,8 +144,8 @@ async def exchange_info_command(message: types.Message) -> None:
     photo = types.FSInputFile(png_path)
     title = 'Курсы валют'
     data_source = 'investing.com'
-    curdatetime = read_curdatetime()
-    await __sent_photo_and_msg(
+    curdatetime = utils.base.read_curdatetime()
+    await utils.base.__sent_photo_and_msg(
         message,
         photo,
         day,
@@ -207,7 +210,7 @@ def format_cell_in_commodity_df(value: str | float | None) -> str | None:
 
     try:
         frmt_value = str(value).replace(',', '.')
-        frmt_value = __replacer(frmt_value)
+        frmt_value = utils.base.__replacer(frmt_value)
         frmt_value = re.sub(r'[%s–]', '', frmt_value)
         frmt_value = '{0:,}'.format(round(float(frmt_value))).replace(',', ' ')
         frmt_value = re.sub(r'-?0.0', '0', frmt_value)
@@ -224,6 +227,8 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     """
     Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
+    Отправляет копию меню в конце, если были отправлены данные
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
     """
@@ -232,6 +237,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await metal_info_command(callback_query.message)
+    await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -269,8 +275,8 @@ async def metal_info_command(message: types.Message) -> None:
     photo = types.FSInputFile(png_path)
     title = 'Сырьевые товары'
     data_source = 'LME, Bloomberg, investing.com'
-    await __sent_photo_and_msg(
-        message, photo, day, title=sample_of_img_title.format(title, data_source, read_curdatetime())
+    await utils.base.__sent_photo_and_msg(
+        message, photo, day, title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime())
     )
 
 
@@ -302,6 +308,8 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     """
     Вывод в чат информации по котировкам связанной с облигациями
 
+    Отправляет копию меню в конце, если были отправлены данные
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
     """
@@ -310,6 +318,7 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await bonds_info_command(callback_query.message)
+    await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -336,13 +345,13 @@ async def bonds_info_command(message: types.Message) -> None:
     month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
     title = 'Доходность ОФЗ'
     data_source = 'investing.com'
-    await __sent_photo_and_msg(
+    await utils.base.__sent_photo_and_msg(
         message,
         photo,
         day,
         month,
         protect_content=False,
-        title=sample_of_img_title.format(title, data_source, read_curdatetime()),
+        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
     )
 
 
@@ -352,6 +361,8 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     """
     Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
 
+    Отправляет копию меню в конце, если были отправлены данные
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит дополнительную информацию
     """
@@ -360,6 +371,7 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     await economy_info_command(callback_query.message)
+    await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -406,8 +418,8 @@ async def economy_info_command(message: types.Message) -> None:
     month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
     title = 'Ключевые ставки ЦБ мира'
     data_source = 'ЦБ стран мира'
-    curdatetime = read_curdatetime()
-    await __sent_photo_and_msg(
+    curdatetime = utils.base.read_curdatetime()
+    await utils.base.__sent_photo_and_msg(
         message, photo, day, month, protect_content=False,
         title=sample_of_img_title.format(title, data_source, curdatetime)
     )

@@ -32,7 +32,7 @@ from log.bot_logger import user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from utils import weekly_pulse
-from utils.base import __sent_photo_and_msg
+from utils.base import __sent_photo_and_msg, send_full_copy_of_message
 from utils.handler_utils import get_client_financial_indicators
 from utils.newsletter import send_researches_to_user
 
@@ -221,6 +221,8 @@ async def get_last_actual_research(
     """
     Получение последнего актуального отчета
 
+    Отправляет копию меню в конце, если были отправлены отчеты
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     """
@@ -235,6 +237,7 @@ async def get_last_actual_research(
     if not research_df.empty:
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
         await callback_query.message.answer(msg_text)
@@ -425,6 +428,8 @@ async def data_mart_callback(
     """
     Получение витрины данных
 
+    Отправляет копию меню в конце, если были отправлены данные
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     """
@@ -434,6 +439,7 @@ async def data_mart_callback(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     await data_mart_body(callback_query.message)
+    await send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -443,6 +449,8 @@ async def economy_monthly_callback(
 ) -> None:
     """
     Получение последнего актуального ежемесячного отчета по Экономике РФ
+
+    Отправляет копию меню в конце, если были отправлены отчеты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
@@ -464,6 +472,7 @@ async def economy_monthly_callback(
 
     if not last_research.empty:
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
         await callback_query.message.answer(msg_text)
@@ -492,6 +501,8 @@ async def get_researches_over_period(
     """
     Отправка пользователю сводки отчетов по отрасли за указанный период
 
+    Отправляет копию меню в конце, если были отправлены отчеты
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
     :param header_not_contains: фильтрация полученных отчетов по header
@@ -514,6 +525,7 @@ async def get_researches_over_period(
 
     if not researches_df.empty:
         await send_researches_to_user(callback_query.bot, user_id, full_name, researches_df)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
         await callback_query.message.answer(msg_text)

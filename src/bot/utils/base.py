@@ -12,6 +12,7 @@ from typing import Optional
 
 import pandas as pd
 from aiogram import Bot, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.media_group import MediaGroupBuilder
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
@@ -513,6 +514,27 @@ async def send_or_edit(
     else:
         call = message
         await call.message.edit_text(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
+
+
+async def send_full_copy_of_message(callback_query: types.CallbackQuery) -> types.Message:
+    """
+    Отправить копию сообщения тому же пользователю и удалить старое сообщение.
+
+    Отправляет копию текста, копию reply_markup, parse_mode='HTML'
+
+    :param callback_query:  Объект, содержащий информацию о пользователе и сообщении
+    :return:                Объект отправленного сообщения, содержащий информацию о пользователе и сообщении
+    """
+    try:
+        await callback_query.message.delete()
+    except TelegramBadRequest:
+        pass
+
+    return await callback_query.message.send_copy(
+        callback_query.message.chat.id,
+        reply_markup=callback_query.message.reply_markup,
+        parse_mode='HTML',
+    )
 
 
 async def send_pdf(
