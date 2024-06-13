@@ -135,7 +135,7 @@ async def exchange_info_command(message: types.Message) -> None:
     exc = exc.sort_index().reset_index(drop=True)
 
     transformer = dt.Transformer()
-    transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2, title='Текущие курсы валют')
+    transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2)
     day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
     month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
     photo = types.FSInputFile(png_path)
@@ -150,9 +150,6 @@ async def exchange_info_command(message: types.Message) -> None:
         protect_content=False,
         title=sample_of_img_title.format(title, data_source, curdatetime),
     )
-
-    fx_predict = pd.read_excel(PATH_TO_SOURCES / 'tables' / 'fx_predict.xlsx').rename(columns={'базовый сценарий': ' '})
-    transformer.render_mpl_table(fx_predict, 'fx_predict', header_columns=0, col_width=1.5, title=title)
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
 
@@ -256,13 +253,7 @@ async def metal_info_command(message: types.Message) -> None:
     materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(lambda x: x + '%' if x else '-')
 
     transformer = dt.Transformer()
-    transformer.render_mpl_table(
-        materials_df,
-        'metal',
-        header_columns=0,
-        col_width=1.5,
-        title='Цены на ключевые сырьевые товары.'
-    )
+    transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
 
     png_path = PATH_TO_SOURCES / 'img' / 'metal_table.png'
     day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
@@ -330,7 +321,7 @@ async def bonds_info_command(message: types.Message) -> None:
 
     transformer = dt.Transformer()
     png_path = PATH_TO_SOURCES / 'img' / 'bonds_table.png'
-    transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5, title='Доходности ОФЗ.')
+    transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
     photo = types.FSInputFile(png_path)
     day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
     month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
@@ -400,7 +391,7 @@ async def economy_info_command(message: types.Message) -> None:
     transformer = dt.Transformer()
     png_path = PATH_TO_SOURCES / 'img' / 'world_bet_table.png'
     world_bet = world_bet.round(2)
-    transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2, title='Ключевые ставки ЦБ мира.')
+    transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2)
     photo = types.FSInputFile(png_path)
     day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
     month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
@@ -429,9 +420,7 @@ async def economy_info_command(message: types.Message) -> None:
     for num, date in enumerate(rus_infl['Дата'].values):
         cell = str(date).split('.')
         rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
-    transformer.render_mpl_table(
-        rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2, title='Ежемесячная инфляция в России.'
-    )
+    transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2)
     png_path = PATH_TO_SOURCES / 'img' / 'rus_infl_table.png'
     photo = types.FSInputFile(png_path)
     title = 'Инфляция в России'

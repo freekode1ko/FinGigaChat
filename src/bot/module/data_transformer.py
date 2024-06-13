@@ -65,28 +65,24 @@ class Transformer:
 
     @staticmethod
     def render_mpl_table(
-        data,
-        name,
-        col_width=1.0,
-        row_height=0.625,
-        font_size=18,
-        header_color='#000000',
-        row_colors=['#030303', '#0E0E0E'],
-        edge_color='grey',
-        bbox=[-0.17, -0.145, 1.3, 1.31],
-        header_columns=0,
-        title=None,
-        alias=None,
-        fin=None,
-        ax=None,
-        **kwargs,
+            data,
+            name,
+            col_width=1.0,
+            row_height=0.625,
+            font_size=14,
+            header_color='#000000',
+            row_colors=['#030303', '#0E0E0E'],
+            edge_color='grey',
+            bbox=[-0.17, -0.145, 1.3, 1.31],
+            header_columns=0,
+            alias=None,
+            fin=None,
+            ax=None,
+            **kwargs
     ):
         """Рендеринг"""
         data = data.fillna('-')
-        if title is None:
-            title = name
         if alias:
-            size = None
             bbox = [-0.17, -0.2, 1.3, 1.145]
             col_widths = [0.2, 0.05, 0.05, 0.05, 0.05, 0.05]
 
