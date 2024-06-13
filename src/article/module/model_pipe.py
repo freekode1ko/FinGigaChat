@@ -13,18 +13,18 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
 from configs import prompts
-from configs.config import ROBERTA_CLIENT_RELEVANCE_LINK
+from configs.config import PROJECT_DIR, ROBERTA_CLIENT_RELEVANCE_LINK
 from db.database import engine
 from log.logger_base import Logger
 from module import utils
 from module.gigachat import GigaChat
 
 
-CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
-COM_BINARY_CLASSIFICATION_MODEL_PATH = 'data/model/commodity_binary_best.pkl'
-STOP_WORDS_FILE_PATH = 'data/stop_words_list.txt'
-COMMODITY_RATING_FILE_PATH = 'data/rating/commodity_rating_system.xlsx'
-CLIENT_RATING_FILE_PATH = 'data/rating/client_rating_system.xlsx'
+CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = PROJECT_DIR / 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
+COM_BINARY_CLASSIFICATION_MODEL_PATH = PROJECT_DIR / 'data/model/commodity_binary_best.pkl'
+STOP_WORDS_FILE_PATH = PROJECT_DIR / 'data/stop_words_list.txt'
+COMMODITY_RATING_FILE_PATH = PROJECT_DIR / 'data/rating/commodity_rating_system.xlsx'
+CLIENT_RATING_FILE_PATH = PROJECT_DIR / 'data/rating/client_rating_system.xlsx'
 ALTERNATIVE_NAME_FILE = 'data/name/{}_with_alternative_names.xlsx'
 
 BAD_GIGA_ANSWERS = [
@@ -91,8 +91,8 @@ MAX_LEN_INPUT = 6000
 
 morph = pymorphy2.MorphAnalyzer()
 
-client_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('client'))
-commodity_names = pd.read_excel(ALTERNATIVE_NAME_FILE.format('commodity'))
+client_names = pd.read_excel(PROJECT_DIR / ALTERNATIVE_NAME_FILE.format('client'))
+commodity_names = pd.read_excel(PROJECT_DIR / ALTERNATIVE_NAME_FILE.format('commodity'))
 alter_client_names_dict = utils.get_alternative_names_pattern_client(client_names)
 alter_commodity_names_dict = utils.get_alternative_names_pattern_commodity(commodity_names)
 
@@ -142,7 +142,7 @@ def get_names_pattern(names: str, type_of_article: str):
     """
     # Load alternative names data
     df_alternative_names = pd.read_excel(
-        ALTERNATIVE_NAME_FILE.format(type_of_article), index_col=False)
+        PROJECT_DIR / ALTERNATIVE_NAME_FILE.format(type_of_article), index_col=False)
     df_alternative_names = df_alternative_names.applymap(
         lambda x: x.lower().strip() if isinstance(x, str) else None)
     first_column = df_alternative_names.columns[0]

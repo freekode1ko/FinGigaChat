@@ -306,6 +306,7 @@ async def get_client_news(callback_query: types.CallbackQuery, callback_data: ca
     :param callback_data: Объект, содержащий в себе инфу о id клиента
     """
     await get_subject_news(callback_query, callback_data, client_db)
+    await utils.base.send_full_copy_of_message(callback_query)
 
 
 @router.callback_query(callbacks.GetCommodityNews.filter())
@@ -317,6 +318,7 @@ async def get_commodity_news(callback_query: types.CallbackQuery, callback_data:
     :param callback_data: Объект, содержащий в себе инфу о id сырья
     """
     await get_subject_news(callback_query, callback_data, commodity_db)
+    await utils.base.send_full_copy_of_message(callback_query)
 
 
 @router.callback_query(callbacks.GetIndustryNews.filter())
@@ -328,6 +330,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
     :param callback_data: Объект, содержащий в себе инфу о id отрасли
     """
     await get_subject_news(callback_query, callback_data, industry_db)
+    await utils.base.send_full_copy_of_message(callback_query)
 
 
 @router.message(F.text)

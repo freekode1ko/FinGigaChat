@@ -11,6 +11,7 @@ GET_ECONOMY_DAILY_RESEARCHES = 'analytics_get_economy_daily_researches'
 
 GET_CLIENT_INAVIGATOR = 'get_client_inavigator'
 SELECT_CLIENT_RESEARCH_GETTING_PERIOD = 'select_cib_client_period'
+GET_FINANCIAL_INDICATORS = 'get_client_financial_indicators'
 
 NOT_IMPLEMENTED = 'analytic_sell_side_not_implemented'
 

@@ -2,6 +2,7 @@
 from aiogram.filters.callback_data import CallbackData
 
 from constants.analytics import analytics_sell_side as callback_prefixes
+from constants.enums import FinancialIndicatorsType
 
 
 class Menu(CallbackData, prefix=callback_prefixes.MENU):
@@ -64,6 +65,13 @@ class SelectClientResearchesGettingPeriod(CallbackData, prefix=callback_prefixes
 
     research_type_id: int
     summary_type: int
+
+
+class GetFinancialIndicators(CallbackData, prefix=callback_prefixes.GET_FINANCIAL_INDICATORS):
+    """Получение фин показателей по клиенту"""
+
+    client_id: int
+    fin_indicator_type: FinancialIndicatorsType
 
 
 class NotImplementedFunctionality(CallbackData, prefix=callback_prefixes.NOT_IMPLEMENTED):

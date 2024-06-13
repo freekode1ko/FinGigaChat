@@ -5,6 +5,7 @@
 а также макроэкономические показатели, прогноз валютных курсов и прогноз по ключевой ставке
 """
 import datetime
+import logging
 import re
 import textwrap
 from typing import Optional, Type
@@ -19,6 +20,7 @@ from constants import enums
 from constants.analytics import analytics_sell_side
 from db import database
 from db.api import client as client_db_api
+from db.api.client import client_db
 from db.api.research import research_db
 from db.api.research_group import research_group_db
 from db.api.research_section import research_section_db
@@ -28,8 +30,10 @@ from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
+from module.article_process import ArticleProcess
 from utils import weekly_pulse
-from utils.base import __sent_photo_and_msg
+from utils.base import __sent_photo_and_msg, send_full_copy_of_message
+from utils.handler_utils import get_client_financial_indicators
 from utils.newsletter import send_researches_to_user
 
 
@@ -136,12 +140,14 @@ async def get_section_research_types_menu(
 async def get_cib_research_data(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        logger: logging.Logger,
 ) -> None:
     """
     Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param logger:          логгер
     """
     summary_type = callback_data.summary_type
 
@@ -151,7 +157,7 @@ async def get_cib_research_data(
         case enums.ResearchSummaryType.last_actual.value:
             await get_last_actual_research(callback_query, callback_data)
         case enums.ResearchSummaryType.analytical_indicators.value:
-            await cib_client_analytical_indicators(callback_query, callback_data)
+            await cib_client_analytical_indicators(callback_query, callback_data, logger)
         case enums.ResearchSummaryType.exc_rate_prediction_table.value:
             await exc_rate_weekly_pulse_table(callback_query, callback_data)
         case enums.ResearchSummaryType.key_rate_dynamics_table.value:
@@ -215,6 +221,8 @@ async def get_last_actual_research(
     """
     Получение последнего актуального отчета
 
+    Отправляет копию меню в конце, если были отправлены отчеты
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     """
@@ -229,6 +237,7 @@ async def get_last_actual_research(
     if not research_df.empty:
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
         await callback_query.message.answer(msg_text)
@@ -238,12 +247,14 @@ async def get_last_actual_research(
 async def cib_client_analytical_indicators(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        logger: logging.Logger,
 ) -> None:
     """
     Меню аналитических показателей по клиенту
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param logger:          логгер
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -254,8 +265,16 @@ async def cib_client_analytical_indicators(
 
     research_info = await research_type_db.get(research_type_id)
 
+    # Ищем клиента по имени отчета
+    client = await client_db.get_by_name(research_info.name)
+
+    # Проверяем, что есть фин показатели для клиента
+    ap_obj = ArticleProcess(logger)
+    client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
+    client_id = 0 if client_fin_tables.empty else client['id']
+
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
-    keyboard = keyboards.client_analytical_indicators_kb(research_info)
+    keyboard = keyboards.client_analytical_indicators_kb(research_info, client_id)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
@@ -408,6 +427,8 @@ async def data_mart_callback(
     """
     Получение витрины данных
 
+    Отправляет копию меню в конце, если были отправлены данные
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     """
@@ -417,6 +438,7 @@ async def data_mart_callback(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     await data_mart_body(callback_query.message)
+    await send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -426,6 +448,8 @@ async def economy_monthly_callback(
 ) -> None:
     """
     Получение последнего актуального ежемесячного отчета по Экономике РФ
+
+    Отправляет копию меню в конце, если были отправлены отчеты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
@@ -447,6 +471,7 @@ async def economy_monthly_callback(
 
     if not last_research.empty:
         await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
         await callback_query.message.answer(msg_text)
@@ -475,6 +500,8 @@ async def get_researches_over_period(
     """
     Отправка пользователю сводки отчетов по отрасли за указанный период
 
+    Отправляет копию меню в конце, если были отправлены отчеты
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
     :param header_not_contains: фильтрация полученных отчетов по header
@@ -497,6 +524,7 @@ async def get_researches_over_period(
 
     if not researches_df.empty:
         await send_researches_to_user(callback_query.bot, user_id, full_name, researches_df)
+        await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
         await callback_query.message.answer(msg_text)
@@ -571,6 +599,20 @@ async def select_client_period(
             summary_type=callback_data.summary_type,
         ).pack(),
     )
+
+
+@router.callback_query(callbacks.GetFinancialIndicators.filter())
+async def get_financial_indicators(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetFinancialIndicators,
+) -> None:
+    """
+    Отправка пользователю фин показателей по клиенту
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип фин показателей и клиент
+    """
+    await get_client_financial_indicators(callback_query, callback_data.client_id, callback_data.fin_indicator_type)
 
 
 @router.callback_query(callbacks.NotImplementedFunctionality.filter())

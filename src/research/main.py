@@ -5,7 +5,6 @@ import time
 import warnings
 from typing import Optional
 
-import asyncpg
 import pandas as pd
 import schedule
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -328,19 +327,11 @@ async def run_parse_cib(logger: Logger.logger) -> None:
 
     :param logger: логгер
     """
-    postgres_pool = await asyncpg.create_pool(
-        user=config.DB_USER,
-        password=config.DB_PASS,
-        host=config.DB_HOST,
-        port=config.DB_PORT,
-        database=config.DB_NAME,
-        max_inactive_connection_lifetime=60,
-    )
     logger.info('Старт парсинга финансовых показателей по клиентам в CIB')
-    await ResearchAPIParser(logger, postgres_pool).get_fin_summary()
+    await ResearchAPIParser(logger).get_fin_summary()
 
     logger.info('Старт парсинга отчетов с CIB')
-    await ResearchAPIParser(logger, postgres_pool).parse_pages()
+    await ResearchAPIParser(logger).parse_pages()
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
@@ -387,10 +378,16 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     runner.save_date_of_last_build()
 
     # Запуск парсинга CIB через условный апиай
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     try:
         if loop.is_closed():
-            asyncio.set_event_loop(asyncio.new_event_loop())
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         loop.run_until_complete(run_parse_cib(logger))
     except Exception as e:
         logger.error('CIB: сборка завершилась с ошибкой: %s', e)

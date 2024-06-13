@@ -65,21 +65,21 @@ class Transformer:
 
     @staticmethod
     def render_mpl_table(
-            data,
-            name,
-            col_width=1.0,
-            row_height=0.625,
-            font_size=14,
-            header_color='#000000',
-            row_colors=['#030303', '#0E0E0E'],
-            edge_color='grey',
-            bbox=[-0.17, -0.145, 1.3, 1.31],
-            header_columns=0,
-            alias=None,
-            fin=None,
-            ax=None,
-            **kwargs
-    ):
+        data,
+        name,
+        col_width=1.0,
+        row_height=0.625,
+        font_size=14,
+        header_color='#000000',
+        row_colors=['#030303', '#0E0E0E'],
+        edge_color='grey',
+        bbox=[-0.17, -0.145, 1.3, 1.31],
+        header_columns=0,
+        alias=None,
+        fin=None,
+        ax=None,
+        **kwargs,
+    ) -> Path:
         """Рендеринг"""
         data = data.fillna('-')
         if alias:
@@ -198,6 +198,7 @@ class Transformer:
         # save png and return it to user
         png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
         plt.savefig(png_path, transparent=False)
+        return png_path
 
     @staticmethod
     def unix_to_default(timestamp):
