@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
-from configs.config import PAGE_ELEMENTS_COUNT, PATH_TO_SOURCES
+from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants
 from constants.constants import research_footer
 from db import models
@@ -345,7 +345,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
     return await get_industries_id(handbook)
 
 
-async def __create_fin_table(message: types.Message, client_name: str,
+async def __create_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
                              table_type: str, client_fin_table: pd.DataFrame) -> None:
     """
     Формирование таблицы под финансовые показатели и запись его изображения
@@ -366,16 +366,18 @@ async def __create_fin_table(message: types.Message, client_name: str,
                     {'Финансовые показатели': client_fin_table.loc[i]['Финансовые показатели']})
     client_fin_table.where(pd.notnull(client_fin_table), '')
 
-    transformer.render_mpl_table(
-        client_fin_table, 'financial_indicator', header_columns=0, col_width=4,
-        title='', alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
+    png_path = transformer.render_mpl_table(
+        client_fin_table, f'financial_indicator_{client_name.replace(" ", "").lower()}_{table_type}', header_columns=0,
+        col_width=4, title='', alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
     )
-    png_path = PATH_TO_SOURCES / 'img' / 'financial_indicator_table.png'
     photo = types.FSInputFile(png_path)
-    await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+    if isinstance(message, types.Message):
+        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+    elif isinstance(message, types.CallbackQuery):
+        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
 
 
-async def process_fin_table(message: types.Message, client_name: str,
+async def process_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
                             table_type: str, table_data: str,
                             logger: Logger.logger = None) -> None:
     """

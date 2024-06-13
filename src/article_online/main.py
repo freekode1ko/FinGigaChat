@@ -15,7 +15,7 @@ from module.article_process import ArticleProcess
 
 MAX_NEWS_BATCH_SIZE = 1000
 MINUTE = 60
-MINUTES_TO_SLEEP = 10
+MINUTES_TO_SLEEP = 20
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:

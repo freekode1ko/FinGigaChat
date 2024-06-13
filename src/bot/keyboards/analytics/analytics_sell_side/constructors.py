@@ -7,7 +7,6 @@
 Меню аналитических показателей для клиентов.
 Меню выбора периода для выгрузки отчетов.
 """
-import datetime
 from typing import Type
 
 import pandas as pd
@@ -17,6 +16,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import analytics, constants, enums
+from constants.enums import FinancialIndicatorsType
 from db import models
 from keyboards.analytics import constructors
 from keyboards.analytics.analytics_sell_side import callbacks
@@ -170,38 +170,7 @@ def get_select_period_kb(
     """
     keyboard = InlineKeyboardBuilder()
 
-    periods_list = [
-        {
-            'text': 'За 1 день',
-            'days': 1,
-        },
-        {
-            'text': 'За 3 дня',
-            'days': 3,
-        },
-        {
-            'text': 'За неделю',
-            'days': 7,
-        },
-        {
-            'text': 'За месяц',
-            'days': 30,  # average
-        },
-        {
-            'text': 'За квартал',
-            'days': 90,  # average
-        },
-        {
-            'text': 'За полгода',
-            'days': 176,  # average
-        },
-        {
-            'text': 'За год',
-            'days': 365 if datetime.date.today().year % 4 else 366,  # average
-        },
-    ]
-
-    for period in periods_list:
+    for period in constants.EXTENDED_GET_NEWS_PERIODS:
         by_days = callback_factory(
             research_type_id=item_id,
             days_count=period['days'],
@@ -220,7 +189,7 @@ def get_select_period_kb(
     return keyboard.as_markup()
 
 
-def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> InlineKeyboardMarkup:
+def client_analytical_indicators_kb(research_type_info: models.ResearchType, client_id: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
@@ -233,7 +202,8 @@ def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> 
     [  назад  ]
     [   Завершить   ]
 
-    :param research_type_info: инфа о типе отчета CIB Research
+    :param research_type_info:  инфа о типе отчета CIB Research
+    :param client_id:           ID клиента, по которому можно получить фин показатели
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -249,23 +219,39 @@ def client_analytical_indicators_kb(research_type_info: models.ResearchType) -> 
                 summary_type=research_type_info.summary_type,
             ).pack(),
         },
-        # {
-        #    'name': 'Обзор',
-        #    'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        # },
-        # {
-        #     'name': 'P&L модель',
-        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        # },
-        # {
-        #     'name': 'Модель баланса',
-        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        # },
-        # {
-        #     'name': 'Модель CF',
-        #     'callback_data': callbacks.NotImplementedFunctionality(research_type_id=research_type_info['id']).pack(),
-        # },
     ]
+
+    if client_id:
+        buttons += [
+            {
+                'name': 'Обзор',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.review_table,
+                ).pack(),
+            },
+            {
+                'name': 'P&L модель',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.pl_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель баланса',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.balance_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель CF',
+                'callback_data': callbacks.GetFinancialIndicators(
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.money_table,
+                ).pack(),
+            },
+        ]
 
     for item in buttons:
         keyboard.row(types.InlineKeyboardButton(

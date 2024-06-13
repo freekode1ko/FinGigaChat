@@ -80,7 +80,7 @@ class Transformer:
         fin=None,
         ax=None,
         **kwargs,
-    ):
+    ) -> Path:
         """Рендеринг"""
         data = data.fillna('-')
         if title is None:
@@ -202,6 +202,7 @@ class Transformer:
         # save png and return it to user
         png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
         plt.savefig(png_path, transparent=False)
+        return png_path
 
     @staticmethod
     def unix_to_default(timestamp):
