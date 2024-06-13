@@ -19,9 +19,9 @@ import pandas as pd
 import requests
 import selenium
 import selenium.webdriver as wb
+import sqlalchemy as sa
 from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent
-from asyncpg.pool import Pool as asyncpgPool
 from bs4 import BeautifulSoup
 from pdf2image import convert_from_path
 from PIL import Image
@@ -29,12 +29,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-from sqlalchemy import select
 
 from configs import config
 from db import parser_source
 from db.database import async_session, engine
-from db.models import FinancialSummary, ParserSource, ResearchType
+from db.models import FinancialSummary, ParserSource, Research, ResearchType
 from log.logger_base import Logger
 from module import data_transformer, weekly_pulse_parse
 from parsers.exceptions import ResearchError
@@ -549,9 +548,10 @@ class ResearchParser:
 class ResearchAPIParser:
     """Класс парсера страниц с портала CIB Research"""
 
-    def __init__(self, logger: Logger.logger, postgres_conn: asyncpgPool) -> None:
+    report_title_tr_pattern = re.compile(r'publication-\d+')
+
+    def __init__(self, logger: Logger.logger) -> None:
         """Инициализация парсера страниц с портала CIB Research"""
-        self.postgres_conn = postgres_conn
         self._logger = logger
 
         login = config.research_cred[0]
@@ -610,8 +610,8 @@ class ResearchAPIParser:
         """
         async with async_session() as session:
             all_sources = await session.execute(
-                select(
-                    ResearchType.id,
+                sa.select(
+                    ResearchType.id.label('research_type_id'),
                     ParserSource.source.label('url'),
                     ParserSource.params,
                     ParserSource.alt_names,
@@ -633,11 +633,8 @@ class ResearchAPIParser:
         day = int(cib_date[:2])
         return datetime.date(year=year, month=month, day=day)
 
-    def is_suitable_report(
-            self,
-            header: str,
-            starts_with: list[str] | None = None,
-    ) -> bool:
+    @staticmethod
+    def is_suitable_report(header: str, starts_with: list[str] | None = None) -> bool:
         """
         Метод для определения подходит ли отчет для парсинга на основе регулярок из разделов
 
@@ -656,11 +653,9 @@ class ResearchAPIParser:
         :param report_id: уникальный айди отчета
         :return: булевое значение с ифнормацией о том есть отчет или нет
         """
-        async with self.postgres_conn.acquire() as connection:
-            count_news = await connection.fetchrow(
-                f"SELECT COUNT(id) AS count_news FROM research WHERE report_id = '{report_id}'"
-            )
-            return bool(count_news['count_news'])
+        async with async_session() as session:
+            count_news = await session.scalar(sa.select(sa.func.count(Research.id)).where(Research.report_id == report_id))
+            return bool(count_news)
 
     async def save_report_to_db(self, report: dict) -> None:
         """
@@ -668,21 +663,12 @@ class ResearchAPIParser:
 
         :param report: Отчет
         """
-        async with self.postgres_conn.acquire() as connection:
-            report_id = report['report_id']
-            research_type_id = report['research_type_id']
-            filepath = report['filepath']
-            header = report['header'].replace("'", "''")
-            text = report['text'].replace("'", "''")
-            parse_datetime = report['parse_datetime']
-            publication_date = report['publication_date']
-            await connection.execute(
-                (
-                    f'INSERT INTO research (research_type_id, filepath, header, text, parse_datetime, publication_date, report_id)'
-                    f"VALUES ('{research_type_id}', '{filepath}', '{header}', '{text}', '{parse_datetime}', "
-                    f"'{publication_date}', '{report_id}')"
-                )
-            )
+        async with async_session() as session:
+            report['header'] = report['header'].replace("'", "''")
+            report['text'] = report['text'].replace("'", "''")
+            report['filepath'] = str(report['filepath'])
+            session.add(Research(**report))
+            await session.commit()
 
     async def parse_reports_by_id(
             self,
@@ -781,7 +767,7 @@ class ResearchAPIParser:
                 req = requests.request(
                     method=params['request_method'],
                     url=params['url'],
-                    params=json.loads(params['params']),
+                    params=params['params'],
                     cookies=self.cookies,
                     verify=False
                 )
@@ -806,19 +792,20 @@ class ResearchAPIParser:
             raise HTTPNoContent
 
         # loop = asyncio.get_event_loop()
-        reports = BeautifulSoup(content, 'html.parser').find_all('tr')
-        reports = [(reports[i], reports[i + 1]) for i in range(0, len(reports), 2)]
+        html_parser = BeautifulSoup(content, 'html.parser')
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'],
-                          str(len(reports)))
+        reports_ids = html_parser.find_all('div', class_='hidden publication-id')
+        reports_titles = html_parser.find_all('tr', class_=self.report_title_tr_pattern)
+
+        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], len(reports_ids))
 
         new_reports = []
-        for report in reports:
-            report_name = str(report[1].find_next('div', class_='title').text).strip()
-            if not self.is_suitable_report(report_name, params['starts_with']):
+        for report_id, report_name in zip(reports_ids, reports_titles):
+            report_name = str(report_name.find_next('div', class_='title').text).strip()
+            if not self.is_suitable_report(report_name, params['alt_names']):
                 continue
 
-            element_with_id = str(report[0].find_next('div', class_='hidden publication-id').text)
+            element_with_id = str(report_id.text)
             if not element_with_id:
                 continue
 
@@ -836,7 +823,7 @@ class ResearchAPIParser:
         :param session: сессия aiohttp
         """
         self._logger.info('Сборка Weekly Pulse')
-        page = parser_source.get_research_type_source_by_name(source_name='Weekly Pulse')
+        page = await parser_source.get_research_type_source_by_name(source_name='Weekly Pulse')
 
         self._logger.info('Поиск Weekly Pulse отчета')
         try:
@@ -950,9 +937,9 @@ class ResearchAPIParser:
         self._logger.info('Чтение таблицы financial_summary')
         # columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
         # metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
-        query = select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
-                       FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
-                       FinancialSummary.balance_table, FinancialSummary.money_table)
+        query = sa.select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
+                          FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
+                          FinancialSummary.balance_table, FinancialSummary.money_table)
         async with async_session() as session:
             metadata = await session.execute(query)
             metadata = metadata.fetchall()
