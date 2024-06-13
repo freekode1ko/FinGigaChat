@@ -87,3 +87,61 @@ class SubjectType(str, Enum):
     client = 'client'
     commodity = 'commodity'
     industry = 'industry'
+
+
+class AutoEnum(Enum):
+    """
+    Родительский класс, который позволяет задать атрибуты у значений енумератора.
+
+    Атрибут value задается автоматически в зависимости от количества создаваемых значений енумератора.
+    Тажке позволяет производить сравнение value енумератора с int и получать значения енумератора по передаваемому int.
+    Например,
+
+    >>> class Test(AutoEnum):
+    ...    data1 = {'title': 'data1'}
+    ...    data2 = {'title': 'data2'}
+
+    >>> Test.data1 == '0'
+    True
+    >>> Test('0') == Test.data1
+    True
+    >>> Test.data1
+    """
+
+    def __new__(cls, *args):
+        """При создании экземпляра енумератора из всех переданных аргументов, лишь первый станет value"""
+        value = len(cls.__members__)
+        obj = object.__new__(cls)
+        obj._value_ = str(value)
+        return obj
+
+    def __eq__(self, obj) -> bool:
+        """Оператор равенства"""
+        if type(self) is type(obj):
+            return super().__eq__(obj)
+        return self.value == obj
+
+    def __ne__(self, obj) -> bool:
+        """Оператор неравенства"""
+        if type(self) is type(obj):
+            return super().__ne__(obj)
+        return self.value != obj
+
+
+class FinancialIndicatorsType(AutoEnum):
+    """Типы фин показателей, которые можно получить"""
+
+    def __init__(self, *args) -> None:
+        """Инициализация енумератора с атрибутом - имя таблицы фин показателей"""
+        if len(args) > 0 and isinstance(args[0], str):
+            self._table_name_ = args[0]
+
+    @property
+    def table_name(self) -> str:
+        """Возврат атрибута имя таблицы фин показателей"""
+        return self._table_name_
+
+    review_table = 'Обзор'
+    pl_table = 'P&L'
+    balance_table = 'Баланс'
+    money_table = 'Денежный поток'
