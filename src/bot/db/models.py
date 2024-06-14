@@ -525,13 +525,13 @@ class ResearchType(Base):
                                  nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
+    researches = relationship('Research', secondary='research_research_type', back_populates='research_types')
 
 class Research(Base):
     __tablename__ = 'research'
     __table_args__ = {'comment': 'Справочник спаршенных отчетов CIB Research'}
 
     id = Column(BigInteger, primary_key=True)
-    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     filepath = Column(Text, nullable=True, server_default='')
     header = Column(Text, nullable=False)
     text = Column(Text, nullable=False)
@@ -540,6 +540,8 @@ class Research(Base):
     report_id = Column(String(64), nullable=False)
     is_new = Column(Boolean, server_default=sa.text('true'),
                     comment='Указывает, что отчет еще не рассылался пользователям')
+
+    research_types = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
 
 
 class UserResearchSubscriptions(Base):
@@ -713,3 +715,11 @@ class TelegramSection(Base):
 
     telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
     telegram_channel = relationship('TelegramChannel', back_populates='section')
+
+
+class ResearchResearchType(Base):
+    __tablename__ = 'research_research_type'
+    __table_args__ = {'comment': 'Cвязь мени ту мени типы ответов и сами отчеты'}
+
+    research_id = Column(ForeignKey('research.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
