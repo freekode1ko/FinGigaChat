@@ -102,7 +102,8 @@ class MetalsGetter(QuotesGetter):
             xpath_price = '//div[starts-with(@class, "currentPrice")]//div[@data-component="sized-price"]/text()'
             xpath_date = '//time[1]/@datetime'
             lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date, delete_commas=True)
-            metals_from_html.append(lng)
+            if lng:
+                metals_from_html.append(lng)
 
         return metals_from_html, metals, U7
 
@@ -113,7 +114,7 @@ class MetalsGetter(QuotesGetter):
                            xpath_price: str,
                            xpath_date: str,
                            delete_commas: bool = False,
-                           ) -> list[str, float | None, None, str]:
+                           ) -> list[str, float, None, str] | None:
         """
         Получение цены и даты металла с html страницы.
 
@@ -129,6 +130,8 @@ class MetalsGetter(QuotesGetter):
         tree = html.fromstring(page_html)
         data_price = tree.xpath(xpath_price)
         price = self.find_number(metal_name, data_price, delete_commas)
+        if not price:
+            return None
         data_date = tree.xpath(xpath_date)
         date = [date for date in data_date if date.strip()][0]
         return [metal_name, price, None, date]
@@ -196,7 +199,8 @@ class MetalsGetter(QuotesGetter):
         :return:    Обработанный датафрейм.
         """
         # заменить цену меди с tradingeconomics на bloomberg
-        df.loc[df['Metals'] == 'Copper USD/Lbs', 'Price'] = df.loc[df['Metals'] == 'Copper Bloomberg', 'Price'].values[0]
+        if not (bloom_price := df.loc[df['Metals'] == 'Copper Bloomberg', 'Price']).empty:
+            df.loc[df['Metals'] == 'Copper USD/Lbs', 'Price'] = bloom_price.values[0]
         # Перевести цену за уран в тонны
         df.loc[df['Metals'] == 'Uranium USD/Lbs', 'Price'] *= self.LBS_IN_T
         return df
