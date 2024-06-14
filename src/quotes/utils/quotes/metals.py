@@ -101,7 +101,7 @@ class MetalsGetter(QuotesGetter):
             url = table_metals[3]
             xpath_price = '//div[starts-with(@class, "currentPrice")]//div[@data-component="sized-price"]/text()'
             xpath_date = '//time[1]/@datetime'
-            lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date, bloom=True)
+            lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date, delete_commas=True)
             metals_from_html.append(lng)
 
         return metals_from_html, metals, U7
@@ -112,23 +112,23 @@ class MetalsGetter(QuotesGetter):
                            url: str,
                            xpath_price: str,
                            xpath_date: str,
-                           bloom: bool = False
+                           delete_commas: bool = False,
                            ) -> list[str, float | None, None, str]:
         """
         Получение цены и даты металла с html страницы.
 
-        :param metal_name: название коммода
-        :param url: ссылка на страницу с данными о коммоде
-        :param session: сессия
-        :param xpath_price: xpath путь до цены коммода
-        :param xpath_date: xpath путь до даты(времени) обновления цены
-        :param bloom: флаг, является ли источник блумбергом
-        :return: список с данными по металлу
+        :param metal_name:      название коммода
+        :param url:             ссылка на страницу с данными о коммоде
+        :param session:         сессия
+        :param xpath_price:     xpath путь до цены коммода
+        :param xpath_date:      xpath путь до даты(времени) обновления цены
+        :param delete_commas:   нужно ли очищать данные от запятых
+        :return:                список с данными по металлу
         """
         useless, page_html = self.parser_obj.get_html(url, session)
         tree = html.fromstring(page_html)
         data_price = tree.xpath(xpath_price)
-        price = self.find_number(metal_name, data_price, bloom)
+        price = self.find_number(metal_name, data_price, delete_commas)
         data_date = tree.xpath(xpath_date)
         date = [date for date in data_date if date.strip()][0]
         return [metal_name, price, None, date]
