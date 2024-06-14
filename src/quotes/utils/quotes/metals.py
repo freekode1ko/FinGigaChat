@@ -201,6 +201,9 @@ class MetalsGetter(QuotesGetter):
         # заменить цену меди с tradingeconomics на bloomberg
         if not (bloom_price := df.loc[df['Metals'] == 'Copper Bloomberg', 'Price']).empty:
             df.loc[df['Metals'] == 'Copper USD/Lbs', 'Price'] = bloom_price.values[0]
+        else:
+            # Перевести цену за медь в тонны
+            df.loc[df['Metals'] == 'Copper USD/Lbs', 'Price'] *= self.LBS_IN_T
         # Перевести цену за уран в тонны
         df.loc[df['Metals'] == 'Uranium USD/Lbs', 'Price'] *= self.LBS_IN_T
         return df
