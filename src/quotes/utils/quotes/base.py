@@ -129,9 +129,18 @@ class QuotesGetter(ABC):
         self.save(data)
         self.save_last_time_update(preprocessed_ids)
 
-    def find_number(self, name: str, data_list: list[str]) -> float | None:
-        """Находит первое число в списке"""
-        for item in data_list[:20]:
+    def find_number(self, name: str, data_list: list[str], delete_commas: bool = False) -> float | None:
+        """
+        Находит первое число в списке.
+
+        :param name:            Название котировки.
+        :param data_list:       Список из спаршенных элементов.
+        :param delete_commas:   Нужно ли очищать данные от запятых.
+        :return:                Первое число в списке (значение котировки).
+        """
+        end = 20
+        data_list = [el.replace(',', '') for el in data_list[:end]] if delete_commas else data_list[:end]
+        for item in data_list:
             try:
                 return float(item)
             except ValueError:

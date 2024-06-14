@@ -413,8 +413,7 @@ async def data_mart_body(message: types.Message) -> None:
             cols_to_keep.insert(0, 'Экономические показатели')
             key_eco = key_eco.loc[:, cols_to_keep]
 
-            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, title=title,
-                                         alias=titles[i])
+            transformer.render_mpl_table(key_eco, 'key_eco', header_columns=0, col_width=4, alias=titles[i], font_size=16)
             png_path = config.PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
 
             photo = types.FSInputFile(png_path)

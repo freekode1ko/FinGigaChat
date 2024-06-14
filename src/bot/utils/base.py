@@ -368,7 +368,7 @@ async def __create_fin_table(message: types.Message | types.CallbackQuery, clien
 
     png_path = transformer.render_mpl_table(
         client_fin_table, f'financial_indicator_{client_name.replace(" ", "").lower()}_{table_type}', header_columns=0,
-        col_width=4, title='', alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
+        col_width=4, alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
     )
     photo = types.FSInputFile(png_path)
     if isinstance(message, types.Message):
