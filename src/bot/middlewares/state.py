@@ -2,9 +2,8 @@
 import datetime as dt
 from typing import Any, Awaitable, Callable
 
-from aiogram import BaseMiddleware
+from aiogram import BaseMiddleware, types
 from aiogram.fsm.state import State
-from aiogram.types import TelegramObject
 
 from configs.config import BASE_DATETIME_FORMAT, STATE_TIMEOUT
 from db.redis.last_activity import get_last_activity, update_last_activity
@@ -15,7 +14,7 @@ class StateMiddleware(BaseMiddleware):
     """Класс, реализующий выход из состояния при определенных условиях."""
 
     @staticmethod
-    def get_user_id(event: TelegramObject) -> int | None:
+    def get_user_id(event: types.Update) -> int | None:
         """
         Получить пользовательский id.
 
@@ -48,8 +47,8 @@ class StateMiddleware(BaseMiddleware):
 
     async def __call__(
             self,
-            handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
-            event: TelegramObject,
+            handler: Callable[[types.Update, dict[str, Any]], Awaitable[Any]],
+            event: types.Update,
             data: dict[str, Any]
     ) -> Any:
         """
@@ -61,9 +60,12 @@ class StateMiddleware(BaseMiddleware):
         """
         raw_state = data.get('raw_state')
 
-        if event.message and event.message.text.startswith('/') and raw_state:
-            data['raw_state'] = None
-            return await handler(event, data)
+        try:
+            if event.message.text.startswith('/') and raw_state:
+                data['raw_state'] = None
+                return await handler(event, data)
+        except AttributeError:
+            pass
 
         user_id = self.get_user_id(event)
         if user_id is None:
@@ -71,5 +73,5 @@ class StateMiddleware(BaseMiddleware):
 
         data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state)
         await handler(event, data)
-        activity_data = dt.datetime.utcnow().strftime(BASE_DATETIME_FORMAT)
-        await update_last_activity(user_id, activity_data)
+        activity_date = dt.datetime.utcnow().strftime(BASE_DATETIME_FORMAT)
+        await update_last_activity(user_id, activity_date)

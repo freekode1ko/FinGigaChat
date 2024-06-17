@@ -328,10 +328,16 @@ async def run_parse_cib(logger: Logger.logger) -> None:
     :param logger: логгер
     """
     logger.info('Старт парсинга финансовых показателей по клиентам в CIB')
-    await ResearchAPIParser(logger).get_fin_summary()
+    try:
+        await ResearchAPIParser(logger).get_fin_summary()
+    except Exception as e:
+        logger.error('Во время парсинга финансовых показателей по клиентам в CIB произошла ошибка: %s', e)
 
     logger.info('Старт парсинга отчетов с CIB')
-    await ResearchAPIParser(logger).parse_pages()
+    try:
+        await ResearchAPIParser(logger).parse_pages()
+    except Exception as e:
+        logger.error('Во время парсинга отчетов c CIB произошла ошибка: %s', e)
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
