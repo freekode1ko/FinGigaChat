@@ -19,11 +19,20 @@ from sqlalchemy import (
     Text
 )
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, relationship, DeclarativeBase
 
 from constants import enums
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+
+    len_of_any_str_field = 100
+
+    def __repr__(self):
+        """Для более удобного отображения в дебаге"""
+        cols = []
+        for col in self.__table__.columns.keys():
+            cols.append(f"{col}={value[:self.len_of_any_str_field] if isinstance(value := getattr(self, col), str) else value}")
+
 metadata = Base.metadata
 mapper_registry = sa.orm.registry(metadata=metadata)
 
@@ -525,7 +534,7 @@ class ResearchType(Base):
                                  nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
-    researches = relationship('Research', secondary='research_research_type', back_populates='research_types')
+    researches = relationship('Research', secondary='research_research_type', back_populates='research_type')
 
 class Research(Base):
     __tablename__ = 'research'
@@ -541,7 +550,7 @@ class Research(Base):
     is_new = Column(Boolean, server_default=sa.text('true'),
                     comment='Указывает, что отчет еще не рассылался пользователям')
 
-    research_types = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
+    research_type = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
 
 
 class UserResearchSubscriptions(Base):

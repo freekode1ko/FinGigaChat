@@ -33,7 +33,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from configs import config
 from db import parser_source
 from db.database import async_session, engine
-from db.models import FinancialSummary, ParserSource, Research, ResearchType
+from db.models import FinancialSummary, ParserSource, Research, ResearchType, ResearchResearchType
 from log.logger_base import Logger
 from module import data_transformer, weekly_pulse_parse
 from parsers.exceptions import ResearchError
@@ -646,16 +646,25 @@ class ResearchAPIParser:
             return any([re.search(x, header) for x in starts_with])
         return True
 
-    async def report_exist_in_db(self, report_id: str) -> bool:
+    async def report_exist_in_db(self, report_id: str, research_type_id: int) -> bool:
         """
         Проверка о том загружен ли отчет в БД или нет
 
         :param report_id: уникальный айди отчета
+        :param research_type_id: айди тип отчета
         :return: булевое значение с ифнормацией о том есть отчет или нет
         """
         async with async_session() as session:
-            count_news = await session.scalar(sa.select(sa.func.count(Research.id)).where(Research.report_id == report_id))
-            return bool(count_news)
+            report_for_report_type = (
+                sa.select(Research.id)
+                .select_from(ResearchType)
+                .join(ResearchType.researches)
+                .filter(ResearchType.id == research_type_id, Research.report_id == report_id,)
+            )
+            reports = await session.execute(report_for_report_type)
+            reports = reports.all()
+
+            return bool(len(reports))
 
     async def save_report_to_db(self, report: dict) -> None:
         """
@@ -664,10 +673,30 @@ class ResearchAPIParser:
         :param report: Отчет
         """
         async with async_session() as session:
-            report['header'] = report['header'].replace("'", "''")
-            report['text'] = report['text'].replace("'", "''")
-            report['filepath'] = str(report['filepath'])
-            session.add(Research(**report))
+            research_type = await session.get(ResearchType, report['research_type_id'])
+            session.add(research_type)
+            stmt = sa.select(Research).filter_by(report_id=report['report_id'])
+            research = await session.execute(stmt)
+            research = research.scalar_one_or_none()
+
+            if research is None:
+                research = Research(
+                    filepath=str(report['filepath']),
+                    header=report['header'].replace("'", "''"),
+                    text=report['text'].replace("'", "''"),
+                    parse_datetime=report['parse_datetime'],
+                    publication_date=report['publication_date'],
+                    report_id=report['report_id'],
+                )
+                session.add(research)
+                await session.commit()
+
+            session.add(
+                ResearchResearchType(
+                    research_id=research.id,
+                    research_type_id=research_type.id
+                )
+            )
             await session.commit()
 
     async def parse_reports_by_id(
@@ -809,7 +838,7 @@ class ResearchAPIParser:
             if not element_with_id:
                 continue
 
-            if not check_existing or not await self.report_exist_in_db(element_with_id):
+            if not check_existing or not await self.report_exist_in_db(element_with_id, params['research_type_id']):
                 self._logger.info('CIB: создание задачи для получения отчета: %s', str(element_with_id))
                 data = await self.parse_reports_by_id(element_with_id, session, params, **kwargs)
                 self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
