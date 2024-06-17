@@ -948,7 +948,7 @@ class ResearchAPIParser:
     async def get_fin_summary(self) -> None:
         """Стартовая точка для парсинга финансовых показателей по клиентам"""
         self._logger.info('Чтение таблицы financial_summary')
-        query = sa.select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
+        query = sa.select(FinancialSummary.sector_id, FinancialSummary.company_id,
                           FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
                           FinancialSummary.balance_table, FinancialSummary.money_table)
         async with async_session() as session:

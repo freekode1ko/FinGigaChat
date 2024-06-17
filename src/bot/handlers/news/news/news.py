@@ -251,8 +251,6 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     for subject_id in subject_ids:
         com_price, reply_msg = await ap_obj.process_user_alias(subject_id, subject)
 
-        return_ans = await show_client_fin_table(message, subject_id, msg_text, ap_obj)
-
         if not reply_msg:
             continue
 
@@ -268,9 +266,6 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
 
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
         return_ans = True
-
-    if not return_ans:
-        return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
 
     return return_ans
 
