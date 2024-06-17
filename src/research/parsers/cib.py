@@ -778,13 +778,14 @@ class ResearchAPIParser:
                 try:
                     req = await session.post(
                         url=params['url'],
-                        params=json.loads(params['params']),
+                        params=params['params'],
                         cookies=self.cookies,
                         ssl=False,
                     )
                     content = await req.text()
                     status_code = req.status
-                except Exception:
+                except Exception as e:
+                    self._logger.error(f'Во время запроса отчетов со страницы {params["url"]} произошла ошибка: %s', e)
                     continue
             if status_code == 200 and len(content) > self.content_len:
                 break
