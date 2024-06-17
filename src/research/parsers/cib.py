@@ -29,10 +29,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from sqlalchemy.dialects.postgresql import insert as insert_psql
 
 from configs import config
 from db import parser_source
-from db.database import async_session, engine
+from db.database import async_session
 from db.models import FinancialSummary, ParserSource, Research, ResearchType
 from log.logger_base import Logger
 from module import data_transformer, weekly_pulse_parse
@@ -930,13 +931,23 @@ class ResearchAPIParser:
 
         :param df: pandas.DataFrame() с таблицей для записи в бд
         """
-        df.to_sql('financial_summary', if_exists='replace', index=False, con=engine)  # TODO: переписать под ORM
+        async with async_session() as session:
+            stmt = insert_psql(FinancialSummary).values(df.to_dict('records'))
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[FinancialSummary.sector_id, FinancialSummary.company_id, FinancialSummary.client_id],
+                set_={
+                    'review_table': stmt.excluded.review_table,
+                    'pl_table': stmt.excluded.pl_table,
+                    'balance_table': stmt.excluded.balance_table,
+                    'money_table': stmt.excluded.money_table,
+                },
+            )
+            await session.execute(stmt)
+            await session.commit()
 
     async def get_fin_summary(self) -> None:
         """Стартовая точка для парсинга финансовых показателей по клиентам"""
         self._logger.info('Чтение таблицы financial_summary')
-        # columns = ['sector_id', 'company_id', 'client_id', 'review_table', 'pl_table', 'balance_table', 'money_table']
-        # metadata_df = pd.read_sql_query(f'SELECT {columns} FROM financial_summary', con=engine)
         query = sa.select(FinancialSummary.id, FinancialSummary.sector_id, FinancialSummary.company_id,
                           FinancialSummary.client_id, FinancialSummary.review_table, FinancialSummary.pl_table,
                           FinancialSummary.balance_table, FinancialSummary.money_table)
