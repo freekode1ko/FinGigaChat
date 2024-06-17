@@ -522,7 +522,6 @@ class ResearchType(Base):
                                  nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
-
     researches = relationship('Research', secondary='research_research_type', back_populates='research_type')
 
 

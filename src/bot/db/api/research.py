@@ -30,7 +30,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
             stmt = (
                 sa.select(self._table, ResearchResearchType)
                 .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
-                .where(self._table.is_new == False)
+                .where(self._table.is_new == False)  # noqa:E712
             )
             data = await session.execute(stmt)
 
@@ -58,15 +58,13 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :param research_type_ids: ID типов отчетов, по которым выгружаются отчеты (по умолчанию все отчеты)
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
-        stmt = (sa.select(
-            *(self.fields + [ResearchResearchType.research_type_id]),
-        ).select_from(
-            self._table, ResearchResearchType
-        ).join(ResearchResearchType, self._table.id == ResearchResearchType.research_id
-        ).where(
-            self._table.publication_date >= from_date,
-            self._table.publication_date <= to_date,
-        ).order_by(self._table.publication_date))
+        stmt = (
+            sa.select(*(self.fields + [ResearchResearchType.research_type_id]),)
+            .select_from(self._table, ResearchResearchType)
+            .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
+            .where(self._table.publication_date >= from_date, self._table.publication_date <= to_date)
+            .order_by(self._table.publication_date)
+        )
 
         if research_type_ids:
             stmt = stmt.where(ResearchResearchType.research_type_id.in_(research_type_ids))
@@ -85,9 +83,11 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
         async with (self._async_session_maker() as session):
-            stmt = sa.select(*(self.fields + [ResearchResearchType.research_type_id])
-            ).join(ResearchResearchType, self._table.id == ResearchResearchType.research_id
-            ).where(ResearchResearchType.research_type_id == research_type_id)
+            stmt = (
+                sa.select(*(self.fields + [ResearchResearchType.research_type_id]))
+                .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
+                .where(ResearchResearchType.research_type_id == research_type_id)
+            )
 
             data = await session.execute(stmt)
             data_df = pd.DataFrame(data.all(), columns=self.columns)
