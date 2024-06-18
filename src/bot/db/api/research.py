@@ -30,7 +30,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
             stmt = (
                 sa.select(self._table, ResearchResearchType)
                 .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
-                .where(self._table.is_new == False)  # noqa:E712
+                .where(self._table.is_new == True)  # noqa:E712
             )
             data = await session.execute(stmt)
 
@@ -38,7 +38,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
             await session.execute(stmt)
             await session.commit()
 
-            data_df = pd.DataFrame(data.all(), columns=self.columns + ['research_type_id'])
+            data_df = pd.DataFrame(data.all(), columns=(*self.columns, 'research_type_id'))
 
         return data_df
 
@@ -59,8 +59,8 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
         stmt = (
-            sa.select(*(self.fields + [ResearchResearchType.research_type_id]),)
-            .select_from(self._table, ResearchResearchType)
+            sa.select(*self.fields, ResearchResearchType.research_type_id)
+            .select_from(self._table)
             .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
             .where(self._table.publication_date >= from_date, self._table.publication_date <= to_date)
             .order_by(self._table.publication_date)
@@ -71,7 +71,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
 
         async with self._async_session_maker() as session:
             data = await session.execute(stmt)
-            data_df = pd.DataFrame(data.all(), columns=self.columns + ['research_type_id'])
+            data_df = pd.DataFrame(data.all(), columns=(*self.columns , 'research_type_id'))
 
         return data_df
 
@@ -82,9 +82,9 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :param research_type_id: id типа отчета, который вынимается (по умолчанию все)
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
-        async with (self._async_session_maker() as session):
+        async with self._async_session_maker() as session:
             stmt = (
-                sa.select(*(self.fields + [ResearchResearchType.research_type_id]))
+                sa.select(*self.fields, ResearchResearchType.research_type_id)
                 .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
                 .where(ResearchResearchType.research_type_id == research_type_id)
             )

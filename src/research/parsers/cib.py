@@ -34,7 +34,7 @@ from sqlalchemy.dialects.postgresql import insert as insert_psql
 from configs import config
 from db import parser_source
 from db.database import async_session
-from db.models import FinancialSummary, ParserSource, Research, ResearchType
+from db.models import FinancialSummary, ParserSource, Research, ResearchResearchType, ResearchType
 from log.logger_base import Logger
 from module import data_transformer, weekly_pulse_parse
 from parsers.exceptions import ResearchError
