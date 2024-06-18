@@ -68,8 +68,7 @@ class StateMiddleware(BaseMiddleware):
             if event.message.text.startswith('/') and raw_state:
                 data['raw_state'] = None
                 await state.clear()
-                await handler(event, data)
-                return
+                return await handler(event, data)
         except AttributeError:
             pass
 
