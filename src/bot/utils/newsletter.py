@@ -372,17 +372,21 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
     start_tm = time.time()
 
     # получаем отчет, который надо разослать
-    weekly_check_up_document = types.FSInputFile(document_path) if (document_path := get_macro_brief_file()) else None
+    if document_path := get_macro_brief_file():
+        weekly_check_up_document = types.FSInputFile(document_path)
+    else:
+        logger.error('Не удалось найти документ Weekly Check up')
+        return
 
     # Сохранение отправленных сообщений
     saved_messages = []
     newsletter_type = 'weekly_check_up_newsletter'
+    msg_text = "Weekly 'Check up'"
 
     for _, user_row in user_df.iterrows():
         user_id = user_row['user_id']
         logger.info(f'Рассылка Weekly Check up пользователю {user_id}')
         # отправка отчета пользователю
-        msg_text = "Weekly 'Check up'"
         msg = await bot.send_document(user_id, document=weekly_check_up_document, caption=msg_text,
                                       protect_content=True, parse_mode='HTML')
         saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
