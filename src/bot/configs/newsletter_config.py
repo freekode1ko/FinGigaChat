@@ -120,6 +120,18 @@ NEWSLETTER_CONFIG = [
             }
         ],
     },
+    # Рассылка weekly check up
+    {
+        'executor': newsletter.send_weekly_check_up,
+        'newsletter_info': 'weekly check up',
+        'params': [
+            {
+                'weekday': calendar.MONDAY,
+                'send_time': '09:30',
+                'kwargs': {},
+            }
+        ],
+    },
 ]
 
 CIB_RESEARCH_NEWSLETTER_PARAMS = {
