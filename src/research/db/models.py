@@ -1,6 +1,7 @@
 """Модели таблиц сервисов"""
 import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -14,7 +15,7 @@ from sqlalchemy import (
     JSON,
     String,
     Table,
-    Text
+    Text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
@@ -561,7 +562,10 @@ t_relation_commodity_metals = Table(
 
 class FinancialSummary(Base):
     __tablename__ = 'financial_summary'
-    __table_args__ = {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'}
+    __table_args__ = (
+        sa.UniqueConstraint('sector_id', 'company_id', 'client_id', name='fin_indicator'),
+        {'comment': 'Справочник таблиц с финансовыми показателями клиентов из CIB Research'},
+    )
 
     id = Column(BigInteger, Identity(always=True, start=1, increment=1, minvalue=1,
                                      maxvalue=2147483647, cycle=False, cache=1), primary_key=True)

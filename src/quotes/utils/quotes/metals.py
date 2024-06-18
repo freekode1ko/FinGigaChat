@@ -96,6 +96,14 @@ class MetalsGetter(QuotesGetter):
             xpath_date = '//*[@data-test="trading-time-label"]//text()'
             lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date)
             metals_from_html.append(lng)
+        elif page_metals == 'LMCADS03:COM':
+            metal_name = 'Copper Bloomberg'
+            url = table_metals[3]
+            xpath_price = '//div[starts-with(@class, "currentPrice")]//div[@data-component="sized-price"]/text()'
+            xpath_date = '//time[1]/@datetime'
+            lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date, delete_commas=True)
+            if lng:
+                metals_from_html.append(lng)
 
         return metals_from_html, metals, U7
 
@@ -104,21 +112,26 @@ class MetalsGetter(QuotesGetter):
                            metal_name: str,
                            url: str,
                            xpath_price: str,
-                           xpath_date: str
-                           ) -> list[str, float | None, None, str]:
+                           xpath_date: str,
+                           delete_commas: bool = False,
+                           ) -> list[str, float, None, str] | None:
         """
         Получение цены и даты металла с html страницы.
 
-        :param metal_name: название коммода
-        :param url: ссылка на страницу с данными о коммоде
-        :param session: сессия
-        :param xpath_price: xpath путь до цены коммода
-        :param xpath_date: xpath путь до даты(времени) обновления цены
+        :param metal_name:      название коммода
+        :param url:             ссылка на страницу с данными о коммоде
+        :param session:         сессия
+        :param xpath_price:     xpath путь до цены коммода
+        :param xpath_date:      xpath путь до даты(времени) обновления цены
+        :param delete_commas:   нужно ли очищать данные от запятых
+        :return:                список с данными по металлу
         """
         useless, page_html = self.parser_obj.get_html(url, session)
         tree = html.fromstring(page_html)
         data_price = tree.xpath(xpath_price)
-        price = self.find_number(metal_name, data_price)
+        price = self.find_number(metal_name, data_price, delete_commas)
+        if not price:
+            return None
         data_date = tree.xpath(xpath_date)
         date = [date for date in data_date if date.strip()][0]
         return [metal_name, price, None, date]
@@ -159,8 +172,8 @@ class MetalsGetter(QuotesGetter):
             big_table = pd.concat([big_table, table], ignore_index=True)
         big_table = pd.concat([big_table, metals_from_html_df, U7_df], ignore_index=True)
         big_table = big_table.drop_duplicates(subset='Metals', ignore_index=True)
-
-        self.from_lbs_to_ton(big_table)
+        # self.from_lbs_to_ton(big_table)
+        self.post_process(big_table)
         return big_table, preprocessed_ids
 
     def from_lbs_to_ton(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -176,4 +189,21 @@ class MetalsGetter(QuotesGetter):
                               if re.search('Lbs', commodity['unit'])]
         indexes = df[df['Metals'].isin(commodities_in_lbs)].index
         df.loc[indexes, ['Price', 'Day']] = df.loc[indexes, ['Price', 'Day']] * self.LBS_IN_T
+        return df
+
+    def post_process(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Пост обработать цены на коммоды.
+
+        :param df:  Датафрейм с информацией о ценах на коммоды.
+        :return:    Обработанный датафрейм.
+        """
+        # заменить цену меди с tradingeconomics на bloomberg
+        if not (bloom_price := df.loc[df['Metals'] == 'Copper Bloomberg', 'Price']).empty:
+            df.loc[df['Metals'] == 'Copper USD/Lbs', 'Price'] = bloom_price.values[0]
+        else:
+            # Перевести цену за медь в тонны
+            df.loc[df['Metals'] == 'Copper USD/Lbs', 'Price'] *= self.LBS_IN_T
+        # Перевести цену за уран в тонны
+        df.loc[df['Metals'] == 'Uranium USD/Lbs', 'Price'] *= self.LBS_IN_T
         return df
