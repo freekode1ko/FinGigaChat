@@ -28,7 +28,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         """
         async with self._async_session_maker() as session:
             stmt = (
-                sa.select(self._table, ResearchResearchType)
+                sa.select(*self.fields, ResearchResearchType.research_type_id)
                 .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
                 .where(self._table.is_new == True)  # noqa:E712
             )
