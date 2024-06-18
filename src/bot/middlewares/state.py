@@ -3,6 +3,7 @@ import datetime as dt
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware, types
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 
 from configs.config import BASE_DATETIME_FORMAT, STATE_TIMEOUT
@@ -28,12 +29,13 @@ class StateMiddleware(BaseMiddleware):
         return None
 
     @staticmethod
-    async def update_raw_state_if_timeout(user_id: int, raw_state: State | None) -> State | None:
+    async def update_raw_state_if_timeout(user_id: int, raw_state: State | None, state: FSMContext) -> State | None:
         """
         Обновить состояния в None, если после последнего сообщения бота прошло > STATE_TIMEOUT.
 
         :param user_id:     ID пользователя.
         :param raw_state:   Значение состояния.
+        :param state:       Объект состояния.
         :return:            None или входное значение состояния.
         """
         last_activity_date = await get_last_activity(user_id)
@@ -42,6 +44,7 @@ class StateMiddleware(BaseMiddleware):
             last_activity_date = dt.datetime.strptime(last_activity_date, BASE_DATETIME_FORMAT)
             diff = dt.datetime.utcnow() - last_activity_date
             if diff > STATE_TIMEOUT:
+                await state.clear()
                 return None
         return raw_state
 
@@ -59,10 +62,12 @@ class StateMiddleware(BaseMiddleware):
         :param data:    Контекстные данные.
         """
         raw_state = data.get('raw_state')
+        state = data.get('state')
 
         try:
             if event.message.text.startswith('/') and raw_state:
                 data['raw_state'] = None
+                await state.clear()
                 return await handler(event, data)
         except AttributeError:
             pass
@@ -71,7 +76,7 @@ class StateMiddleware(BaseMiddleware):
         if user_id is None:
             return await handler(event, data)
 
-        data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state)
+        data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state, state)
         await handler(event, data)
         activity_date = dt.datetime.utcnow().strftime(BASE_DATETIME_FORMAT)
         await update_last_activity(user_id, activity_date)
