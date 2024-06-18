@@ -43,6 +43,14 @@ def upgrade() -> None:
     # ### end Alembic commands ###
     to_remove_ids: set[int] = set()
     uniq_reports: list[dict[str, int | str]] = []
+
+    for report in all_reports:
+        if len(same_reports := list(
+                filter(lambda x: x['report_id'] == report['report_id'] and x['research_type_id'] == report['research_type_id'],
+                       all_reports))) > 1:
+            for i in same_reports[1:]:
+                to_remove_ids.add(i['id'])
+
     for i in all_reports:
         same_reports = list(filter(lambda x: i['report_id'] == x['report_id'], uniq_reports))
         if len(same_reports):
@@ -51,13 +59,6 @@ def upgrade() -> None:
             i['id'] = report['id']
         else:
             uniq_reports.append(i)
-
-    for report in all_reports:
-        if len(same_reports := list(
-                filter(lambda x: x['report_id'] == report['report_id'] and x['research_type_id'] == report['research_type_id'],
-                       all_reports))) > 1:
-            for i in same_reports[1:]:
-                to_remove_ids.add(i['id'])
 
     session.bulk_save_objects(
         [ResearchResearchType(research_id=x['id'], research_type_id=x['research_type_id']) for x in all_reports if
