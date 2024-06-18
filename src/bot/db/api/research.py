@@ -90,7 +90,7 @@ class ResearchCRUD(BaseCRUD[models.Research]):
             )
 
             data = await session.execute(stmt)
-            data_df = pd.DataFrame(data.all(), columns=self.columns)
+            data_df = pd.DataFrame(data.all(), columns=(*self.columns, 'research_type_id'))
 
         return data_df
 
