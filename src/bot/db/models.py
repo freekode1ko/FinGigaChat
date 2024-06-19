@@ -33,6 +33,7 @@ class Base(DeclarativeBase):
         cols = []
         for col in self.__table__.columns.keys():
             cols.append(f'{col}={value[:self.len_of_any_str_field] if isinstance(value := getattr(self, col), str) else value}')
+        return f'<{self.__class__.__name__} {", ".join(cols)}›'
 
 
 metadata = Base.metadata

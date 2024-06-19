@@ -44,6 +44,7 @@ def upgrade() -> None:
     to_remove_ids: set[int] = set()
     uniq_reports: list[dict[str, int | str]] = []
 
+    # Удалить полные дубли
     for report in all_reports:
         if len(same_reports := list(
                 filter(lambda x: x['report_id'] == report['report_id'] and x['research_type_id'] == report['research_type_id'],
@@ -51,7 +52,10 @@ def upgrade() -> None:
             for i in same_reports[1:]:
                 to_remove_ids.add(i['id'])
 
+    # Удалить дубли по research_type_id
     for i in all_reports:
+        if i['id'] in to_remove_ids:
+            continue
         same_reports = list(filter(lambda x: i['report_id'] == x['report_id'], uniq_reports))
         if len(same_reports):
             to_remove_ids.add(i['id'])
