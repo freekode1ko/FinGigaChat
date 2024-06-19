@@ -1,4 +1,5 @@
-from aiogram import F, types, Bot
+"""Хендлеры новостей новостей новостей"""
+from aiogram import Bot, F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
@@ -25,10 +26,12 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import __create_fin_table, bot_send_msg, user_in_whitelist
+from utils.base import bot_send_msg, process_fin_table, user_in_whitelist
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
+    """CallbackData для следующей новости"""
+
     subject: str
     subject_id: int
     offset: int
@@ -44,11 +47,11 @@ async def send_news_with_next_button(
         articles_limit: int,
 ) -> None:
     """
-    Отправка новостей по клиенту/сырью/отрасли (reply_msg).
+    Отправка новостей по клиенту, сырью и отрасли (reply_msg).
 
     :param bot: Объект телеграм бота aiogram.Bot
     :param chat_id: Чат, в который нужно отправить новости
-    :param reply_msg: Новости, разделенные \n\n
+    :param reply_msg: Новости, разделенные двойным переносом строки
     :param subject_id: id клиента или сырья, или отрасли
     :param subject: название таблицы объекта (client, commodity, industry)  FIXME Enum
     :param next_news_offset: Данные для формирование кнопки Еще новости
@@ -99,7 +102,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
         await call.message.edit_reply_markup()
 
         user_logger.info(
-            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} ' f'(всего {new_offset})'
+            f'*{chat_id}* {full_name} - {user_msg} : получил следующий набор новостей по {subject} (всего {new_offset})'
         )
 
 
@@ -113,19 +116,26 @@ async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str
     :param ap_obj: экземпляр класса ArticleProcess
     return значение об успешности создания таблицы
     """
-    client_name, client_fin_table = ap_obj.get_client_fin_indicators(s_id, msg_text.strip().lower())
-    if not client_fin_table.empty:
+    logger.info(f'НАЧАЛО Вывода таблицы с финансовыми показателями в виде фотокарточки для клиента {s_id}')
+    client_fin_tables = await ap_obj.get_client_fin_indicators(s_id)
+    client_name = msg_text.strip().lower()
+    if not client_fin_tables.empty:
         await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
-        await __create_fin_table(message, client_name, client_fin_table)
-        return True
-    else:
-        return False
+
+        # Создание и отправка таблиц
+        await process_fin_table(message, client_name, 'Обзор', client_fin_tables['review_table'][0], logger)
+        await process_fin_table(message, client_name, 'P&L', client_fin_tables['pl_table'][0], logger)
+        await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0], logger)
+        await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0], logger)
+
+        return True  # Создание таблицы успешно
+    logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
+    return False
 
 
 @router.message(Command('newsletter'))
 async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
-
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await user_in_whitelist(message.from_user.model_dump_json()):
@@ -199,6 +209,7 @@ async def send_nearest_subjects(message: types.Message) -> None:
 async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: ArticleProcess) -> None:
     """
     Отправляет сообщение с ссылкой на invaigator клиента
+
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_id: id клиента (client.id)
     :param ap_obj: Объект, который ищет и форматирует новости
@@ -240,8 +251,6 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     for subject_id in subject_ids:
         com_price, reply_msg = await ap_obj.process_user_alias(subject_id, subject)
 
-        return_ans = await show_client_fin_table(message, subject_id, '', ap_obj)
-
         if not reply_msg:
             continue
 
@@ -258,9 +267,6 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости по {subject}')
         return_ans = True
 
-    if not return_ans:
-        return_ans = await show_client_fin_table(message, 0, msg_text, ap_obj)
-
     return return_ans
 
 
@@ -271,6 +277,7 @@ async def get_subject_news(
 ) -> None:
     """
     Получение имени subject и отправка новостей по нему
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Хранит id объекта, по которому вынимаются новости
     :param subject_db_api: Интерфейс взаимодействия с таблицами клиентов/сырья/отраслей
@@ -294,6 +301,7 @@ async def get_client_news(callback_query: types.CallbackQuery, callback_data: ca
     :param callback_data: Объект, содержащий в себе инфу о id клиента
     """
     await get_subject_news(callback_query, callback_data, client_db)
+    await utils.base.send_full_copy_of_message(callback_query)
 
 
 @router.callback_query(callbacks.GetCommodityNews.filter())
@@ -305,6 +313,7 @@ async def get_commodity_news(callback_query: types.CallbackQuery, callback_data:
     :param callback_data: Объект, содержащий в себе инфу о id сырья
     """
     await get_subject_news(callback_query, callback_data, commodity_db)
+    await utils.base.send_full_copy_of_message(callback_query)
 
 
 @router.callback_query(callbacks.GetIndustryNews.filter())
@@ -316,6 +325,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
     :param callback_data: Объект, содержащий в себе инфу о id отрасли
     """
     await get_subject_news(callback_query, callback_data, industry_db)
+    await utils.base.send_full_copy_of_message(callback_query)
 
 
 @router.message(F.text)
@@ -336,10 +346,10 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
                 **{alias: (common.help_handler, {}) for alias in aliases.help_aliases},
                 **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
                 **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
-                **{alias: (quotes.bonds_info, {}) for alias in aliases.bonds_aliases},
-                **{alias: (quotes.economy_info, {}) for alias in aliases.eco_aliases},
-                **{alias: (quotes.metal_info, {}) for alias in aliases.metal_aliases},
-                **{alias: (quotes.exchange_info, {}) for alias in aliases.exchange_aliases},
+                **{alias: (quotes.bonds_info_command, {}) for alias in aliases.bonds_aliases},
+                **{alias: (quotes.economy_info_command, {}) for alias in aliases.eco_aliases},
+                **{alias: (quotes.metal_info_command, {}) for alias in aliases.metal_aliases},
+                **{alias: (quotes.exchange_info_command, {}) for alias in aliases.exchange_aliases},
                 **{alias: (analytics_sell_side.data_mart_body, {}) for alias in aliases.view_aliases},
             }
             message_text = message.text.lower().strip()

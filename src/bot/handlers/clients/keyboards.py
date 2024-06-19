@@ -1,3 +1,4 @@
+"""Клавиатуры клиентов"""
 from typing import Any, Optional
 
 import pandas as pd
@@ -6,6 +7,7 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
+from constants.enums import FinancialIndicatorsType
 from handlers.clients import callback_data_factories
 from keyboards.base import get_pagination_kb
 
@@ -13,6 +15,7 @@ from keyboards.base import get_pagination_kb
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Выбрать клиента из списка подписок ]
     [ Выбрать другого клиента ]
     [ Завершить ]
@@ -48,6 +51,8 @@ def get_clients_list_kb(
         subscribed: bool,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для клиентов
+
     [ item 1 ]
     ...
     [ item N ]
@@ -60,13 +65,13 @@ def get_clients_list_kb(
     """
     page_data['name'] = page_data['name'].str.capitalize()
     page_data['item_callback'] = page_data['id'].apply(
-            lambda x: callback_data_factories.ClientsMenuData(
-                menu=callback_data_factories.ClientsMenusEnum.client_menu,
-                client_id=x,
-                page=current_page,
-                subscribed=subscribed,
-            ).pack()
-        )
+        lambda x: callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.client_menu,
+            client_id=x,
+            page=current_page,
+            subscribed=subscribed,
+        ).pack()
+    )
     return get_pagination_kb(
         page_data,
         current_page,
@@ -98,6 +103,8 @@ def get_client_menu_kb(
         with_back_button: bool = True,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для клиента
+
     [ Новости ]
     [ Аналитика публичных рынков ] [если публичный]
     [ Отраслевая аналитика ]
@@ -208,6 +215,7 @@ def get_news_menu_kb(
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитика sell-side ]
     [ Отраслевая аналитика ]
     [ Завершить ]
@@ -318,6 +326,8 @@ def get_products_menu_kb(
         subscribed: bool,
 ) -> InlineKeyboardMarkup:
     """
+    Получение клавиатуры для продуктов
+
     [ hot offers ]
     [ Назад ]
     [ Завершить ]
@@ -360,9 +370,11 @@ def client_analytical_indicators_kb(
         current_page: int,
         subscribed: bool,
         research_type_id: int,
+        with_financial_indicators: bool,
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитические обзоры ]
     [ P&L модель ]
     [ Модель баланса ]
@@ -371,10 +383,11 @@ def client_analytical_indicators_kb(
     [  назад  ]
     [   Завершить   ]
 
-    :param client_id: client.id
-    :param current_page: ClientsMenuData.page
-    :param subscribed: ClientsMenuData.subscribed
-    :param research_type_id: ClientsMenuData.research_type_id
+    :param client_id:                   client.id
+    :param current_page:                ClientsMenuData.page
+    :param subscribed:                  ClientsMenuData.subscribed
+    :param research_type_id:            ClientsMenuData.research_type_id
+    :param with_financial_indicators:   Добавлять ли кнопки для получения фин показателей?
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -389,31 +402,43 @@ def client_analytical_indicators_kb(
                 subscribed=subscribed,
             ).pack(),
         },
-        # {
-        #     'name': 'P&L модель',
-        #     'callback_data': callback_data_factories.ClientsMenuData(
-        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-        #     ).pack(),
-        # },
-        # {
-        #     'name': 'Модель баланса',
-        #     'callback_data': callback_data_factories.ClientsMenuData(
-        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-        #     ).pack(),
-        # },
-        # {
-        #     'name': 'Модель CF',
-        #     'callback_data': callback_data_factories.ClientsMenuData(
-        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-        #     ).pack(),
-        # },
-        # {
-        #     'name': 'Коэффициенты',
-        #     'callback_data': callback_data_factories.ClientsMenuData(
-        #         menu=callback_data_factories.ClientsMenusEnum.not_implemented,
-        #     ).pack(),
-        # },
     ]
+
+    if with_financial_indicators:
+        buttons += [
+            {
+                'name': 'Обзор',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.review_table,
+                ).pack(),
+            },
+            {
+                'name': 'P&L модель',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.pl_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель баланса',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.balance_table,
+                ).pack(),
+            },
+            {
+                'name': 'Модель CF',
+                'callback_data': callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
+                    client_id=client_id,
+                    fin_indicator_type=FinancialIndicatorsType.money_table,
+                ).pack(),
+            },
+        ]
 
     for item in buttons:
         keyboard.row(types.InlineKeyboardButton(
@@ -438,4 +463,3 @@ def client_analytical_indicators_kb(
         ).pack(),
     ))
     return keyboard.as_markup()
-

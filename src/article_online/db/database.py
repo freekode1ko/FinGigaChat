@@ -1,3 +1,4 @@
+"""Модуль с engine для взаимодействия с базой данных."""
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 

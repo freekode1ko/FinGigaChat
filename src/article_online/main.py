@@ -1,3 +1,4 @@
+"""Точка входа для сервиса обработки новостей от GigaParsers."""
 import datetime
 import json
 import time
@@ -8,19 +9,23 @@ import requests
 
 from configs import config
 from configs.config import BASE_GIGAPARSER_URL
-from module.article_process import ArticleProcess
-from log.logger_base import selector_logger
 from log import sentry
+from log.logger_base import selector_logger
+from module.article_process import ArticleProcess
 
 MAX_NEWS_BATCH_SIZE = 1000
 MINUTE = 60
-MINUTES_TO_SLEEP = 10
+MINUTES_TO_SLEEP = 20
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
     """
-    Отправляет post запрос при помощи requests, совершает n-1 попыток с перехватом ошибки
+    Отправляет post запрос при помощи requests, совершает n-1 попыток с перехватом ошибки.
+
     На n-ый раз делает запрос без перехвата ошибки, чтобы внешняя функция могла обработать ошибку
+    :param n:       Количество попыток.
+    :param kwargs:  Параметры для POST запроса.
+    :return:        Ответ на POST запрос или исключение.
     """
     for _ in range(n - 1):
         try:
@@ -52,7 +57,11 @@ def try_post_n_times(n: int, **kwargs) -> requests.Response:
 
 
 def get_article() -> pd.DataFrame:
-    """Получение новостей"""
+    """
+    Получить новости.
+
+    :return: Датафрейм с новостями и их атрибутами.
+    """
     df_article = pd.DataFrame()
     try:
         url = BASE_GIGAPARSER_URL.format(f'get_articles/all?stand={config.STAND}')
@@ -70,19 +79,19 @@ def get_article() -> pd.DataFrame:
     return df_article
 
 
-def regular_func():
+def regular_func() -> tuple[str, list, list]:
     """
-    Обработка новых новостей
-    return: айди полученных новостей,
-    список ссылок на новые новости о клиентах/коммодах,
-    список ссылок на тг новости об отраслях
-    """
+    Обработать новые новости.
 
+    :return: ID полученных новостей,
+             Список ссылок на новые новости о клиентах/коммодах,
+             Список ссылок на тг новости об отраслях.
+    """
     subject_links, tg_links = [], []
     df_article = get_article()
     logger.info(f'Получено всего {len(df_article)} новостей')
     print(f'Получено всего {len(df_article)} новостей')
-    # Берем последнюю тысячу еовостей для обработки
+    # Берем первую тысячу новостей для обработки
     df_article = df_article[:MAX_NEWS_BATCH_SIZE]
 
     if not df_article.empty:
@@ -136,7 +145,12 @@ def regular_func():
     return ids, subject_links, tg_links
 
 
-def post_ids(ids):
+def post_ids(ids: str) -> None:
+    """
+    Отправить id обработанных новостей GigaParsers.
+
+    :param ids: Json из списка id обработанных новостей.
+    """
     try:
         logger.debug('Отправка id обработанных новостей на сервер')
         # ids = {'id': [1,2,3...]}
@@ -151,12 +165,18 @@ def post_ids(ids):
         logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
 
 
-def post_new_links(subject_links: list, tg_links: list):
+def post_new_links(subject_links: list, tg_links: list) -> None:
+    """
+    Отправить ссылки на сохраненные новости в RAG по новостям.
+
+    :param subject_links: Ссылки на новости по клиентам/коммодам.
+    :param tg_links:      Ссылки на новости из Telegram (по индустриям и общим каналам).
+    """
     logger.debug('Отправка ссылок сохраненных новостей на сервер')
     links_dict = {
-            "subject_links": subject_links,  # ссылки на новости по клиентам и коммодам
-            "tg_links": tg_links  # ссылки на новости из тг каналов
-                }
+        'subject_links': subject_links,  # ссылки на новости по клиентам и коммодам
+        'tg_links': tg_links             # ссылки на новости из тг каналов
+    }
     try:
         response = try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
@@ -164,9 +184,7 @@ def post_new_links(subject_links: list, tg_links: list):
             json=links_dict,
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
-
-        msg = response.json()['message']
-        logger.info(msg)
+        logger.info(response.json()['message'])
     except Exception as e:
         print(f'Ошибка при отправке ссылок новостей в QABanker: {e}')
         logger.error('Ошибка при отправке ссылок новостей в QABanker:: %s', e)

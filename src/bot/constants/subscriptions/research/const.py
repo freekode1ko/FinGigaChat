@@ -1,3 +1,5 @@
+"""Файл с константами для подписок на отчеты по CIB"""
+
 GET_CIB_RESEARCH_SUBS_MENU = 'research_subscriptions_menu'
 
 CIB_RESEARCH_GROUPS_MENU = 'cib_groups_menu'

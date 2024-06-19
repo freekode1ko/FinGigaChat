@@ -1,4 +1,5 @@
-from typing import Tuple, List
+"""Модуль для получения и обработки экономических данных (Курсы валют, ключевая ставка и т.д)."""
+from typing import List, Tuple
 
 import pandas as pd
 import requests as req
@@ -8,6 +9,8 @@ from utils.quotes.base import QuotesGetter
 
 
 class EcoGetter(QuotesGetter):
+    """Класс для получения и обработки данных об экономике."""
+
     NAME = 'eco'
 
     world_bet_columns: List[str] = ['Country', 'Last', 'Previous', 'Reference', 'Unit']
@@ -15,11 +18,24 @@ class EcoGetter(QuotesGetter):
 
     @staticmethod
     def filter(table_row: list) -> bool:
+        """
+        Проверяет, является ли строка таблицы строкой с данными об ключевой ставке.
+
+        :param table_row: Строка таблицы для проверки.
+        :return: возвращает True, если строка является строкой с данными об ключевой ставке, иначе False
+        """
         page = QuotesGetter.get_source_page_from_table_row(table_row)
         pages = ['KeyRate', 'ruonia', 'interest-rate', 'infl']
         return table_row[0] == 'Экономика' and page in pages
 
     def economic_block(self, table_eco: list, page_eco: str):
+        """
+        Обрабатывает блок данных об экономике и создает DataFrame.
+
+        :param table_eco: Список данных об ключевой ставке.
+        :param page_eco: Тип ключевая ставка. (КС РФ, RUONIA, Китай, Инфляция)
+        :return: Список экономических данных, DataFrame мировых ставок, DataFrame российской инфляции.
+        """
         eco_frst_third = []
         world_bet = pd.DataFrame(columns=self.world_bet_columns)
         rus_infl = pd.DataFrame(columns=self.rus_infl_columns)
@@ -48,6 +64,14 @@ class EcoGetter(QuotesGetter):
         return eco_frst_third, world_bet, rus_infl
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> Tuple[Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame], set]:
+        """
+        Предобрабатывает таблицы данных и создает итоговый DataFrame с экономическими данными.
+
+        :param tables: Список таблиц данных.
+        :param session: Сессия для выполнения HTTP-запросов.
+        :return: Кортеж c: кортеж из DataFrame с экономическими данными (ставки, мировые ставки, российская инфляция) и
+        множество идентификаторов обработанных таблиц.
+        """
         preprocessed_ids = set()
         group_name = self.get_group_name()
         eco_frst_third = []
@@ -75,6 +99,12 @@ class EcoGetter(QuotesGetter):
         return (eco_stake, world_bet, rus_infl), preprocessed_ids
 
     def save(self, data: Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]) -> None:
+        """
+        Сохраняет данные в базы данных.
+
+        :param data: Кортеж, содержащий три DataFrame: экономические ставки, мировые ставки, российская инфляция.
+        :return: None
+        """
         eco_stake, world_bet, rus_infl = data
 
         eco_stake.to_sql('eco_stake', if_exists='replace', index=False, con=database.engine)

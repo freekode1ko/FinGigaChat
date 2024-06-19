@@ -1,3 +1,7 @@
+"""Файл с основными константами для бота"""
+import copy
+import datetime
+
 sample_of_news_title = '{}\n<i><a href="{}">{}</a></i>\n\n'
 sample_of_img_title = '<b>{}</b>\nИсточник: {}\nДанные на <i>{}</i>'
 sample_of_img_title_view = '<b>{}\n{}</b>\nДанные на <i>{}</i>'
@@ -52,5 +56,21 @@ GET_NEWS_PERIODS = [
     {
         'text': 'За месяц',
         'days': 30,  # average
+    },
+]
+
+
+EXTENDED_GET_NEWS_PERIODS = copy.deepcopy(GET_NEWS_PERIODS) + [
+    {
+        'text': 'За квартал',
+        'days': 90,  # average
+    },
+    {
+        'text': 'За полгода',
+        'days': 176,  # average
+    },
+    {
+        'text': 'За год',
+        'days': 365 if datetime.date.today().year % 4 else 366,  # average
     },
 ]

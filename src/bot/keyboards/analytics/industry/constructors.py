@@ -1,3 +1,4 @@
+"""Клавиатуры для отрасли"""
 import pandas as pd
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
@@ -10,6 +11,7 @@ from keyboards.analytics.industry import callbacks
 def get_menu_kb(item_df: pd.DataFrame) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]

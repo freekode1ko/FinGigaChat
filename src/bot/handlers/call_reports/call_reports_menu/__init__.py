@@ -1,3 +1,5 @@
+"""Хендлеры меню кол репортов"""
+
 from aiogram import Router
 
 from .handler import router as call_report_all_view_router

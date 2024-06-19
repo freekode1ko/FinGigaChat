@@ -1,4 +1,7 @@
+"""Базовая ошибка при парсинге CIB Research"""
+
+
 class ResearchError(Exception):
-    """Base class for Research exception"""
+    """Базовый класс для ошибок Research"""
 
     __module__ = Exception.__module__

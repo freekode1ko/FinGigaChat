@@ -1,3 +1,4 @@
+"""data transformer"""
 import datetime
 from pathlib import Path
 
@@ -12,20 +13,24 @@ from utils.base import read_curdatetime
 
 
 class Transformer:
+    """Класс Transformer"""
+
     @staticmethod
-    def load_urls_as_list(path: str, filedName: str) -> pd.DataFrame:
+    def load_urls_as_list(path: str, filed_name: str) -> pd.DataFrame:
         """
         Get sources url from excel file
+
         :param path: path to .xlsx file
-        :param filedName: Column name where holding all urls
+        :param filed_name: Column name where holding all urls
         :return: return list with urls
         """
-        return pd.read_excel(path)[['Алиас', 'Блок', filedName]].values.tolist()
+        return pd.read_excel(path)[['Алиас', 'Блок', filed_name]].values.tolist()
 
     @staticmethod
     def get_table_from_html(euro_standard: bool, html: str):
         """
         Take all tables from html code
+
         :param euro_standard: Bool value for separators of decimals and thousands
         :param html: HTML codes as text
         :return: list with DataFrames
@@ -39,6 +44,7 @@ class Transformer:
     def formatter(f):
         """
         Format value
+
         :param f: value to format
         :return: formatted value
         """
@@ -69,17 +75,14 @@ class Transformer:
         edge_color='grey',
         bbox=[-0.17, -0.145, 1.3, 1.31],
         header_columns=0,
-        title=None,
         alias=None,
         fin=None,
         ax=None,
         **kwargs,
-    ):
+    ) -> Path:
+        """Рендеринг"""
         data = data.fillna('-')
-        if title is None:
-            title = name
         if alias:
-            size = None
             bbox = [-0.17, -0.2, 1.3, 1.145]
             col_widths = [0.2, 0.05, 0.05, 0.05, 0.05, 0.05]
 
@@ -120,7 +123,7 @@ class Transformer:
                     cell.set_facecolor(header_color)
                     cell.get_text().set_color('white')
                 else:
-                    cell.set_text_props(fontsize=18)
+                    cell.set_text_props(fontsize=font_size)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
                     cell.get_text().set_color('white')
                     if all(
@@ -195,24 +198,22 @@ class Transformer:
         # save png and return it to user
         png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
         plt.savefig(png_path, transparent=False)
+        return png_path
 
     @staticmethod
     def unix_to_default(timestamp):
         """
         Transform unix-time to world-time
+
         :param timestamp: unix formatted timestamp
         """
-
         date_time = datetime.datetime.fromtimestamp(timestamp / 1000)
         formatted_date = date_time.strftime('%Y-%m-%dT%H:%M:%S')
         return formatted_date
 
     @staticmethod
     def default_to_unix():
-        """
-        Transform world-time now to unix-time
-        """
-
+        """Transform world-time now to unix-time"""
         now = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         date_time = datetime.datetime.strptime(now, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = int(date_time.timestamp())
@@ -226,11 +227,12 @@ class Newsletter:
 
     @classmethod
     def get_newsletter_dict(cls) -> dict[str, str]:
+        """Получение данных для рассылок"""
         return cls.__newsletter_dict
 
     @classmethod
     def make_weekly_result(cls) -> tuple[str, str, list[Path]]:
-        """Создает текст для рассылки "Итоги недели" """
+        """Создает текст для рассылки 'Итоги недели'"""
         title = 'Итоги недели'
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_results)
@@ -240,7 +242,7 @@ class Newsletter:
 
     @classmethod
     def make_weekly_event(cls) -> tuple[str, str, list[Path]]:
-        """Создает текст для рассылки "Что нас ждет на этой неделе?" """
+        """Создает текст для рассылки 'Что нас ждет на этой неделе?'"""
         title = 'Что нас ждет на этой неделе?'
         weekly_dir = config.PATH_TO_SOURCES / 'weeklies'
         slides_fnames = wp_parse.ParsePresentationPDF.get_fnames_by_type(wp_parse.ReportTypes.weekly_event)

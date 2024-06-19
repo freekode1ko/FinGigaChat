@@ -1,3 +1,4 @@
+"""Запросы к бд связанные со справочником групп"""
 from db import models
 from db.api.base_crud import BaseCRUD
 from log.bot_logger import logger

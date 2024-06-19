@@ -1,3 +1,5 @@
+"""Файл с константами макро обзора"""
+
 from configs import config
 
 MENU = 'analytics_macroview_menu'

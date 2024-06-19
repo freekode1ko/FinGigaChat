@@ -194,7 +194,7 @@ async def get_cib_section_research_types_menu(
 async def make_cib_group_sections_menu(callback_query: types.CallbackQuery, group_id: int, user_id: int) -> None:
     """Формирует сообщение с подборкой отчетов по разделу"""
     group_info = await research_group_db.get(group_id)
-    section_df = await research_section_db.get_cib_sections_by_group_df(group_id, user_id)
+    section_df = await research_section_db.get_research_sections_df_by_group_id(group_id, user_id)
     msg_text = 'Выберите разделы, на которые вы хотите подписаться.\n\n'
 
     if not section_df[~section_df['dropdown_flag']].empty:
@@ -317,6 +317,7 @@ async def research_subs_menu_end(callback_query: types.CallbackQuery) -> None:
 
 
 async def cib_research_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
+    """Подписки на аналитические отчеты"""
     keyboard = keyboards.get_research_subscriptions_main_menu_kb()
     msg_text = 'Подписки на аналитические отчеты'
     await send_or_edit(message, msg_text, keyboard)

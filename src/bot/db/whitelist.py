@@ -1,8 +1,9 @@
+"""Запросы к бд связанные с models.whitelist"""
 import pandas as pd
-from sqlalchemy import text, select, func
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 
-from db import models, database
+from db import database, models
 from db.database import engine
 
 
@@ -21,6 +22,11 @@ def is_user_email_exist(user_id: int) -> bool:
 
 
 async def get_users_subscriptions() -> pd.DataFrame:
+    """
+    Получить подписки пользователя
+
+    :return: подписки
+    """
     async with database.async_session() as session:
         stmt = select(
             models.Whitelist.user_id,
@@ -28,19 +34,19 @@ async def get_users_subscriptions() -> pd.DataFrame:
             func.coalesce(
                 func.array_agg(
                     models.UserIndustrySubscriptions.industry_id.distinct()
-                ).filter(models.UserIndustrySubscriptions.industry_id != None),
+                ).filter(models.UserIndustrySubscriptions.industry_id != None),  # noqa:E711
                 [],
             ).label('industry_ids'),
             func.coalesce(
                 func.array_agg(
                     models.UserClientSubscriptions.client_id.distinct()
-                ).filter(models.UserClientSubscriptions.client_id != None),
+                ).filter(models.UserClientSubscriptions.client_id != None),  # noqa:E711
                 [],
             ).label('client_ids'),
             func.coalesce(
                 func.array_agg(
                     models.UserCommoditySubscriptions.commodity_id.distinct()
-                ).filter(models.UserCommoditySubscriptions.commodity_id != None),
+                ).filter(models.UserCommoditySubscriptions.commodity_id != None),  # noqa:E711
                 [],
             ).label('commodity_ids'),
         ).outerjoin(
@@ -78,14 +84,14 @@ async def insert_user_email_after_register(
             user_email=user_email,
         )
         ins = ins.on_conflict_do_update(
-            constraint="whitelist_pkey",
+            constraint='whitelist_pkey',
             set_={
-                "user_id": ins.excluded.user_id,
-                "username": ins.excluded.username,
-                "full_name": ins.excluded.full_name,
-                "user_type": 'user',
-                "user_status": 'active',
-                "user_email": ins.excluded.user_email,
+                'user_id': ins.excluded.user_id,
+                'username': ins.excluded.username,
+                'full_name': ins.excluded.full_name,
+                'user_type': 'user',
+                'user_status': 'active',
+                'user_email': ins.excluded.user_email,
             }
         )
         await session.execute(ins)

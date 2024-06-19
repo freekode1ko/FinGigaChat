@@ -1,9 +1,12 @@
+"""Константы для запуска приложения"""
+import datetime as dt
 import json
 import pathlib
 from typing import Union
 
-from constants.enums import Environment
 from environs import Env
+
+from constants.enums import Environment
 
 env = Env()
 env.read_env()
@@ -23,10 +26,11 @@ DEBUG: bool = env.bool('DEBUG', default=False)
 
 def read_asset_from_json(file_name: Union[str, pathlib.Path], encoding: str = 'utf-8') -> Union[list, dict, str]:
     """
-    Считывает константу из json-файла
-    Args:
-        file_name: Путь до файла относительно STATIC_ASSETS_PATH
-        encoding: Кодировка файла
+    Считывает константу из json-файла.
+
+    :param file_name:   Путь до файла относительно STATIC_ASSETS_PATH.
+    :param encoding:    Кодировка файла.
+    :return:            Сериализованный JSON.
     """
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
 
@@ -85,6 +89,7 @@ PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 USER_SUBSCRIPTIONS_LIMIT = 70
 DELETE_TG_MESSAGES_TIMEOUT = 5
+STATE_TIMEOUT = dt.timedelta(minutes=5)
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'

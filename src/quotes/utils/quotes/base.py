@@ -1,3 +1,4 @@
+"""Модуль с набором иструментов для работы с источниками данных"""
 import datetime
 from abc import ABC, abstractmethod
 from typing import Any, Tuple, Union
@@ -6,13 +7,15 @@ import pandas as pd
 import requests as req
 from sqlalchemy import text
 
-from configs import config
-from db import database
 import module.crawler as crawler
 import module.data_transformer as dt
+from configs import config
+from db import database
 
 
 class QuotesGetter(ABC):
+    """Класс для получения источников данных"""
+
     NAME = 'base quotes getter class'
 
     def __init__(self, logger):
@@ -31,9 +34,10 @@ class QuotesGetter(ABC):
 
     def get_tables(self, session: req.sessions.Session) -> list:
         """
-        Выгружает источники для подгруппы котировок
-        Вынимает таблицы с источников
-        Возвращает список источников и собранных для них таблиц
+        Получает по источнику подгруппы котировок таблицы и возвращает список источников с собранными для них таблицами.
+
+        :param session: Сессия для выполнения HTTP-запросов.
+        :return: Список источников и собранных для них таблиц.
         """
         all_tables = []
         group_name = self.get_group_name()
@@ -85,6 +89,7 @@ class QuotesGetter(ABC):
 
     @classmethod
     def get_group_name(cls) -> str:
+        """Возвращает имя группы котировок"""
         return cls.NAME
 
     @staticmethod
@@ -100,7 +105,7 @@ class QuotesGetter(ABC):
 
         :param tables: Таблицы, собранные с источников данных по котировкам
         :param session: requests Сессия
-        return: Кортеж из результата, который надо сохранить, и множества id источников, с которых удалось собрать данные
+        :return: Кортеж из результата, для сохранения и множества id источников, с которых удалось собрать данные
         """
         pass
 
@@ -124,9 +129,18 @@ class QuotesGetter(ABC):
         self.save(data)
         self.save_last_time_update(preprocessed_ids)
 
-    def find_number(self, name: str, data_list: list[str]) -> float | None:
-        """Находит первое число в списке"""
-        for item in data_list[:20]:
+    def find_number(self, name: str, data_list: list[str], delete_commas: bool = False) -> float | None:
+        """
+        Находит первое число в списке.
+
+        :param name:            Название котировки.
+        :param data_list:       Список из спаршенных элементов.
+        :param delete_commas:   Нужно ли очищать данные от запятых.
+        :return:                Первое число в списке (значение котировки).
+        """
+        end = 20
+        data_list = [el.replace(',', '') for el in data_list[:end]] if delete_commas else data_list[:end]
+        for item in data_list:
             try:
                 return float(item)
             except ValueError:

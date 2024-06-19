@@ -1,12 +1,12 @@
+"""Файл с перечислениями"""
+
 from __future__ import annotations
 
-from enum import Enum, IntEnum, auto
+from enum import auto, Enum, IntEnum
 
 
 class Environment(str, Enum):
-    """
-    Среда окружения, где запускаем код
-    """
+    """Среда окружения, где запускаем код"""
 
     STAGE = 'dev'
     PROD = 'prod'
@@ -14,10 +14,12 @@ class Environment(str, Enum):
     UNKNOWN = 'unknown'
 
     def is_local(self) -> bool:
+        """Является ли окружение локальным?"""
         return self in (Environment.UNKNOWN, Environment.LOCAL)
 
     @classmethod
     def from_str(cls, param: str) -> Environment:
+        """Получить объект енумератора из переданной строки"""
         try:
             return cls(param.lower())
         except ValueError:
@@ -25,9 +27,8 @@ class Environment(str, Enum):
 
 
 class RetrieverType(Enum):
-    """
-    Типы ретриверов в боте
-    """
+    """Типы ретриверов в боте"""
+
     other = 0  # простое обращение к гигачат
     state_support = 1  # ретривер по господдержке
     qa_banker = 2  # ретривер по новостям и финансовым показателям
@@ -35,6 +36,7 @@ class RetrieverType(Enum):
 
 class ResearchSectionType(Enum):
     """Типы разделов CIB Research, участвует в формировании меню аналитики"""
+
     default = 0  # Раздел без доп пунктов
     economy = 1  # Раздел с прогнозом КС ЦБ и макроэконом показателями [витрина данных]
     financial_exchange = 2  # Раздел с прогнозом валютных курсов
@@ -42,6 +44,7 @@ class ResearchSectionType(Enum):
 
 class ResearchSummaryType(Enum):
     """Тип формирования сводки отчетов CIB Research, участвует в формировании меню аналитики"""
+
     periodic = 0  # Предлагает пользователю выгрузить отчеты за период
     last_actual = 1  # Выгружает последний актуальный отчет
     analytical_indicators = 2  # Формирует отдельное меню для выгрузки различных аналитических данных
@@ -53,7 +56,10 @@ class ResearchSummaryType(Enum):
 
 
 class FIGroupType(Enum):
+    """Типы долговых рынков"""
+
     bonds = 0, 'ОФЗ'
+
     # obligates = 1, 'Корпоративные облигации '
     # foreign_markets = 2, 'Зарубежные рынки '
 
@@ -63,11 +69,13 @@ class FIGroupType(Enum):
 
     @property
     def title(self):
+        """Получить тайтл"""
         return self._title_
 
 
 class IndustryTypes(IntEnum):
     """Типы отраслей. Используется для меню отраслевой аналитики и для таблицы bot_industry_documents"""
+
     default = auto()            # Все стандартные отрасли
     other = auto()              # Пункт прочее
     general_comments = auto()   # Пункт общий комментарий
@@ -79,3 +87,61 @@ class SubjectType(str, Enum):
     client = 'client'
     commodity = 'commodity'
     industry = 'industry'
+
+
+class AutoEnum(Enum):
+    """
+    Родительский класс, который позволяет задать атрибуты у значений енумератора.
+
+    Атрибут value задается автоматически в зависимости от количества создаваемых значений енумератора.
+    Тажке позволяет производить сравнение value енумератора с int и получать значения енумератора по передаваемому int.
+    Например,
+
+    >>> class Test(AutoEnum):
+    ...    data1 = {'title': 'data1'}
+    ...    data2 = {'title': 'data2'}
+
+    >>> Test.data1 == '0'
+    True
+    >>> Test('0') == Test.data1
+    True
+    >>> Test.data1
+    """
+
+    def __new__(cls, *args):
+        """При создании экземпляра енумератора из всех переданных аргументов, лишь первый станет value"""
+        value = len(cls.__members__)
+        obj = object.__new__(cls)
+        obj._value_ = str(value)
+        return obj
+
+    def __eq__(self, obj) -> bool:
+        """Оператор равенства"""
+        if type(self) is type(obj):
+            return super().__eq__(obj)
+        return self.value == obj
+
+    def __ne__(self, obj) -> bool:
+        """Оператор неравенства"""
+        if type(self) is type(obj):
+            return super().__ne__(obj)
+        return self.value != obj
+
+
+class FinancialIndicatorsType(AutoEnum):
+    """Типы фин показателей, которые можно получить"""
+
+    def __init__(self, *args) -> None:
+        """Инициализация енумератора с атрибутом - имя таблицы фин показателей"""
+        if len(args) > 0 and isinstance(args[0], str):
+            self._table_name_ = args[0]
+
+    @property
+    def table_name(self) -> str:
+        """Возврат атрибута имя таблицы фин показателей"""
+        return self._table_name_
+
+    review_table = 'Обзор'
+    pl_table = 'P&L'
+    balance_table = 'Баланс'
+    money_table = 'Денежный поток'

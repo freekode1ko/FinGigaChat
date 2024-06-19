@@ -1,6 +1,4 @@
-"""Дополнительные функции для работы с клиентами
-
-"""
+"""Дополнительные функции для работы с клиентами"""
 import logging
 
 from aiogram import types
@@ -26,7 +24,10 @@ async def is_client_in_message(
     :return: булевое значение о том ли сообщение совпадает с именем клиента
     """
     fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
-    clients_id = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[models.ClientAlternative], score=score_for_fuzzy)
+    clients_id = await fuzzy_searcher.find_subjects_id_by_name(
+        message.text, subject_types=[models.ClientAlternative],
+        score=score_for_fuzzy
+    )
     clients = await client_db.get_by_ids(clients_id)
 
     if len(clients) >= 1:  # больше одного клиента найтись скорее всего не может, если большой процент совпадения стоит

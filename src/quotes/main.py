@@ -1,3 +1,4 @@
+"""Модуль для периодического сбора котировок."""
 import datetime
 import multiprocessing
 import time
@@ -6,13 +7,20 @@ import warnings
 import click
 
 from configs import config
-from log.logger_base import selector_logger, Logger
 from log import sentry
+from log.logger_base import Logger, selector_logger
 from utils.cli_utils import get_period
 from utils.quotes import get_groups
 
 
 def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
+    """
+    Функция для сбора котировок для заданной группы котировок.
+
+    :param QuotesGetterClass: Класс, реализующий функциональность получения котировок.
+    :param logger: Логгер для записи действий и ошибок.
+    :return: True, если сбор данных прошел успешно, False в случае ошибки.
+    """
     is_success = True
     group_name = QuotesGetterClass.get_group_name()
     logger.info(f'Инициализация сборщика котировок {group_name}')
@@ -41,12 +49,10 @@ def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
     default=config.COLLECT_PERIOD,
     show_default=True,
     type=str,
-    help='Периодичность сборки котировок\n' 's - секунды\n' 'm - минуты (значение по умолчанию)\n' 'h - часы\n' 'd - дни',
+    help='Периодичность сборки котировок\ns - секунды\nm - минуты (значение по умолчанию)\nh - часы\nd - дни',
 )
 def main(period):
-    """
-    Сборщик котировок
-    """
+    """Сборщик котировок"""
     sentry.init_sentry(dsn=config.SENTRY_QUOTES_PARSER_DSN)
     try:
         period, scale, scale_txt = get_period(period)

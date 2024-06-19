@@ -1,13 +1,16 @@
-from enum import IntEnum, auto
+"""CallbackData клиентов"""
+from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData
 
+from constants.enums import FinancialIndicatorsType
 
 MENU = 'clients_menu'
 
 
 class ClientsMenusEnum(IntEnum):
     """Уровни меню клиенты"""
+
     main_menu = auto()
     end_menu = auto()
 
@@ -39,6 +42,9 @@ class ClientsMenusEnum(IntEnum):
     # Вывод сообщения, то функционал не готов
     not_implemented = auto()
 
+    # Получение фин показателей по клиенту
+    financial_indicators = auto()
+
     # Меню периодов для получения отчетов CIB Research по клиенту
     analytic_reports = auto()
 
@@ -48,9 +54,11 @@ class ClientsMenusEnum(IntEnum):
 
 class ClientsMenuData(CallbackData, prefix=MENU):
     """Меню клиенты"""
+
     menu: ClientsMenusEnum
     subscribed: bool = True
     client_id: int = 0
     research_type_id: int = 0
     days_count: int = 1
     page: int = 0
+    fin_indicator_type: FinancialIndicatorsType | None = None

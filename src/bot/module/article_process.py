@@ -9,9 +9,8 @@ import re
 from typing import Optional
 from urllib.parse import urlparse
 
-import numpy as np
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.exc import ProgrammingError
 
 from configs.config import (
@@ -21,9 +20,10 @@ from configs.config import (
 )
 from constants.enums import SubjectType
 from constants.quotes import COMMODITY_MARKS
-from db.database import engine
 from db.api.client import client_db
 from db.api.commodity import commodity_db
+from db.database import async_session, engine
+from db.models import FinancialSummary
 from log.logger_base import Logger
 
 CONDITION_TOP = (
@@ -161,53 +161,27 @@ class ArticleProcess:
 
         return com_data
 
-    def get_client_fin_indicators(self, client_id: int, client_name: str) -> tuple[str, pd.DataFrame]:
+    async def get_client_fin_indicators(self, client_id: int) -> pd.DataFrame:
         """
-        Получить финансовые показатели по компании.
+        Получение финансовых показателей для клиента.
 
-        :param client_id: id компании в таблице клиентов
-        :param client_name: наименование компании в сообщении пользователя
-        :return: df финансовых показателей
+        :param client_id: id компании в таблице client
+        :return: DF таблица финансовых показателей для клиента
         """
         if client_id:
-            client = pd.read_sql('client', con=self.engine)
-            client_name = client[client['id'] == client_id]['name'].iloc[0]
-        client = pd.read_sql('financial_indicators', con=self.engine)
-        client = client[client['company'] == client_name]
-        client = client.sort_values('id')
-        client_copy = client.copy()
+            self._logger.info(f'Поиск фин. показателей для клиента: {client_id}')
+            query = select(FinancialSummary.review_table, FinancialSummary.pl_table,
+                           FinancialSummary.balance_table, FinancialSummary.money_table)\
+                .where(FinancialSummary.client_id == client_id)
 
-        if not client.empty:
-            alias_idx = client.columns.get_loc('alias')
-            new_df = client.iloc[:, :alias_idx]
-            full_nan_cols = new_df.isna().all().sum()
+            async with async_session() as session:
+                metadata = await session.execute(query)
+                metadata = metadata.fetchall()
+            metadata_df = pd.DataFrame(metadata)
+            metadata_df.columns = metadata_df.keys()
 
-            if full_nan_cols > 1:
-                alias_idx = client_copy.columns.get_loc('alias')
-                left_client = client_copy.iloc[:, :alias_idx]
-                remaining_cols = 5 - left_client.notnull().sum(axis=1).iloc[0]
-                right_client = client_copy.iloc[:, alias_idx:]
-                selected_cols = left_client.columns[left_client.notnull().sum(axis=0) > 0][:5]
-
-                if len(selected_cols) < 5:
-                    if full_nan_cols < 5:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[: int(remaining_cols) - 1]
-                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
-                    else:
-                        remaining_numeric_cols = list(right_client.select_dtypes(include=np.number).columns)[: int(remaining_cols) + 1]
-                        selected_cols = selected_cols.tolist() + remaining_numeric_cols
-
-                result = client_copy[selected_cols]
-                numeric_cols = [col for col in result.columns if all(c.isdigit() or c == 'E' for c in col)]
-                numeric_cols.sort()
-                new_cols = ['name'] + numeric_cols
-                new_df = result[new_cols]
-                if new_df.shape[1] > 6:
-                    new_df = new_df.drop(new_df.columns[new_df.isna().any()].values[0], axis=1)
-        else:
-            return client_name, client
-
-        return client_name, new_df
+            return metadata_df
+        return pd.DataFrame()
 
     @staticmethod
     def _make_place_number(mark: str | int | float | None) -> str | None:
@@ -449,10 +423,13 @@ class ArticleProcess:
 
 
 class ArticleProcessAdmin:
+    """Работа с новостями для админа"""
+
     def __init__(self):
         self.engine = engine
 
-    def get_article_id_by_link(self, link: str):
+    def get_article_id_by_link(self, link: str) -> Optional[int]:
+        """Получение айди новости по ссылке"""
         try:
             with self.engine.connect() as conn:
                 article_id = conn.execute(text(f"SELECT id FROM article WHERE link='{link}'")).fetchone()[0]
@@ -460,7 +437,8 @@ class ArticleProcessAdmin:
         except (TypeError, ProgrammingError):
             return
 
-    def get_article_text_by_link(self, link: str):
+    def get_article_text_by_link(self, link: str) -> Optional[str]:
+        """Получение текста новости по ссылке"""
         try:
             with self.engine.connect() as conn:
                 article = conn.execute(text(f"SELECT text, text_sum FROM article WHERE link='{link}'")).fetchone()
@@ -469,7 +447,8 @@ class ArticleProcessAdmin:
         except (TypeError, ProgrammingError):
             return '', ''
 
-    def get_article_by_link(self, link: str):
+    def get_article_by_link(self, link: str) -> Optional[dict]:
+        """Получение новости по ссылке"""
         dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
         dict_keys_client = ('Клиент', 'Балл по клиенту')
         dict_keys_commodity = ('Товар', 'Балл по товару')
@@ -524,6 +503,7 @@ class ArticleProcessAdmin:
             return e
 
     def change_score_article_by_id(self, article_id: int):
+        """Изменение оценки новости по айди"""
         try:
             with self.engine.connect() as conn:
                 query = 'update relation_{subject}_article set {subject}_score=0 where article_id={id}'

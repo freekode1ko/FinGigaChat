@@ -1,3 +1,4 @@
+"""Клавиатуры для главного меню в Меню Аналитика"""
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -5,12 +6,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import analytics, constants
 from constants.analytics import analytics_sell_side
 from constants.analytics import macro_view
+from keyboards.analytics import callbacks
 from keyboards.analytics.industry import callbacks as industry_callbacks
 
 
 def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Группа 1 ]
     ...
     [ Группа n ]
@@ -32,6 +35,7 @@ def get_sub_menu_kb(keyboard: InlineKeyboardBuilder) -> InlineKeyboardMarkup:
 def get_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
+
     [ Аналитика публичных рынков ]
     [ Отраслевая аналитика ]
     [ macro_view.TITLE ]
@@ -53,5 +57,21 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
         callback_data=analytics.END_MENU,
+    ))
+    return keyboard.as_markup()
+
+
+def get_full_research_kb(research_id: int) -> InlineKeyboardMarkup:
+    """
+    Получить клавиатуру для выдачи полной версии отчета.
+
+    :param research_id: research.id, который будет выдан при нажатии на кнопку
+    :return: Клавиатура вида
+    [ Получить полную версию ]
+    """
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(
+        text='Получить полную версию',
+        callback_data=callbacks.GetFullResearch(research_id=research_id).pack(),
     ))
     return keyboard.as_markup()

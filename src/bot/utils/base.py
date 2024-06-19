@@ -1,25 +1,28 @@
+"""Файл с дополнительными функциями"""
+import ast
 import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timedelta, date
+import re
+from datetime import date, datetime, timedelta
 from math import ceil
 from pathlib import Path
 from typing import Optional
-import re
 
 import pandas as pd
 from aiogram import Bot, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.media_group import MediaGroupBuilder
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
 import module.data_transformer as dt
-from configs.config import PATH_TO_SOURCES, PAGE_ELEMENTS_COUNT
+from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants
 from constants.constants import research_footer
 from db import models
-from db.database import engine, async_session
+from db.database import async_session, engine
 from log.logger_base import Logger
 
 
@@ -36,7 +39,7 @@ async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = 
     """
     batches = []
     current_batch = prefix
-    max_batch_length = 4096
+    max_batch_length = constants.TELEGRAM_MESSAGE_MAX_LEN
     messages: list[types.Message] = []
 
     for paragraph in msg.split(delimiter):
@@ -72,7 +75,13 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
             msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
-            msg = await bot.send_document(document=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_document(
+                document=file,
+                chat_id=user_id,
+                caption=message_text,
+                parse_mode='HTML',
+                protect_content=True
+            )
     else:
         msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
 
@@ -160,10 +169,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     giga_ans = text
     if len(giga_ans) > batch_size:
         for batch in range(0, len(giga_ans), batch_size):
-            text_group.append(text[batch : batch + batch_size])
+            text_group.append(text[batch: batch + batch_size])
         for summ_part in text_group:
             await message.answer(
-                 '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
+                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
             )
     else:
         await message.answer(
@@ -208,11 +217,13 @@ async def __sent_photo_and_msg(
 
 def __replacer(data: str) -> str:
     """
+    Форматирование текста
+
     Если '.' больше чем 1 в числовом значении фин.показателя
     и первый объект равен 0, то форматируем так '{}.{}{}'(*data_list)
 
     :param data: Значение из ячейки таблицы с фин.показателями
-    return Форматированный текст
+    :return: Форматированный текст
     """
     data_list = data.split('.')
     if len(data_list) > 2:
@@ -232,7 +243,6 @@ async def get_waiting_time(weekday_to_send: int, hour_to_send: int, minute_to_se
     :param minute_to_send: минуты, в которые нужно отправить рассылку
     return время ожидания перед рассылкой
     """
-
     # получаем текущее датувремя и день недели
     current_datetime = datetime.now()
     current_weekday = current_datetime.isoweekday()
@@ -305,6 +315,7 @@ def translate_subscriptions_to_object_id(object_dict: dict, subscriptions: list)
 
 
 async def get_industries_id(handbook: pd.DataFrame) -> list:
+    """Получение айди отраслей"""
     handbooks = []
     industry_ids = handbook['industry_id'].tolist()
     for industry_id in list(set(industry_ids)):
@@ -313,6 +324,7 @@ async def get_industries_id(handbook: pd.DataFrame) -> list:
 
 
 async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger) -> list:
+    """Получение айди отраслей"""
     logger.info(f'Сборка справочника для *{chat_id}* на тему {subject}')
 
     if (subject == 'client') or (subject == 'commodity'):
@@ -324,7 +336,7 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
         )
     else:
         handbook = pd.read_sql_query(
-            "SELECT client_alternative.other_name AS object, "
+            'SELECT client_alternative.other_name AS object, '
             'client.industry_id, industry.name AS industry_name FROM client_alternative '
             'INNER JOIN client ON client_alternative.client_id = client.id '
             'INNER JOIN industry ON client.industry_id = industry.id',
@@ -333,22 +345,63 @@ async def show_ref_book_by_request(chat_id, subject: str, logger: Logger.logger)
     return await get_industries_id(handbook)
 
 
-async def __create_fin_table(message: types.Message, client_name: str, client_fin_table: pd.DataFrame) -> None:
+async def __create_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
+                             table_type: str, client_fin_table: pd.DataFrame) -> None:
     """
     Формирование таблицы под финансовые показатели и запись его изображения
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param client_name: Наименование клиента финансовых показателей
+    :param table_type: Название вкладки для таблицы
     :param client_fin_table: Таблица финансовых показателей
     """
     transformer = dt.Transformer()
-    client_fin_table = client_fin_table.rename(columns={'name': 'Финансовые показатели'})
-    transformer.render_mpl_table(
-        client_fin_table, 'financial_indicator', header_columns=0, col_width=4, title='', alias=client_name.strip().upper(), fin=True
+    client_fin_table = client_fin_table.rename(columns={'': 'Финансовые показатели'})
+    for i, row in client_fin_table.iterrows():
+        if row['Финансовые показатели'] in row[client_fin_table.keys().to_list()[1:]].values:
+            if not row['Финансовые показатели']:
+                client_fin_table.drop(index=i, inplace=True)
+            else:
+                client_fin_table.loc[i] = pd.Series(
+                    {'Финансовые показатели': client_fin_table.loc[i]['Финансовые показатели']})
+    client_fin_table.where(pd.notnull(client_fin_table), '')
+
+    png_path = transformer.render_mpl_table(
+        client_fin_table, f'financial_indicator_{client_name.replace(" ", "").lower()}_{table_type}', header_columns=0,
+        col_width=4, alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
     )
-    png_path = PATH_TO_SOURCES / 'img' / 'financial_indicator_table.png'
     photo = types.FSInputFile(png_path)
-    await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+    if isinstance(message, types.Message):
+        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+    elif isinstance(message, types.CallbackQuery):
+        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+
+
+async def process_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
+                            table_type: str, table_data: str,
+                            logger: Logger.logger = None) -> None:
+    """
+    Создание и отправка таблицы как изображения
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param client_name: Наименование клиента
+    :param table_type: Название темы таблицы
+    :param table_data: Таблица финансовых показателей в формате str
+    :param logger: Логгер
+    return None
+    """
+    logger = logger or logging.getLogger('bot_runner')
+    table_data = table_data.replace(' NaN', '""')
+    if table_data:
+        try:
+            df = pd.DataFrame(data=ast.literal_eval(table_data))
+        except ValueError:
+            logger.error(f'Ошибка при создании таблицы финансовых показателей для {client_name}, не верный данных')
+            return None
+        await __create_fin_table(message, client_name, table_type, df)
+        logger.info(f'{table_type} таблица финансовых показателей для клиента: {client_name} - собрана')
+    else:
+        logger.info(f'Не найдены данные для {table_type} таблицы клиента: {client_name}')
 
 
 def get_page_data_and_info(
@@ -357,6 +410,8 @@ def get_page_data_and_info(
         page_elements: int = PAGE_ELEMENTS_COUNT,
 ) -> tuple[pd.DataFrame, str, int]:
     """
+    Получение информации о странице
+
     1)Вынимает набор данных, которые должны быть отображены на странице номер {page}
     2)Формирует сообщение: какое кол-во данных отображено на странице из всего данных
     3)Вычисляет кол-во страниц
@@ -378,10 +433,12 @@ def get_page_data_and_info(
 
 
 def wrap_callback_data(data: str) -> str:
+    """Замена : на ;"""
     return data.replace(':', ';')
 
 
 def unwrap_callback_data(data: str) -> str:
+    """Замена ; на :"""
     return data.replace(';', ':')
 
 
@@ -399,6 +456,7 @@ def next_weekday(d: date | datetime, weekday: int) -> date | datetime:
 def next_weekday_time(from_dt: datetime, weekday: int, hour: int = 0, minute: int = 0) -> datetime:
     """
     Вычисляет ближайшую дату_время относительно переданной по заданным параметрам
+
     next_weekday_time(datetime(2024, 1, 1, 12, 0), 0, 15, 30) -> datetime(2024, 1, 1, 15, 30)
     next_weekday_time(datetime(2024, 1, 1, 16, 0), 0, 15, 30) -> datetime(2024, 1, 8, 15, 30)
 
@@ -440,6 +498,7 @@ async def send_or_edit(
 ) -> None:
     """
     Отправляет новое сообщение, если message это types.Message
+
     Изменяет текущее сообщение, если message это types.CallbackQuery
 
     :param message: Объект сообщения или callback
@@ -457,6 +516,27 @@ async def send_or_edit(
         await call.message.edit_text(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
 
 
+async def send_full_copy_of_message(callback_query: types.CallbackQuery) -> types.Message:
+    """
+    Отправить копию сообщения тому же пользователю и удалить старое сообщение.
+
+    Отправляет копию текста, копию reply_markup, parse_mode='HTML'
+
+    :param callback_query:  Объект, содержащий информацию о пользователе и сообщении
+    :return:                Объект отправленного сообщения, содержащий информацию о пользователе и сообщении
+    """
+    try:
+        await callback_query.message.delete()
+    except TelegramBadRequest:
+        pass
+
+    return await callback_query.message.send_copy(
+        callback_query.message.chat.id,
+        reply_markup=callback_query.message.reply_markup,
+        parse_mode='HTML',
+    )
+
+
 async def send_pdf(
         callback_query: types.CallbackQuery,
         pdf_files: list[Path],
@@ -465,6 +545,7 @@ async def send_pdf(
 ) -> bool:
     """
     Отправка сообщения перед файлами
+
     Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
 
     Если файлов нет, то return False и ничего не отправляет

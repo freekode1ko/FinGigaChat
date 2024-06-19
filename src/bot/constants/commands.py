@@ -1,6 +1,6 @@
-from typing import List
+"""Файл с командами для бота"""
 
-PUBLIC_COMMANDS: List[dict] = [
+PUBLIC_COMMANDS: list[dict] = [
     {
         'command': 'news',
         'description': 'Новости',
@@ -37,10 +37,10 @@ PUBLIC_COMMANDS: List[dict] = [
         'command': 'knowledgebase',
         'description': 'Спросить у Базы Знаний',
     },
-    {
-        'command': 'get_tg_news',
-        'description': 'Сводка новостей из telegram каналов по отраслям',
-    },
+    # {
+    #     'command': 'get_tg_news',
+    #     'description': 'Сводка новостей из telegram каналов по отраслям',
+    # },
     {
         'command': 'help',
         'description': 'Информация о боте',
@@ -68,7 +68,7 @@ PUBLIC_COMMANDS: List[dict] = [
 
 ]
 
-SECRET_COMMANDS: List[dict] = [
+SECRET_COMMANDS: list[dict] = [
     {
         'command': 'admin_help',
         'description': 'Подсказка для админа',

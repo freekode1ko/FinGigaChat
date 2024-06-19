@@ -1,15 +1,14 @@
+"""Файл с хендлерами отрасли"""
 from pathlib import Path
 
 import pandas as pd
-from aiogram import types, F
-from aiogram.utils.media_group import MediaGroupBuilder
+from aiogram import F, types
 
-from constants import constants
-from db.api.industry import industry_db, get_industry_analytic_files
+from db.api.industry import get_industry_analytic_files, industry_db
 from handlers.analytics.handler import router
 from keyboards.analytics.industry import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import send_pdf
+from utils.base import send_full_copy_of_message, send_pdf
 
 
 @router.callback_query(callbacks.Menu.filter(
@@ -89,4 +88,6 @@ async def get_industry_analytics(callback_query: types.CallbackQuery, callback_d
     if not await send_pdf(callback_query, files, msg_text, protect_content=True):
         msg_text += '\nФункционал появится позднее'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+    else:
+        await send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

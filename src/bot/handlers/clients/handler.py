@@ -9,13 +9,14 @@
 - цифровая справка
 """
 import datetime
+import logging
 from pathlib import Path
 from typing import Optional
 
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 import utils.base
@@ -33,20 +34,19 @@ from handlers.clients import callback_data_factories
 from handlers.clients import keyboards
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
-from log.bot_logger import user_logger, logger
-from module.article_process import FormatText
+from log.bot_logger import user_logger
+from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
-
+from utils.handler_utils import get_client_financial_indicators
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
 
 
 class ChooseClient(StatesGroup):
-    """
-    Состояние для ввода имени клиента для более удобного поиска
-    """
+    """Состояние для ввода имени клиента для более удобного поиска"""
+
     choosing_from_all_not_subscribed_clients = State()
     choosing_from_subscribed_clients = State()
 
@@ -166,12 +166,14 @@ async def clients_list(
 async def clients_subscriptions_list(
         message: types.Message,
         state: FSMContext,
+        logger: logging.Logger,
 ) -> None:
     """
     Поиск по клиентам, на которые пользователь подписаны
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param state: Объект, который хранит состояние FSM для пользователя
+    :param state:   Объект, который хранит состояние FSM для пользователя
+    :param logger:  логгер
     """
     subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
 
@@ -275,12 +277,14 @@ async def get_client_news_menu(
 async def get_client_analytic_indicators(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
+        logger: logging.Logger,
 ) -> None:
     """
     Меню аналитических показателей по клиенту, если есть research_type_id
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   subscribed означает, что выгружает из списка подписок пользователя или остальных
+    :param logger:          логгер
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -293,12 +297,17 @@ async def get_client_analytic_indicators(
 
     research_info = await research_type_db.get(research_type_id)
 
+    # Проверяем, что есть фин показатели для клиента
+    ap_obj = ArticleProcess(logger)
+    client_fin_tables = await ap_obj.get_client_fin_indicators(callback_data.client_id)
+
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(
         client_id=callback_data.client_id,
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
+        with_financial_indicators=not client_fin_tables.empty,
     )
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -314,6 +323,8 @@ async def get_client_industry_analytics(
 ) -> None:
     """
     Получение файлов по отраслевой аналитике, к которой принадлежит клиент
+
+    Отправляет копию меню в конце, если были отправлены файлы
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
@@ -334,6 +345,8 @@ async def get_client_industry_analytics(
     if not await send_pdf(callback_query, files, msg_text, protect_content=True):
         msg_text += '\nФункционал появится позднее'
         await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+    else:
+        await utils.base.send_full_copy_of_message(callback_query)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -503,7 +516,7 @@ async def get_client_select_period_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=callback_data.research_type_id,
-        periods=constants.GET_NEWS_PERIODS,
+        periods=constants.EXTENDED_GET_NEWS_PERIODS,
         select_period_menu=select_period_menu,
         back_menu=back_menu,
     )
@@ -545,6 +558,8 @@ async def get_client_news_by_period(
     """
     Получение новостей по клиенту за выбранный период
 
+    Отправляет копию меню в конце, если были отправлены новости
+
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
@@ -577,6 +592,7 @@ async def get_client_news_by_period(
         frmt_msg += f'\n\n{all_articles}'
         await callback_query.message.answer(msg_text, parse_mode='HTML')
         await utils.base.bot_send_msg(callback_query.bot, from_user.id, frmt_msg)
+        await utils.base.send_full_copy_of_message(callback_query)
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -600,6 +616,22 @@ async def analytic_reports(
         select_period_menu=callback_data_factories.ClientsMenusEnum.get_anal_reports,
         back_menu=callback_data_factories.ClientsMenusEnum.analytic_indicators,
     )
+
+
+@router.callback_query(callback_data_factories.ClientsMenuData.filter(
+    F.menu == callback_data_factories.ClientsMenusEnum.financial_indicators
+))
+async def get_financial_indicators(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.ClientsMenuData,
+) -> None:
+    """
+    Отправка пользователю фин показателей по клиенту
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип фин показателей и клиент
+    """
+    await get_client_financial_indicators(callback_query, callback_data.client_id, callback_data.fin_indicator_type)
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
