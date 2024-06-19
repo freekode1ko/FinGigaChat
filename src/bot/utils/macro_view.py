@@ -4,7 +4,7 @@ from pathlib import Path
 from constants.analytics import macro_view
 
 
-def get_macro_brief_file() -> Path:
+def get_macro_brief_file() -> Path | None:
     """
     Получить документ macro brief
 
