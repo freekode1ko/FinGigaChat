@@ -22,6 +22,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 from constants import enums
+from constants.enums import FormatType
 
 
 class Base(DeclarativeBase):
@@ -659,35 +660,35 @@ class IndustryDocuments(Base):
                            comment='тип отрасли')
 
 
-class ProductGroup(Base):
-    __tablename__ = 'bot_product_group'
-    __table_args__ = (
-        sa.UniqueConstraint('name', name='group_name'),
-        {'comment': 'Справочник групп продуктов (продуктовая полка, hot offers)'},
-    )
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
-    name = Column(String(255), nullable=False, comment='Имя группы')
-    name_latin = Column(String(255), nullable=False, comment='Имя группы eng')
-    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
-                         comment='Описание группы (текст меню тг)')
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-
-
 class Product(Base):
     __tablename__ = 'bot_product'
-    __table_args__ = (
-        sa.UniqueConstraint('name', 'group_id', name='product_name_in_group'),
-        {'comment': 'Справочник продуктов (кредит, GM, ...)'},
-    )
+    __table_args__ = {'comment': 'Справочник продуктов (кредит, GM, ...)'}
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    parent_id = Column(Integer, ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=True,
+                       comment='ID родительского продукта, который выступает в качестве категории продуктов')
+    children = relationship('Product', back_populates='parent')
+    parent = relationship('Product', back_populates='children', remote_side=[id])
+
     name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
+    name_latin = Column(String(255), nullable=True, comment='Имя eng', server_default=sa.text(''))
+    send_documents_format_type = Column(Integer(), server_default=sa.text(str(FormatType.group_files)),
+                                        nullable=False, comment='Формат выдачи документов')
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
                          comment='Текст сообщения, которое выдается при нажатии на продукт')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-    group_id = Column(ForeignKey('bot_product_group.id', ondelete='CASCADE', onupdate='CASCADE'),
-                      primary_key=False, nullable=False, comment='id группы продукта')
+
+    documents = relationship('ProductDocument')
+
+
+# class SubProduct(Base):
+#     __tablename__ = 'bot_sub_product'
+#     __table_args__ = {'comment': 'Таблица связей продукта с дочерними продуктами'}
+#
+#     parent_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
+#                        primary_key=True, nullable=False, comment='id продукта (раздел)')
+#     child_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
+#                        primary_key=True, nullable=False, comment='id продукта (подраздел)')
 
 
 class ProductDocument(Base):

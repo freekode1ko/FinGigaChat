@@ -3,20 +3,9 @@ from enum import auto, IntEnum
 
 from aiogram.filters.callback_data import CallbackData
 
+from constants.enums import FormatType
 
 MENU = 'products_menu'
-
-
-class FormatType(IntEnum):
-    """Enum`сы форматов"""
-
-    # Выдача общего текста группы и затем выдача группы файлов
-    group_files = 1
-    # Выдача общего текста группы, затем для каждого документа выдача сообщений:
-    # document.name жирным
-    # document.description просто текст
-    # [document.file] если есть файл
-    individual_messages = 2
 
 
 class ProductsMenusEnum(IntEnum):
