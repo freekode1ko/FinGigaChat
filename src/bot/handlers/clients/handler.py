@@ -24,7 +24,7 @@ from constants import constants
 from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
-from db.api.product_group import product_group_db
+from db.api.product import product_db
 from db.api.research_type import research_type_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
@@ -538,10 +538,10 @@ async def get_client_hot_offers(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
-    group = await product_group_db.get_by_latin_name('hot_offers')
+    product = await product_db.get_by_latin_name('hot_offers')
     products_callback_data = products_callbacks.ProductsMenuData(
         menu=products_callbacks.ProductsMenusEnum.group_products,
-        group_id=group.id,
+        product_id=product.id,
         format_type=products_callbacks.FormatType.individual_messages,
     )
     callback_data.menu = callback_data_factories.ClientsMenusEnum.products
