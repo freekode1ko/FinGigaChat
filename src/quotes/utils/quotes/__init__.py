@@ -16,4 +16,9 @@ def get_groups() -> list:
 
     :return: Список обработчиков котировок.
     """
-    return [BondsGetter, EcoGetter, ExcGetter, MetalsGetter]
+    return [
+        BondsGetter,
+        EcoGetter,
+        ExcGetter,
+        MetalsGetter,
+    ]
