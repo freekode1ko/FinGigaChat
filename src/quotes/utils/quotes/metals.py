@@ -5,8 +5,10 @@ from typing import Any
 import pandas as pd
 import requests as req
 from lxml import html
+from sqlalchemy import text
 
 from configs import config
+from db import database
 from utils.quotes.base import QuotesGetter
 
 
@@ -22,6 +24,22 @@ class MetalsGetter(QuotesGetter):
     big_table_columns: list[str] = ['Metals', 'Price', 'Day', '%', 'Weekly', 'Monthly', 'YoY', 'Date']
     middle_table_columns: list[str] = ['Metals', 'Price', 'Weekly', 'Date']
     small_table_columns: list[str] = ['Metals', 'Price']
+
+    @staticmethod
+    def get_extra_data() -> list:
+        """По этим данным не удается получить таблицы стандартным способом"""
+        with database.engine.connect() as conn:
+            query = text(
+                'SELECT sg.name, p.id, p.response_format, p.source '
+                'FROM parser_source p '
+                'JOIN source_group sg ON p.source_group_id = sg.id '
+                'WHERE p.source=:source LIMIT 1'
+            )
+            source = 'https://www.bloomberg.com/quote/LMCADS03:COM'
+            row = conn.execute(query.bindparams(source=source)).fetchone()
+
+        copper_source = [*row, [pd.DataFrame()]]
+        return copper_source
 
     @staticmethod
     def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, Any] | None:
@@ -96,6 +114,10 @@ class MetalsGetter(QuotesGetter):
             xpath_date = '//*[@data-test="trading-time-label"]//text()'
             lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date)
             metals_from_html.append(lng)
+        elif page_metals == 'LMCADS03:COM':
+            # Получение данных о коммодах (меди) от GigaParsers
+            if data := self.get_com_data_from_gigaparsers(session, 'Copper Bloomberg'):
+                metals_from_html.append(data)
 
         return metals_from_html, metals, U7
 
@@ -156,11 +178,6 @@ class MetalsGetter(QuotesGetter):
                 preprocessed_ids.add(tables_row[1])
             except Exception as e:
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
-
-        # Получение данных о коммодах (меди) от GigaParsers
-        if data := self.get_com_data_from_gigaparsers(session, 'Copper Bloomberg'):
-            preprocessed_ids.add(7)
-            metals_from_html_full += [data]
 
         big_table = pd.DataFrame(columns=self.big_table_columns)
         metals_from_html_df = pd.DataFrame(metals_from_html_full, columns=self.middle_table_columns)
