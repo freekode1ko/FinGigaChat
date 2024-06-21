@@ -13,6 +13,7 @@ import sqlalchemy as sa
 
 from db import models
 from db.api.base_crud import BaseCRUD
+from db.models import ResearchResearchType
 from log.bot_logger import logger
 
 
@@ -26,11 +27,18 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
         async with self._async_session_maker() as session:
-            stmt = sa.update(self._table).values(is_new=False).where(self._table.is_new == True).returning(*self.fields)  # noqa:E712
-
+            stmt = (
+                sa.select(*self.fields, ResearchResearchType.research_type_id)
+                .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
+                .where(self._table.is_new == True)  # noqa:E712
+            )
             data = await session.execute(stmt)
+
+            stmt = sa.update(self._table).values(is_new=False).where(self._table.is_new == True)  # noqa:E712
+            await session.execute(stmt)
             await session.commit()
-            data_df = pd.DataFrame(data.all(), columns=self.columns)
+
+            data_df = pd.DataFrame(data.all(), columns=(*self.columns, 'research_type_id'))
 
         return data_df
 
@@ -50,21 +58,20 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :param research_type_ids: ID типов отчетов, по которым выгружаются отчеты (по умолчанию все отчеты)
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
-        stmt = sa.select(
-            *self.fields,
-        ).select_from(
-            self._table
-        ).where(
-            self._table.publication_date >= from_date,
-            self._table.publication_date <= to_date,
-        ).order_by(self._table.publication_date)
+        stmt = (
+            sa.select(*self.fields, ResearchResearchType.research_type_id)
+            .select_from(self._table)
+            .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
+            .where(self._table.publication_date >= from_date, self._table.publication_date <= to_date)
+            .order_by(self._table.publication_date)
+        )
 
         if research_type_ids:
-            stmt = stmt.where(self._table.research_type_id.in_(research_type_ids))
+            stmt = stmt.where(ResearchResearchType.research_type_id.in_(research_type_ids))
 
         async with self._async_session_maker() as session:
             data = await session.execute(stmt)
-            data_df = pd.DataFrame(data.all(), columns=self.columns)
+            data_df = pd.DataFrame(data.all(), columns=(*self.columns, 'research_type_id'))
 
         return data_df
 
@@ -76,9 +83,14 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         :returns: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
         """
         async with self._async_session_maker() as session:
-            stmt = sa.select(*self.fields).where(self._table.research_type_id == research_type_id)
+            stmt = (
+                sa.select(*self.fields, ResearchResearchType.research_type_id)
+                .join(ResearchResearchType, self._table.id == ResearchResearchType.research_id)
+                .where(ResearchResearchType.research_type_id == research_type_id)
+            )
+
             data = await session.execute(stmt)
-            data_df = pd.DataFrame(data.all(), columns=self.columns)
+            data_df = pd.DataFrame(data.all(), columns=(*self.columns, 'research_type_id'))
 
         return data_df
 
