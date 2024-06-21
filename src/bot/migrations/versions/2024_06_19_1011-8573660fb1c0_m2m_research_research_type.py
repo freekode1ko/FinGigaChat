@@ -16,7 +16,7 @@ from db.models import ResearchResearchType, Research
 
 # revision identifiers, used by Alembic.
 revision: str = '8573660fb1c0'
-down_revision: Union[str, None] = '039896d53418'
+down_revision: Union[str, None] = '473e815e1353'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
