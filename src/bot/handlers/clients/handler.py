@@ -542,8 +542,8 @@ async def get_client_hot_offers(
     products_callback_data = products_callbacks.ProductsMenuData(
         menu=products_callbacks.ProductsMenusEnum.group_products,
         product_id=product.id,
-        format_type=products_callbacks.FormatType.individual_messages,
     )
+    # TODO решить проблему глубоких проваливаний
     callback_data.menu = callback_data_factories.ClientsMenusEnum.products
     await products.get_group_products(callback_query, products_callback_data, callback_data.pack())
 
