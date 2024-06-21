@@ -18,7 +18,7 @@ from migrations.data.product_hierarchical_structure import new_models, old_model
 
 # revision identifiers, used by Alembic.
 revision: str = '0a80d96a6984'
-down_revision: Union[str, None] = '473e815e1353'
+down_revision: Union[str, None] = '8573660fb1c0'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
