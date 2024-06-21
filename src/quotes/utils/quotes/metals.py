@@ -42,7 +42,7 @@ class MetalsGetter(QuotesGetter):
         return copper_source
 
     @staticmethod
-    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, Any] | None:
+    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, Any]:
         """
         Получение цены товара (меди) от GigaParsers.
 
@@ -51,10 +51,7 @@ class MetalsGetter(QuotesGetter):
         :return:        Кортеж с именем коммода, его ценой, пустым значением и датой обновления цены на сайте.
         """
         response = session.post(config.GIGAPARSERS_QUOTES)
-        try:
-            response.raise_for_status()
-        except req.exceptions.HTTPError:
-            return None
+        response.raise_for_status()
         data = response.json()['quotes'][0]
         price, update_date = data.strip().split(',')
         return name, price, None, update_date
@@ -116,8 +113,8 @@ class MetalsGetter(QuotesGetter):
             metals_from_html.append(lng)
         elif page_metals == 'LMCADS03:COM':
             # Получение данных о коммодах (меди) от GigaParsers
-            if data := self.get_com_data_from_gigaparsers(session, 'Copper Bloomberg'):
-                metals_from_html.append(data)
+            data = self.get_com_data_from_gigaparsers(session, 'Copper Bloomberg')
+            metals_from_html.append(data)
 
         return metals_from_html, metals, U7
 
