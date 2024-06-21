@@ -30,6 +30,7 @@ from log.bot_logger import logger, user_logger
 from module import formatter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
+from utils.macro_view import get_macro_brief_file
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
 
 
@@ -354,5 +355,47 @@ async def send_new_researches_to_users(bot: Bot) -> None:
     users_cnt = len(user_df)
     logger.info(
         f'Рассылка в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
+        f'Переходим в ожидание следующей рассылки.'
+    )
+
+
+async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> None:
+    """
+    Функция рассылки weekly check up
+
+    :param bot: телеграм бот, который отправляет сообщения пользователям
+    :param user_df: Датафрейм с пользователями, которым рассылается weekly check up
+    """
+    now = datetime.datetime.now()
+    newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
+    logger.info(f'Начинается рассылка Weekly Check up в {newsletter_dt_str}')
+    start_tm = time.time()
+
+    # получаем отчет, который надо разослать
+    if document_path := get_macro_brief_file():
+        weekly_check_up_document = types.FSInputFile(document_path)
+    else:
+        logger.error('Не удалось найти документ Weekly Check up')
+        return
+
+    # Сохранение отправленных сообщений
+    saved_messages = []
+    newsletter_type = 'weekly_check_up_newsletter'
+    msg_text = "Weekly 'Check up'"
+
+    for _, user_row in user_df.iterrows():
+        user_id = user_row['user_id']
+        logger.info(f'Рассылка Weekly Check up пользователю {user_id}')
+        # отправка отчета пользователю
+        msg = await bot.send_document(user_id, document=weekly_check_up_document, caption=msg_text,
+                                      protect_content=True, parse_mode='HTML')
+        saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+
+    message.add_all(saved_messages)
+
+    work_time = time.time() - start_tm
+    users_cnt = len(user_df)
+    logger.info(
+        f'Рассылка Weekly Check up в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
         f'Переходим в ожидание следующей рассылки.'
     )
