@@ -98,9 +98,9 @@ class ArticleProcess:
 
         return df_subject
 
-    def throw_the_models(self, df: pd.DataFrame, name: str = '', online_flag: bool = True) -> pd.DataFrame:
+    def throw_the_models(self, df: pd.DataFrame, name: str = '') -> pd.DataFrame:
         """Call model pipe func"""
-        df = model_pipe.model_func_online(self._logger, df) if online_flag else model_pipe.model_func(self._logger, df, name)
+        df = model_pipe.model_func(self._logger, df, name)
         return df
 
     def drop_duplicate(self):

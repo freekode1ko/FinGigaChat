@@ -246,46 +246,6 @@ def find_names(article_text, alt_names_dict, rule_flag: bool = False) -> tuple[s
     return ';'.join(names_dict.keys()), impact_json
 
 
-def find_names_online(article_title: str, article_text: str, alt_names_dict: dict) -> tuple[str, str]:
-    """
-    Takes string and returns string with all found names (with ; separator) from provided Pandas DF.
-
-    :param article_title: str. Current string in which we search for names.
-    :param article_text: str. Current string in which we search for names.
-    :param alt_names_dict: Pandas DF. Pandas DF with columns with names needed to be found. In one row all names - alternatives.
-    :return: str. String with found names separated with ; symbol.
-    """
-    article_text = ' {} '.format(article_text.replace('"', ''))
-    article_title = ' {} '.format(article_title.replace('"', '')) if isinstance(
-        article_title, str) else ''
-    names_dict = {}
-    title_name_list = []
-    names_text = ''
-    for key, alt_names in alt_names_dict.items():
-        alt_names = alt_names.replace('"', '')
-        re_findall = re.findall(alt_names, article_text)
-
-        # find in text
-        if re_findall:
-            key_name = key.lower().strip()
-            names_dict[key_name] = len(re_findall)
-
-        # find in title
-        re_findall_t = re.findall(alt_names, article_title)
-        if re_findall_t:
-            title_name_list.append(key.lower().strip())
-
-    names_title = ';'.join(title_name_list)
-    impact_json = json.dumps(names_dict, ensure_ascii=False)
-    max_count = max(names_dict.values(), default=None)
-    if max_count and max_count != 1:
-        names_text = ';'.join(
-            [key for key, val in names_dict.items() if val == max_count])
-
-    names = union_name(names_title, names_text)
-    return names, impact_json
-
-
 def down_threshold(type_of_article, names, threshold) -> float:
     """
     Down threshold if new contains rare subject
@@ -450,21 +410,6 @@ def rate_commodity(df, rating_dict, threshold=0.5) -> pd.DataFrame:
     return df
 
 
-def union_name(p_row: str, r_row: str) -> str:
-    """
-    Union names
-
-    :param p_row: row with names from polyanalyst
-    :param r_row: row with names from models (regular exception)
-    :return: str with union names from the all rows
-    """
-    p_set = set(el.strip() for el in p_row.split(';')) if p_row else set()
-    r_set = set(el.strip() for el in r_row.split(';')) if r_row else set()
-    common_set = p_set.union(r_set)
-
-    return ';'.join(common_set)
-
-
 def summarization_by_giga(logger: Logger.logger, giga_chat: GigaChat, content: str) -> str:
     """
     Создание краткой версии новостного текста с помощью GigaChat
@@ -518,27 +463,24 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
     logger.debug(f'Нахождение {type_of_article} в тексте новости')
 
     if type_of_article == 'client':
-        df[['found_client', 'client_impact']] = df['text'].apply(
+        df[[type_of_article, 'client_impact']] = df['text'].apply(
             lambda x: pd.Series(find_names(x, alter_client_names_dict)))
 
         df[type_of_article] = df.apply(
-            lambda row: union_name(row['client'], row['found_client']), axis=1)
-        df[type_of_article] = df.apply(
-            lambda row: check_gazprom(row['client'], row['client_impact'],
-                                      row['text']), axis=1)
+            lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1
+        )
 
         logger.debug('Сортировка новостей о клиентах')
-        df = rate_client(df, client_rating_system_dict)
+        df = rate_client(df, client_rating_system_dict, logger)
 
     else:
-        df[['found_commodity', 'commodity_impact']] = df['cleaned_data'].apply(
+        df[[type_of_article, 'commodity_impact']] = df['cleaned_data'].apply(
             lambda x: pd.Series(find_names(x, alter_commodity_names_dict, True))
         )
 
-        df['found_commodity'] = df.apply(
-            lambda row: find_bad_gas(row['found_commodity'],
-                                     row['cleaned_data']), axis=1)
-        df[type_of_article] = df['found_commodity']
+        df[type_of_article] = df.apply(
+            lambda row: find_bad_gas(row[type_of_article], row['cleaned_data']), axis=1
+        )
 
         logger.debug('Сортировка новостей о товарах')
         df = rate_commodity(df, commodity_rating_system_dict)
@@ -548,52 +490,7 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
         lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
-    df.drop(columns=[f'{type_of_article}_labels', f'found_{type_of_article}'],
-            inplace=True)
-
-    return df
-
-
-def model_func_online(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Нахождение имен объектов в тексте новости и назначение баллов значимости новости
-
-    :param logger: экземпляр класса логер для логирования процесса
-    :param df: датафрейм с новостями
-    :return: датафрейм с найденными в новостях объектами и баллами значимости
-    """
-    logger.debug('Приведение текста новостей в нормальную форму')
-    df['cleaned_data'] = df['text'].map(lambda x: clean_data(x))
-
-    # find subject name in text
-    logger.debug('Нахождение клиентов в тексте новости')
-    df[['client', 'client_impact']] = df.apply(
-        lambda row: pd.Series(find_names_online(row['title'], row['text'], alter_client_names_dict)),
-        axis=1
-    )
-    df['client'] = df.apply(lambda row: check_gazprom(row['client'], row['client_impact'], row['text']), axis=1)
-
-    logger.debug('Нахождение товаров в тексте новости')
-    df[['commodity', 'commodity_impact']] = df.apply(
-        lambda row: pd.Series(find_names_online(row['title'], row['cleaned_data'], alter_commodity_names_dict)),
-        axis=1
-    )
-    df['commodity'] = df.apply(lambda row: find_bad_gas(row['commodity'], row['cleaned_data']), axis=1)
-
-    # make rating for article
-    logger.debug('Сортировка новостей о клиентах')
-    df = rate_client(df, client_rating_system_dict, logger)
-    logger.debug('Сортировка новостей о товарах')
-    df = rate_commodity(df, commodity_rating_system_dict)
-
-    # суммирование баллов значимости
-    df['client_score'] = df['client_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
-    df['commodity_score'] = df['commodity_labels'].map(
-        lambda x: sum(list(map(int, list(x.split(';'))))))
-
-    # удаление ненужных колонок
-    df.drop(columns=['client_labels', 'commodity_labels'], inplace=True)
+    df.drop(columns=[f'{type_of_article}_labels',], inplace=True)
 
     return df
 
@@ -714,19 +611,22 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     return df
 
 
-def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
+def get_gigachat_filtering_list(names: str | float, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
     """
     Фильтрует новости по клиентам и комодам с помощью Gigachat.
 
-    :param names: Список клиентов или комодов полученных с помощью регулярки.
-    :param text_sum: Суммаризованный текст новости.
-    :param giga_chat : Gigachat.
-    :param name_type: client or commodity.
-    :param logger: логгер.
-    :return: строка с конкатенированными названиями клиентов или комодов.
+    :param names:       Строка из имен клиентов или комодов полученных с помощью регулярки.
+    :param text_sum:    Суммаризованный текст новости.
+    :param giga_chat:   Gigachat.
+    :param name_type:   client or commodity.
+    :param logger:      Логгер.
+    :return:            Строка с конкатенированными названиями клиентов или комодов.
     """
+    if isinstance(names, float):
+        return ''
     result = []
-    for name in names:
+    giga_answer = ''
+    for name in names.split(';'):
         if str(name):
             if name_type == 'client':
                 system_prompt = prompts.CLIENT_SYSTEM_PROMPT
@@ -777,12 +677,12 @@ def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
     logger.debug('Фильтрация клиентов')
-    df['client'] = df.apply(lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'],
+    df['client'] = df.apply(lambda x: get_gigachat_filtering_list(x['client'], x['text_sum'],
                                                                   giga_chat, 'client', logger), axis=1)
 
     # обрабатываем комоды. Для каждого найденного коммода проверяем, что он действительно подходит к новости
     logger.debug('Фильтрация комодов')
-    df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list(x['commodity'].split(';'), x['text_sum'],
+    df['commodity'] = df.apply(lambda x: get_gigachat_filtering_list(x['commodity'], x['text_sum'],
                                                                      giga_chat, 'commodity', logger), axis=1)
     logger.debug('Окончена фильтрация новостей с GigaChat')
     return df
