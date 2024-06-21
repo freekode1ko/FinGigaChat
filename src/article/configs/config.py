@@ -33,14 +33,9 @@ def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8')
 SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
-BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
-
 mail_imap_server = 'imap.mail.ru'
 mail_username = 'ai-helper@mail.ru'
-mail_password = 'ExamKejCpmcpr8kM5emw'
-
-NEWS_LIMIT = 5
-dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
+mail_password: str = env.str('MAIL_RU_PASSWORD', default='')
 
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 
@@ -53,13 +48,10 @@ LOG_LEVEL_WARNING = 30
 LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
-
-api_key_gpt = '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'
-
-
 giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
 giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
-ROBERTA_CLIENT_RELEVANCE_LINK = 'http://bert_client_relevance_container:444/query'
+host_name = 'localhost' if ENV.is_local() else 'bert_client_relevance_container'
+ROBERTA_CLIENT_RELEVANCE_LINK = f'http://{host_name}:444/query'
