@@ -5,8 +5,25 @@ import pathlib
 from typing import Union
 
 from environs import Env
+from pydantic_settings import BaseSettings
 
 from constants.enums import Environment
+
+
+class BaseConfig(BaseSettings):
+    """
+    Класс для добавления конфигов, переменные которого будут получены через редис
+
+
+    Examples:
+    top_news_count: str = Field(3, env='TOP_NEWS_COUNT', default="1")
+    DB_HOST: str = "123"
+    DB_PORT: int = 123
+    """
+
+    DB_HOST: str = "123"
+    DB_PORT: int = 123
+
 
 env = Env()
 env.read_env()
