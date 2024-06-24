@@ -671,7 +671,7 @@ class Product(Base):
     parent = relationship('Product', back_populates='children', remote_side=[id])
 
     name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
-    name_latin = Column(String(255), nullable=True, comment='Имя eng', server_default=sa.text(''))
+    name_latin = Column(String(255), nullable=True, comment='Имя eng', server_default=sa.text("''"))
     send_documents_format_type = Column(Integer(), server_default=sa.text(str(FormatType.group_files)),
                                         nullable=False, comment='Формат выдачи документов')
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
@@ -679,16 +679,6 @@ class Product(Base):
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
 
     documents = relationship('ProductDocument')
-
-
-# class SubProduct(Base):
-#     __tablename__ = 'bot_sub_product'
-#     __table_args__ = {'comment': 'Таблица связей продукта с дочерними продуктами'}
-#
-#     parent_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
-#                        primary_key=True, nullable=False, comment='id продукта (раздел)')
-#     child_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
-#                        primary_key=True, nullable=False, comment='id продукта (подраздел)')
 
 
 class ProductDocument(Base):

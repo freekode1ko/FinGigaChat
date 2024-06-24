@@ -1,7 +1,8 @@
 """Products data"""
-from configs import config
-from migrations.data.product_hierarchical_structure import new_models
+import sqlalchemy as sa
 
+from configs import config
+from migrations.data.product_hierarchical_structure import new_models, old_models, bot_product_group
 
 root_data = new_models.Product(
     id=0,
@@ -21,3 +22,94 @@ state_support = dict(
 
 
 STATE_SUPPORT_SOURCES = config.PATH_TO_SOURCES / 'products' / 'state_support'
+
+
+old_products = [
+    # ------------- HOT OFFERS -----------------------
+    {
+        'name': 'Кредитование',
+        'name_latin': bot_product_group.data[0]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[0]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'Пассивы',
+        'name_latin': bot_product_group.data[0]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[0]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'GM',
+        'name_latin': bot_product_group.data[0]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[0]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'ВЭД',
+        'name_latin': bot_product_group.data[0]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[0]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'Экосистема',
+        'name_latin': bot_product_group.data[0]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[0]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'Прочий НКД',
+        'name_latin': bot_product_group.data[0]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[0]['name_latin'],
+        ).limit(1),
+    },
+
+    # ------------- PRODUCT SHELF -----------------------
+    {
+        'name': 'Кредитование',
+        'name_latin': bot_product_group.data[1]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[1]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'Пассивы',
+        'name_latin': bot_product_group.data[1]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[1]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'GM',
+        'name_latin': bot_product_group.data[1]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[1]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'ВЭД',
+        'name_latin': bot_product_group.data[1]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[1]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'Экосистема',
+        'name_latin': bot_product_group.data[1]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[1]['name_latin'],
+        ).limit(1),
+    },
+    {
+        'name': 'Прочий НКД',
+        'name_latin': bot_product_group.data[1]['name_latin'],
+        'group_id': sa.select(old_models.ProductGroup.id).where(
+            old_models.ProductGroup.name_latin == bot_product_group.data[1]['name_latin'],
+        ).limit(1),
+    },
+]

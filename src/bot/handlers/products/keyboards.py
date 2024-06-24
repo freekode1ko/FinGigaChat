@@ -16,16 +16,16 @@ def get_sub_menu_kb(
         callback_data: callbacks.ProductsMenuData,
 ) -> InlineKeyboardMarkup:
     """
-    Формирует Inline клавиатуру вида:
-
-    [ продукт 1 ]
-    ...
-    [ продукт n ]
-    [  назад  ]
+    Формирует Inline клавиатуру
 
     :param items: список models.Product с информацией о продуктах
     :param product: Текущая категория продуктов
     :param callback_data: callback_data текущего меню
+    :return: клавиатура
+    [ продукт 1 ]
+    ...
+    [ продукт n ]
+    [  назад  ]
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -69,6 +69,8 @@ def get_menu_kb(products: list[models.Product]) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
+    :param products: Список продуктов
+    :return: Inline клавиатура
     [ Hot offers ]
     [ Продуктовая полка ]
     [ Господдержка ]

@@ -1,4 +1,4 @@
-"""Новые таблицы"""
+"""Старые таблицы"""
 
 import sqlalchemy as sa
 from sqlalchemy.orm import declarative_base

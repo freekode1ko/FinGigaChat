@@ -28,5 +28,6 @@ class ProductsMenuData(CallbackData, prefix=MENU):
 
     menu: ProductsMenusEnum = ProductsMenusEnum.main_menu
     product_id: int = 0
+    # Эту часть можно унести в redis, чтоб не бояться, что len(ProductsMenuData.pack().encode()) будет > 64
     root_id: int = 0
     back_menu: str | None = ''  # это мем, но приходится писать | None, чтоб тут можно было пустую строку передать, иначе ошибка
