@@ -57,3 +57,5 @@ INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 tradingeconomics_commodities: dict = read_asset_from_json('tradingeconomics_commodities.json')
 
 COLLECT_PERIOD = '15m'
+
+GIGAPARSERS_QUOTES = 'http://gigaparsers.ru/inner_api/get_quotes'
