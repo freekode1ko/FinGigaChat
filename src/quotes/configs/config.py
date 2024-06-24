@@ -58,4 +58,7 @@ tradingeconomics_commodities: dict = read_asset_from_json('tradingeconomics_comm
 
 COLLECT_PERIOD = '15m'
 
+# timeout для http(s) запросов
+REQUEST_TIMEOUT = 90
+
 GIGAPARSERS_QUOTES = 'http://gigaparsers.ru/inner_api/get_quotes'
