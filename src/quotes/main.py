@@ -26,7 +26,7 @@ def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
     logger.info(f'Инициализация сборщика котировок {group_name}')
     runner = QuotesGetterClass(logger)
     logger.info('Загрузка прокси')
-    runner.parser_obj.get_proxy_addresses()
+    runner.parser_obj.set_proxy_addresses()
 
     try:
         logger.info(f'Начало сборки котировок {group_name}')

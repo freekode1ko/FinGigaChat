@@ -1,16 +1,21 @@
 """Набор инструментов для сборки данных с WEB-источников"""
 import random
+import string
 
 import requests as req
 
-from configs.config import user_agents
+from configs.config import REQUEST_TIMEOUT, user_agents
 from log.logger_base import Logger
+
+
+DEFAULT_USER_AGENT_ALPH = string.ascii_lowercase
+DEFAULT_USER_AGENT_LEN = 12
 
 
 class Dictlist(dict):
     """Класс словаря, в котором значения хранятся в виде списков."""
 
-    def __setitem__(self, key, value) -> dict:
+    def __setitem__(self, key, value) -> None:
         """
         Перегружает стандартный метод __setitem__ в классе словаря, чтобы добавлять значение в список.
 
@@ -31,7 +36,9 @@ proxy = Dictlist()
 class Parser:
     """Класс для парсинга данных."""
 
-    def __init__(self, logger: Logger.logger):
+    user_agents = user_agents
+
+    def __init__(self, logger: Logger.logger) -> None:
         """
         Инициализирует экземпляр класса Parser.
 
@@ -39,9 +46,18 @@ class Parser:
         """
         self._logger = logger
 
-    user_agents = user_agents
+    @staticmethod
+    def get_random_user_agent(alph: str = DEFAULT_USER_AGENT_ALPH, user_agent_len: int = DEFAULT_USER_AGENT_LEN) -> str:
+        """
+        Получить случайный user agent.
 
-    def get_proxy_addresses(self) -> None:
+        :param alph:            Алфавит для генерации user agent
+        :param user_agent_len:  Длина сгенерированного user agent
+        :return:                Случайный user agent
+        """
+        return ''.join(random.choices(alph, k=user_agent_len))
+
+    def set_proxy_addresses(self) -> None:
         """Метод получения списка доступных прокси и их загрузка"""
         global proxy
         proxy['https'] = ['socks5h://193.23.50.38:10222']
@@ -50,19 +66,17 @@ class Parser:
         proxy['https'] = ['socks5h://54.37.194.34:10526']
         self._logger.info('Прокси инициализировано')
 
-    def get_html(self, url: str, session: req.sessions.Session):
+    def get_html(self, url: str, session: req.sessions.Session) -> tuple[bool, str]:
         """
         Метод получения html страницы
 
         :param session: Получение сессии якобы пользователя
         :param url: Адрес страницы
-        :return: html страницы как string
+        :return: флаг euro_standard, html страницы как string
         """
         euro_standard = False
         # http = random.choice(proxy['http'])
         https = random.choice(proxy['https'])
-        # if type(http) == list:
-        #     http = http[0]
         if isinstance(https, list):
             https = https[0]
         # proxies = {'http': http, 'https': https}
@@ -75,9 +89,9 @@ class Parser:
 
         try:
             self._logger.info('Генерируем User-Agent для запроса')
-            random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
+            random_user_agent = self.get_random_user_agent()
             header = {'Accept': '*/*', 'User-Agent': random_user_agent, 'Accept-Encoding': 'gzip, deflate'}
-            req_page = session.get(url, verify=False, headers=header, proxies=proxies)
+            req_page = session.get(url, verify=False, headers=header, proxies=proxies, timeout=REQUEST_TIMEOUT)
             html = req_page.text
             self._logger.info(f'{url} - Прокси УСПЕХ')
 
@@ -91,9 +105,9 @@ class Parser:
 
         except req.exceptions.ConnectionError:
             session = req.Session()
-            random_user_agent = ''.join((random.choice('qwertyuiopasdfghjklzxcvbnm') for i in range(12)))
+            random_user_agent = self.get_random_user_agent()
             header = {'Accept': '*/*', 'User-Agent': random_user_agent, 'Accept-Encoding': 'gzip, deflate'}
-            req_page = session.get(url, verify=False, headers=header)
+            req_page = session.get(url, verify=False, headers=header, timeout=REQUEST_TIMEOUT)
             html = req_page.text
             self._logger.info(f'{url} Прокси ПРОВАЛ')
 
