@@ -1,5 +1,5 @@
 """Products data"""
-
+from configs import config
 from migrations.data.product_hierarchical_structure import new_models
 
 
@@ -11,12 +11,13 @@ root_data = new_models.Product(
     description='Актуальные предложения для клиента',
 )
 
-new_data = [
-    new_models.Product(
-        parent_id=0,
-        name='Господдержка',
-        name_latin='state_support',
-        description='Господдержка',
-        display_order=3,
-    ),
-]
+state_support = dict(
+    parent_id=0,
+    name='Господдержка',
+    name_latin='state_support',
+    description='Господдержка',
+    display_order=3,
+)
+
+
+STATE_SUPPORT_SOURCES = config.PATH_TO_SOURCES / 'products' / 'state_support'

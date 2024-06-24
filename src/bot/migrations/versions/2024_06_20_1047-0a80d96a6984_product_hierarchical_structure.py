@@ -5,6 +5,7 @@ Revises: 473e815e1353
 Create Date: 2024-06-20 10:47:58.968100
 
 """
+from pathlib import Path
 from typing import Sequence, Union
 
 import pandas as pd
@@ -92,7 +93,22 @@ def upgrade_add_old_products(
 
 def upgrage_add_new_products(session: Session) -> None:
     """Add new products"""
-    session.bulk_save_objects(bot_product.new_data)
+    stmt = sa.insert(new_models.Product).values(**bot_product.state_support).returning(new_models.Product.id)
+    new_product_id = session.execute(stmt).scalar_one_or_none()
+
+    files = list(bot_product.STATE_SUPPORT_SOURCES.iterdir()) if bot_product.STATE_SUPPORT_SOURCES.exists() else []
+    files_objs = []
+    for file_path in files:
+        # Преобразуем в относительный путь (на случай переноса бэкапа удобнее)
+        sources_folder_index = file_path.parts.index(bot_product.config.PATH_TO_SOURCES.name)
+        file_path = Path(*file_path.parts[sources_folder_index:])
+        files_objs.append(new_models.ProductDocument(
+            file_path=str(file_path),
+            name=file_path.name,
+            description='',
+            product_id=new_product_id,
+        ))
+    session.bulk_save_objects(files_objs)
 
 
 def upgrade() -> None:
