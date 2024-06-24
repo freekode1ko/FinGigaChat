@@ -55,8 +55,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     root = await product_db.get_root()
     keyboard = keyboards.get_menu_kb(root.children)
-    msg_text = root.description
-    await send_or_edit(message, msg_text, keyboard)
+    await send_or_edit(message, root.description, keyboard)
 
 
 @router.callback_query(callbacks.ProductsMenuData.filter(
@@ -100,14 +99,12 @@ async def main_menu_command(message: types.Message) -> None:
 async def get_group_products(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.ProductsMenuData,
-        back_callback_data: Optional[str] = None,
 ) -> None:
     """
     Получение меню продукты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
-    :param back_callback_data: callback_data для кнопки назад
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -120,7 +117,7 @@ async def get_group_products(
     if not sub_products:
         await get_product_documents(callback_query, product_info)
     else:
-        keyboard = keyboards.get_sub_menu_kb(sub_products, product_info, back_callback_data)
+        keyboard = keyboards.get_sub_menu_kb(sub_products, product_info, callback_data)
         msg_text = product_info.description
         if product_info.documents and (fpath := configs.config.PROJECT_DIR / product_info.documents[0].file_path).exists():
             await callback_query.message.answer_document(

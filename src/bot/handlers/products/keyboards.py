@@ -1,10 +1,10 @@
 """Клавиатуры дял меню продуктов"""
-from typing import Optional
 
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+import utils.base
 from constants import constants
 from db import models
 from handlers.products import callbacks
@@ -13,7 +13,7 @@ from handlers.products import callbacks
 def get_sub_menu_kb(
         items: list[models.Product],
         product: models.Product,
-        back_callback_data: Optional[str] = None,
+        callback_data: callbacks.ProductsMenuData,
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
@@ -25,7 +25,7 @@ def get_sub_menu_kb(
 
     :param items: список models.Product с информацией о продуктах
     :param product: Текущая категория продуктов
-    :param back_callback_data: callback_data для кнопки назад
+    :param callback_data: callback_data текущего меню
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -33,6 +33,8 @@ def get_sub_menu_kb(
         item_callback = callbacks.ProductsMenuData(
             menu=callbacks.ProductsMenusEnum.group_products,
             product_id=item.id,
+            root_id=callback_data.root_id,
+            back_menu=callback_data.back_menu,
         )
 
         keyboard.row(types.InlineKeyboardButton(
@@ -41,12 +43,18 @@ def get_sub_menu_kb(
         )
 
     if product.parent_id is not None:
+        back_callback_data = (utils.base.unwrap_callback_data(callback_data.back_menu)
+                              if callback_data.root_id == callback_data.product_id
+                              else callbacks.ProductsMenuData(
+            menu=callbacks.ProductsMenusEnum.group_products,
+            product_id=product.parent_id,
+            root_id=callback_data.root_id,
+            back_menu=callback_data.back_menu,
+        ).pack())
+
         keyboard.row(types.InlineKeyboardButton(
             text=constants.BACK_BUTTON_TXT,
-            callback_data=back_callback_data or callbacks.ProductsMenuData(
-                menu=callbacks.ProductsMenusEnum.group_products,
-                product_id=product.parent_id,
-            ).pack(),
+            callback_data=back_callback_data,
         ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,

@@ -28,3 +28,5 @@ class ProductsMenuData(CallbackData, prefix=MENU):
 
     menu: ProductsMenusEnum = ProductsMenusEnum.main_menu
     product_id: int = 0
+    root_id: int = 0
+    back_menu: str | None = ''  # это мем, но приходится писать | None, чтоб тут можно было пустую строку передать, иначе ошибка

@@ -538,14 +538,15 @@ async def get_client_hot_offers(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     """
+    callback_data.menu = callback_data_factories.ClientsMenusEnum.products
     product = await product_db.get_by_latin_name('hot_offers')
     products_callback_data = products_callbacks.ProductsMenuData(
         menu=products_callbacks.ProductsMenusEnum.group_products,
         product_id=product.id,
+        root_id=product.id,
+        back_menu=utils.base.wrap_callback_data(callback_data.pack()),
     )
-    # TODO решить проблему глубоких проваливаний
-    callback_data.menu = callback_data_factories.ClientsMenusEnum.products
-    await products.get_group_products(callback_query, products_callback_data, callback_data.pack())
+    await products.get_group_products(callback_query, products_callback_data)
 
 
 @router.callback_query(callback_data_factories.ClientsMenuData.filter(
