@@ -2,7 +2,8 @@
 import sqlalchemy as sa
 
 from configs import config
-from migrations.data.product_hierarchical_structure import new_models, old_models, bot_product_group
+from migrations.data.product_hierarchical_structure import bot_product_group
+from migrations.models.product_hierarchical_structure import old_models, new_models
 
 root_data = new_models.Product(
     id=0,

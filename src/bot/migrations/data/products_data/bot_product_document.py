@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlalchemy as sa
 
 from configs import config
-from migrations.data.products_data import new_models as models
+from migrations.models.products_data import new_models as models
 from migrations.data.products_data import bot_product
 from migrations.data.products_data import bot_product_group
 

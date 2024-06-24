@@ -14,7 +14,8 @@ from alembic import op
 from sqlalchemy.orm import Session
 
 from constants.enums import FormatType
-from migrations.data.product_hierarchical_structure import new_models, old_models, bot_product, bot_product_group
+from migrations.data.product_hierarchical_structure import bot_product, bot_product_group
+from migrations.models.product_hierarchical_structure import old_models, new_models
 
 # revision identifiers, used by Alembic.
 revision: str = '0a80d96a6984'
