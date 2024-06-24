@@ -1,5 +1,6 @@
 """Набор инструментов для сборки данных с WEB-источников"""
 import random
+import string
 
 import requests as req
 
@@ -7,7 +8,7 @@ from configs.config import REQUEST_TIMEOUT, user_agents
 from log.logger_base import Logger
 
 
-DEFAULT_USER_AGENT_ALPH = 'qwertyuiopasdfghjklzxcvbnm'
+DEFAULT_USER_AGENT_ALPH = string.ascii_lowercase
 DEFAULT_USER_AGENT_LEN = 12
 
 
@@ -54,7 +55,7 @@ class Parser:
         :param user_agent_len:  Длина сгенерированного user agent
         :return:                Случайный user agent
         """
-        return ''.join(random.choice(alph) for _ in range(user_agent_len))
+        return ''.join(random.choices(alph, k=user_agent_len))
 
     def set_proxy_addresses(self) -> None:
         """Метод получения списка доступных прокси и их загрузка"""
