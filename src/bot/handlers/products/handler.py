@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
 import aiogram.exceptions
 from aiogram import F, Router, types
