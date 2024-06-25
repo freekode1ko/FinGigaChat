@@ -35,7 +35,24 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     [ Завершить  ]
     """
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Новости', callback_data=const.NEWS_SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на клиентов',
+        callback_data=client.CLIENT_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на сырьевые товары',
+        callback_data=commodity.COMMODITY_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на отрасли',
+        callback_data=industry.INDUSTRY_SUBS_MENU,
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на телеграм-каналы',
+        callback_data=telegram_callback_factory.TelegramSubsMenuData(
+            menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+        ).pack(),
+    ))
     keyboard.row(types.InlineKeyboardButton(text='Аналитика', callback_data=research.GET_CIB_RESEARCH_SUBS_MENU))
     keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()
