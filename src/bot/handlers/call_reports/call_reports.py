@@ -9,6 +9,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import insert, select, update
 
+from constants.texts import texts_manager
 from configs import config
 from db.call_reports import get_all_dates_for_client_report, get_all_sorted_clients_for_user
 from db.models import CallReports
@@ -52,12 +53,12 @@ async def main_menu(message: Message, edit: bool = False) -> None:
 
     if edit:
         await message.edit_text(
-            'Вы вызвали функцию работы с протоколами встреч, что вы хотите сделать?',
+            texts_manager.CALL_REPORTS_MAIN_MENU,
             reply_markup=keyboard.as_markup(),
         )
     else:
         await message.answer(
-            'Вы вызвали функцию работы с протоколами встреч, что вы хотите сделать?',
+            texts_manager.CALL_REPORTS_MAIN_MENU,
             reply_markup=keyboard.as_markup(),
         )
 
@@ -101,7 +102,7 @@ async def call_reports_close(
     :param callback_data: Объект, содержащий дополнительную информацию
     """
     await callback_query.message.edit_text(
-        'Меню протоколов встреч закрыто.'
+        texts_manager.CALL_REPORTS_CLOSE,
     )
 
 
