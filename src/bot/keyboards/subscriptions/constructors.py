@@ -53,39 +53,6 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
             menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
         ).pack(),
     ))
-    keyboard.row(types.InlineKeyboardButton(text='Аналитика', callback_data=research.GET_CIB_RESEARCH_SUBS_MENU))
-    keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
-    return keyboard.as_markup()
-
-
-def get_news_subscriptions_menu_kb() -> InlineKeyboardMarkup:
-    """
-    Формирует Inline клавиатуру вида:
-
-    [ Подписки на клиентов, сырье, отрасли ]
-    [ Подписки на телеграм-каналы  ]
-    [ Назад  ]
-    [ Завершить  ]
-    """
-    keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на клиентов',
-        callback_data=client.CLIENT_SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на сырьевые товары',
-        callback_data=commodity.COMMODITY_SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на отрасли',
-        callback_data=industry.INDUSTRY_SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на телеграм-каналы',
-        callback_data=telegram_callback_factory.TelegramSubsMenuData(
-            menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
-        ).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(text=constants.BACK_BUTTON_TXT, callback_data=const.SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(text='Подписки на аналитические отчеты', callback_data=research.GET_CIB_RESEARCH_SUBS_MENU))
     keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()
