@@ -1,4 +1,4 @@
-"""Клас для хранения текстовок """
+"""Клас для хранения текстовок"""
 from pydantic_settings import BaseSettings
 
 

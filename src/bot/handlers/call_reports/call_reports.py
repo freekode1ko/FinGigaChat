@@ -9,8 +9,8 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import insert, select, update
 
-from constants.texts import texts_manager
 from configs import config
+from constants.texts import texts_manager
 from db.call_reports import get_all_dates_for_client_report, get_all_sorted_clients_for_user
 from db.models import CallReports
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date

@@ -1,5 +1,4 @@
 """Клас для получения файла из конфига редиса"""
-import asyncio
 
 from constants.texts.texts import AllListOfTexts, CallReportsTexts
 from db.redis.client import redis_client_sync as redis_client
@@ -7,6 +6,7 @@ from db.redis.client import redis_client_sync as redis_client
 
 class TextsManager:
     """Класс для хранения конфига в редисе"""
+
     def __init__(self):
         self.__configs = [AllListOfTexts(), CallReportsTexts()]
         self.__init_values()
