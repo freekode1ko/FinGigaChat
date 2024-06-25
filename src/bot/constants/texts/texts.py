@@ -12,7 +12,6 @@ class AllListOfTexts(BaseSettings):
     DB_PORT: int = 123
     """
 
-    # CumReports
     pass
 
 
