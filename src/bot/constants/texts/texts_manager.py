@@ -14,8 +14,8 @@ class TextsManager:
     def __init_values(self):
         """Загрузка переменных в redis"""
         for config_class in self.__configs:
-            for i in config_class.dict().items():
-                redis_client.set(f'settings_{i[0]}', i[1])
+            for key, value in config_class.dict().items():
+                redis_client.set(f'settings_{key}', value)
 
     def __getattr__(self, item):
         """Получение атрибута из редиса"""
