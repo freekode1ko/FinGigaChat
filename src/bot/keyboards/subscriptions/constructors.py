@@ -53,6 +53,9 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
             menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
         ).pack(),
     ))
-    keyboard.row(types.InlineKeyboardButton(text='Подписки на аналитические отчеты', callback_data=research.GET_CIB_RESEARCH_SUBS_MENU))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Подписки на аналитические отчеты',
+        callback_data=research.GET_CIB_RESEARCH_SUBS_MENU
+    ))
     keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()
