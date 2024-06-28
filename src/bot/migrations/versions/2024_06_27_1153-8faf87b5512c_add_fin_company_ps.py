@@ -14,7 +14,7 @@ from db.models import Client, FinancialSummary, ParserSource, SourceGroup
 
 # revision identifiers, used by Alembic.
 revision: str = '8faf87b5512c'
-down_revision: Union[str, None] = '0a80d96a6984'
+down_revision: Union[str, None] = '16fbac4960dd'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
