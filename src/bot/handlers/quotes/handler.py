@@ -14,6 +14,7 @@ from configs import config
 from configs.config import PATH_TO_SOURCES
 from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
+from db.api.exc import exc_db
 from db.database import engine
 from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
@@ -114,36 +115,49 @@ async def exchange_info_command(message: types.Message) -> None:
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    png_path = PATH_TO_SOURCES / 'img' / 'exc_table.png'
-    exc = pd.read_sql_query('SELECT * FROM exc', con=engine)
-    exc['Курс'] = exc['Курс'].apply(lambda x: round(float(x), 2) if x is not None else x)
+    # Получаем курсы и преобразуем в таблицу
+    exc_data = exc_db.get_all()
+    df = pd.DataFrame([
+        [i.name, i.value, i.display_order, i.exc_type.name, i.exc_type.display_order]
+        for i in exc_data
+    ], columns=['name', 'value', 'display_order', 'exc_type_name', 'exc_type_display_order'])
 
-    exc_order = {
-        'USD/RUB': 0,
-        'EUR/RUB': 1,
-        'CNH/RUB': 2,
-        'Индекс DXY': 3,
-        'EUR/USD': 4,
-        'USD/CNH': 5,
-    }
+    header_color = '#E2EFDA'
+    default_color = '#ffffff'
+    row_colors = []
+    merged_cells = []
+    cells_counter = 1
+    data = []
+    for exc_type_name, group in df.sort_values(['exc_type_display_order', 'display_order']).groupby('exc_type_name'):
+        data.append([exc_type_name, ''])
+        row_colors.append(header_color)
+        merged_cells.append(((cells_counter, 0), (cells_counter, 1)))
+        cells_counter += 1
 
-    for num, currency in enumerate(exc['Валюта'].values):
-        if currency.lower() == 'usdollar':
-            exc['Валюта'].values[num] = 'Индекс DXY'
-        else:
-            cur = currency.upper().split('-')
-            exc['Валюта'].values[num] = '/'.join(cur).replace('CNY', 'CNH')
-    exc['order'] = exc['Валюта'].apply(lambda x: exc_order.get(x, np.inf))
-    exc.set_index('order', drop=True, inplace=True)
-    exc = exc.sort_index().reset_index(drop=True)
+        for _, i in group.iterrows():
+            data.append([i['name'], i['value']])
+            row_colors.append(default_color)
+            cells_counter += 1
 
+    df = pd.DataFrame(data, columns=['Валютная пара', 'Значение'])
+    png_name = 'exc'
     transformer = dt.Transformer()
-    transformer.render_mpl_table(exc.round(2), 'exc', header_columns=0, col_width=2)
+    png_path = transformer.render_mpl_table(
+        df,
+        png_name,
+        col_width=4,
+        header_color=header_color,
+        row_colors=row_colors,
+        font_size=16,
+        text_color='black',
+        merged_cells=merged_cells,
+    )
+
     day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
     month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
     photo = types.FSInputFile(png_path)
     title = 'Курсы валют'
-    data_source = 'investing.com'
+    data_source = 'investing.com, ru.tradingview.com, www.finam.ru, www.cbr.ru'
     curdatetime = utils.base.read_curdatetime()
     await utils.base.__sent_photo_and_msg(
         message,
