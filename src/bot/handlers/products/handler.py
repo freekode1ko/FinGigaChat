@@ -195,6 +195,7 @@ async def get_product_documents(callback_query: types.CallbackQuery, product: mo
                     await callback_query.message.answer(document_msg_text, parse_mode='HTML')
 
                 if os.path.exists(document.file_path):
+                    await callback_query.message.bot.send_chat_action(callback_query.message.chat.id, 'upload_document')
                     await callback_query.message.answer_document(types.FSInputFile(document.file_path))
 
             if documents:
