@@ -2,17 +2,17 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
+import aiogram.exceptions
 from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from constants.products import state_support
+import configs.config
+from constants import enums
+from db import models
 from db.api.product import product_db
-from db.api.product_document import product_document_db
-from db.api.product_group import product_group_db
 from handlers.products import callbacks
 from handlers.products import keyboards
 from log.bot_logger import user_logger
@@ -34,7 +34,16 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Завершена работа с меню "продукты"')
+
+    match callback_query.message.content_type:
+        case types.ContentType.TEXT:
+            await callback_query.message.edit_text(text='Завершена работа с меню "продукты"')
+        case types.ContentType.DOCUMENT:
+            try:
+                await callback_query.message.delete()
+            except aiogram.exceptions.TelegramBadRequest:
+                pass
+            await callback_query.message.answer(text='Завершена работа с меню "продукты"')
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
@@ -43,10 +52,9 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
 
     :param message: types.CallbackQuery | types.Message
     """
-    product_groups = await product_group_db.get_all()
-    keyboard = keyboards.get_menu_kb(product_groups)
-    msg_text = 'Актуальные предложения для клиента'
-    await send_or_edit(message, msg_text, keyboard)
+    root = await product_db.get_root()
+    keyboard = keyboards.get_menu_kb(root.children)
+    await send_or_edit(message, root.description, keyboard)
 
 
 @router.callback_query(callbacks.ProductsMenuData.filter(
@@ -85,62 +93,52 @@ async def main_menu_command(message: types.Message) -> None:
 
 
 @router.callback_query(callbacks.ProductsMenuData.filter(
-    F.menu == callbacks.ProductsMenusEnum.state_support,
-))
-async def get_state_support_pdf(callback_query: types.CallbackQuery, callback_data: callbacks.ProductsMenuData) -> None:
-    """
-    Получение pdf файлов по господдержке
-
-    Отправляет копию меню в конце, если были отправлены файлы
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
-    """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_data.pack()
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-
-    msg_text = state_support.TITLE
-    pdf_files = list(state_support.DATA_ROOT_PATH.iterdir())
-    await send_pdf(callback_query, pdf_files, msg_text)
-    await send_full_copy_of_message(callback_query)
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-
-
-@router.callback_query(callbacks.ProductsMenuData.filter(
     F.menu == callbacks.ProductsMenusEnum.group_products,
 ))
 async def get_group_products(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.ProductsMenuData,
-        back_callback_data: Optional[str] = None,
 ) -> None:
     """
     Получение меню продукты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
-    :param back_callback_data: callback_data для кнопки назад
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    group_info = await product_group_db.get(callback_data.group_id)
-    products = await product_db.get_all_by_group_id(group_id=callback_data.group_id)
+    product_info = await product_db.get(callback_data.product_id)
+    sub_products = product_info.children
 
-    keyboard = keyboards.get_sub_menu_kb(products, callback_data.format_type, back_callback_data)
-    msg_text = group_info.description
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    if not sub_products:
+        await get_product_documents(callback_query, product_info)
+    else:
+        keyboard = keyboards.get_sub_menu_kb(sub_products, product_info, callback_data)
+        msg_text = product_info.description
+        if product_info.documents and (fpath := configs.config.PROJECT_DIR / product_info.documents[0].file_path).exists():
+            await callback_query.message.answer_document(
+                document=types.FSInputFile(fpath),
+                caption=msg_text,
+                parse_mode='HTML',
+                reply_markup=keyboard,
+            )
+        else:
+            await callback_query.message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+
+        try:
+            await callback_query.message.delete()
+        except aiogram.exceptions.TelegramBadRequest:
+            pass
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(callbacks.ProductsMenuData.filter(
     F.menu == callbacks.ProductsMenusEnum.get_product_documents,
 ))
-async def get_product_documents(callback_query: types.CallbackQuery, callback_data: callbacks.ProductsMenuData) -> None:
+async def get_product_documents_callback(callback_query: types.CallbackQuery, callback_data: callbacks.ProductsMenuData) -> None:
     """
     Получение продуктовых предложений
 
@@ -155,19 +153,32 @@ async def get_product_documents(callback_query: types.CallbackQuery, callback_da
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     product_info = await product_db.get(callback_data.product_id)
-    documents = await product_document_db.get_all_by_product_id(product_id=callback_data.product_id)
+    await get_product_documents(callback_query, product_info)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    msg_text = product_info.description
 
-    match callback_data.format_type:
-        case callbacks.FormatType.group_files:
+async def get_product_documents(callback_query: types.CallbackQuery, product: models.Product) -> None:
+    """
+    Получение продуктовых предложений
+
+    Отправляет копию меню в конце, если были отправлены продуктовые предложения
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param product: содержит информацию о продукте, формате выдачи предложений
+    """
+    documents = list(product.documents)
+
+    msg_text = product.description
+
+    match product.send_documents_format_type:
+        case enums.FormatType.group_files:
             pdf_files = [Path(i.file_path) for i in documents]
             if not await send_pdf(callback_query, pdf_files, msg_text):
                 msg_text += '\nФункционал появится позднее'
                 await callback_query.message.answer(msg_text, parse_mode='HTML')
             else:
                 await send_full_copy_of_message(callback_query)
-        case callbacks.FormatType.individual_messages:
+        case enums.FormatType.individual_messages:
             if not documents:
                 msg_text += '\nФункционал появится позднее'
 
@@ -184,9 +195,8 @@ async def get_product_documents(callback_query: types.CallbackQuery, callback_da
                     await callback_query.message.answer(document_msg_text, parse_mode='HTML')
 
                 if os.path.exists(document.file_path):
+                    await callback_query.message.bot.send_chat_action(callback_query.message.chat.id, 'upload_document')
                     await callback_query.message.answer_document(types.FSInputFile(document.file_path))
 
             if documents:
                 await send_full_copy_of_message(callback_query)
-
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
