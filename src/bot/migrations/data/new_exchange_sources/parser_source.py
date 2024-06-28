@@ -74,7 +74,7 @@ new_data = [
         'response_format': 'CNH/RUB (MOEX)',
         'source': 'https://ru.tradingview.com/symbols/CNYRUB_TOM/?exchange=MOEX',
         'source_group_id': source_group_id_subquery,
-        'params': [{'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}}],
+        'params': {'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}},
         'before_link': '',
     },
     {
@@ -200,7 +200,7 @@ new_data = [
         'response_format': 'CNH/RUB',
         'source': 'https://ru.tradingview.com/symbols/MOEX-CR1%21/',
         'source_group_id': source_group_id_subquery,
-        'params': [{'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}}],
+        'params': {'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}},
         'before_link': '',
     },
     {
@@ -209,7 +209,7 @@ new_data = [
         'response_format': 'USD/RUB',
         'source': 'https://ru.tradingview.com/symbols/MOEX-SI1%21/',
         'source_group_id': source_group_id_subquery,
-        'params': [{'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}}],
+        'params': {'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}},
         'before_link': '',
     },
     {
@@ -218,7 +218,7 @@ new_data = [
         'response_format': 'EUR/RUB',
         'source': 'https://ru.tradingview.com/symbols/MOEX-EU1%21/',
         'source_group_id': source_group_id_subquery,
-        'params': [{'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}}],
+        'params': {'tag': 'div', 'attrs': {'class': 'lastContainer-.+'}},
         'before_link': '',
     },
     # Others

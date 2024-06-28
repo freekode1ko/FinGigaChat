@@ -225,6 +225,22 @@ t_report_eco_mon = Table(
 )
 
 
+t_report_exc_day = Table(
+    'report_exc_day', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_exc_mon = Table(
+    'report_exc_mon', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
 t_report_met_day = Table(
     'report_met_day', metadata,
     Column('0', Text),

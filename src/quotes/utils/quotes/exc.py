@@ -1,6 +1,8 @@
 """Модуль для получения и обработки данных обменных курсов."""
 import logging
 import re
+import time
+from random import random
 
 import requests as req
 import sqlalchemy as sa
@@ -9,95 +11,144 @@ from bs4 import BeautifulSoup, Tag
 from db import database
 from module import crawler, websocket_parser
 from utils.quotes.base import QuotesGetter
+from utils.selenium_utils import get_driver
 
 
-def get_value(data: str) -> str:
-    """
-    Получить значение курса валюты.
+class ExchangeParser:
+    """Парсер курсов валют"""
 
-    Ищет цифры и запятые. Все точки заменяет на запятые.
+    def __init__(self, logger: logging.Logger) -> None:
+        """Инициализация парсера курсов валют"""
+        self._logger = logger
 
-    :param data:    Текст со значением курса валюты
-    :return:        значение курса валюты
-    """
-    return ''.join(re.findall(r',|\d', data.replace('.', ',')))
+    @staticmethod
+    def get_value(data: str) -> str:
+        """
+        Получить значение курса валюты.
 
+        Ищет цифры и запятые. Все точки заменяет на запятые.
 
-def parse_by_params(
-    source_page: str,
-    session: req.sessions.Session,
-    parse_params: dict[str, str | dict],
-    logger: logging.Logger,
-) -> Tag | None:
-    """
-    Распарсить по параметрам.
+        :param data:    Текст со значением курса валюты
+        :return:        значение курса валюты
+        """
+        return ''.join(re.findall(r',|\d', data.replace('.', ',')))
 
-    :param source_page:     Ссылка на источник
-    :param session:         Сессия для выполнения HTTP-запросов.
-    :param parse_params:    Параметры парсинга источника данных.
-    :param logger:          Логгер.
-    :return:                Тэг с данными о курсе валют или None
-    """
-    parser_obj = crawler.Parser(logger)
-    euro_standard, page_html = parser_obj.get_html(source_page, session)
-    html_parser = BeautifulSoup(page_html, 'html.parser')
-    return html_parser.find(parse_params['name'], **parse_params['kwargs'])
+    def parse_by_params(
+        self,
+        source_page: str,
+        session: req.sessions.Session,
+        parse_params: dict[str, str | dict],
+    ) -> Tag | None:
+        """
+        Распарсить по параметрам.
 
+        :param source_page:     Ссылка на источник
+        :param session:         Сессия для выполнения HTTP-запросов.
+        :param parse_params:    Параметры парсинга источника данных.
+        :return:                Тэг с данными о курсе валют или None
+        """
+        parser_obj = crawler.Parser(self._logger)
+        euro_standard, page_html = parser_obj.get_html(source_page, session)
+        html_parser = BeautifulSoup(page_html, 'html.parser')
+        return html_parser.find(parse_params['name'], **parse_params['kwargs'])
 
-def parse_cbr(
-    source_page: str,
-    session: req.sessions.Session,
-    parse_params: dict[str, str | dict],
-    logger: logging.Logger,
-) -> str:
-    """
-    Распарсить данные о курсах с сайта cbr
+    def parse_cbr(
+        self,
+        source_page: str,
+        session: req.sessions.Session,
+        parse_params: dict[str, str | dict],
+    ) -> str:
+        """
+        Распарсить данные о курсах с сайта cbr
 
-    :param source_page:     Ссылка на источник
-    :param session:         Сессия для выполнения HTTP-запросов.
-    :param parse_params:    Параметры парсинга источника данных.
-    :param logger:          Логгер.
-    :return:                Текущий курс
-    """
-    data = parse_by_params(source_page, session, parse_params, logger)
-    return get_value(data.parent.find_all(parse_params['children_name'])[-1].get_text())
+        :param source_page:     Ссылка на источник
+        :param session:         Сессия для выполнения HTTP-запросов.
+        :param parse_params:    Параметры парсинга источника данных.
+        :return:                Текущий курс
+        """
+        data = self.parse_by_params(source_page, session, parse_params)
+        return self.get_value(data.parent.find_all(parse_params['children_name'])[-1].get_text())
 
+    def parse_investing(
+        self,
+        source_page: str,
+        session: req.sessions.Session,
+        parse_params: dict[str, str | dict],
+    ) -> str:
+        """
+        Распарсить данные о курсах с сайта investing
 
-def parse_investing(
-    source_page: str,
-    session: req.sessions.Session,
-    parse_params: dict[str, str | dict],
-    logger: logging.Logger,
-) -> str:
-    """
-    Распарсить данные о курсах с сайта investing
+        :param source_page:     Ссылка на источник
+        :param session:         Сессия для выполнения HTTP-запросов.
+        :param parse_params:    Параметры парсинга источника данных.
+        :return:                Текущий курс
+        """
+        return self.get_value(self.parse_by_params(source_page, session, parse_params).get_text())
 
-    :param source_page:     Ссылка на источник
-    :param session:         Сессия для выполнения HTTP-запросов.
-    :param parse_params:    Параметры парсинга источника данных.
-    :param logger:          Логгер.
-    :return:                Текущий курс
-    """
-    return get_value(parse_by_params(source_page, session, parse_params, logger).get_text())
+    @staticmethod
+    def websocket_parse_finam(
+        source_page: str,
+        session: req.sessions.Session,
+        parse_params: dict[str, str | dict],
+    ) -> str:
+        """
+        Распарсить данные о курсах с сайта finam
 
+        :param source_page:     Ссылка на источник
+        :param session:         Сессия для выполнения HTTP-запросов.
+        :param parse_params:    Параметры парсинга источника данных.
+        :return:                Текущий курс
+        """
+        val = websocket_parser.parse_by_params(parse_params)
+        return str(val).replace('.', ',')
 
-def websocket_parse_finam(
-    source_page: str,
-    session: req.sessions.Session,
-    parse_params: dict[str, str | dict],
-    logger: logging.Logger,
-) -> str:
-    """
-    Распарсить данные о курсах с сайта finam
+    def __sleep_some_time(self, start: float = 1.0, end: float = 2.0) -> None:
+        """
+        Поспать некоторое время.
 
-    :param source_page:     Ссылка на источник
-    :param session:         Сессия для выполнения HTTP-запросов.
-    :param parse_params:    Параметры парсинга источника данных.
-    :param logger:          Логгер.
-    :return:                Текущий курс
-    """
-    val = websocket_parser.parse_by_params(parse_params)
-    return str(val).replace('.', ',')
+        Псевдо задержка работы пользователя в браузере.
+        Ожидание подгрузки элементов страницы
+
+        :param start:   Ждать от...
+        :param end:     Ждать до...
+        """
+        sleep_time = random.uniform(start, end)
+        self._logger.info(f'Уходим в ожидание на: {sleep_time}')
+        time.sleep(sleep_time)
+
+    def selenium_parse(
+        self,
+        source_page: str,
+        session: req.sessions.Session,
+        parse_params: dict[str, str | dict],
+    ) -> str:
+        """
+        Распарсить данные о курсах с сайта с помощью селениума.
+
+        :param source_page:     Ссылка на источник
+        :param session:         Сессия для выполнения HTTP-запросов.
+        :param parse_params:    Параметры парсинга источника данных.
+        :return:                Текущий курс
+        """
+        try:
+            driver = get_driver(self._logger)
+        except Exception as e:
+            self._logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
+            driver = None
+        self._logger.info(f'Открываем страницу о ключевых показателях компании: {source_page}')
+        driver.implicitly_wait(5)
+        driver.get(source_page)
+        self.__sleep_some_time(60.0, 65.0)
+        # time.sleep(60)
+
+        page_html = driver.page_source
+
+        self._logger.info('Ищем в html курс валюты')
+        html_parser = BeautifulSoup(page_html, 'html.parser')
+        for attr_key, attr_value in parse_params['attrs'].items():
+            parse_params['attrs'][attr_key] = re.compile(attr_value)
+        data = html_parser.find(parse_params['tag'], attrs=parse_params['attrs'])
+        return self.get_value(data.get_text())
 
 
 class WrongSource(Exception):
@@ -108,13 +159,19 @@ class ExcGetter(QuotesGetter):
     """Класс для получения и обработки данных об обменных курсах."""
 
     NAME = 'exc'
-    # Поддерживаемые источники
-    SupportedSources = dict(
-        tradingview=None,
-        finam=websocket_parse_finam,
-        cbr=parse_cbr,
-        investing=parse_investing,
-    )
+
+    def __init__(self, logger: logging.Logger) -> None:
+        """Инициализация класса получения данных об обменных курсах"""
+        super().__init__(logger)
+
+        self.parser = ExchangeParser(logger)
+        # Поддерживаемые источники
+        self.supported_sources = dict(
+            tradingview=self.parser.selenium_parse,
+            finam=self.parser.websocket_parse_finam,
+            cbr=self.parser.parse_cbr,
+            investing=self.parser.parse_investing,
+        )
 
     @staticmethod
     def filter(table_row: list) -> bool:
@@ -154,14 +211,14 @@ class ExcGetter(QuotesGetter):
         :param parse_params:    Параметры парсинга источника данных.
         :return:                Текущий курс
         """
-        for supported_source, tool in self.SupportedSources.items():
+        for supported_source, tool in self.supported_sources.items():
             if supported_source in source_page:
                 parse_tool = tool
                 break
         else:
             raise WrongSource(f'Данный источник не поддерживается: {source_page}')
 
-        return parse_tool(source_page, session, parse_params, self.logger)
+        return parse_tool(source_page, session, parse_params)
 
     def preprocess(self, tables: list, session: req.sessions.Session) -> tuple[dict[int, str], set]:
         """
