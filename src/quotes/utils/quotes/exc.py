@@ -1,8 +1,8 @@
 """Модуль для получения и обработки данных обменных курсов."""
 import logging
+import random
 import re
 import time
-from random import random
 
 import requests as req
 import sqlalchemy as sa
@@ -141,6 +141,11 @@ class ExchangeParser:
         self.__sleep_some_time(10.0, 15.0)
 
         page_html = driver.page_source
+
+        try:
+            driver.quit()
+        except Exception as e:
+            self._logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
 
         self._logger.info('Ищем в html курс валюты')
         html_parser = BeautifulSoup(page_html, 'html.parser')
