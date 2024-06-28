@@ -18,7 +18,11 @@ class ExchangeParser:
     """Парсер курсов валют"""
 
     def __init__(self, logger: logging.Logger) -> None:
-        """Инициализация парсера курсов валют"""
+        """
+        Инициализация парсера курсов валют
+
+        :param logger: Логгер.
+        """
         self._logger = logger
 
     @staticmethod
@@ -130,16 +134,11 @@ class ExchangeParser:
         :param parse_params:    Параметры парсинга источника данных.
         :return:                Текущий курс
         """
-        try:
-            driver = get_driver(self._logger)
-        except Exception as e:
-            self._logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
-            driver = None
+        driver = get_driver(self._logger)
         self._logger.info(f'Открываем страницу о ключевых показателях компании: {source_page}')
         driver.implicitly_wait(5)
         driver.get(source_page)
-        self.__sleep_some_time(60.0, 65.0)
-        # time.sleep(60)
+        self.__sleep_some_time(10.0, 15.0)
 
         page_html = driver.page_source
 
@@ -161,7 +160,11 @@ class ExcGetter(QuotesGetter):
     NAME = 'exc'
 
     def __init__(self, logger: logging.Logger) -> None:
-        """Инициализация класса получения данных об обменных курсах"""
+        """
+        Инициализация класса получения данных об обменных курсах
+
+        :param logger: Логгер.
+        """
         super().__init__(logger)
 
         self.parser = ExchangeParser(logger)

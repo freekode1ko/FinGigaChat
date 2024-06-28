@@ -30,17 +30,6 @@ class ExcCRUD(BaseCRUD[models.Exc]):
         )
         return stmt
 
-    async def get(self, id_: int) -> models.Exc | None:
-        """
-        Получить курс по его ID
-
-        :param id_: ID курса
-        :returns: Возвращает либо сам объект, который есть в БД, либо None
-        """
-        async with self._async_session_maker() as session:
-            result = await session.execute(self._get().where(self._table.id == id_).limit(1))
-            return self._sort_children(result.unique().scalar_one_or_none())
-
     async def get_all(self) -> list[models.Exc]:
         """
         Получить все курсы валют

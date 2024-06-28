@@ -3,7 +3,7 @@
 import logging
 import time
 
-from docker import errors as docker_errors
+import selenium.common.exceptions
 from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -34,7 +34,7 @@ def get_driver(logger: Logger.logger = None, connect_attempt_number: int = 1) ->
         firefox_options.add_argument('--disable-gpu')
         firefox_options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Remote(command_executor=config.SELENIUM_COMMAND_EXECUTOR, options=firefox_options)
-    except docker_errors.DockerException as e:
+    except selenium.common.exceptions.WebDriverException as e:
         logger.error('При подключении к selenium произошла ошибка: %s', e)
         time.sleep(10)
         return get_driver(logger, connect_attempt_number + 1)

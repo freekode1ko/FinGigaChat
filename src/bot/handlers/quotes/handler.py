@@ -129,7 +129,7 @@ async def exchange_info_command(message: types.Message) -> None:
     merged_cells = []
     cells_counter = 1
     data = []
-    last_exc_type = None
+    last_exc_type = ''
     for _, row in df.sort_values(['exc_type_display_order', 'display_order']).iterrows():
         if last_exc_type != row['exc_type_name']:
             last_exc_type = row['exc_type_name']
