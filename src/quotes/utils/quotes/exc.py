@@ -1,7 +1,6 @@
 """Модуль для получения и обработки данных обменных курсов."""
 import logging
 import re
-from enum import Enum
 
 import requests as req
 import sqlalchemy as sa
@@ -105,19 +104,17 @@ class WrongSource(Exception):
     """Неподдерживаемый источник данных"""
 
 
-class SupportedSourcesEnum(Enum):
-    """Поддерживаемые источники"""
-
-    tradingview = ''
-    finam = websocket_parse_finam
-    cbr = parse_cbr
-    investing = parse_investing
-
-
 class ExcGetter(QuotesGetter):
     """Класс для получения и обработки данных об обменных курсах."""
 
     NAME = 'exc'
+    # Поддерживаемые источники
+    SupportedSources = dict(
+        tradingview=None,
+        finam=websocket_parse_finam,
+        cbr=parse_cbr,
+        investing=parse_investing,
+    )
 
     @staticmethod
     def filter(table_row: list) -> bool:
@@ -140,16 +137,12 @@ class ExcGetter(QuotesGetter):
         """
         with database.engine.connect() as conn:
             query = sa.text(
-                "SELECT sg.name, p.id, p.response_format, p.source, p.params, e.id as 'exc_id' "
+                'SELECT sg.name, p.id, p.response_format, p.source, p.params, e.id as exc_id '
                 'FROM parser_source p '
                 'JOIN source_group sg ON p.source_group_id = sg.id '
                 'JOIN exc e ON e.parser_source_id = p.id '
             )
             data = conn.execute(query).all()
-            for item in data:
-                for param in item[4]:
-                    for k, v in param['attrs'].items():
-                        param['attrs'][k] = re.compile(v)
             return data
 
     def parse_source_page(self, source_page: str, session: req.sessions.Session, parse_params: dict) -> str:
@@ -161,9 +154,9 @@ class ExcGetter(QuotesGetter):
         :param parse_params:    Параметры парсинга источника данных.
         :return:                Текущий курс
         """
-        for supported_source in SupportedSourcesEnum:
-            if supported_source.name in source_page:
-                parse_tool = supported_source.value
+        for supported_source, tool in self.SupportedSources.items():
+            if supported_source in source_page:
+                parse_tool = tool
                 break
         else:
             raise WrongSource(f'Данный источник не поддерживается: {source_page}')

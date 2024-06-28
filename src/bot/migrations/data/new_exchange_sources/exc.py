@@ -17,6 +17,7 @@ for display_order, source in enumerate(parser_source.new_data):
                         .where(new_models.ExcType.name == exc_types.data[display_order // 3]['name'])
                         .scalar_subquery()),
         'parser_source_id': (sa.select(models.ParserSource.id)
-                             .where(models.ParserSource.source == source['source'])
+                             .where(models.ParserSource.source == source['source'],
+                                    models.ParserSource.name == source['name'])
                              .scalar_subquery()),
     })

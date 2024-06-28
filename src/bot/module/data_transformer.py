@@ -36,7 +36,7 @@ def mergecells(table: plt.table, cells: Iterable[tuple[int, int]]):
         cells = np.array(sorted(cells, key=lambda h: h[0]))
         edges = ['TRL'] + ['RL' for i in range(len(cells) - 2)] + ['BRL']
     else:
-        raise ValueError("Only horizontal and vertical merges allowed")
+        raise ValueError('Only horizontal and vertical merges allowed')
 
     for cell, e in zip(cells, edges):
         table[cell[0], cell[1]].visible_edges = e
@@ -234,7 +234,7 @@ class Transformer:
 
             table_bg = ax.table(bbox=bbox, cellColours=bg_colors)
             for cell in table_bg._cells.values():
-                cell.set_edgecolor("none")
+                cell.set_edgecolor('none')
 
             mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns, cellLoc='center', **kwargs)
             mpl_table.auto_set_font_size(False)
@@ -242,7 +242,7 @@ class Transformer:
 
             for k, cell in six.iteritems(mpl_table._cells):
                 cell.set_edgecolor(edge_color)
-                cell.set_facecolor("none")
+                cell.set_facecolor('none')
                 if k[0] == 0 or k[1] < header_columns:
                     cell.set_text_props(weight='bold', color='w')
                     cell.get_text().set_color(text_color)

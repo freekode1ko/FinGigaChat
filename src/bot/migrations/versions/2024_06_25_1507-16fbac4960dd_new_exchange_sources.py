@@ -26,17 +26,17 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade_update_exc_parser_sources(session: Session) -> None:
     """Обновить parser_source"""
     session.execute(sa.delete(models.ParserSource).where(models.ParserSource.source_group_id == parser_source.source_group_id_subquery))
-    session.execute(sa.insert(models.ParserSource), parser_source.new_data)
+    session.execute(sa.insert(models.ParserSource).values(parser_source.new_data))
 
 
-def upgrade_add_exc_types(exc_type_table: sa.Table) -> None:
+def upgrade_add_exc_types(session: Session) -> None:
     """Добавить типы курсов валют"""
-    op.bulk_insert(exc_type_table, exc_types.data)
+    session.execute(sa.insert(new_models.ExcType).values(exc_types.data))
 
 
 def upgrade_add_exc(session: Session) -> None:
     """Добавить курсы вaлют"""
-    session.execute(sa.insert(new_models.Exc), exc.data)
+    session.execute(sa.insert(new_models.Exc).values(exc.data))
 
 
 def upgrade() -> None:
@@ -67,7 +67,7 @@ def upgrade() -> None:
     )
     # ### end Alembic commands ###
     upgrade_update_exc_parser_sources(session)
-    upgrade_add_exc_types(exc_type_table)
+    upgrade_add_exc_types(session)
     upgrade_add_exc(session)
 
 

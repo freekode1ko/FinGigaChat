@@ -116,7 +116,7 @@ async def exchange_info_command(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     # Получаем курсы и преобразуем в таблицу
-    exc_data = exc_db.get_all()
+    exc_data = await exc_db.get_all()
     df = pd.DataFrame([
         [i.name, i.value, i.display_order, i.exc_type.name, i.exc_type.display_order]
         for i in exc_data
@@ -128,16 +128,17 @@ async def exchange_info_command(message: types.Message) -> None:
     merged_cells = []
     cells_counter = 1
     data = []
-    for exc_type_name, group in df.sort_values(['exc_type_display_order', 'display_order']).groupby('exc_type_name'):
-        data.append([exc_type_name, ''])
-        row_colors.append(header_color)
-        merged_cells.append(((cells_counter, 0), (cells_counter, 1)))
-        cells_counter += 1
-
-        for _, i in group.iterrows():
-            data.append([i['name'], i['value']])
-            row_colors.append(default_color)
+    last_exc_type = None
+    for _, row in df.sort_values(['exc_type_display_order', 'display_order']).iterrows():
+        if last_exc_type != row['exc_type_name']:
+            last_exc_type = row['exc_type_name']
+            data.append([last_exc_type, ''])
+            row_colors.append(header_color)
+            merged_cells.append(((cells_counter, 0), (cells_counter, 1)))
             cells_counter += 1
+        data.append([row['name'], row['value']])
+        row_colors.append(default_color)
+        cells_counter += 1
 
     df = pd.DataFrame(data, columns=['Валютная пара', 'Значение'])
     png_name = 'exc'
