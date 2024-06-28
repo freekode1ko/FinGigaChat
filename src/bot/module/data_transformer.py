@@ -1,7 +1,9 @@
 """data transformer"""
 import datetime
 from pathlib import Path
+from typing import Iterable
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -10,6 +12,44 @@ import six
 from configs import config
 from module import weekly_pulse_parse as wp_parse
 from utils.base import read_curdatetime
+
+
+def mergecells(table: plt.table, cells: Iterable[tuple[int, int]]):
+    """
+    Объединить ячейки таблицы
+
+    :param table: matplotlib.Table Таблица
+    :param cells: Список координат ячеек таблицы, которые надо объединить
+        - Пример: [(0,1), (0,0), (0,2)]
+    """
+    cells = tuple(cells)
+    cells_array = [np.asarray(c) for c in cells]
+    x_coords = np.array([cells_array[i + 1][0] - cells_array[i][0] for i in range(len(cells_array) - 1)])
+    y_coords = np.array([cells_array[i + 1][1] - cells_array[i][1] for i in range(len(cells_array) - 1)])
+
+    # if it's a horizontal merge, all values for `h` are 0
+    if not np.any(x_coords):
+        # sort by horizontal coord
+        cells = np.array(sorted(cells, key=lambda v: v[1]))
+        edges = ['BTL'] + ['BT' for i in range(len(cells) - 2)] + ['BTR']
+    elif not np.any(y_coords):
+        cells = np.array(sorted(cells, key=lambda h: h[0]))
+        edges = ['TRL'] + ['RL' for i in range(len(cells) - 2)] + ['BRL']
+    else:
+        raise ValueError('Only horizontal and vertical merges allowed')
+
+    for cell, e in zip(cells, edges):
+        table[cell[0], cell[1]].visible_edges = e
+
+    txts = [table[cell[0], cell[1]].get_text() for cell in cells]
+    tpos = [np.array(t.get_position()) for t in txts]
+
+    # transpose the text of the left cell
+    trans = (tpos[-1] - tpos[0]) / 2
+    # didn't have to check for ha because I only want ha='center'
+    txts[0].set_transform(mpl.transforms.Affine2D().translate(*trans))
+    for txt in txts[1:]:
+        txt.set_visible(False)
 
 
 class Transformer:
@@ -65,19 +105,21 @@ class Transformer:
 
     @staticmethod
     def render_mpl_table(
-        data,
-        name,
-        col_width=1.0,
-        row_height=0.625,
-        font_size=14,
-        header_color='#000000',
-        row_colors=['#030303', '#0E0E0E'],
-        edge_color='grey',
-        bbox=[-0.17, -0.145, 1.3, 1.31],
-        header_columns=0,
-        alias=None,
+        data: pd.DataFrame,
+        name: str,
+        col_width: float = 1.0,
+        row_height: float = 0.625,
+        font_size: float = 14,
+        header_color: str = '#000000',
+        row_colors: list[str] = ['#030303', '#0E0E0E'],
+        edge_color: str = 'grey',
+        bbox: list[float] = [-0.17, -0.145, 1.3, 1.31],
+        header_columns: int = 0,
+        alias: str | None = None,
         fin=None,
         ax=None,
+        text_color: str = 'white',
+        merged_cells: Iterable[Iterable[tuple[int, int]]] = None,
         **kwargs,
     ) -> Path:
         """Рендеринг"""
@@ -121,7 +163,7 @@ class Transformer:
                 if k[0] == 0 or k[1] < header_columns:
                     cell.set_text_props(weight='bold', color='w', fontsize=20)
                     cell.set_facecolor(header_color)
-                    cell.get_text().set_color('white')
+                    cell.get_text().set_color(text_color)
                 else:
                     cell.set_text_props(fontsize=font_size)
                     cell.set_facecolor(row_colors[k[0] % len(row_colors)])
@@ -130,7 +172,7 @@ class Transformer:
                         mpl_table._cells.get((k[0], j), None) is None or mpl_table._cells[(k[0], j)]._text.get_text() == ''
                         for j in range(2, 3)
                     ):
-                        cell.set_text_props(weight='bold', fontsize=20, color='white')
+                        cell.set_text_props(weight='bold', fontsize=20, color=text_color)
                         cell.set_linewidth(0)
                         rgb_color = (30 / 255, 31 / 255, 36 / 255)
                         cell.set_facecolor(rgb_color)
@@ -150,7 +192,7 @@ class Transformer:
                 alias,
                 fontsize=fontsize,
                 fontweight='bold',
-                color='white',
+                color=text_color,
                 ha=title_loc,
                 va='top',
                 transform=ax.transAxes,
@@ -181,19 +223,35 @@ class Transformer:
                 fig.facecolor = 'black'
                 ax.axis('off')
 
+            # Таблица задник для цветов
+            len_row_colors = len(row_colors)
+            bg_colors = [
+                tuple(header_color for _ in data.columns),
+            ] + [
+                tuple(row_colors[i % len_row_colors] if j >= header_columns else header_color for j, _ in enumerate(row))
+                for i, row in enumerate(data.values)
+            ]
+
+            table_bg = ax.table(bbox=bbox, cellColours=bg_colors)
+            for cell in table_bg._cells.values():
+                cell.set_edgecolor('none')
+
             mpl_table = ax.table(cellText=data.values, bbox=bbox, colLabels=data.columns, cellLoc='center', **kwargs)
             mpl_table.auto_set_font_size(False)
             mpl_table.set_fontsize(font_size)
 
             for k, cell in six.iteritems(mpl_table._cells):
                 cell.set_edgecolor(edge_color)
+                cell.set_facecolor('none')
                 if k[0] == 0 or k[1] < header_columns:
                     cell.set_text_props(weight='bold', color='w')
-                    cell.set_facecolor(header_color)
-                    cell.get_text().set_color('white')
+                    cell.get_text().set_color(text_color)
                 else:
-                    cell.set_facecolor(row_colors[k[0] % len(row_colors)])
-                    cell.get_text().set_color('white')
+                    cell.get_text().set_color(text_color)
+
+            if merged_cells:
+                for merged_cell_coords in merged_cells:
+                    mergecells(mpl_table, merged_cell_coords)
 
         # save png and return it to user
         png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
@@ -223,7 +281,8 @@ class Transformer:
 class Newsletter:
     """Создает текста для рассылок"""
 
-    __newsletter_dict = dict(weekly_result='Основные события прошедшей недели', weekly_event='Календарь и прогнозы текущей недели')
+    __newsletter_dict = dict(weekly_result='Основные события прошедшей недели',
+                             weekly_event='Календарь и прогнозы текущей недели')
 
     @classmethod
     def get_newsletter_dict(cls) -> dict[str, str]:
