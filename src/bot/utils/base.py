@@ -566,6 +566,7 @@ async def send_pdf(
         for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
             media_group.add_document(media=types.FSInputFile(fpath))
 
+        await callback_query.message.bot.send_chat_action(callback_query.message.chat.id, 'upload_document')
         await callback_query.message.answer_media_group(media_group.build(), protect_content=protect_content)
 
     return True

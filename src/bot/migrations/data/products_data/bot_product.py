@@ -1,6 +1,6 @@
 import sqlalchemy as sa
 
-from db import models
+from migrations.models.products_data import new_models as models
 from migrations.data.products_data import bot_product_group
 
 data = [

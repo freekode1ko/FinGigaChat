@@ -9,8 +9,9 @@ from aiogram.types import TelegramObject
 class LoggingMiddleware(BaseMiddleware):
     """Middleware для удобной передачи логера"""
 
-    def __init__(self, logger: logging.Logger) -> None:
+    def __init__(self, logger: logging.Logger, db_logger: logging.Logger) -> None:
         self.logger = logger
+        self.db_logger = db_logger
 
     async def __call__(
             self,
@@ -19,4 +20,5 @@ class LoggingMiddleware(BaseMiddleware):
             data: dict[str, Any]) -> Any:
         """Передачи логера"""
         data['logger'] = self.logger
+        data['db_logger'] = self.db_logger
         return await handler(event, data)
