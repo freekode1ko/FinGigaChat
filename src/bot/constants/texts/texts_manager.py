@@ -1,6 +1,6 @@
 """Клас для получения файла из конфига редиса"""
 
-from constants.texts.texts import AllListOfTexts, CallReportsTexts
+from constants.texts.texts import CONFIG_CLASSES
 from db.redis.client import redis_client_sync as redis_client
 
 
@@ -8,7 +8,7 @@ class TextsManager:
     """Класс для хранения конфига в редисе"""
 
     def __init__(self):
-        self.__configs = [AllListOfTexts(), CallReportsTexts()]
+        self.__configs = [x() for x in CONFIG_CLASSES]
         self.__init_values()
 
     def __init_values(self):
