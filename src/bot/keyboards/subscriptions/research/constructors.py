@@ -40,7 +40,9 @@ def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Изменить подписки',
-        callback_data=callbacks.GetCIBGroups().pack(),
+        callback_data=callbacks.GetCIBGroupSections(
+            group_id=1,
+        ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Удалить все подписки',
@@ -149,6 +151,8 @@ def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
 
     for index, item in group_df.iterrows():
+        if item['name'] == 'Клиенты':
+            continue
         get_group_sections_callback = callbacks.GetCIBGroupSections(
             group_id=item['id'],
         )
@@ -191,6 +195,8 @@ def get_research_sections_by_group_menu_kb(
     keyboard = InlineKeyboardBuilder()
 
     for index, item in section_df.iterrows():
+        if item['name'] == 'Отрасли':
+            continue
         if item['dropdown_flag']:
             button_txt = item['name'].capitalize()
             section_callback = callbacks.GetCIBSectionResearches(
@@ -217,7 +223,7 @@ def get_research_sections_by_group_menu_kb(
     # ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callbacks.GetCIBGroups().pack(),
+        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
