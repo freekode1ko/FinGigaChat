@@ -89,3 +89,19 @@ async def get_research_type_source_by_name(source_name: str) -> dict[str, int | 
             'request_method': data.response_format,
         }
         return source
+
+
+def update_get_datetime_by_source(source: str) -> None:
+    """
+    Обновляет время сбора данных с источника по ссылке на источник.
+
+    :param source: Ссылка на источник собираемых данных.
+    """
+    query = sa.update(ParserSource).values(
+        previous_update_datetime=ParserSource.last_update_datetime,
+        last_update_datetime=datetime.datetime.now()
+    ).where(ParserSource.source == source)
+
+    with database.engine.connect() as conn:
+        conn.execute(query)
+        conn.commit()
