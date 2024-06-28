@@ -160,7 +160,10 @@ async def exchange_info_command(message: types.Message) -> None:
     photo = types.FSInputFile(png_path)
     title = 'Курсы валют'
     data_source = 'investing.com, ru.tradingview.com, www.finam.ru, www.cbr.ru'
-    exc_data.sort(key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min, reverse=True)
+    exc_data.sort(
+        key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min,
+        reverse=True,
+    )
     curdatetime = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
     await utils.base.__sent_photo_and_msg(
         message,
