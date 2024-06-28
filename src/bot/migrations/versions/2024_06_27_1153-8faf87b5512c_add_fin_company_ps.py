@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from db.models import Client, FinancialSummary, ParserSource
+from db.models import Client, FinancialSummary, ParserSource, SourceGroup
 
 # revision identifiers, used by Alembic.
 revision: str = '8faf87b5512c'
@@ -32,7 +32,7 @@ def upgrade_add_ps_for_financial_summary(session: sa.orm.Session):
     for client_id_tuple in clients_ids:
         query = sa.insert(ParserSource).values(
             name=f'Финансовые показатели: {client_id_tuple[0]}',
-            source_group_id=7,
+            source_group_id=sa.select(SourceGroup.id).where(SourceGroup.name_latin == 'CIB').scalar_subquery(),
             source=f'{URL}{client_id_tuple[1]}',
             alt_names={},
         )
