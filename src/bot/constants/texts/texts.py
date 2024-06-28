@@ -3,9 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class AllListOfTexts(BaseSettings):
-    """
-    Класс для хранения текстовок, которы будут загружены в редис
-    """
+    """Класс для хранения текстовок, которы будут загружены в редис"""
 
     pass
 
