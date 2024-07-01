@@ -40,9 +40,7 @@ def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Изменить подписки',
-        callback_data=callbacks.GetCIBGroupSections(
-            group_id=1,
-        ).pack(),
+        callback_data=callbacks.GetCIBGroups().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Удалить все подписки',
@@ -221,7 +219,7 @@ def get_research_sections_by_group_menu_kb(
     # ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+        callback_data=callbacks.GetCIBGroups().pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
