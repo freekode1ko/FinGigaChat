@@ -3,7 +3,6 @@ import datetime
 from pathlib import Path
 from typing import Iterable
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
