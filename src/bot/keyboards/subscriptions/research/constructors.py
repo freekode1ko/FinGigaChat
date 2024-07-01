@@ -151,8 +151,6 @@ def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
 
     for index, item in group_df.iterrows():
-        if item['name'] == 'Клиенты':
-            continue
         get_group_sections_callback = callbacks.GetCIBGroupSections(
             group_id=item['id'],
         )
