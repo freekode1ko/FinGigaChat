@@ -13,7 +13,7 @@ import time
 from typing import List
 
 import pandas as pd
-from aiogram import Bot, types
+from aiogram import Bot, exceptions, types
 from aiogram.utils.media_group import MediaGroupBuilder
 
 import module.data_transformer as dt
@@ -340,14 +340,21 @@ async def send_new_researches_to_users(bot: Bot) -> None:
         for research_section_name, section_researches_df in research_df_group_by_section:
             # отправка отчета пользователю
             start_msg = f'Ваша новостная рассылка по подпискам на отчеты по разделу <b>{research_section_name}</b>:'
-            msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
-            saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
-
-            sent_msg_list = await send_researches_to_user(bot, user_id, user_name, section_researches_df)
-            saved_messages.extend(
-                dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type)
-                for m in sent_msg_list
-            )
+            try:
+                msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
+                sent_msg_list = await send_researches_to_user(bot, user_id, user_name, section_researches_df)
+            except exceptions.TelegramForbiddenError as e:
+                logger.error(f'При рассылке по подпискам на отчеты пользователю {user_id} произошла ошибка: %s', e)
+                break
+            except exceptions.TelegramAPIError as e:
+                logger.error(f'При рассылке по подпискам на отчеты пользователю {user_id} произошла ошибка: %s', e)
+                continue
+            else:
+                saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+                saved_messages.extend(
+                    dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type)
+                    for m in sent_msg_list
+                )
 
     message.add_all(saved_messages)
 
@@ -387,9 +394,13 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
         user_id = user_row['user_id']
         logger.info(f'Рассылка Weekly Check up пользователю {user_id}')
         # отправка отчета пользователю
-        msg = await bot.send_document(user_id, document=weekly_check_up_document, caption=msg_text,
-                                      protect_content=True, parse_mode='HTML')
-        saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
+        try:
+            msg = await bot.send_document(user_id, document=weekly_check_up_document, caption=msg_text,
+                                          protect_content=True, parse_mode='HTML')
+        except exceptions.TelegramAPIError as e:
+            logger.error(f'При рассылке weekly check up пользователю {user_id} произошла ошибка: %s', e)
+        else:
+            saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
 
     message.add_all(saved_messages)
 
