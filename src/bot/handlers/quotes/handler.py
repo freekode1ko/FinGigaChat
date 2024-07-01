@@ -127,6 +127,7 @@ async def exchange_info_command(message: types.Message) -> None:
     default_color = '#ffffff'
     row_colors = []
     merged_cells = []
+    text_props = []
     cells_counter = 1
     data = []
     last_exc_type = ''
@@ -136,7 +137,15 @@ async def exchange_info_command(message: types.Message) -> None:
             data.append([last_exc_type, ''])
             row_colors.append(header_color)
             merged_cells.append(((cells_counter, 0), (cells_counter, 1)))
+            text_props.append((cells_counter, 0, dict(fontstyle='italic', fontweight='bold')))
             cells_counter += 1
+
+        # Добавляем пробелы между тысячами
+        try:
+            row['value'] = f'{float(row["value"]):_}'.replace('_', ' ')
+        except ValueError:
+            pass
+
         data.append([row['name'], row['value']])
         row_colors.append(default_color)
         cells_counter += 1
@@ -153,6 +162,7 @@ async def exchange_info_command(message: types.Message) -> None:
         font_size=16,
         text_color='black',
         merged_cells=merged_cells,
+        text_props=text_props,
     )
 
     day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()

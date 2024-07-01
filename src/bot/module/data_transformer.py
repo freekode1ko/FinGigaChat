@@ -42,12 +42,6 @@ def mergecells(table: plt.table, cells: Iterable[tuple[int, int]]):
         table[cell[0], cell[1]].visible_edges = e
 
     txts = [table[cell[0], cell[1]].get_text() for cell in cells]
-    tpos = [np.array(t.get_position()) for t in txts]
-
-    # transpose the text of the left cell
-    trans = (tpos[-1] - tpos[0]) / 2
-    # didn't have to check for ha because I only want ha='center'
-    txts[0].set_transform(mpl.transforms.Affine2D().translate(*trans))
     for txt in txts[1:]:
         txt.set_visible(False)
 
@@ -120,6 +114,7 @@ class Transformer:
         ax=None,
         text_color: str = 'white',
         merged_cells: Iterable[Iterable[tuple[int, int]]] = None,
+        text_props: list[tuple[int, int, dict[str, str]]] = None,
         **kwargs,
     ) -> Path:
         """Рендеринг"""
@@ -248,6 +243,10 @@ class Transformer:
                     cell.get_text().set_color(text_color)
                 else:
                     cell.get_text().set_color(text_color)
+
+            if text_props:
+                for x, y, props in text_props:
+                    mpl_table[x, y].set_text_props(**props)
 
             if merged_cells:
                 for merged_cell_coords in merged_cells:
