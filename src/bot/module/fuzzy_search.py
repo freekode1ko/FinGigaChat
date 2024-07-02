@@ -35,7 +35,11 @@ class FuzzyAlternativeNames:
         async with async_session() as session:
             for table_with_attr_tuple in self.tables_with_attr_tuples:
                 table_alt, table_alt_pk, table_main = table_with_attr_tuple
-                stmt = sa.select(table_alt.other_name, table_main.name).join(table_alt, table_alt_pk == table_main.id).filter(table_alt.other_name.in_(alt_names))
+                stmt = (
+                    sa.select(table_alt.other_name, table_main.name)
+                    .join(table_alt, table_alt_pk == table_main.id)
+                    .filter(table_alt.other_name.in_(alt_names))
+                )
                 result = await session.execute(stmt)
                 main_names_dict.update({alt_main_name[0]: alt_main_name[1] for alt_main_name in result.all()})
                 if len(main_names_dict) == len(alt_names):
