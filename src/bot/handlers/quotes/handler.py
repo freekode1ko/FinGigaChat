@@ -126,7 +126,6 @@ async def exchange_info_command(message: types.Message) -> None:
     header_color = '#E2EFDA'
     default_color = '#ffffff'
     row_colors = []
-    merged_cells = []
     text_props = []
     cells_counter = 1
     data = []
@@ -136,7 +135,6 @@ async def exchange_info_command(message: types.Message) -> None:
             last_exc_type = row['exc_type_name']
             data.append([last_exc_type, ''])
             row_colors.append(header_color)
-            merged_cells.append(((cells_counter, 0), (cells_counter, 1)))
             text_props.append((cells_counter, 0, dict(fontstyle='italic', fontweight='bold')))
             cells_counter += 1
 
@@ -153,15 +151,14 @@ async def exchange_info_command(message: types.Message) -> None:
     df = pd.DataFrame(data, columns=['Валютная пара', 'Значение'])
     png_name = 'exc'
     transformer = dt.Transformer()
-    png_path = transformer.render_mpl_table(
+    png_path = transformer.draw_table(
         df,
         png_name,
-        col_width=4,
+        col_width=3,
         header_color=header_color,
         row_colors=row_colors,
         font_size=16,
         text_color='black',
-        merged_cells=merged_cells,
         text_props=text_props,
     )
 
