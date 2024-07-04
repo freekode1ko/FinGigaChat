@@ -1,17 +1,16 @@
-from contextlib import asynccontextmanager
 import ssl
 
+import aiohttp
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 
 import config
+import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
-import utils
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,7 +23,6 @@ logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 templates = Jinja2Templates(directory="frontend/templates")
-
 
 if not config.DEBUG:
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -88,3 +86,55 @@ async def create_meeting(
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
+
+
+@app.get('/quotation/{currency}')
+async def get_quotes(currency: str) -> JSONResponse:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'https://open.er-api.com/v6/latest/{currency}') as response:
+            if response.status != 200:
+                raise Exception
+
+            content = await response.json()
+            return JSONResponse(content['rates'])
+
+
+@app.get('/quotation')
+async def get_quotation(from_currency: str, to_currency) -> JSONResponse:
+    async with (aiohttp.ClientSession() as session):
+        async with session.get(
+                f'https://www.alphavantage.co/query?function=FX_DAILY&from_symbol={from_currency}&to_symbol={to_currency}&apikey=NH8NVX5T3WA054E6'
+        ) as response:
+            if response.status != 200:
+                raise Exception
+
+            content = await response.json()
+            ret = {
+                'from_currency': from_currency,
+                'to_currency': to_currency,
+                'Time Series FX': content['Time Series FX (Daily)']
+            }
+
+            return JSONResponse(ret)
+
+
+@app.get('/news/')
+async def get_news() -> JSONResponse:
+    return JSONResponse(
+        {
+            'news': [
+                {
+                    'section': 'Валютный рынок и процентные ставки - 3 июля 2024.',
+                    'title': 'Укрепление рубля может продолжиться',
+                    'text': "Валютный рынок: укрепление рубля может продолжиться. Вчера рубль подешевел до 11,94 за юань, но вечером восстановился до 11,8, поскольку спрос на валюту сейчас невелик. Коммерсант сообщил, что Ozon столкнулся со сложностями при проведении трансграничных платежей. В частности, возникли проблемы с оформлением заказов крупной бытовой техники из Китая.\nСегодня (03 июл, '24) утром рубль подешевел до 11,87 за юань. Однако мы полагаем, что это ослабление временно и спрос на валюту может снизиться, а экспортеры будут ее постепенно продавать для выплаты крупных налогов и дивидендов в июле в размере 2,3 трлн руб. - максимум с октября 2022 года. В этих условиях рубль может укрепиться до 11,7 за юань.",
+                    'date': "03 июл, '24",
+                },
+                {
+                    'section': 'Валютный рынок и процентные ставки - 2 июля 2024.',
+                    'title': 'Укрепление рубля может возобновиться',
+                    'text': "Валютный рынок: укрепление рубля может возобновиться. Вчера рубль продолжил дешеветь после окончания периода налоговых выплат и отступил еще на 1% почти до 11,9 за юань. Обороты торгов по паре CNY/RUB на спотовом рынке МосБиржи снизились на 60 млрд руб. до 172 млрд руб., что говорит об уменьшении активности экспортеров.",
+                    'date': "02 июл, '24",
+                }
+            ]
+        }
+    )
