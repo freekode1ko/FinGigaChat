@@ -15,9 +15,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from constants import constants
+from constants import constants, enums
 from db import models
-from db.api import industry
+from db.api import beneficiary, industry
 from db.api.subject_interface import SubjectInterface
 from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
@@ -609,3 +609,103 @@ async def get_industry_news_by_period(
         await callback_query.message.answer(msg_text, parse_mode='HTML')
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 95) -> bool:
+    """
+    Является ли введенное сообщение бенефициаром, и если да, вывод меню бенефициара или новостей.
+
+    :param message:      Сообщение от пользователя.
+    :param fuzzy_score:  Величина в процентах совпадение с референсными именами бенефициара.
+    :return:             Булевое значение о том что совпадает ли сообщение с именем бенефициара.
+    """
+    ben_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
+        message.text,
+        subject_types=[models.BeneficiaryAlternative, ],
+        score=fuzzy_score
+    )
+
+    if not ben_ids or len(set(ben_ids)) != 1:
+        return False
+
+    ben_id = ben_ids[0]
+    clients = await beneficiary.get_beneficiary_clients(ben_id)
+    if not clients:  # такого случая по факту не должно быть
+        return False
+
+    ben_name = await beneficiary.get_beneficiary_name(ben_id)
+    ben_name = utils.decline_name(ben_name).title()
+    if len(clients) > 1:
+        msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
+        keyboard = keyboards.get_select_beneficiary_clients_kb(ben_id, clients)
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML', reply_markeup=types.ReplyKeyboardRemove())
+    else:
+        ap_obj = ArticleProcess(logger)
+        msg_text = f'Вот новости по активам <b>{ben_name}</b>:\n\n'
+        _, articles_text = await ap_obj.process_user_alias(
+            subject=enums.SubjectType.client,
+            subject_id=clients[0].id,
+            limit_val=2
+        )
+        await bot_send_msg(message.bot, message.from_user.id, msg_text + articles_text)
+
+    return True
+
+
+@router.callback_query(callback_data_factories.BeneficiaryData.filter(
+    F.menu == callback_data_factories.NewsMenusEnum.choose_beneficiary_clients
+))
+async def choose_beneficiary_clients(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.BeneficiaryData,
+) -> None:
+    """
+    Обновление меню клиентов бенефициара.
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:   Информация о выбранной группе клиентов бенефициара.
+    """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    selected_ids = utils.get_selected_ids_from_callback_data(callback_data)
+    selected_ids = utils.update_selected_ids(selected_ids, callback_data.subject_id)
+    callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
+
+    clients = await beneficiary.get_beneficiary_clients(callback_data.beneficiary_id)
+    ben_name = await beneficiary.get_beneficiary_name(callback_data.beneficiary_id)
+    ben_name = utils.decline_name(ben_name).title()
+    msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
+    keyboard = keyboards.get_select_beneficiary_clients_kb(callback_data.beneficiary_id, clients, callback_data)
+    await send_or_edit(callback_query, msg_text, keyboard)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
+@router.callback_query(
+    callback_data_factories.BeneficiaryData.filter(F.menu == callback_data_factories.NewsMenusEnum.show_news)
+)
+async def show_beneficiary_articles(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.BeneficiaryData,
+) -> None:
+    """
+    Отправка новостей по выбранным клиентам бенефициара.
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:   Информация о выбранной группе клиентов бенефициара.
+    """
+    clients_ids = utils.get_selected_ids_from_callback_data(callback_data)
+    ben_name = await beneficiary.get_beneficiary_name(callback_data.beneficiary_id)
+    ben_name = utils.decline_name(ben_name).title()
+    await callback_query.message.edit_text(f'Новости по активам <b>{ben_name}</b>', parse_mode='HTML')
+
+    ap_obj = ArticleProcess(logger)
+    for client_id in clients_ids:
+        _, articles = await ap_obj.process_user_alias(
+            subject=enums.SubjectType.client,
+            subject_id=client_id,
+            limit_val=2
+        )
+        await bot_send_msg(callback_query.bot, callback_query.from_user.id, articles)
