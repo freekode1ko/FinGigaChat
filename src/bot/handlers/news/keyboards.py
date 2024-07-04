@@ -6,6 +6,7 @@
 Меню выбора тг разделов.
 Меню выбора клиентов и сырья.
 Меню выбора периода получения новостей.
+Меню выбора клиента бенефициара.
 """
 from typing import Any
 
@@ -16,7 +17,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
 from db import models
-from handlers.news import callback_data_factories
+from handlers.news import callback_data_factories, utils
 from keyboards.base import get_pagination_kb
 
 
@@ -364,5 +365,62 @@ def get_periods_kb(
         callback_data=callback_data_factories.NewsMenuData(
             menu=callback_data_factories.NewsMenusEnum.end_menu,
         ).pack(),
+    ))
+    return keyboard.as_markup()
+
+
+def get_select_beneficiary_clients_kb(
+        beneficiary_id: int,
+        clients: list[models.Client],
+        callback_data: callback_data_factories.BeneficiaryData | None = None,
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида.
+
+    [✅/🟩][Имя клиента 1]
+    [✅/🟩][...]
+    [✅/🟩][Имя клиента N]
+    [Получить новости]
+    [Завершить]
+
+    :param beneficiary_id:   ID бенефициара, по которому нужно получить меню клиентов.
+    :param clients:          Список из клиентов, которые относятся к бенефициару.
+    :param callback_data:    Данные о текущем меню.
+    :return:                 Клавиатуру с клиентами бенефициара.
+    """
+    keyboard = InlineKeyboardBuilder()
+    if callback_data:
+        subject_ids = callback_data.subject_ids
+        subject_ids_list = utils.get_selected_ids_from_callback_data(callback_data)
+    else:
+        subject_ids = '0'
+        subject_ids_list = []
+
+    for client in clients:
+        button_call = callback_data_factories.BeneficiaryData(
+            menu=callback_data_factories.NewsMenusEnum.choose_beneficiary_clients,
+            beneficiary_id=beneficiary_id,
+            subject_id=client.id,
+            subject_ids=subject_ids,
+        ).pack()
+
+        mark = constants.SELECTED if client.id in subject_ids_list else constants.UNSELECTED
+        keyboard.row(
+            types.InlineKeyboardButton(text=mark, callback_data=button_call),
+            types.InlineKeyboardButton(text=client.name, callback_data=button_call)
+        )
+
+    if subject_ids != '0':
+        keyboard.row(types.InlineKeyboardButton(
+            text='Получить новости',
+            callback_data=callback_data_factories.BeneficiaryData(
+                menu=callback_data_factories.NewsMenusEnum.show_news,
+                subject_ids=subject_ids,
+                beneficiary_id=beneficiary_id,
+            ).pack()
+        ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_data_factories.NewsMenuData(menu=callback_data_factories.NewsMenusEnum.end_menu).pack()
     ))
     return keyboard.as_markup()
