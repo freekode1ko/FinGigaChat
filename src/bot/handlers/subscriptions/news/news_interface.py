@@ -329,7 +329,7 @@ class NewsHandler:
             new_subs = subscriptions[~subscriptions['id'].isin(user_subscription_df['id'])].drop_duplicates(subset='id')
             if len(subscriptions) < len(user_request):
                 list_of_unknown = list(set(user_request) - set(subscriptions['other_name']))
-                fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+                fuzzy_searcher = FuzzyAlternativeNames()
                 near_to_list_of_unknown = '\n'.join(
                     await fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown, self.subject_names_to_find_nearest)
                 )

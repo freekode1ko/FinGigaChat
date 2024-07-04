@@ -360,7 +360,7 @@ async def find_subject_by_name(
     subject_db = subject.subject_db
     user_subject_subscription = subject.subject_subscription_db
 
-    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    fuzzy_searcher = FuzzyAlternativeNames()
     subject_ids = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[subject_db.table_alternative])
     subjects = await subject_db.get_by_ids(subject_ids)
     subject_subscriptions = await user_subject_subscription.get_subscription_df(message.chat.id)
@@ -631,7 +631,8 @@ async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 9
     ben_id = ben_ids[0]
     clients = await beneficiary.get_beneficiary_clients(ben_id)
     if not clients:  # такого случая по факту не должно быть
-        return False
+        await message.answer('Пока нет новостей на эту тему', reply_markeup=types.ReplyKeyboardRemove())
+        return True
 
     ben_name = await beneficiary.get_beneficiary_name(ben_id)
     ben_name = utils.decline_name(ben_name).title()

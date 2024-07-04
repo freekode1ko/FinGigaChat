@@ -166,7 +166,6 @@ async def clients_list(
 async def clients_subscriptions_list(
         message: types.Message,
         state: FSMContext,
-        logger: logging.Logger,
 ) -> None:
     """
     Поиск по клиентам, на которые пользователь подписаны
@@ -177,7 +176,7 @@ async def clients_subscriptions_list(
     """
     subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
 
-    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    fuzzy_searcher = FuzzyAlternativeNames()
     clients_id = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[models.ClientAlternative])
     clients = await client_db.get_by_ids(clients_id)
     client_subscriptions = await user_client_subscription_db.get_subscription_df(message.chat.id)
