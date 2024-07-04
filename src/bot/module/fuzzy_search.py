@@ -21,6 +21,7 @@ class FuzzyAlternativeNames:
             (models.ClientAlternative, models.ClientAlternative.client_id, models.Client),
             (models.CommodityAlternative, models.CommodityAlternative.commodity_id, models.Commodity),
             (models.IndustryAlternative, models.IndustryAlternative.industry_id, models.Industry),
+            (models.BeneficiaryAlternative, models.BeneficiaryAlternative.beneficiary_id, models.Beneficiary),
         ]
 
     async def get_main_names(self, alt_names: list[str]) -> list[str]:
