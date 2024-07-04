@@ -14,7 +14,6 @@ class FuzzyAlternativeNames:
 
     def __init__(self):
         """Инициализация экземпляра модуля неточного поиска"""
-
         self.tables_with_attr_tuples = [
             (models.ClientAlternative, models.ClientAlternative.client_id, models.Client),
             (models.CommodityAlternative, models.CommodityAlternative.commodity_id, models.Commodity),

@@ -22,7 +22,7 @@ from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
 from db.api.user_research_subscription import user_research_subscription_db
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
-from log.bot_logger import logger, user_logger
+from log.bot_logger import user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit
 
