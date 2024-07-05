@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="{{ url_for('static', path='/css/main.css') }}">
+        <title>Котировки</title>
+    </head>
+    <body>
+        <header class="header">
+            <ul class="menu-list">
+                <li class="menu-item active">
+                    <i data-lucide="activity"></i>
+                    <a class="menu-link" href="/">Котировки</a>
+                </li>
+                <li class="menu-item">
+                    <i data-lucide="newspaper"></i>
+                    <a class="menu-link" href="/">Новости</a>
+                </li>
+            </ul>
+        </header>
+        <div class="container">
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Просмотр текущих котировок</h2>
+                </div>
+                <div id="quotes" class="quotes-list"></div>
+                <div class="section-actions">
+                    <button id="load-quotes" class="button-link">Показать еще <i data-lucide="chevron-down"></i></button>
+                </div>
+            </section>
+            <section class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Последние новости</h2>
+                </div>
+                <div id="news" class="news-list"></div>
+            </section>
+        </div>
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <script src="{{ url_for('static', path='/js/script.js') }}"></script>
+    </body>
+</html>
