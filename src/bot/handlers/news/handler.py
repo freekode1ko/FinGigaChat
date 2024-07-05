@@ -628,24 +628,22 @@ async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 9
     if not ben_ids or len(set(ben_ids)) != 1:
         return False
 
-    ben_id = ben_ids[0]
-    clients = await beneficiary.get_beneficiary_clients(ben_id)
-    if not clients:  # такого случая по факту не должно быть
+    ben_obj = await beneficiary.get_beneficiary_by_id(ben_ids[0])
+    if not ben_obj.clients:  # такого случая по факту не должно быть
         await message.answer('Пока нет новостей на эту тему', reply_markeup=types.ReplyKeyboardRemove())
         return True
 
-    ben_name = await beneficiary.get_beneficiary_name(ben_id)
-    ben_name = utils.decline_name(ben_name).title()
-    if len(clients) > 1:
+    ben_name = utils.decline_name(ben_obj.name).title()
+    if len(ben_obj.clients) > 1:
         msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
-        keyboard = keyboards.get_select_beneficiary_clients_kb(ben_id, clients)
+        keyboard = keyboards.get_select_beneficiary_clients_kb(ben_obj.id, ben_obj.clients)
         await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML', reply_markeup=types.ReplyKeyboardRemove())
     else:
         ap_obj = ArticleProcess(logger)
         msg_text = f'Вот новости по активам <b>{ben_name}</b>:\n\n'
         _, articles_text = await ap_obj.process_user_alias(
             subject=enums.SubjectType.client,
-            subject_id=clients[0].id,
+            subject_id=ben_obj.clients[0].client.id,
             limit_val=2
         )
         await bot_send_msg(message.bot, message.from_user.id, msg_text + articles_text)
@@ -667,7 +665,6 @@ async def choose_beneficiary_clients(
     :param callback_data:   Информация о выбранной группе клиентов бенефициара.
     """
     chat_id = callback_query.message.chat.id
-    user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
@@ -675,13 +672,12 @@ async def choose_beneficiary_clients(
     selected_ids = utils.update_selected_ids(selected_ids, callback_data.subject_id)
     callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
 
-    clients = await beneficiary.get_beneficiary_clients(callback_data.beneficiary_id)
-    ben_name = await beneficiary.get_beneficiary_name(callback_data.beneficiary_id)
-    ben_name = utils.decline_name(ben_name).title()
+    ben_obj = await beneficiary.get_beneficiary_by_id(callback_data.beneficiary_id)
+    ben_name = utils.decline_name(ben_obj.name).title()
     msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
-    keyboard = keyboards.get_select_beneficiary_clients_kb(callback_data.beneficiary_id, clients, callback_data)
+    keyboard = keyboards.get_select_beneficiary_clients_kb(callback_data.beneficiary_id, ben_obj.clients, callback_data)
     await send_or_edit(callback_query, msg_text, keyboard)
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
 
 @router.callback_query(
@@ -710,3 +706,6 @@ async def show_beneficiary_articles(
             limit_val=2
         )
         await bot_send_msg(callback_query.bot, callback_query.from_user.id, articles)
+    user_logger.info(
+        f'*{callback_query.from_user.id}* {callback_query.from_user.full_name} - получил новости по {ben_name}'
+    )

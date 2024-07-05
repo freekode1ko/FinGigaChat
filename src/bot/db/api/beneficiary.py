@@ -1,24 +1,9 @@
 """Запросы к бд связанные с бенефициарами."""
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from db.database import async_session
-from db.models import Beneficiary, Client, RelationClientBeneficiary
-
-
-async def get_beneficiary_clients(ben_id: int) -> list[Client]:
-    """
-    Получение клиентов, относящихся к бенефициару.
-
-    :param ben_id:   ID бенефициара.
-    :return:         Список из клиентов, относящихся к бенефициару.
-    """
-    async with async_session() as session:
-        result = await session.execute(
-            select(Client)
-            .join(RelationClientBeneficiary)
-            .where(RelationClientBeneficiary.beneficiary_id == ben_id)
-        )
-        return result.scalars().all()
+from db.models import Beneficiary, RelationClientBeneficiary
 
 
 async def get_beneficiary_name(ben_id: int) -> str:
@@ -30,4 +15,21 @@ async def get_beneficiary_name(ben_id: int) -> str:
     """
     async with async_session() as session:
         result = await session.execute(select(Beneficiary.name).where(Beneficiary.id == ben_id))
+        return result.scalar()
+
+
+async def get_beneficiary_by_id(ben_id: int) -> Beneficiary:
+    """
+    Получение бенефициара.
+
+    :param ben_id:   ID бенефициара.
+    :return:         Сущность бенефициара.
+    """
+    async with async_session() as session:
+        stmt = (
+            select(Beneficiary)
+            .options(joinedload(Beneficiary.clients).joinedload(RelationClientBeneficiary.client))
+            .where(Beneficiary.id == ben_id)
+        )
+        result = await session.execute(stmt)
         return result.scalar()

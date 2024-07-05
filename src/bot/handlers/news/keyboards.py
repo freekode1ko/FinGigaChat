@@ -371,7 +371,7 @@ def get_periods_kb(
 
 def get_select_beneficiary_clients_kb(
         beneficiary_id: int,
-        clients: list[models.Client],
+        relation_client_ben: list[models.RelationClientBeneficiary],
         callback_data: callback_data_factories.BeneficiaryData | None = None,
 ) -> InlineKeyboardMarkup:
     """
@@ -383,10 +383,10 @@ def get_select_beneficiary_clients_kb(
     [Получить новости]
     [Завершить]
 
-    :param beneficiary_id:   ID бенефициара, по которому нужно получить меню клиентов.
-    :param clients:          Список из клиентов, которые относятся к бенефициару.
-    :param callback_data:    Данные о текущем меню.
-    :return:                 Клавиатуру с клиентами бенефициара.
+    :param beneficiary_id:      ID бенефициара, по которому нужно получить меню клиентов.
+    :param relation_client_ben: Отношения между клиентами и бенефициаром.
+    :param callback_data:       Данные о текущем меню.
+    :return:                    Клавиатуру с клиентами бенефициара.
     """
     keyboard = InlineKeyboardBuilder()
     if callback_data:
@@ -396,18 +396,18 @@ def get_select_beneficiary_clients_kb(
         subject_ids = '0'
         subject_ids_list = []
 
-    for client in clients:
+    for relation in relation_client_ben:
         button_call = callback_data_factories.BeneficiaryData(
             menu=callback_data_factories.NewsMenusEnum.choose_beneficiary_clients,
             beneficiary_id=beneficiary_id,
-            subject_id=client.id,
+            subject_id=relation.client.id,
             subject_ids=subject_ids,
         ).pack()
 
-        mark = constants.SELECTED if client.id in subject_ids_list else constants.UNSELECTED
+        mark = constants.SELECTED if relation.client.id in subject_ids_list else constants.UNSELECTED
         keyboard.row(
             types.InlineKeyboardButton(text=mark, callback_data=button_call),
-            types.InlineKeyboardButton(text=client.name, callback_data=button_call)
+            types.InlineKeyboardButton(text=relation.client.name, callback_data=button_call)
         )
 
     if subject_ids != '0':
