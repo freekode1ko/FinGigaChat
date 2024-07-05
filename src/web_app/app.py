@@ -12,15 +12,15 @@ import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     await utils.add_notify_job(logger)
-#     utils.scheduler.start()
-#     yield
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await utils.add_notify_job(logger)
+    utils.scheduler.start()
+    yield
 
 logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 templates = Jinja2Templates(directory="frontend/templates")
 
@@ -30,7 +30,7 @@ if not config.DEBUG:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], ## allow all origins
+    allow_origins=[config.WEB_APP_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

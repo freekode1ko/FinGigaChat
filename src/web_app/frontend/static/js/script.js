@@ -4,28 +4,35 @@ let LOADED_QUOTES = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
   lucide.createIcons();
+  const CURRENT_URL = window.location.href;
+  if (CURRENT_URL.includes("/quotation/")) {
+    let quotesData;
+    fetch(API_URL.concat("quotation/RUB"))
+      .then((response) => response.json())
+      .then((data) => {
+        quotesData = data;
+        renderQuotesData(quotesData);
+      })
+      .catch((err) => console.error("Котировки не были загружены", err));
 
-  let quotesData;
-  fetch(API_URL.concat("quotation/RUB"))
-    .then((response) => response.json())
-    .then((data) => {
-      quotesData = data;
+    fetch(API_URL.concat("news/"))
+      .then((response) => response.json())
+      .then((data) => renderShortNewsData(data.news))
+      .catch((err) => console.error("Новости не были загружены", err));
+
+    const showQuotesButton = document.getElementById("load-quotes");
+    showQuotesButton.addEventListener("click", () => {
       renderQuotesData(quotesData);
-    })
-    .catch((err) => console.error("Котировки не были загружены", err));
-
-  fetch(API_URL.concat("news/"))
-    .then((response) => response.json())
-    .then((data) => renderNewsData(data.news))
-    .catch((err) => console.error("Новости не были загружены", err));
-
-  const showQuotesButton = document.getElementById("load-quotes");
-  showQuotesButton.addEventListener("click", () => {
-    renderQuotesData(quotesData);
-    if (LOADED_QUOTES >= Object.keys(quotesData).length) {
-      showQuotesButton.style.display = "none";
-    }
-  });
+      if (LOADED_QUOTES >= Object.keys(quotesData).length) {
+        showQuotesButton.style.display = "none";
+      }
+    });
+  } else if (CURRENT_URL.includes("/news/")) {
+    fetch(API_URL.concat("news/"))
+      .then((response) => response.json())
+      .then((data) => renderNewsData(data.news))
+      .catch((err) => console.error("Новости не были загружены", err));
+  }
 });
 
 function renderQuotesData(quotesData) {
@@ -42,10 +49,23 @@ function renderQuotesData(quotesData) {
   LOADED_QUOTES += quotesToRender.length;
 }
 
-function renderNewsData(newsData) {
+function renderShortNewsData(newsData) {
   const newsElement = document.getElementById("news");
   newsData.forEach((news) => {
     const newsCardHTML = createShortNewsCard(news.title, news.text);
+    newsElement.innerHTML += newsCardHTML;
+  });
+}
+
+function renderNewsData(newsData) {
+  const newsElement = document.getElementById("news");
+  newsData.forEach((news) => {
+    const newsCardHTML = createNewsCard(
+      news.title,
+      news.text,
+      news.section,
+      news.date
+    );
     newsElement.innerHTML += newsCardHTML;
   });
 }
@@ -55,6 +75,16 @@ function createShortNewsCard(title, text) {
     <div class="news-item">
         <h2 class="news-title">${title}</h2>
         <p class="news-description truncate-4">${text}</p>
+    </div>
+  `;
+}
+
+function createNewsCard(title, text, section, date) {
+  return `
+    <div class="news-item">
+        <p class="news-info">${section}</p>
+        <h2 class="news-title">${title}</h2>
+        <p class="news-description">${text}</p>
     </div>
   `;
 }

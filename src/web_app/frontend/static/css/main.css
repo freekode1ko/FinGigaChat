@@ -198,3 +198,9 @@ button {
     margin: 0;
     color: #708499;
 }
+
+.news-info {
+    color: #f1c40f;
+    font-size: 0.8rem;
+    margin-bottom: 0.8rem;
+}
