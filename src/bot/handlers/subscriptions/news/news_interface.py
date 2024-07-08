@@ -333,8 +333,7 @@ class NewsHandler:
                 near_to_list_of_unknown = '\n'.join(
                     await fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown, self.subject_names_to_find_nearest)
                 )
-                user_logger.info(f'*{user_id}* Пользователь запросил неизвестные новостные ' f'объекты на подписку: '
-                                 f'{list_of_unknown}')
+                user_logger.info(f'*{user_id}* Пользователь запросил неизвестные новостные объекты на подписку: {list_of_unknown}')
                 reply_msg = f'{", ".join(list_of_unknown)} - Эти объекты новостей нам неизвестны'
                 reply_msg += f'\n\nВозможно, вы имели в виду:\n{near_to_list_of_unknown}'
                 # Если нет корректных названий, то новых подписок не добавляем и предлагаем пользователю
