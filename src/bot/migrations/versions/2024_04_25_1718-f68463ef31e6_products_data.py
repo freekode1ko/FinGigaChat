@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from db import models
+from migrations.models.products_data import new_models as models
 from migrations.data.products_data import bot_product, bot_product_document, bot_product_group
 
 

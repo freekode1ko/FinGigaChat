@@ -26,18 +26,6 @@ async def subs_menu_end(callback_query: types.CallbackQuery, state: FSMContext) 
     await callback_query.message.edit_text(text='Формирование подписок завершено')
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.NEWS_SUBS_MENU))
-async def news_subs_menu(callback_query: types.CallbackQuery) -> None:
-    """
-    Формирует сообщение с меню подписок на новости
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    keyboard = keyboards.get_news_subscriptions_menu_kb()
-    msg_text = 'Меню управления подписками на новости из телеграм каналов и доверенных источников\n'
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
-
-
 async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     Формирует меню подписок

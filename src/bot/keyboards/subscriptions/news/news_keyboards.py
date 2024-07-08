@@ -79,7 +79,7 @@ class BaseKeyboard:
         ))
         keyboard.row(types.InlineKeyboardButton(
             text=constants.BACK_BUTTON_TXT,
-            callback_data=const.NEWS_SUBS_MENU,
+            callback_data=const.SUBS_MENU,
         ))
         keyboard.row(types.InlineKeyboardButton(
             text=constants.END_BUTTON_TXT,

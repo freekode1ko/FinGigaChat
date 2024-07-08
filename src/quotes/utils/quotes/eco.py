@@ -40,17 +40,17 @@ class EcoGetter(QuotesGetter):
         world_bet = pd.DataFrame(columns=self.world_bet_columns)
         rus_infl = pd.DataFrame(columns=self.rus_infl_columns)
         if page_eco == 'KeyRate':
-            eco_frst_third.append(['Текущая ключевая ставка Банка России', table_eco[4]['Ставка'][0]])
+            eco_frst_third.append(['Текущая ключевая ставка Банка России', float(table_eco[4]['Ставка'][0])])
             self.logger.info('Таблица Экономика (KeyRate) собрана')
 
         elif page_eco == 'ruonia':
             ruonia = table_eco[4].loc[table_eco[4][0] == 'Ставка RUONIA, %'][2].values.tolist()[0]
-            eco_frst_third.append(['Текущая ставка RUONIA', ruonia])
+            eco_frst_third.append(['Текущая ставка RUONIA', float(ruonia)])
             self.logger.info('Таблица Экономика (ruonia) собрана')
 
         elif page_eco == 'interest-rate':
             if 'Actual' in table_eco[4] and 'Unit' in table_eco[4]:
-                eco_frst_third.append(['LPR Китай', table_eco[4]['Actual'][0]])
+                eco_frst_third.append(['LPR Китай', float(table_eco[4]['Actual'][0])])
                 self.logger.info('Таблица interest-rate (LPR Китай) собрана')
 
             elif 'Country' in table_eco[4]:

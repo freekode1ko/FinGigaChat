@@ -147,6 +147,7 @@ services:
         depends_on:
             - database
             - bot
+            - selenium_firefox
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data

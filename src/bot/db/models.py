@@ -19,11 +19,24 @@ from sqlalchemy import (
     Text
 )
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 from constants import enums
+from constants.enums import FormatType
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+
+    len_of_any_str_field = 100
+
+    def __repr__(self):
+        """Для более удобного отображения в дебаге"""
+        cols = []
+        for col in self.__table__.columns.keys():
+            cols.append(f'{col}={value[:self.len_of_any_str_field] if isinstance(value := getattr(self, col), str) else value}')
+        return f'<{self.__class__.__name__} {", ".join(cols)}›'
+
+
 metadata = Base.metadata
 mapper_registry = sa.orm.registry(metadata=metadata)
 
@@ -96,13 +109,6 @@ t_eco_stake = Table(
     'eco_stake', metadata,
     Column('0', Text),
     Column('1', Text)
-)
-
-
-t_exc = Table(
-    'exc', metadata,
-    Column('Валюта', Text),
-    Column('Курс', DOUBLE_PRECISION(precision=53))
 )
 
 
@@ -525,13 +531,14 @@ class ResearchType(Base):
                                  nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
+    researches = relationship('Research', secondary='research_research_type', back_populates='research_type')
+
 
 class Research(Base):
     __tablename__ = 'research'
     __table_args__ = {'comment': 'Справочник спаршенных отчетов CIB Research'}
 
     id = Column(BigInteger, primary_key=True)
-    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     filepath = Column(Text, nullable=True, server_default='')
     header = Column(Text, nullable=False)
     text = Column(Text, nullable=False)
@@ -540,6 +547,8 @@ class Research(Base):
     report_id = Column(String(64), nullable=False)
     is_new = Column(Boolean, server_default=sa.text('true'),
                     comment='Указывает, что отчет еще не рассылался пользователям')
+
+    research_type = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
 
 
 class UserResearchSubscriptions(Base):
@@ -644,35 +653,25 @@ class IndustryDocuments(Base):
                            comment='тип отрасли')
 
 
-class ProductGroup(Base):
-    __tablename__ = 'bot_product_group'
-    __table_args__ = (
-        sa.UniqueConstraint('name', name='group_name'),
-        {'comment': 'Справочник групп продуктов (продуктовая полка, hot offers)'},
-    )
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
-    name = Column(String(255), nullable=False, comment='Имя группы')
-    name_latin = Column(String(255), nullable=False, comment='Имя группы eng')
-    description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
-                         comment='Описание группы (текст меню тг)')
-    display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-
-
 class Product(Base):
     __tablename__ = 'bot_product'
-    __table_args__ = (
-        sa.UniqueConstraint('name', 'group_id', name='product_name_in_group'),
-        {'comment': 'Справочник продуктов (кредит, GM, ...)'},
-    )
+    __table_args__ = {'comment': 'Справочник продуктов (кредит, GM, ...)'}
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
+    parent_id = Column(Integer, ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=True,
+                       comment='ID родительского продукта, который выступает в качестве категории продуктов')
+    children = relationship('Product', back_populates='parent')
+    parent = relationship('Product', back_populates='children', remote_side=[id])
+
     name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
+    name_latin = Column(String(255), nullable=True, comment='Имя eng', server_default=sa.text("''"))
+    send_documents_format_type = Column(Integer(), server_default=sa.text(str(FormatType.group_files)),
+                                        nullable=False, comment='Формат выдачи документов')
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
                          comment='Текст сообщения, которое выдается при нажатии на продукт')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-    group_id = Column(ForeignKey('bot_product_group.id', ondelete='CASCADE', onupdate='CASCADE'),
-                      primary_key=False, nullable=False, comment='id группы продукта')
+
+    documents = relationship('ProductDocument')
 
 
 class ProductDocument(Base):
@@ -716,3 +715,42 @@ class TelegramSection(Base):
 
     telegram_group = relationship('TelegramGroup', back_populates='telegram_section')
     telegram_channel = relationship('TelegramChannel', back_populates='section')
+
+
+class ResearchResearchType(Base):
+    __tablename__ = 'research_research_type'
+    __table_args__ = {'comment': 'Cвязь мени ту мени типы ответов и сами отчеты'}
+
+    research_id = Column(ForeignKey('research.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class ExcType(Base):
+    __tablename__ = 'bot_exc_type'
+    __table_args__ = {'comment': 'Справочник типов курсов валют'}
+
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, comment='id типа')
+    name = sa.Column(sa.String(64), nullable=False, comment='Наименование типа курсов валют')
+    description = sa.Column(sa.Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    display_order = sa.Column(sa.Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+
+
+class Exc(Base):
+    __tablename__ = 'exc'
+    __table_args__ = {'comment': 'Таблица с курсами валют'}
+
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, comment='id курса валюты')
+
+    name = sa.Column(sa.String(255), nullable=False, comment='Имя курса валюты')
+    name_latin = sa.Column(sa.String(255), nullable=True, comment='Имя eng', server_default=sa.text("''"))
+    value = sa.Column(sa.String(255), nullable=True, comment='Значение курса', server_default=sa.text("'-'"))
+    description = sa.Column(sa.Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    display_order = sa.Column(sa.Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+
+    exc_type_id = sa.Column(sa.Integer, sa.ForeignKey('bot_exc_type.id', ondelete='CASCADE', onupdate='CASCADE'),
+                            nullable=False, comment='ID типа курса')
+    parser_source_id = sa.Column(sa.ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'),
+                                 primary_key=False, nullable=False, comment='id источника данных')
+
+    exc_type = relationship('ExcType')
+    parser_source = relationship('ParserSource')

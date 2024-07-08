@@ -1,5 +1,6 @@
 """Модуль для получения и обработки данных по металлам (сырью/комодам)."""
 import re
+from typing import Any
 
 import pandas as pd
 import requests as req
@@ -24,7 +25,6 @@ class MetalsGetter(QuotesGetter):
     middle_table_columns: list[str] = ['Metals', 'Price', 'Weekly', 'Date']
     small_table_columns: list[str] = ['Metals', 'Price']
 
-    # TODO: ненужно? + удалить из parser_source
     @staticmethod
     def get_extra_data() -> list:
         """По этим данным не удается получить таблицы стандартным способом"""
@@ -40,6 +40,21 @@ class MetalsGetter(QuotesGetter):
 
         copper_source = [*row, [pd.DataFrame()]]
         return copper_source
+
+    @staticmethod
+    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, Any]:
+        """
+        Получение цены товара (меди) от GigaParsers.
+
+        :param session: Сессия.
+        :param name:    Имя коммода.
+        :return:        Кортеж с именем коммода, его ценой, пустым значением и датой обновления цены на сайте.
+        """
+        response = session.post(config.GIGAPARSERS_QUOTES)
+        response.raise_for_status()
+        data = response.json()['quotes'][0]
+        price, update_date = data.strip().split(',')
+        return name, price, None, update_date
 
     @staticmethod
     def filter(table_row: list) -> bool:
@@ -97,13 +112,9 @@ class MetalsGetter(QuotesGetter):
             lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date)
             metals_from_html.append(lng)
         elif page_metals == 'LMCADS03:COM':
-            metal_name = 'Copper Bloomberg'
-            url = table_metals[3]
-            xpath_price = '//div[starts-with(@class, "currentPrice")]//div[@data-component="sized-price"]/text()'
-            xpath_date = '//time[1]/@datetime'
-            lng = self.get_data_from_page(session, metal_name, url, xpath_price, xpath_date, delete_commas=True)
-            if lng:
-                metals_from_html.append(lng)
+            # Получение данных о коммодах (меди) от GigaParsers
+            data = self.get_com_data_from_gigaparsers(session, 'Copper Bloomberg')
+            metals_from_html.append(data)
 
         return metals_from_html, metals, U7
 

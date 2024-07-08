@@ -105,7 +105,7 @@ def create_client_industry_dict() -> dict:
     return client_industry_dict
 
 
-def modify_commodity_rating_system_dict(commodity_rating_system_dict: dict) -> dict:
+def modify_commodity_rating_system_dict(commodity_rating_system_dict: list[dict]) -> list[dict]:
     """
     Изменяет словарь с названиями коммодов в нужном формате.
 

@@ -191,6 +191,8 @@ def get_research_sections_by_group_menu_kb(
     keyboard = InlineKeyboardBuilder()
 
     for index, item in section_df.iterrows():
+        if item['name'] == 'Отрасли':
+            continue
         if item['dropdown_flag']:
             button_txt = item['name'].capitalize()
             section_callback = callbacks.GetCIBSectionResearches(

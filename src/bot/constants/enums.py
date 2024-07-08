@@ -145,3 +145,15 @@ class FinancialIndicatorsType(AutoEnum):
     pl_table = 'P&L'
     balance_table = 'Баланс'
     money_table = 'Денежный поток'
+
+
+class FormatType(IntEnum):
+    """Enum`сы форматов отправки файлов пользователю"""
+
+    # Выдача общего текста группы и затем выдача группы файлов
+    group_files = 1
+    # Выдача общего текста группы, затем для каждого документа выдача сообщений:
+    # document.name жирным
+    # document.description просто текст
+    # [document.file] если есть файл
+    individual_messages = 2

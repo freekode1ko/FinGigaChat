@@ -17,7 +17,7 @@ from db.database import async_session as async_session_maker, engine
 from handlers import (
     admin, ai, analytics, call_reports, clients, common, news, products, quotes, referencebook, subscriptions, telegram_sections
 )
-from log.bot_logger import logger
+from log.bot_logger import logger, user_logger
 from log.sentry import init_sentry
 from middlewares.db import DatabaseMiddleware
 from middlewares.logger import LoggingMiddleware
@@ -110,7 +110,7 @@ async def start_bot():
     # Добавляем мидлварю для работы с БД
     dp.update.middleware(DatabaseMiddleware(session_maker=async_session_maker))
     # Добавляем мидлварю для логирования
-    dp.update.middleware(LoggingMiddleware(logger=logger))
+    dp.update.middleware(LoggingMiddleware(logger=logger, db_logger=user_logger))
     # Добавляем мидлварю для снятия состояния спустя N кол-во минут неактивности пользователя
     dp.update.middleware(StateMiddleware())
 

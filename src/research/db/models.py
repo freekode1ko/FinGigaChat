@@ -496,7 +496,12 @@ class ResearchSection(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
+    display_order = Column(Integer, nullable=True, server_default='0')
     dropdown_flag = Column(Boolean, server_default='true')
+    section_type = Column(
+        Integer,
+        comment='тип раздела из enums.ResearchSectionType (зависит формирование меню аналитики)',
+    )
     research_group_id = Column(ForeignKey('research_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
 
@@ -507,9 +512,18 @@ class ResearchType(Base):
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
     description = Column(Text, nullable=True, server_default='')
+    summary_type = Column(
+        Integer,
+        comment=(
+            'тип формирования сводки отчетов CIB Research '
+            'из enums.ResearchSummaryType (зависит формирование меню аналитики)'
+        ),
+    )
     research_section_id = Column(ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'),
                                  nullable=False)
     source_id = Column(ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+    researches = relationship('Research', secondary='research_research_type', back_populates='research_type')
 
 
 class Research(Base):
@@ -517,7 +531,6 @@ class Research(Base):
     __table_args__ = {'comment': 'Справочник спаршенных отчетов CIB Research'}
 
     id = Column(BigInteger, primary_key=True)
-    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     filepath = Column(Text, nullable=True, server_default='')
     header = Column(Text, nullable=False)
     text = Column(Text, nullable=False)
@@ -525,6 +538,8 @@ class Research(Base):
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
     report_id = Column(String(64), nullable=False)
     is_new = Column(Boolean, server_default='true', comment='Указывает, что новость еще не рассылалась пользователям')
+
+    research_type = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
 
 
 class UserResearchSubscriptions(Base):
@@ -562,3 +577,11 @@ class FinancialSummary(Base):
     pl_table = Column(Text, nullable=True, comment='Таблица с P&L таблицей в формате dict')
     balance_table = Column(Text, nullable=True, comment='Таблица с балансной таблицей в формате dict')
     money_table = Column(Text, nullable=True, comment='Таблица с таблицей денежных потоков в формате dict')
+
+
+class ResearchResearchType(Base):
+    __tablename__ = 'research_research_type'
+    __table_args__ = {'comment': 'Cвязь мени ту мени типы ответов и сами отчеты'}
+
+    research_id = Column(ForeignKey('research.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)

@@ -57,3 +57,11 @@ INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 tradingeconomics_commodities: dict = read_asset_from_json('tradingeconomics_commodities.json')
 
 COLLECT_PERIOD = '15m'
+
+# timeout для http(s) запросов
+REQUEST_TIMEOUT = 90
+
+GIGAPARSERS_QUOTES = 'http://gigaparsers.ru/inner_api/get_quotes'
+
+# SELENIUM DRIVER PARAMS
+SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'
