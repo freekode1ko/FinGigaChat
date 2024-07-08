@@ -1,11 +1,11 @@
-const API_URL = "https://127.0.0.1:443/";
+const API_URL = "https://ai-bankir-helper-dev.ru/";
 const QUOTES_PER_PAGE = 10;
 let LOADED_QUOTES = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
   lucide.createIcons();
   const CURRENT_URL = window.location.href;
-  if (CURRENT_URL.includes("/quotation/")) {
+  if (CURRENT_URL.includes("/quotes/")) {
     let quotesData;
     fetch(API_URL.concat("quotation/RUB"))
       .then((response) => response.json())

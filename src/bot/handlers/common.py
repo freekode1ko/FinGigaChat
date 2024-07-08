@@ -209,3 +209,19 @@ async def open_meeting_app(message: types.Message) -> None:
         resize_keyboard=True
     )
     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+
+@router.message(Command('test'))
+async def open_app(message: types.Message) -> None:
+    """Открытие веб приложения со встречами."""
+    user_id = message.from_user.id
+    if not is_user_email_exist(user_id):
+        await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')
+        return
+
+    markup = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text='Новости и котировки', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news/show'))],
+        ],
+        resize_keyboard=True
+    )
+    await message.answer('Для просмотра тестовой версии нажмите:', reply_markup=markup)

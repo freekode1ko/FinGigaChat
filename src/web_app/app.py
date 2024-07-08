@@ -1,5 +1,6 @@
 import ssl
 
+from contextlib import asynccontextmanager
 import aiohttp
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,13 +25,13 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 templates = Jinja2Templates(directory="frontend/templates")
 
-if not config.DEBUG:
+if True:
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ssl_context.load_cert_chain(config.STATIC_CHAIN_PATH, keyfile=config.STATIC_KEY_PATH)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[config.WEB_APP_URL],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -138,3 +139,12 @@ async def get_news() -> JSONResponse:
             ]
         }
     )
+
+@app.get("/news/show", response_class=HTMLResponse)
+async def show_news(request: Request):
+    return templates.TemplateResponse("news.html", {"request": request})
+
+
+@app.get("/quotes/show", response_class=HTMLResponse)
+async def show_quotes(request: Request):
+    return templates.TemplateResponse("quotation.html", {"request": request})
