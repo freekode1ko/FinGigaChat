@@ -1,34 +1,14 @@
-<!DOCTYPE html>
-<html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="{{ url_for('static', path='/css/main.css') }}">
-        <link rel="shortcut icon" href="{{ url_for('static', path='/favicon.ico') }}">
-        <title>Новости</title>
-    </head>
-    <body>
-        <header class="header">
-            <ul class="menu-list">
-                <li class="menu-item">
-                    <i data-lucide="activity"></i>
-                    <a class="menu-link" href="{{ url_for('show_quotes') }}">Котировки</a>
-                </li>
-                <li class="menu-item active">
-                    <i data-lucide="newspaper"></i>
-                    <a class="menu-link" href="{{ url_for('show_news') }}">Новости</a>
-                </li>
-            </ul>
-        </header>
-        <div class="container">
-            <section class="section">
-                <div class="section-header">
-                    <h2 class="section-title">Новости</h2>
-                </div>
-                <div id="news" class="news-list"></div>
-            </section>
-        </div>
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="{{ url_for('static', path='/js/script.js') }}"></script>
-    </body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Новости{% endblock %}
+{% block content %}
+<section class="section">
+    <div class="section-header">
+        <h2 class="section-title">Новости</h2>
+    </div>
+    <div id="news" class="news-list"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="../static/js/pages/news.js"></script>
+{% endblock %}
