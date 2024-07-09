@@ -148,3 +148,8 @@ async def show_news(request: Request):
 @app.get("/quotes/show", response_class=HTMLResponse)
 async def show_quotes(request: Request):
     return templates.TemplateResponse("quotation.html", {"request": request})
+
+
+@app.get("/dashboard/show", response_class=HTMLResponse)
+async def show_dashboard(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})

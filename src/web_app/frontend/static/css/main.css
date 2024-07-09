@@ -1,4 +1,4 @@
-:root {
+/* :root {
     --bg-color: #17212b;
     --text-color: #f5f5f5;
     --hint-color: #708499;
@@ -13,7 +13,7 @@
     --section-separator-color: #708499;
     --subtitle-text-color: #708499;
     --destructive-text-color: #ce1313;
-}
+} */
 
 ::-moz-selection {
     color: var(--bg-color);
@@ -52,9 +52,12 @@ html {
 body {
     font-family: Arial, sans-serif;
     color: var(--text-color);
+    background-color: var(--bg-color);
+}
+
+body, p, a, button { 
     margin: 0;
     padding: 0;
-    background-color: var(--bg-color);
 }
 
 button {
@@ -162,6 +165,7 @@ button {
 }
 
 .quote-value {
+    text-align: center;
     display: flex;
     align-items: center;
     justify-items: start;
@@ -176,11 +180,19 @@ button {
 }
 
 .quote-change.positive {
-    background-color: var(--accent-text-color);
+    background-color: #27ae60;
 }
 
 .quote-change.negative {
     background-color: var(--destructive-text-color);
+}
+
+.quote-details {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: center;
+    /* text-align: center; */
+    gap: 0.25rem;
 }
 
 /* NEWS */

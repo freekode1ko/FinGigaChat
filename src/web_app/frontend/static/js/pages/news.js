@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-  lucide.createIcons();
   fetch(API_URL.concat("news/"))
     .then((response) => response.json())
     .then((data) => renderNewsData(data.news))
