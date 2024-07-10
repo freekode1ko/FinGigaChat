@@ -53,6 +53,7 @@ body {
     font-family: Arial, sans-serif;
     color: var(--text-color);
     background-color: var(--bg-color);
+    visibility: hidden;
 }
 
 body, p, a, button { 
@@ -181,6 +182,10 @@ button {
 
 .quote-change.positive {
     background-color: #27ae60;
+}
+
+.quote-change.neutral {
+    background-color: var(--hint-color);
 }
 
 .quote-change.negative {

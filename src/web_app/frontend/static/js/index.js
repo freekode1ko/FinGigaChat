@@ -12,4 +12,5 @@ function applyTgTheme(themeParams) {
     const cssVarName = `--${param.replace(/_/g, "-")}`;
     root.style.setProperty(cssVarName, themeParams[param]);
   });
+  document.body.style.visibility = "visible";
 }
