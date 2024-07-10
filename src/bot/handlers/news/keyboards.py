@@ -396,6 +396,7 @@ def get_select_beneficiary_clients_kb(
         subject_ids = '0'
         subject_ids_list = []
 
+    all_clients = []
     for relation in relation_client_ben:
         button_call = callback_data_factories.BeneficiaryData(
             menu=callback_data_factories.NewsMenusEnum.choose_beneficiary_clients,
@@ -403,6 +404,7 @@ def get_select_beneficiary_clients_kb(
             subject_id=relation.client.id,
             subject_ids=subject_ids,
         ).pack()
+        all_clients.append(relation.client.id)
 
         mark = constants.SELECTED if relation.client.id in subject_ids_list else constants.UNSELECTED
         keyboard.row(
@@ -419,6 +421,15 @@ def get_select_beneficiary_clients_kb(
                 beneficiary_id=beneficiary_id,
             ).pack()
         ))
+
+    keyboard.row(types.InlineKeyboardButton(
+        text='Получить по всем',
+        callback_data=callback_data_factories.BeneficiaryData(
+            menu=callback_data_factories.NewsMenusEnum.show_news,
+            subject_ids=utils.wrap_selected_ids(all_clients),
+            beneficiary_id=beneficiary_id,
+        ).pack()
+    ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
         callback_data=callback_data_factories.NewsMenuData(menu=callback_data_factories.NewsMenusEnum.end_menu).pack()
