@@ -637,7 +637,7 @@ async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 9
     if len(ben_obj.clients) > 1:
         msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
         keyboard = keyboards.get_select_beneficiary_clients_kb(ben_obj.id, ben_obj.clients)
-        await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML', reply_markeup=types.ReplyKeyboardRemove())
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
     else:
         ap_obj = ArticleProcess(logger)
         msg_text = f'Вот новости по активам <b>{ben_name}</b>:\n\n'
