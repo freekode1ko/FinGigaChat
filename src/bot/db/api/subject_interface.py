@@ -148,12 +148,14 @@ class SubjectInterface:
         if not isinstance(subject_ids, list):
             subject_ids = [subject_ids]
 
+        _, _, score_col = self.table_relation_article.__table__.columns
         async with database.async_session() as session:
             stmt = (
                 select(Article, self.table.id)
                 .join(self.relation_article)
                 .join(self.table)
                 .where(self.table.id.in_(subject_ids))
+                .where(score_col > 0)
                 .order_by(self.table.id)
             )
 
