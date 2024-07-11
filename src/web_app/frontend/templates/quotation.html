@@ -2,25 +2,17 @@
 
 {% block title %}Котировки{% endblock %}
 {% block content %}
-<section class="section">
-    <div class="section-header">
-        <h2 class="section-title">Просмотр текущих котировок</h2>
-    </div>
-    <div id="quotes" class="quotes-list"></div>
-    <div class="section-actions">
-        <a href="#" id="load-quotes" class="link">Показать еще <i data-lucide="chevron-down"></i></a>
-    </div>
-</section>
-
-<section class="section">
-    <div class="section-header">
-        <h2 class="section-title">Последние новости</h2>
-    </div>
-    <div id="news" class="news-list"></div>
-    <div class="section-actions">
-        <a href="/news/show" class="link">Посмотреть все <i data-lucide="chevron-right"></i></a>
-    </div>
-</section>
+<div id="dashboard">
+    <section class="section">
+        <div class="section-header">
+            <h2 class="section-title">Последние новости</h2>
+        </div>
+        <div id="news" class="news-list"></div>
+        <div class="section-actions">
+            <a href="/news/show" class="link">Посмотреть все <i data-lucide="chevron-right"></i></a>
+        </div>
+    </section>
+</div>
 {% endblock %}
 {% block scripts %}
 <script src="../static/js/pages/quotes.js"></script>

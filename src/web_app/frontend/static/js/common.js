@@ -27,7 +27,8 @@ class WebAppAPI {
   constructor(baseURL) {
     this.baseURL = baseURL;
     this.news = new Endpoint(this.baseURL, "news/");
-    this.quotes = new Endpoint(this.baseURL, "quotation/RUB");
+    this.quotes = new Endpoint(this.baseURL, "quotation/popular");
+    this.dashboard = new Endpoint(this.baseURL, "quotation/dashboard");
   }
 }
 
@@ -38,11 +39,12 @@ function parseChange(value) {
   return {
     changeClass:
       parsedValue < 0 ? "negative" : parsedValue >= 0 ? "positive" : "neutral",
-    changeValue: value ? value.toString().concat("%") : "—",
+    changeValue: value ? value.toLocaleString("ru-RU").concat("%") : "—",
   };
 }
 
 function formatPrice(value) {
+  if (!value) return "0.00";
   if (typeof value === "string") {
     value = parseInt(value, 10);
   }

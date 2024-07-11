@@ -1,7 +1,5 @@
-const API_URL = "https://ai-bankir-helper-dev.ru/";
-const tgObj = window.Telegram.WebApp;
-
 document.addEventListener("DOMContentLoaded", () => {
+  const tgObj = window.Telegram.WebApp;
   applyTgTheme(tgObj.themeParams);
   lucide.createIcons();
 });

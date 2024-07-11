@@ -1,56 +1,64 @@
-document.addEventListener("DOMContentLoaded", handleQuotesPageLoading);
+document.addEventListener("DOMContentLoaded", handleDashboardPageLoading);
 
-async function handleQuotesPageLoading() {
-  const quotesData = await api.quotes.get();
-  const newsData = await api.news.get();
-  const quotesArray = Object.entries(quotesData);
-  const quotesState = {
-    quotesArray: quotesArray,
-    currentPage: 0,
-    itemsPerPage: 10,
-    totalPages: Math.ceil(quotesArray.length / 10),
-  };
-
-  loadQuotes(quotesState);
-  document.getElementById("load-quotes").addEventListener("click", (event) => {
-    event.preventDefault();
-    quotesState.currentPage++;
-    loadQuotes(quotesState);
-  });
-  renderNews(newsData.news);
+async function handleDashboardPageLoading() {
+  if (window.location.href.includes("quotes/show")) {
+    const dashboardData = await api.quotes.get();
+    const newsData = await api.news.get();
+    renderDashboard(dashboardData.sections);
+    renderNews(newsData.news);
+  } else {
+    const dashboardData = await api.dashboard.get();
+    renderDashboard(dashboardData.sections);
+  }
 }
 
-function loadQuotes(state) {
-  renderQuotes(state);
-  updateLoadMoreButton(state);
-}
-
-function updateLoadMoreButton(state) {
-  const { currentPage, totalPages } = state;
-  const loadMoreButton = document.getElementById("load-quotes");
-  loadMoreButton.style.display = currentPage + 1 >= totalPages && "none";
-}
-
-function renderQuotes(state) {
-  const { quotesArray, currentPage, itemsPerPage } = state;
-  const start = currentPage * itemsPerPage;
-  const end = start + itemsPerPage;
-  const quotesToRender = quotesArray.slice(start, end);
-  const quotesContainer = document.getElementById("quotes");
-
-  quotesToRender.forEach(([currencyName, currencyValue]) => {
-    const { changeClass, changeValue } = parseChange("-0.19");
-    const quoteCard = `
-      <div class="quote-item">
-        <p>RUB/${currencyName}</p>
-        <div class="quote-value">
-            <p>${formatPrice(currencyValue)}</p>
-            <p class="quote-change ${changeClass}">${changeValue}</p>
-        </div>
-      </div>
+function renderDashboard(dashboardData) {
+  const dashboardContainer = document.getElementById("dashboard");
+  dashboardData.forEach((section) => {
+    const sectionBlock = `
+      <section class="section">
+          <div class="section-header">
+              <h2 class="section-title">${section.section_name}</h2>
+          </div>
+          <div class="quotes-list">
+              ${renderCurrencies(section.data)}
+          </div>
+      </section>
     `;
-    quotesContainer.insertAdjacentHTML("beforeend", quoteCard);
+    dashboardContainer.insertAdjacentHTML("afterbegin", sectionBlock);
   });
+}
+
+function renderCurrencies(currencies) {
+  return currencies
+    .map((currency) => {
+      return `
+      <div class="quote-item">
+          <div>
+            <p>${currency.name}</p>
+            <strong>${formatPrice(currency.value)}</strong>
+          </div>
+          <div class="quote-value">
+              ${renderCurrencyParameters(currency.params)}
+          </div>
+      </div>
+      `;
+    })
+    .join("");
+}
+
+function renderCurrencyParameters(parameters) {
+  return parameters
+    .map((parameter) => {
+      const { changeClass, changeValue } = parseChange(parameter.value);
+      return `
+      <span class="quote-details">
+          <small>${parameter.name}</small>
+          <p class="quote-change ${changeClass}">${changeValue}</p>
+      </span>
+      `;
+    })
+    .join("");
 }
 
 function renderNews(newsArray) {
