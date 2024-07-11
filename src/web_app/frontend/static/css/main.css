@@ -169,7 +169,7 @@ button {
     text-align: center;
     display: flex;
     align-items: center;
-    justify-items: start;
+    justify-items: space-between;
     gap: 1rem;
 }
 

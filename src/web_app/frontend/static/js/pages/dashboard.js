@@ -37,7 +37,7 @@ const FAKE_DATA = {
       section_title: "Драгоценные металлы, $/унц",
       currencies: [
         {
-          currency_name: "Золото",
+          currency_name: "Ключевая ставка ЦБ",
           exchange_rate: 145200,
           parameters: [
             {
@@ -81,9 +81,11 @@ function renderCurrencies(currencies) {
     .map((currency) => {
       return `
       <div class="quote-item">
-          <p>${currency.currency_name}</p>
+          <div>
+            <p>${currency.currency_name}</p>
+            <strong>${formatPrice(currency.exchange_rate)}</strong>
+          </div>
           <div class="quote-value">
-              <p>${formatPrice(currency.exchange_rate)}</p>
               ${renderCurrencyParameters(currency.parameters)}
           </div>
       </div>
