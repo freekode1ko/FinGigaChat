@@ -13,7 +13,7 @@ const FAKE_DATA = {
             },
             {
               name: "YTD",
-              value: 12.3,
+              value: 0.01,
             },
           ],
         },
@@ -27,7 +27,7 @@ const FAKE_DATA = {
             },
             {
               name: "YTD",
-              value: 12.3,
+              value: null,
             },
           ],
         },
@@ -38,7 +38,7 @@ const FAKE_DATA = {
       currencies: [
         {
           currency_name: "Золото",
-          exchange_rate: 2372,
+          exchange_rate: 145200,
           parameters: [
             {
               name: "Δ day",
@@ -46,7 +46,7 @@ const FAKE_DATA = {
             },
             {
               name: "YTD",
-              value: 5.44,
+              value: -5.44,
             },
           ],
         },
@@ -56,48 +56,52 @@ const FAKE_DATA = {
 };
 
 document.addEventListener("DOMContentLoaded", () =>
-  renderDashboardData(FAKE_DATA)
+  renderDashboard(FAKE_DATA.sections)
 );
 
-function renderDashboardData(dashboardData) {
-  const dashboardElement = document.getElementById("dashboard");
-  dashboardElement.innerHTML = dashboardData.sections
-    .map(createDashboardSection)
+function renderDashboard(dashboardData) {
+  const dashboardContainer = document.getElementById("dashboard");
+  dashboardData.forEach((section) => {
+    const sectionBlock = `
+      <section class="section">
+          <div class="section-header">
+              <h2 class="section-title">${section.section_title}</h2>
+          </div>
+          <div class="quotes-list">
+              ${renderCurrencies(section.currencies)}
+          </div>
+      </section>
+    `;
+    dashboardContainer.insertAdjacentHTML("beforeend", sectionBlock);
+  });
+}
+
+function renderCurrencies(currencies) {
+  return currencies
+    .map((currency) => {
+      return `
+      <div class="quote-item">
+          <p>${currency.currency_name}</p>
+          <div class="quote-value">
+              <p>${formatPrice(currency.exchange_rate)}</p>
+              ${renderCurrencyParameters(currency.parameters)}
+          </div>
+      </div>
+      `;
+    })
     .join("");
 }
 
-function createDashboardSection(section) {
-  return `
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">${section.section_title}</h2>
-            </div>
-            <div class="quotes-list">
-                ${section.currencies.map(createCurrency).join("")}
-            </div>
-        </section>
-    `;
-}
-
-function createCurrency(currency) {
-  return `
-    <div class="quote-item">
-        <p>${currency.currency_name}</p>
-        <div class="quote-value">
-            <p>${currency.exchange_rate}</p>
-            ${currency.parameters.map(createCurrencyParameters).join("")}
-      </div>
-    </div>
-    `;
-}
-
-function createCurrencyParameters(parameter) {
-  return `
-    <span class="quote-details">
-        <small>${parameter.name}</small>
-        <p class="quote-change ${
-          parseFloat(parameter.value) < 0 ? "negative" : "positive"
-        }">${parameter.value}%</p>
-    </span>
-    `;
+function renderCurrencyParameters(parameters) {
+  return parameters
+    .map((parameter) => {
+      const { changeClass, changeValue } = parseChange(parameter.value);
+      return `
+      <span class="quote-details">
+          <small>${parameter.name}</small>
+          <p class="quote-change ${changeClass}">${changeValue}</p>
+      </span>
+      `;
+    })
+    .join("");
 }

@@ -38,7 +38,7 @@ function parseChange(value) {
   return {
     changeClass:
       parsedValue < 0 ? "negative" : parsedValue >= 0 ? "positive" : "neutral",
-    changeValue: value ? value.concat("%") : "—",
+    changeValue: value ? value.toString().concat("%") : "—",
   };
 }
 

@@ -39,12 +39,13 @@ function renderQuotes(state) {
   const quotesContainer = document.getElementById("quotes");
 
   quotesToRender.forEach(([currencyName, currencyValue]) => {
+    const { changeClass, changeValue } = parseChange("-0.19");
     const quoteCard = `
       <div class="quote-item">
         <p>RUB/${currencyName}</p>
         <div class="quote-value">
             <p>${formatPrice(currencyValue)}</p>
-            <!-- <p class="quote-change></p> -->
+            <p class="quote-change ${changeClass}">${changeValue}</p>
         </div>
       </div>
     `;
