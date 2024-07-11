@@ -1,4 +1,5 @@
 import ssl
+from pathlib import Path
 
 from contextlib import asynccontextmanager
 import aiohttp
@@ -7,11 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.responses import FileResponse
 
 import config
 import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
+from api.router import router as api_router
+from utils.templates import templates
+
+
+logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
+
+app = FastAPI()#lifespan=lifespan)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,15 +28,9 @@ async def lifespan(app: FastAPI):
     utils.scheduler.start()
     yield
 
-logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
-
-app = FastAPI(lifespan=lifespan)
+app.include_router(api_router)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 templates = Jinja2Templates(directory="frontend/templates")
-
-if True:
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_context.load_cert_chain(config.STATIC_CHAIN_PATH, keyfile=config.STATIC_KEY_PATH)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,7 +39,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.get("/meeting/show", response_class=HTMLResponse)
 async def show_meetings(request: Request):
