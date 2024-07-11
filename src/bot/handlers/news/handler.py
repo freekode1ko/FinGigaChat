@@ -625,7 +625,7 @@ async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 9
         score=fuzzy_score
     )
 
-    if not ben_ids or len(set(ben_ids)) != 1:
+    if len(set(ben_ids)) != 1:
         return False
 
     ben_obj = await beneficiary.get_beneficiary_by_id(ben_ids[0])
