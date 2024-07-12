@@ -302,6 +302,7 @@ class Client(Base):
     industry = relationship('Industry', back_populates='client')
     client_alternative = relationship('ClientAlternative', back_populates='client')
     relation_client_article = relationship('RelationClientArticle', back_populates='client')
+    beneficiaries = relationship('Beneficiary', secondary='relation_client_beneficiary', back_populates='clients')
 
 
 class Commodity(Base):
@@ -754,3 +755,34 @@ class Exc(Base):
 
     exc_type = relationship('ExcType')
     parser_source = relationship('ParserSource')
+
+
+class Beneficiary(Base):
+    __tablename__ = 'beneficiary'
+    __table_args__ = {'comment': 'Таблица с именами бенефициаров'}
+
+    id = Column(Integer(), autoincrement=True, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True, comment='ФИО бенефициара')
+
+    alternatives = relationship('BeneficiaryAlternative', back_populates='beneficiary')
+    clients = relationship('Client', secondary='relation_client_beneficiary', back_populates='beneficiaries')
+
+
+class BeneficiaryAlternative(Base):
+    __tablename__ = 'beneficiary_alternative'
+    __table_args__ = {'comment': 'Таблица с альтернативными именами бенефициаров'}
+
+    id = Column(Integer(), autoincrement=True, primary_key=True)
+    beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'),
+                            nullable=False, comment='id бенефициара')
+    other_name = Column(String(255), nullable=False, unique=True, comment='альтернативное ФИО бенефициара')
+
+    beneficiary = relationship('Beneficiary', back_populates='alternatives')
+
+
+class RelationClientBeneficiary(Base):
+    __tablename__ = 'relation_client_beneficiary'
+    __table_args__ = {'comment': 'Таблица отношений бенефициаров к клиентам'}
+
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)

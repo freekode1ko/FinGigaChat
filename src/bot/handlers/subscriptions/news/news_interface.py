@@ -22,7 +22,7 @@ from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
 from db.api.user_research_subscription import user_research_subscription_db
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
-from log.bot_logger import logger, user_logger
+from log.bot_logger import user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit
 
@@ -329,7 +329,7 @@ class NewsHandler:
             new_subs = subscriptions[~subscriptions['id'].isin(user_subscription_df['id'])].drop_duplicates(subset='id')
             if len(subscriptions) < len(user_request):
                 list_of_unknown = list(set(user_request) - set(subscriptions['other_name']))
-                fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+                fuzzy_searcher = FuzzyAlternativeNames()
                 near_to_list_of_unknown = '\n'.join(
                     await fuzzy_searcher.find_nearest_to_subjects_list(list_of_unknown, self.subject_names_to_find_nearest)
                 )

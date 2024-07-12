@@ -7,20 +7,18 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from db import models
 from db.database import async_session
-from log.logger_base import Logger
 
 
 class FuzzyAlternativeNames:
     """Неточный поиск по клиентам, сырью, отраслям"""
 
-    def __init__(self, logger: Logger.logger):
+    def __init__(self):
         """Инициализация экземпляра модуля неточного поиска"""
-        self._logger = logger
-
         self.tables_with_attr_tuples = [
             (models.ClientAlternative, models.ClientAlternative.client_id, models.Client),
             (models.CommodityAlternative, models.CommodityAlternative.commodity_id, models.Commodity),
             (models.IndustryAlternative, models.IndustryAlternative.industry_id, models.Industry),
+            (models.BeneficiaryAlternative, models.BeneficiaryAlternative.beneficiary_id, models.Beneficiary),
         ]
 
     async def get_main_names(self, alt_names: list[str]) -> list[str]:
