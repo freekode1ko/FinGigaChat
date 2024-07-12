@@ -56,7 +56,7 @@ body {
     visibility: hidden;
 }
 
-body, p, a, button { 
+body, p, a, button, h2, h3 { 
     margin: 0;
     padding: 0;
 }
@@ -140,6 +140,7 @@ button {
 .section-title {
     font-size: 1.2em;
     color: var(--section-header-text-color);
+    margin-bottom: 0.25rem;
 }
 
 .section-actions {
@@ -153,16 +154,17 @@ button {
 .quotes-list {
     display: flex;
     flex-direction: column;
+    gap: 0.25rem;
 }
 
 .quote-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
     background-color: var(--secondary-bg-color);
     margin-bottom: 0.4rem;
     border-radius: 1rem;
+    padding: 0.25rem;
 }
 
 .quote-value {

@@ -36,7 +36,7 @@ function renderCurrencies(currencies) {
       <div class="quote-item">
           <div>
             <p>${currency.name}</p>
-            <strong>${formatPrice(currency.value)}</strong>
+            <h2>${formatPrice(currency.value)}</h2>
           </div>
           <div class="quote-value">
               ${renderCurrencyParameters(currency.params)}
