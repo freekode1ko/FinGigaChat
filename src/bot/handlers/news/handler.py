@@ -643,7 +643,7 @@ async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 9
         msg_text = f'Вот новости по активам <b>{ben_name}</b>:\n\n'
         _, articles_text = await ap_obj.process_user_alias(
             subject=enums.SubjectType.client,
-            subject_id=ben_obj.clients[0].client.id,
+            subject_id=ben_obj.clients[0].id,
             limit_val=2
         )
         await bot_send_msg(message.bot, message.from_user.id, msg_text + articles_text)

@@ -302,7 +302,7 @@ class Client(Base):
     industry = relationship('Industry', back_populates='client')
     client_alternative = relationship('ClientAlternative', back_populates='client')
     relation_client_article = relationship('RelationClientArticle', back_populates='client')
-    beneficiaries = relationship('RelationClientBeneficiary', back_populates='client')
+    beneficiaries = relationship('Beneficiary', secondary='relation_client_beneficiary', back_populates='clients')
 
 
 class Commodity(Base):
@@ -765,7 +765,7 @@ class Beneficiary(Base):
     name = Column(String(255), nullable=False, unique=True, comment='ФИО бенефициара')
 
     alternatives = relationship('BeneficiaryAlternative', back_populates='beneficiary')
-    clients = relationship('RelationClientBeneficiary', back_populates='beneficiary')
+    clients = relationship('Client', secondary='relation_client_beneficiary', back_populates='beneficiaries')
 
 
 class BeneficiaryAlternative(Base):
@@ -786,6 +786,3 @@ class RelationClientBeneficiary(Base):
 
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-
-    client = relationship('Client', back_populates='beneficiaries')
-    beneficiary = relationship('Beneficiary', back_populates='clients')

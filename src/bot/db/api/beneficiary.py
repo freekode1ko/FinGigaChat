@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from db.database import async_session
-from db.models import Beneficiary, RelationClientBeneficiary
+from db.models import Beneficiary
 
 
 async def get_beneficiary_name(ben_id: int) -> str:
@@ -28,7 +28,7 @@ async def get_beneficiary_by_id(ben_id: int) -> Beneficiary:
     async with async_session() as session:
         stmt = (
             select(Beneficiary)
-            .options(joinedload(Beneficiary.clients).joinedload(RelationClientBeneficiary.client))
+            .options(joinedload(Beneficiary.clients))
             .where(Beneficiary.id == ben_id)
         )
         result = await session.execute(stmt)

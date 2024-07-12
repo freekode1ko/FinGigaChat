@@ -371,7 +371,7 @@ def get_periods_kb(
 
 def get_select_beneficiary_clients_kb(
         beneficiary_id: int,
-        relation_client_ben: list[models.RelationClientBeneficiary],
+        ben_clients: list[models.Client],
         callback_data: callback_data_factories.BeneficiaryData | None = None,
 ) -> InlineKeyboardMarkup:
     """
@@ -384,7 +384,7 @@ def get_select_beneficiary_clients_kb(
     [Завершить]
 
     :param beneficiary_id:      ID бенефициара, по которому нужно получить меню клиентов.
-    :param relation_client_ben: Отношения между клиентами и бенефициаром.
+    :param ben_clients:         Клиенты бенефициара.
     :param callback_data:       Данные о текущем меню.
     :return:                    Клавиатуру с клиентами бенефициара.
     """
@@ -397,19 +397,19 @@ def get_select_beneficiary_clients_kb(
         subject_ids_list = []
 
     all_clients = []
-    for relation in relation_client_ben:
+    for ben_client in ben_clients:
         button_call = callback_data_factories.BeneficiaryData(
             menu=callback_data_factories.NewsMenusEnum.choose_beneficiary_clients,
             beneficiary_id=beneficiary_id,
-            subject_id=relation.client.id,
+            subject_id=ben_client.id,
             subject_ids=subject_ids,
         ).pack()
-        all_clients.append(relation.client.id)
+        all_clients.append(ben_client.id)
 
-        mark = constants.SELECTED if relation.client.id in subject_ids_list else constants.UNSELECTED
+        mark = constants.SELECTED if ben_client.id in subject_ids_list else constants.UNSELECTED
         keyboard.row(
             types.InlineKeyboardButton(text=mark, callback_data=button_call),
-            types.InlineKeyboardButton(text=relation.client.name, callback_data=button_call)
+            types.InlineKeyboardButton(text=ben_client.name, callback_data=button_call)
         )
 
     if subject_ids != '0':
