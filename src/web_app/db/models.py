@@ -9,6 +9,7 @@ from sqlalchemy import (
     String,
     ARRAY,
     JSON,
+    Identity,
 
 )
 from sqlalchemy.orm import declarative_base, relationship, deferred
@@ -98,3 +99,28 @@ class Exc(Base):
     parser_source_id = sa.Column(sa.ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'),
                                  primary_key=False, nullable=False, comment='id источника данных')
 
+
+class Article(Base):
+    __tablename__ = 'article'
+
+    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
+                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+    link = Column(Text, nullable=False, comment='Ссылка на новость')
+    date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
+    text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
+    title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
+    text_sum = Column(Text, comment='Сформированная гигачатом сводка по новости')
+
+    relation_client_article = relationship('RelationClientArticle', back_populates='article')
+
+
+class RelationClientArticle(Base):
+    __tablename__ = 'relation_client_article'
+
+    client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'),
+                       primary_key=True, nullable=False)
+    article_id = Column(ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'),
+                        primary_key=True, nullable=False)
+    client_score = Column(Integer)
+
+    article = relationship('Article', back_populates='relation_client_article')

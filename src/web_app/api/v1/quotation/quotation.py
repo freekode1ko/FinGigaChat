@@ -3,7 +3,6 @@ import math
 
 import sqlalchemy as sa
 from dateutil.relativedelta import *
-from db.models import Exc, ExcType
 from fastapi import APIRouter
 from fastapi import Request
 from fastapi.responses import HTMLResponse
@@ -11,14 +10,13 @@ from utils.templates import templates
 
 from constants.constants import bonds_names, commodity_pricing_names, metals_pricing_names
 from db.database import async_session
+from db.models import Exc, ExcType
 from .schemas import SectionData, DataItem, Param, ExchangeSectionData
 
 router = APIRouter()
 
 
 async def get_quotation_from_fx() -> list[SectionData]:
-    ### FX
-
     async with async_session() as session:
         sel = sa.select(Exc.name, Exc.value, ExcType.name).select_from(Exc).join(ExcType)
         result = await session.execute(sel)
@@ -66,11 +64,12 @@ async def get_quotation_from_eco() -> SectionData:
 
     infl_mounth = datetime.date.today() - relativedelta(months=1)
     infl_mounth = f'{infl_mounth.month}.{infl_mounth.year}'
-    infl_mounth_before = datetime.date.today() - relativedelta(months=2)
-    infl_mounth_before = f'{infl_mounth_before.month}.{infl_mounth_before.year}'
-
     infl = float(next(filter(lambda x: str(x[0]) == infl_mounth, result_infl))[2])
-    infl_before = float(next(filter(lambda x: str(x[0]) == infl_mounth_before, result_infl))[2])
+
+    # Раскомментировать тут и ниже если Макс опять захочет узнать изменение инфляции
+    # infl_before = float(next(filter(lambda x: str(x[0]) == infl_mounth_before, result_infl))[2])
+    # infl_mounth_before = datetime.date.today() - relativedelta(months=2)
+    # infl_mounth_before = f'{infl_mounth_before.month}.{infl_mounth_before.year}'
 
     section = SectionData(
         section_name='Процентные ставки и инфляция',
@@ -78,31 +77,21 @@ async def get_quotation_from_eco() -> SectionData:
             DataItem(
                 name='Ключевая ставка ЦБ',
                 value=float(next(filter(lambda x: x[0] == 'Текущая ключевая ставка Банка России', result_eco))[1]),
-                params=[
-                    Param(
-                        name='%',
-                        value=None
-                    ),
-                ]
+                params=[]
             ),
             DataItem(
                 name='RUONIA',
                 value=float(next(filter(lambda x: x[0] == 'Текущая ставка RUONIA', result_eco))[1]),
-                params=[
-                    Param(
-                        name='%',
-                        value=None
-                    ),
-                ]
+                params=[]
             ),
             DataItem(
                 name='Инфляция %',
                 value=float(infl),
                 params=[
-                    Param(
-                        name='м/м',
-                        value=100 * (infl - infl_before) / infl_before
-                    ),
+                    # Param(
+                    #     name='м/м',
+                    #     value=100 * (infl - infl_before) / infl_before
+                    # ),
                 ]
             )
         ]
@@ -124,7 +113,7 @@ async def get_quotation_from_bonds() -> SectionData:
                 value=float(next(filter(lambda x: x[0] == i['name_db'], result_bonds))[1]),
                 params=[
                     Param(
-                        name='%',
+                        name='%день',
                         value=float(next(filter(lambda x: x[0] == i['name_db'], result_bonds))[5][:-1])
                     ),
                 ]
@@ -147,15 +136,19 @@ async def get_quotation_from_commodity() -> SectionData:
         data.append(
             DataItem(
                 name=i['name'],
-                value=None if math.isnan(val := float(next(filter(lambda x: x[2] == i['name_db'], result))[4])) else val,
+                value=None if math.isnan(value := float(next(filter(lambda x: x[2] == i['name_db'], result))[4])) else value,
                 params=[
                     Param(
-                        name='del мес',
-                        value=None if math.isnan(val := float(next(filter(lambda x: x[2] == i['name_db'], result))[5])) else val
+                        name='%мес',
+                        value=None if math.isnan(
+                            del_month := float(next(filter(lambda x: x[2] == i['name_db'], result))[5])) else 100 * del_month / (
+                                    value - del_month)
+
                     ),
                     Param(
-                        name='del год',
-                        value=None if math.isnan((val := next(filter(lambda x: x[2] == i['name_db'], result))[5])) else val  # FIXME
+                        name='%год',
+                        value=None if math.isnan(del_year := next(filter(lambda x: x[2] == i['name_db'], result))[6]) else
+                            100 * del_year / (value - del_year)
                     ),
                 ]
             ),
@@ -214,3 +207,8 @@ async def dashboard_quotation(request: Request) -> ExchangeSectionData:
 @router.get("/show", response_class=HTMLResponse)
 async def show_quotes(request: Request):
     return templates.TemplateResponse("quotation.html", {"request": request})
+
+
+@router.get("/dashboard/show", response_class=HTMLResponse)
+async def show_dashboard(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})

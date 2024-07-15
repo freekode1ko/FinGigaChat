@@ -3,17 +3,17 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="../static/css/main.css">
+        <link rel="stylesheet" href="/static/css/main.css">
         <link rel="shortcut icon" href="{{ url_for('static', path='/favicon.ico') }}">
         <title>{% block title %}Mini App{% endblock %}</title>
     </head>
     <body>
         <header class="header">
             <div class="menu-list">
-                <a class="menu-link {% if request.url.path == '/quotes/show' %}active{% endif %}" href="/quotes/show">
+                <a class="menu-link {% if request.url.path == '/quotation/show' %}active{% endif %}" href="/quotation/show">
                     <i data-lucide="activity"></i> Котировки
                 </a>
-                <a class="menu-link {% if request.url.path == '/dashboard/show' %}active{% endif %}" href="/dashboard/show">
+                <a class="menu-link {% if request.url.path == '/quotation/dashboard/show' %}active{% endif %}" href="/quotation/dashboard/show">
                     <i data-lucide="layout-dashboard"></i> Дашборд
                 </a>
                 <a class="menu-link {% if request.url.path == '/news/show' %}active{% endif %}" href="/news/show">
@@ -28,8 +28,8 @@
         </div>
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="../static/js/index.js"></script>
-        <script src="../static/js/common.js"></script>
+        <script src="/static/js/index.js"></script>
+        <script src="/static/js/common.js"></script>
         {% block scripts %}{% endblock %}
     </body>
 </html>

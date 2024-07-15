@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", handleDashboardPageLoading);
 
 async function handleDashboardPageLoading() {
-  if (window.location.href.includes("quotes/show")) {
+  if (window.location.href.includes("quotation/show")) {
     const dashboardData = await api.quotes.get();
     const newsData = await api.news.get();
     renderDashboard(dashboardData.sections);
