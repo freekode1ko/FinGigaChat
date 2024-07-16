@@ -13,21 +13,33 @@ from .schemas import SectionData, DataItem, Param
 
 async def get_quotation_from_fx() -> list[SectionData]:
     async with async_session() as session:
-        sel = sa.select(Exc.name, Exc.value, ExcType.name).select_from(Exc).join(ExcType)
+        sel = (
+            sa.select(
+                sa.func.json_agg(
+                    sa.func.json_build_array(
+                        Exc.name,
+                        Exc.value
+                    )
+                ),
+                ExcType.name
+            )
+            .select_from(Exc)
+            .join(ExcType)
+            .group_by(ExcType.name))
         result = await session.execute(sel)
         result = result.all()
 
     sections = []
-    for section_name in set(_[2] for _ in result):
+    for data, section_name in result:
         section = SectionData(
             section_name=section_name,
-            data=[]
+            data=[],
         )
 
-        for name, value, _ in filter(lambda x: x[2] == section_name, result):
+        for name, value in data:
             try:
                 value = float(value)
-            except Exception:
+            except (ValueError, TypeError):
                 value = None
 
             section.data.append(
