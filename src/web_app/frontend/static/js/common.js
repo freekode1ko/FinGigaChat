@@ -32,7 +32,7 @@ class WebAppAPI {
   }
 }
 
-const api = new WebAppAPI("https://ai-bankir-helper-dev.ru");
+const api = new WebAppAPI("https://" + process.env.DOMAIN_NAME);
 
 function parseChange(value) {
   const parsedValue = parseFloat(value);
