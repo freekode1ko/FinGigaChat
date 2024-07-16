@@ -42,15 +42,15 @@ commodity_pricing_names = [
 ]
 metals_pricing_names = [
     {
-        'name': 'Золото USD/t,oz',
+        'name': 'Золото, $/унц',
         'name_db': 'Gold USD/t,oz'
     },
     {
-        'name': 'Медь USD/Lbs',
+        'name': 'Медь, $/т',
         'name_db': 'Copper USD/Lbs'
     },
     {
-        'name': 'Уголь USD/T',
+        'name': 'Уголь, $/т',
         'name_db': 'Coal USD/T'
     },
 ]
