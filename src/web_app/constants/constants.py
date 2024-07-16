@@ -1,3 +1,7 @@
+CLIENT_SCORE_ARTICLE = 3
+
+BASE_DATE_FORMAT = '%d.%m.%Y'
+
 bonds_names = [
     {
         'name': 'Годовые',

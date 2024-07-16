@@ -30,7 +30,7 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
     [ телеграм группа N ]
     [ Клиентские новости ]
     [ Сырьевые новости ]
-    [ Web-app ] /quotation/show
+    [ Web-app ] /news/show
     [ Завершить ]
 
     :param telegram_groups: Список тг групп

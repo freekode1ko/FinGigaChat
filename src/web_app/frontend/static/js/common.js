@@ -26,7 +26,7 @@ class Endpoint {
 class WebAppAPI {
   constructor(baseURL) {
     this.baseURL = baseURL;
-    this.news = new Endpoint(this.baseURL, "news/");
+    this.news = new Endpoint(this.baseURL, "news");
     this.quotes = new Endpoint(this.baseURL, "quotation/popular");
     this.dashboard = new Endpoint(this.baseURL, "quotation/dashboard");
   }

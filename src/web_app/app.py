@@ -29,7 +29,6 @@ async def lifespan(app: FastAPI):
 
 app.include_router(api_router)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
-templates = Jinja2Templates(directory="frontend/templates")
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,25 +1,24 @@
 """API для работы новостей"""
-from datetime import datetime
-
 import sqlalchemy as sa
-from fastapi import APIRouter
-from fastapi import Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from utils.templates import templates
 
+from constants.constants import CLIENT_SCORE_ARTICLE, BASE_DATE_FORMAT
 from db.database import async_session
 from db.models import Article, RelationClientArticle
+from utils.templates import templates
+
 
 router = APIRouter()
 
 
 @router.get('/')
 async def get_news(page: int, size: int) -> JSONResponse:
-    async with (async_session() as session):
+    async with async_session() as session:
         stmt = (
             sa.select(Article,)
             .join(RelationClientArticle)
-            .where(RelationClientArticle.client_score > 3)
+            .where(RelationClientArticle.client_score > CLIENT_SCORE_ARTICLE)
             .order_by(Article.date.desc())
             .offset((page - 1) * size).limit(size)
         )
@@ -29,10 +28,10 @@ async def get_news(page: int, size: int) -> JSONResponse:
     for article in result:
         data.append(
             {
-                'section': article.date.strftime("%d.%m.%Y"),
+                'section': article.date.strftime(BASE_DATE_FORMAT),
                 'title': article.title,
                 'text': article.text_sum,
-                'date': article.date.strftime("%d.%m.%Y"),
+                'date': article.date.strftime(BASE_DATE_FORMAT),
             }
         )
 
@@ -40,5 +39,5 @@ async def get_news(page: int, size: int) -> JSONResponse:
 
 
 @router.get("/show", response_class=HTMLResponse)
-async def show_news(request: Request):
+async def show_news(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("news.html", {"request": request})

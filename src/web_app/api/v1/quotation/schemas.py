@@ -1,23 +1,31 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class Param(BaseModel):
+    """Параметры, которые могут быть у элементов"""
+    
     name: str
     value: Optional[float]
 
 
 class DataItem(BaseModel):
+    """"Элементы для дашбордов"""
+
     name: str
     value: Optional[float]
-    params: List[Param]
+    params: list[Param]
 
 
 class SectionData(BaseModel):
+    """"Секции для дашбордов"""
+
     section_name: str
-    data: List[DataItem]
+    data: list[DataItem]
 
 
 class ExchangeSectionData(BaseModel):
-    sections: List[SectionData]
+    """"Список секций для дашбордов"""
+
+    sections: list[SectionData]
