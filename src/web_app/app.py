@@ -88,14 +88,3 @@ async def create_meeting(
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
-
-
-@app.get('/quotation/{currency}')
-async def get_quotes(currency: str) -> JSONResponse:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f'https://open.er-api.com/v6/latest/{currency}') as response:
-            if response.status != 200:
-                raise Exception
-
-            content = await response.json()
-            return JSONResponse(content['rates'])

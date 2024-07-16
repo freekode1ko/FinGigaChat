@@ -7,8 +7,8 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import constants, quotes
 from configs import config
+from constants import constants, quotes
 
 
 def get_sub_menu_kb(item_df: pd.DataFrame, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
