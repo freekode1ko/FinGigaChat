@@ -28,7 +28,7 @@ class UserMeeting(Base):
     date_start = sa.Column(sa.DateTime, nullable=False, comment='Время начала встречи (UTC)')
     date_end = sa.Column(sa.DateTime, nullable=False, comment='Время окончания встречи (UTC)')
     timezone = sa.Column(sa.Integer, comment='Таймзона пользователя во время использования web app', nullable=False)
-    notify_count = sa.Column(sa.Integer, server_default=sa.Text('0'), comment='Количество отправленных напоминаний')
+    notify_count = sa.Column(sa.Integer, server_default=sa.text('0'), comment='Количество отправленных напоминаний')
     description = sa.Column(sa.Text, comment='Описание встречи')
 
 
@@ -64,10 +64,10 @@ class ExcType(Base):
     __tablename__ = 'bot_exc_type'
     __table_args__ = {'comment': 'Справочник типов курсов валют'}
 
-    id = sa.sa.Column(sa.sa.Integer, primary_key=True, autoincrement=True, comment='id типа')
-    name = sa.sa.Column(sa.sa.String(64), nullable=False, comment='Наименование типа курсов валют')
-    description = sa.sa.Column(sa.Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
-    display_order = sa.sa.Column(sa.Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True, comment='id типа')
+    name = sa.Column(sa.String(64), nullable=False, comment='Наименование типа курсов валют')
+    description = sa.Column(sa.Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
+    display_order = sa.Column(sa.Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
 
 class Exc(Base):
     __tablename__ = 'exc'
