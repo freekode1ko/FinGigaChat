@@ -27,7 +27,7 @@ match DOMAIN_NAME:
     case 'ai-bankir-helper-dev.ru':
         WEB_APP_URL = f'https://{DOMAIN_NAME}'
     case _:
-        WEB_APP_URL = f'http://{DOMAIN_NAME}'
+        WEB_APP_URL = f'https://{DOMAIN_NAME}'
 
 
 # _________________________date_format_________________________
