@@ -1,5 +1,7 @@
 """Обработчики для меню Аналитика"""
 import os
+import tempfile
+from pathlib import Path
 
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramAPIError
@@ -9,10 +11,12 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 from constants import analytics as callback_prefixes
 from db.api.research import research_db
+from db.whitelist import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import formatter
 from utils.base import bot_send_msg, send_or_edit, user_in_whitelist
+from utils.watermark import add_watermark
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -98,7 +102,14 @@ async def get_full_version_of_research(callback_query: types.CallbackQuery, call
 
     # Если есть файл - отправляем
     if research.filepath and os.path.exists(research.filepath):
-        file = types.FSInputFile(research.filepath)
+        user = await get_user(from_user.id)
+        user_anal_filepath = Path(tempfile.tempdir) / f'{from_user.id}.pdf'
+        add_watermark(
+            research.filepath,
+            user_anal_filepath,
+            user.user_email,
+        )
+        file = types.FSInputFile(user_anal_filepath)
         msg_txt = f'Полная версия отчета: <b>{research.header}</b>'
         await callback_query.message.answer_document(
             document=file,

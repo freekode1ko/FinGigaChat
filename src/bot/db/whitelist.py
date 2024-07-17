@@ -96,3 +96,15 @@ async def insert_user_email_after_register(
         )
         await session.execute(ins)
         await session.commit()
+
+
+async def get_user(user_id) -> models.Whitelist:
+    """
+    Получить ORM объект пользователя по телеграм user_id.
+
+    :param user_id: whitelist.user_id
+    :return:        ORM объект пользователя
+    """
+    async with database.async_session() as session:
+        item = await session.get(models.Whitelist, user_id)
+        return item

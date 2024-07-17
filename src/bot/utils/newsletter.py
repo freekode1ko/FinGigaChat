@@ -9,7 +9,9 @@
 import asyncio
 import datetime
 import os
+import tempfile
 import time
+from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -24,7 +26,7 @@ from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
 from db.database import engine
-from db.whitelist import get_users_subscriptions
+from db.whitelist import get_users_subscriptions, get_user
 from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
@@ -32,6 +34,7 @@ from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
 from utils.macro_view import get_macro_brief_file
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
+from utils.watermark import add_watermark
 
 
 async def tg_newsletter(
@@ -280,7 +283,14 @@ async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, resear
             msg = await bot.send_message(user_id, formatted_msg_txt, reply_markup=keyboard, protect_content=False, parse_mode='HTML')
         # Если есть файл, но нет текста - тайтл с файлом
         elif research['filepath'] and os.path.exists(research['filepath']):
-            file = types.FSInputFile(research['filepath'])
+            user = await get_user(user_id)
+            user_anal_filepath = Path(tempfile.tempdir) / f'{user_id}.pdf'
+            add_watermark(
+                research['filepath'],
+                user_anal_filepath,
+                user.user_email,
+            )
+            file = types.FSInputFile(user_anal_filepath)
             msg_txt = f'<b>{research["header"]}</b>'
             msg = await bot.send_document(
                 document=file,
