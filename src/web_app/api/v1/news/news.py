@@ -1,4 +1,6 @@
 """API для работы новостей"""
+from typing import Optional
+
 import sqlalchemy as sa
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -13,7 +15,7 @@ router = APIRouter()
 
 
 @router.get('/')
-async def get_news(page: int, size: int) -> JSONResponse:
+async def get_news(page: Optional[int] = 1, size: Optional[int] = 10) -> JSONResponse:
     async with async_session() as session:
         stmt = (
             sa.select(Article,)
