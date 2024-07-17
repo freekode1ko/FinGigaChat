@@ -32,7 +32,7 @@ class WebAppAPI {
   }
 }
 
-const api = new WebAppAPI("https://ai-bankir-helper.ru"); // Без react только так
+const api = new WebAppAPI("https://" + window.location.host);
 
 function parseChange(value) {
   const parsedValue = parseFloat(value);
