@@ -14,10 +14,11 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import constants, enums
 from db import models
-from db.api import beneficiary, industry
+from db.api import stakeholder, industry
 from db.api.subject_interface import SubjectInterface
 from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
@@ -611,39 +612,40 @@ async def get_industry_news_by_period(
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 95) -> bool:
+async def is_stakeholder_in_message(message: types.Message, session: AsyncSession, fuzzy_score: int = 95) -> bool:
     """
-    Является ли введенное сообщение бенефициаром, и если да, вывод меню бенефициара или новостей.
+    Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
 
+    :param session:      Сессия для взаимодействия с бд.
     :param message:      Сообщение от пользователя.
-    :param fuzzy_score:  Величина в процентах совпадение с референсными именами бенефициара.
-    :return:             Булевое значение о том что совпадает ли сообщение с именем бенефициара.
+    :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
+    :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
-    ben_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
+    sh_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
         message.text,
-        subject_types=[models.BeneficiaryAlternative, ],
+        subject_types=[models.StakeholderAlternative, ],
         score=fuzzy_score
     )
 
-    if len(set(ben_ids)) != 1:
+    if len(set(sh_ids)) != 1:
         return False
 
-    ben_obj = await beneficiary.get_beneficiary_by_id(ben_ids[0])
-    if not ben_obj.clients:  # такого случая по факту не должно быть
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, sh_ids[0])
+    if not sh_obj.clients:  # такого случая по факту не должно быть
         await message.answer('Пока нет новостей на эту тему', reply_markeup=types.ReplyKeyboardRemove())
         return True
 
-    ben_name = utils.decline_name(ben_obj.name).title()
-    if len(ben_obj.clients) > 1:
-        msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
-        keyboard = keyboards.get_select_beneficiary_clients_kb(ben_obj.id, ben_obj.clients)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_ids[0])
+    if len(sh_obj.clients) > 1:
+        msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+        keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
         await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
     else:
         ap_obj = ArticleProcess(logger)
-        msg_text = f'Вот новости по активам <b>{ben_name}</b>:\n\n'
+        msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj, sh_obj.clients[0].name)
         _, articles_text = await ap_obj.process_user_alias(
             subject=enums.SubjectType.client,
-            subject_id=ben_obj.clients[0].id,
+            subject_id=sh_obj.clients[0].id,
             limit_val=2
         )
         await bot_send_msg(message.bot, message.from_user.id, msg_text + articles_text)
@@ -651,18 +653,20 @@ async def is_beneficiary_in_message(message: types.Message, fuzzy_score: int = 9
     return True
 
 
-@router.callback_query(callback_data_factories.BeneficiaryData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_beneficiary_clients
+@router.callback_query(callback_data_factories.StakeholderData.filter(
+    F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholders_clients
 ))
-async def choose_beneficiary_clients(
+async def choose_stakeholder_clients(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.BeneficiaryData,
+        callback_data: callback_data_factories.StakeholderData,
+        session: AsyncSession
 ) -> None:
     """
-    Обновление меню клиентов бенефициара.
+    Обновление меню клиентов стейкхолдера.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
-    :param callback_data:   Информация о выбранной группе клиентов бенефициара.
+    :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
+    :param session:         Сессия для взаимодействия с бд.
     """
     chat_id = callback_query.message.chat.id
     from_user = callback_query.from_user
@@ -672,31 +676,35 @@ async def choose_beneficiary_clients(
     selected_ids = utils.update_selected_ids(selected_ids, callback_data.subject_id)
     callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
 
-    ben_obj = await beneficiary.get_beneficiary_by_id(callback_data.beneficiary_id)
-    ben_name = utils.decline_name(ben_obj.name).title()
-    msg_text = f'По каким активам <b>{ben_name}</b> Вы хотите получить новости?'
-    keyboard = keyboards.get_select_beneficiary_clients_kb(callback_data.beneficiary_id, ben_obj.clients, callback_data)
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
+
+    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = keyboards.get_select_stakeholder_clients_kb(callback_data.stakeholder_id, sh_obj.clients, callback_data)
     await send_or_edit(callback_query, msg_text, keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
 
 @router.callback_query(
-    callback_data_factories.BeneficiaryData.filter(F.menu == callback_data_factories.NewsMenusEnum.show_news)
+    callback_data_factories.StakeholderData.filter(F.menu == callback_data_factories.NewsMenusEnum.show_news)
 )
-async def show_beneficiary_articles(
+async def show_stakeholder_articles(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.BeneficiaryData,
+        callback_data: callback_data_factories.StakeholderData,
+        session: AsyncSession,
 ) -> None:
     """
-    Отправка новостей по выбранным клиентам бенефициара.
+    Отправка новостей по выбранным клиентам стейкхолдера.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
-    :param callback_data:   Информация о выбранной группе клиентов бенефициара.
+    :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
+    :param session:         Сессия для взаимодействия с бд.
     """
     clients_ids = utils.get_selected_ids_from_callback_data(callback_data)
-    ben_name = await beneficiary.get_beneficiary_name(callback_data.beneficiary_id)
-    ben_name = utils.decline_name(ben_name).title()
-    await callback_query.message.edit_text(f'Новости по активам <b>{ben_name}</b>', parse_mode='HTML')
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
+    msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj)
+    await callback_query.message.edit_text(msg_text, parse_mode='HTML')
 
     ap_obj = ArticleProcess(logger)
     for client_id in clients_ids:
@@ -707,5 +715,5 @@ async def show_beneficiary_articles(
         )
         await bot_send_msg(callback_query.bot, callback_query.from_user.id, articles)
     user_logger.info(
-        f'*{callback_query.from_user.id}* {callback_query.from_user.full_name} - получил новости по {ben_name}'
+        f'*{callback_query.from_user.id}* {callback_query.from_user.full_name} - получил новости по {sh_obj.name}'
     )
