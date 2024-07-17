@@ -314,7 +314,7 @@ class ArticleProcess:
             self,
             subject_id: int,
             subject: str = '',
-            limit_val: int = NEWS_LIMIT + 1,
+            limit_val: int = NEWS_LIMIT,
             offset_val: int = 0
     ) -> tuple[str, str]:
         """
