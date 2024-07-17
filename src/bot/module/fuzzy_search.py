@@ -42,7 +42,7 @@ class FuzzyAlternativeNames:
                 main_names_dict.update({alt_main_name[0]: alt_main_name[1] for alt_main_name in result.all()})
                 if len(main_names_dict) == len(alt_names):
                     break
-        return list(dict.fromkeys([main_names_dict[name] for name in alt_names]))
+        return list(dict.fromkeys(main_names_dict[name] for name in alt_names))
 
     @staticmethod
     async def get_subjects_names(
