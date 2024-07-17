@@ -1,9 +1,10 @@
+"""Функции для создания слайда с текстом вотермарки и наложения вотермарки на pdf файлы."""
+
+import io
 from pathlib import Path
 
 from PyPDF2 import PdfReader, PdfWriter
-from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
-import io
 
 from constants.texts import texts_manager
 
@@ -15,13 +16,13 @@ def create_watermark(
         rotation: int = texts_manager.ROTATION,
 ) -> PdfReader:
     """
-    Create watermark from text.
+    Создать слайд с вотермаркой из переданного текста.
 
-    :param text:        watermark text
-    :param font_type:   font type
-    :param font_size:   font size
-    :param rotation:    watermark text rotation
-    :return:            reader of watermark pdf file
+    :param text:        Текст вотермарки
+    :param font_type:   Шрифт
+    :param font_size:   Размер шрифта
+    :param rotation:    Угол наклона текста вотермарки
+    :return:            Объект чтения pdf файла с вотермаркой
     """
     word_spacing = texts_manager.WORD_SPACING
     line_spacing = texts_manager.LINE_SPACING
@@ -63,7 +64,8 @@ def add_watermark(
         font_size: int = texts_manager.FONT_SIZE,
         watermark_text_rotation: int = texts_manager.ROTATION,
 ):
-    """Add text watermark to pdf file.
+    """
+    Добавить вотермарку к pdf файлу.
 
     :param input_pdf:                    Путь к файлу, к которому надо добавить вотермарку
     :param output_pdf:             Путь сохранения файла с вотермаркой
