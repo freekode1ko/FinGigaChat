@@ -8,6 +8,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
 from db.api.research import research_db
@@ -83,12 +84,17 @@ async def main_menu_command(message: types.Message) -> None:
 
 
 @router.callback_query(callbacks.GetFullResearch.filter())
-async def get_full_version_of_research(callback_query: types.CallbackQuery, callback_data: callbacks.GetFullResearch) -> None:
+async def get_full_version_of_research(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetFullResearch,
+        session: AsyncSession,
+) -> None:
     """
     Получить полную версию отчета
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию по отчету
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   содержит дополнительную информацию по отчету
+    :param session:         Асинхронная сессия базы данных.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -102,8 +108,8 @@ async def get_full_version_of_research(callback_query: types.CallbackQuery, call
 
     # Если есть файл - отправляем
     if research.filepath and os.path.exists(research.filepath):
-        user = await get_user(from_user.id)
-        user_anal_filepath = Path(tempfile.tempdir) / f'{from_user.id}.pdf'
+        user = await get_user(session, from_user.id)
+        user_anal_filepath = Path(tempfile.tempdir) / f'{os.path.basename(research["filepath"])}_{from_user.id}_watermarked.pdf'
         add_watermark(
             research.filepath,
             user_anal_filepath,

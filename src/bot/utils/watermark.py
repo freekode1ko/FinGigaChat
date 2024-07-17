@@ -31,20 +31,21 @@ def create_watermark(
     word_in_line_cnt = texts_manager.WORD_IN_LINE_COUNT
     font_color_alpha = texts_manager.FONT_COLOR_ALPHA  # коэф прозрачности
 
-    packet = io.BytesIO()
-    c = canvas.Canvas(packet, pagesize=pagesize)
+    packet = io.BytesIO()   # Файл будет буффере памяти (но можно сделать создание и проверку, что файл есть или нет)
+    c = canvas.Canvas(packet, pagesize=pagesize)  # Создаем картинку размеров pagesize
 
-    text_line = ' '.join(text for _ in range(word_in_line_cnt))
-    text_object = c.beginText()
-    text_object.setLeading(line_spacing)
-    text_object.setWordSpace(word_spacing)
+    text_line = ' '.join(text for _ in range(word_in_line_cnt))  # Создаем строку, которая будет записываться на картинку
+    text_object = c.beginText()  # Создает текстовый объект, который позволяет записывать множество строк на картинку
+    text_object.setLeading(line_spacing)  # установка расстояния между строк
+    text_object.setWordSpace(word_spacing)  # установка расстояния между слов в строке
 
-    c.setFont(font_type, font_size)
-    c.setFillGray(0.5, font_color_alpha)  # Устанавливаем серый цвет
+    c.setFont(font_type, font_size)  # Установка шрифта
+    c.setFillGray(0.5, font_color_alpha)  # Устанавливаем серый цвет и его прозрачность
     c.saveState()
-    c.translate(-pagesize[0], pagesize[1])
-    c.rotate(rotation)
+    c.translate(-pagesize[0], pagesize[1])  # Установка стартовой точки, откуда текст начнет записываться на картинку
+    c.rotate(rotation)  # Установка угла наклона текста (весь блок текста будет повернут относительно стартовой точки записи)
 
+    # Запись строк текста на картинку
     for indent in range(lines_cnt):
         text_object.textLine(text_line)
     c.drawText(text_object)
@@ -52,6 +53,7 @@ def create_watermark(
     c.restoreState()
     c.save()
 
+    # Возвращаемся в начало файла, чтоб pdfreader считал файл с самого начала
     packet.seek(0)
     return PdfReader(packet)
 
@@ -67,12 +69,12 @@ def add_watermark(
     """
     Добавить вотермарку к pdf файлу.
 
-    :param input_pdf:                    Путь к файлу, к которому надо добавить вотермарку
-    :param output_pdf:             Путь сохранения файла с вотермаркой
-    :param watermark_text:              Текст вотермарки
-    :param font_type:                   Шрифт текста
-    :param font_size:                   Размера шрифта
-    :param watermark_text_rotation:     Угол наклона текста
+    :param input_pdf:               Путь к файлу, к которому надо добавить вотермарку
+    :param output_pdf:              Путь сохранения файла с вотермаркой
+    :param watermark_text:          Текст вотермарки
+    :param font_type:               Шрифт текста
+    :param font_size:               Размера шрифта
+    :param watermark_text_rotation: Угол наклона текста
     """
     pdf_reader = PdfReader(input_pdf)
     pdf_writer = PdfWriter()

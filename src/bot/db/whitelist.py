@@ -2,6 +2,7 @@
 import pandas as pd
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as insert_pg
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import database, models
 from db.database import engine
@@ -98,13 +99,24 @@ async def insert_user_email_after_register(
         await session.commit()
 
 
-async def get_user(user_id) -> models.Whitelist:
+async def get_user(session: AsyncSession, user_id: int) -> models.Whitelist | None:
     """
     Получить ORM объект пользователя по телеграм user_id.
 
+    :param session: Асинхронная сессия базы данных.
     :param user_id: whitelist.user_id
     :return:        ORM объект пользователя
     """
-    async with database.async_session() as session:
-        item = await session.get(models.Whitelist, user_id)
-        return item
+    item = await session.get(models.Whitelist, user_id)
+    return item
+
+
+async def get_users(session: AsyncSession) -> list[models.Whitelist]:
+    """
+    Получить пользователей.
+
+    :param session: Асинхронная сессия базы данных.
+    :return:        Список пользователей
+    """
+    items = await session.scalars(select(models.Whitelist))
+    return list(items)
