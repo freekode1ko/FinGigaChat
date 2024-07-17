@@ -1,0 +1,40 @@
+{
+    "роман троценко": {
+        "clients": [
+            {
+                "name":"aeon",
+                "stakeholder_type": "ЛПР"
+            },
+            {
+                "name":"новапорт",
+                "stakeholder_type": "Бенефициар"
+            },
+            {
+                "name":"кемерово азот",
+                "stakeholder_type": "ЛПР"
+            }
+        ],
+        "alternatives": [],
+        "forbes_link": "https://www.forbes.ru/profile/roman-trotsenko"
+    },
+    "гречин сергей": {
+        "clients": [
+            {
+                "name":"aliexpress russia",
+                "stakeholder_type": "Бенефициар"
+            }
+        ],
+        "alternatives": [],
+        "forbes_link": ""
+    },
+    "давид амарян": {
+        "clients": [
+            {
+                "name":"balchug capital",
+                "stakeholder_type": "ЛПР"
+            }
+        ],
+        "alternatives": [],
+        "forbes_link": ""
+    }
+}

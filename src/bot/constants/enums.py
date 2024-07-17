@@ -157,3 +157,10 @@ class FormatType(IntEnum):
     # document.description просто текст
     # [document.file] если есть файл
     individual_messages = 2
+
+
+class StakeholderType(str, Enum):
+    """Тип того, кем является стейкхолдер для клиента."""
+
+    lpr = 'ЛПР'
+    beneficiary = 'Бенефициар'
