@@ -77,11 +77,11 @@ def get_menu_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder) -> str
     """
     match ''.join(sh_types):
         case StakeholderType.lpr:
-            msg_text = texts_manager.LPR_MENU_NEWS.format(ben_name=sh_obj.name.title())
+            msg_text = texts_manager.LPR_MENU_NEWS.format(sh_name=sh_obj.name.title())
         case StakeholderType.beneficiary:
-            msg_text = texts_manager.BEN_MENU_NEWS.format(ben_name=decline_words(sh_obj.name))
+            msg_text = texts_manager.BEN_MENU_NEWS.format(sh_name=decline_words(sh_obj.name))
         case _:
-            msg_text = texts_manager.FEW_COMMON_MENU_NEWS.format(ben_name=decline_words(sh_obj.name, case='ablt'))
+            msg_text = texts_manager.FEW_COMMON_MENU_NEWS.format(sh_name=decline_words(sh_obj.name, case='ablt'))
 
     forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
     return msg_text + forbes_link
@@ -98,14 +98,15 @@ def get_show_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder, client
     """
     match ''.join(sh_types):
         case StakeholderType.lpr:
+            sh_name = sh_obj.name.title()
             if client:
-                return texts_manager.ONE_LPR_SHOW_NEWS.format(ben_name=decline_words(sh_obj.name))
-            return texts_manager.FEW_LPR_SHOW_NEWS.format(ben_name=sh_obj.name.title())
+                return texts_manager.ONE_LPR_SHOW_NEWS.format(client=client, sh_name=sh_name)
+            return texts_manager.FEW_LPR_SHOW_NEWS.format(sh_name=sh_name)
         case StakeholderType.beneficiary:
-            ben_name = decline_words(sh_obj.name)
+            sh_name = decline_words(sh_obj.name)
             if client:
-                return texts_manager.ONE_BEN_SHOW_NEWS.format(client=client, ben_name=ben_name)
-            return texts_manager.FEW_BEN_SHOW_NEWS.format(ben_name=ben_name)
+                return texts_manager.ONE_BEN_SHOW_NEWS.format(sh_name=sh_name)
+            return texts_manager.FEW_BEN_SHOW_NEWS.format(sh_name=sh_name)
         case _:
-            ben_name = decline_words(sh_obj.name, case='ablt')
-            return texts_manager.FEW_COMMON_SHOW_NEWS.format(ben_name=ben_name)
+            sh_name = decline_words(sh_obj.name, case='ablt')
+            return texts_manager.FEW_COMMON_SHOW_NEWS.format(sh_name=sh_name)

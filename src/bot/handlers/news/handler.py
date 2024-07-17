@@ -17,12 +17,14 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import constants, enums
+from constants.texts.texts_manager import texts_manager
 from db import models
-from db.api import stakeholder, industry
+from db.api import stakeholder, industry, client
 from db.api.subject_interface import SubjectInterface
 from db.api.telegram_group import telegram_group_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
+from handlers.clients.keyboards import get_client_menu_kb
 from handlers.news import callback_data_factories, keyboards, utils
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcess, FormatText
@@ -649,6 +651,17 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
             limit_val=2
         )
         await bot_send_msg(message.bot, message.from_user.id, msg_text + articles_text)
+        kb = get_client_menu_kb(
+            sh_obj.clients[0].id,
+            current_page=0,
+            research_type_id=await client.get_research_type_id_by_name(sh_obj.clients[0].name),
+            with_back_button=False,
+        )
+        await message.answer(
+            texts_manager.CLIENT_MENU_START.format(client=sh_obj.clients[0].name),
+            parse_mode='HTML',
+            reply_markup=kb
+        )
 
     return True
 
@@ -714,6 +727,19 @@ async def show_stakeholder_articles(
             limit_val=2
         )
         await bot_send_msg(callback_query.bot, callback_query.from_user.id, articles)
+        client_dict = await client.client_db.get(client_id)
+        kb = get_client_menu_kb(
+            client_id,
+            current_page=0,
+            research_type_id=await client.get_research_type_id_by_name(client_dict['name']),
+            with_back_button=False,
+        )
+        await callback_query.message.answer(
+            texts_manager.CLIENT_MENU_START.format(client=client_dict['name']),
+            parse_mode='HTML',
+            reply_markup=kb
+        )
+
     user_logger.info(
         f'*{callback_query.from_user.id}* {callback_query.from_user.full_name} - получил новости по {sh_obj.name}'
     )
