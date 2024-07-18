@@ -109,7 +109,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    with open('migrations/data/create_stakeholder/client_beneficiary_test.json', encoding='utf-8') as file:  # FIXME
+    with open('migrations/data/create_stakeholder/stakeholders_data.json', encoding='utf-8') as file:
         data = json.load(file)
 
     stakeholders = insert_stakeholders(session, data)

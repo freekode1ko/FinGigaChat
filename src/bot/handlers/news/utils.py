@@ -69,7 +69,7 @@ def decline_words(words: str, case: str = 'gent', str_func: Callable = str.title
 
 def get_menu_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder) -> str:
     """
-    Получение сообщения в зависимости от того, кем является стейкхолдер по отношению к клиентам.
+    Получение текста для меню стейкхолдеров в зависимости от того, кем является стейкхолдер по отношению к клиентам.
 
     :param sh_types:    Последовательность уникальных StakeholderType.
     :param sh_obj:      Сущность стейкхолдера.
@@ -81,7 +81,7 @@ def get_menu_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder) -> str
         case StakeholderType.beneficiary:
             msg_text = texts_manager.BEN_MENU_NEWS.format(sh_name=decline_words(sh_obj.name))
         case _:
-            msg_text = texts_manager.FEW_COMMON_MENU_NEWS.format(sh_name=decline_words(sh_obj.name, case='ablt'))
+            msg_text = texts_manager.COMMON_MENU_NEWS.format(sh_name=decline_words(sh_obj.name, case='ablt'))
 
     forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
     return msg_text + forbes_link
@@ -89,7 +89,7 @@ def get_menu_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder) -> str
 
 def get_show_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder, client: str = '') -> str:
     """
-    Получение сообщения в зависимости от того, кем является стейкхолдер по отношению к клиентам(у).
+    Получение текста для отображения новостей в зависимости от того, кем является стейкхолдер по отношению к клиентам(у).
 
     :param sh_types:    Последовательность уникальных StakeholderType.
     :param sh_obj:      Сущность стейкхолдера.
@@ -109,4 +109,4 @@ def get_show_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder, client
             return texts_manager.FEW_BEN_SHOW_NEWS.format(sh_name=sh_name)
         case _:
             sh_name = decline_words(sh_obj.name, case='ablt')
-            return texts_manager.FEW_COMMON_SHOW_NEWS.format(sh_name=sh_name)
+            return texts_manager.COMMON_SHOW_NEWS.format(sh_name=sh_name)

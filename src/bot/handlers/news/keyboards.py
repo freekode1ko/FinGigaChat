@@ -399,7 +399,7 @@ def get_select_stakeholder_clients_kb(
     all_clients = []
     for sh_client in sh_clients:
         button_call = callback_data_factories.StakeholderData(
-            menu=callback_data_factories.NewsMenusEnum.choose_stakeholders_clients,
+            menu=callback_data_factories.NewsMenusEnum.choose_stakeholder_clients,
             stakeholder_id=stakeholder_id,
             subject_id=sh_client.id,
             subject_ids=subject_ids,

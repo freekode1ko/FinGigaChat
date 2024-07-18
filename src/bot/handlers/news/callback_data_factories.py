@@ -174,8 +174,8 @@ class NewsMenusEnum(IntEnum):
     news_by_period = auto()             # выдача новостей за период
     industry_news_by_period = auto()             # выдача новостей за период
 
-    # меню для бенефициаров
-    choose_stakeholders_clients = auto()  # выбор клиентов бенефициаров
+    # меню для стейкхолдеров
+    choose_stakeholder_clients = auto()  # выбор клиентов стейкхолдера
     show_news = auto()  # выдача новостей по выбранным клиентам
 
 

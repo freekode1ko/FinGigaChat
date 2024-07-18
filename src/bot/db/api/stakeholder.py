@@ -1,4 +1,4 @@
-"""Запросы к бд связанные с бенефициарами."""
+"""Запросы к бд связанные со стейкхолдерами."""
 from typing import Sequence
 
 from sqlalchemy import select
@@ -21,8 +21,7 @@ async def get_stakeholder_by_id(session: AsyncSession, sh_id: int) -> Stakeholde
         .options(joinedload(Stakeholder.clients))
         .where(Stakeholder.id == sh_id)
     )
-    result = await session.execute(stmt)
-    return result.scalar()
+    return await session.scalar(stmt)
 
 
 async def get_stakeholder_types(session: AsyncSession, sh_id: int) -> Sequence[str]:

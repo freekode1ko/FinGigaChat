@@ -397,7 +397,7 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
         await message.answer('Пока нет новостей на эту тему', reply_markeup=types.ReplyKeyboardRemove())
         return True
 
-    stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_ids[0])
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
     if len(sh_obj.clients) > 1:
         msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
         keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
@@ -411,7 +411,7 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
 
 
 @router.callback_query(callback_data_factories.StakeholderData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholders_clients
+    F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholder_clients
 ))
 async def choose_stakeholder_clients(
         callback_query: types.CallbackQuery,
@@ -476,7 +476,7 @@ async def send_stakeholder_articles(
         extra_text: str = ''
 ) -> None:
     """
-    Отправка новостей о клиентах, относящихся к стейкхолдеру.
+    Отправка новостей о клиенте стейкхолдера.
 
     :param tg_obj:          Telegram-объект для отправки сообщения и получения данных о пользователе.
     :param ap_obj:          Экземпляр ArticleProcess.
