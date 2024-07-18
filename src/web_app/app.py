@@ -19,14 +19,13 @@ from utils.templates import templates
 
 logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
-app = FastAPI(lifespan=lifespan)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await utils.add_notify_job(logger)
     utils.scheduler.start()
     yield
 
+app = FastAPI(lifespan=lifespan)
 app.include_router(api_router)
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
