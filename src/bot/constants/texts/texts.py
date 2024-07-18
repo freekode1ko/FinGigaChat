@@ -29,6 +29,9 @@ class WatermarkConfig(BaseSettings):
     WORD_IN_LINE_COUNT: int = 8                             # Кол-во повторений слова в строке
     FONT_COLOR_ALPHA: float = 0.3                           # коэф прозрачности
 
+    VERTICAL_REPETITIONS: int = 3                           # Кол-во строк на странице с вотермаркой
+    HORIZONTAL_REPETITIONS: int = 3                         # Кол-во повторений слова в строке
+
 
 CONFIG_CLASSES = [
     AllListOfTexts,
