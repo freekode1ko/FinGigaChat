@@ -1,3 +1,4 @@
+"""Модуль с текстовыми константами по call report."""
 from pydantic_settings import BaseSettings
 
 

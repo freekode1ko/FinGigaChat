@@ -5,7 +5,7 @@
 Обновляет список выбранных субъектов.
 Оборачивает в строку список выбранных субъектов.
 """
-from typing import Sequence, Callable
+from typing import Callable, Sequence
 
 from pymorphy2 import MorphAnalyzer
 

@@ -12,25 +12,25 @@ import utils.base
 from configs import config
 from constants import aliases, enums
 from constants.texts.texts_manager import texts_manager
-from db import parser_source, models
+from db import models, parser_source
+from db.api import stakeholder
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.commodity import commodity_db
 from db.api.industry import industry_db
-from db.api import stakeholder
 from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
 from handlers.clients.keyboards import get_client_menu_kb
 from handlers.clients.utils import is_client_in_message
-from handlers.news import utils, callback_data_factories, keyboards
+from handlers.news import callback_data_factories, keyboards, utils
 from handlers.news.handler import router
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, process_fin_table, user_in_whitelist, send_or_edit
+from utils.base import bot_send_msg, process_fin_table, send_or_edit, user_in_whitelist
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
@@ -64,7 +64,7 @@ async def send_news_with_next_button(
     """
     articles_all = reply_msg.split('\n\n', articles_limit)
     if len(articles_all) > articles_limit:
-        articles_upto_limit = '\n\n'.join(articles_all[:articles_limit+1])
+        articles_upto_limit = '\n\n'.join(articles_all[:articles_limit + 1])
         keyboard = InlineKeyboardBuilder()
         callback_meta = NextNewsCallback(
             subject_id=subject_id,

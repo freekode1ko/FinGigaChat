@@ -2,10 +2,10 @@
 from typing import Sequence
 
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
-from db.models import Stakeholder, RelationClientStakeholder
+from db.models import RelationClientStakeholder, Stakeholder
 
 
 async def get_stakeholder_by_id(session: AsyncSession, sh_id: int) -> Stakeholder:
@@ -26,12 +26,12 @@ async def get_stakeholder_by_id(session: AsyncSession, sh_id: int) -> Stakeholde
 
 async def get_stakeholder_types(session: AsyncSession, sh_id: int) -> Sequence[str]:
     """
-     Получение уникальных значений в колонке stakeholder_type для стейкхолдеров.
+    Получение уникальных значений в колонке stakeholder_type для стейкхолдеров.
 
-     :param session:  Сессия для взаимодействия с бд.
-     :param sh_id:    ID стейкхолдера.
-     :return:         Сущность стейкхолдера.
-     """
+    :param session:  Сессия для взаимодействия с бд.
+    :param sh_id:    ID стейкхолдера.
+    :return:         Сущность стейкхолдера.
+    """
     stmt = (
         select(RelationClientStakeholder.stakeholder_type)
         .distinct()
