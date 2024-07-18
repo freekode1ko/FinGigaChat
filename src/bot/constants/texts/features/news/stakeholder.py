@@ -16,9 +16,10 @@ class StakeholderTexts(BaseSettings):
     # Текстовки для отображения новостей
     FEW_BEN_SHOW_NEWS: str = 'Вот новости по активам <b>{sh_name}</b>'
     FEW_LPR_SHOW_NEWS: str = 'Вот новости по клиентам, для которого <b>{sh_name}</b> является ЛПР'
-    COMMON_SHOW_NEWS: str = 'Вот новости по компаниям, аффилированным с <b>{sh_name}</b>'
-    ONE_BEN_SHOW_NEWS: str = 'Вот новости по активу <b>{sh_name}</b>\n\n'
-    ONE_LPR_SHOW_NEWS: str = 'Вот новости по <b>{client}</b>, для которого <b>{sh_name}</b> является ЛПР\n\n'
+    FEW_COMMON_SHOW_NEWS: str = 'Вот новости по компаниям, аффилированным с <b>{sh_name}</b>\n\n'
+    ONE_BEN_SHOW_NEWS: str = 'Вот новости по активу <b>{sh_name}</b>{link}\n\n'
+    ONE_LPR_SHOW_NEWS: str = 'Вот новости по <b>{client}</b>, для которого <b>{sh_name}</b> является ЛПР{link}\n\n'
+    ONE_COMMON_SHOW_NEWS: str = 'Вот новости по компании, аффилированной с <b>{sh_name}</b>{link}\n\n'
 
     # Сообщение для отображения меню по клиенту
     CLIENT_MENU_START: str = 'Дополнительные данные о клиенте <b>{client}</b>'

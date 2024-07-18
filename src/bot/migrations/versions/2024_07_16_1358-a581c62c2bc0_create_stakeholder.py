@@ -99,7 +99,7 @@ def upgrade() -> None:
     op.create_table('relation_client_stakeholder',
     sa.Column('client_id', sa.Integer(), nullable=False),
     sa.Column('stakeholder_id', sa.Integer(), nullable=False),
-    sa.Column('stakeholder_type', sa.Enum('lpr', 'beneficiary', name='stakeholdertype'), nullable=False, comment='Тип стейкхолдера'),
+    sa.Column('stakeholder_type', sa.Enum('lpr', 'beneficiary', 'undefined', name='stakeholdertype'), nullable=False, comment='Тип стейкхолдера'),
     sa.ForeignKeyConstraint(['client_id'], ['client.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['stakeholder_id'], ['stakeholder.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('client_id', 'stakeholder_id'),
@@ -122,5 +122,5 @@ def downgrade() -> None:
     op.drop_table('relation_client_stakeholder')
     op.drop_table('stakeholder_alternative')
     op.drop_table('stakeholder')
-    sa.Enum('lpr', 'beneficiary', name='stakeholdertype').drop(op.get_bind())
+    sa.Enum('lpr', 'beneficiary', 'undefined', name='stakeholdertype').drop(op.get_bind())
     # ### end Alembic commands ###

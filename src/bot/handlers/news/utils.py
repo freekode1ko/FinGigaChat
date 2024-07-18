@@ -96,17 +96,20 @@ def get_show_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder, client
     :param client:      Имя единственного клиента стейкхолдера, если клиент единственный.
     :return:            Строку для формирования сообщения.
     """
+    forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
     match ''.join(sh_types):
         case StakeholderType.lpr:
             sh_name = sh_obj.name.title()
             if client:
-                return texts_manager.ONE_LPR_SHOW_NEWS.format(client=client, sh_name=sh_name)
+                return texts_manager.ONE_LPR_SHOW_NEWS.format(client=client, sh_name=sh_name, link=forbes_link)
             return texts_manager.FEW_LPR_SHOW_NEWS.format(sh_name=sh_name)
         case StakeholderType.beneficiary:
             sh_name = decline_words(sh_obj.name)
             if client:
-                return texts_manager.ONE_BEN_SHOW_NEWS.format(sh_name=sh_name)
+                return texts_manager.ONE_BEN_SHOW_NEWS.format(sh_name=sh_name, link=forbes_link)
             return texts_manager.FEW_BEN_SHOW_NEWS.format(sh_name=sh_name)
         case _:
             sh_name = decline_words(sh_obj.name, case='ablt')
-            return texts_manager.COMMON_SHOW_NEWS.format(sh_name=sh_name)
+            if client:
+                return texts_manager.ONE_COMMON_SHOW_NEWS.format(sh_name=sh_name, link=forbes_link)
+            return texts_manager.FEW_COMMON_SHOW_NEWS.format(sh_name=sh_name)

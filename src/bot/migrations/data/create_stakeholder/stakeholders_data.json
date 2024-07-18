@@ -36,5 +36,15 @@
         ],
         "alternatives": [],
         "forbes_link": ""
+    },
+    "владимир лисин": {
+        "clients": [
+            {
+                "name":"нлмк",
+                "stakeholder_type": "Неопределенно"
+            }
+        ],
+        "alternatives": [],
+        "forbes_link": "https://www.forbes.ru/profile/vladimir-lisin"
     }
 }

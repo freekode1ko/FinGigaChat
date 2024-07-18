@@ -164,3 +164,4 @@ class StakeholderType(str, Enum):
 
     lpr = 'ЛПР'
     beneficiary = 'Бенефициар'
+    undefined = 'Неопределенно'
