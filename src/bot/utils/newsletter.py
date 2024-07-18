@@ -9,6 +9,7 @@
 import asyncio
 import datetime
 import os
+import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -284,21 +285,28 @@ async def send_researches_to_user(bot: Bot, user: models.Whitelist, research_df:
             )
         # Если есть файл, но нет текста - тайтл с файлом
         elif research['filepath'] and os.path.exists(research['filepath']):
-            user_anal_filepath = Path(tempfile.gettempdir()) / f'{os.path.basename(research["filepath"])}_{user.user_id}_watermarked.pdf'
-            add_watermark_cli(
-                research['filepath'],
-                user_anal_filepath,
-                user.user_email,
-            )
-            file = types.FSInputFile(user_anal_filepath)
-            msg_txt = f'<b>{research["header"]}</b>'
-            msg = await bot.send_document(
-                document=file,
-                chat_id=user.user_id,
-                caption=msg_txt,
-                parse_mode='HTML',
-                protect_content=True,
-            )
+            tmp_file_name = f'{os.path.basename(research["filepath"])}_{user.user_id}_watermarked.pdf'
+            user_anal_filepath = Path(tempfile.gettempdir()) / tmp_file_name
+
+            try:
+                add_watermark_cli(
+                    research['filepath'],
+                    user_anal_filepath,
+                    user.user_email,
+                )
+            except subprocess.SubprocessError as e:
+                logger.error(f'*{user.user_id}* При рассылке отчета {research["id"]} произошла ошибка: {e}.')
+                continue
+            else:
+                file = types.FSInputFile(user_anal_filepath)
+                msg_txt = f'<b>{research["header"]}</b>'
+                msg = await bot.send_document(
+                    document=file,
+                    chat_id=user.user_id,
+                    caption=msg_txt,
+                    parse_mode='HTML',
+                    protect_content=True,
+                )
         else:
             continue
 

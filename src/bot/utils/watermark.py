@@ -6,16 +6,19 @@ from pathlib import Path
 from constants.texts import texts_manager
 
 
+SUBPROCESS_CALL_TIMEOUT = 30
+
+
 def add_watermark_cli(
-        input_pdf: str | Path,
-        output_pdf: str | Path,
-        watermark: str,
-        font_type: str = texts_manager.FONT_TYPE,
-        font_size: int = texts_manager.FONT_SIZE,
-        rotation: int = texts_manager.ROTATION,
-        lines_count: int = texts_manager.VERTICAL_REPETITIONS,
-        word_in_line_count: int = texts_manager.HORIZONTAL_REPETITIONS,
-        opacity: float = texts_manager.FONT_COLOR_ALPHA,
+    input_pdf: str | Path,
+    output_pdf: str | Path,
+    watermark: str,
+    font_type: str = texts_manager.FONT_TYPE,
+    font_size: int = texts_manager.FONT_SIZE,
+    rotation: int = texts_manager.ROTATION,
+    lines_count: int = texts_manager.VERTICAL_REPETITIONS,
+    word_in_line_count: int = texts_manager.HORIZONTAL_REPETITIONS,
+    opacity: float = texts_manager.FONT_COLOR_ALPHA,
 ) -> None:
     """
     Добавить вотермарку к pdf файлу.
@@ -47,7 +50,4 @@ def add_watermark_cli(
         watermark,
     ]
 
-    try:
-        subprocess.call(cmd)
-    except subprocess.SubprocessError as e:
-        print(f'Error: {e}')
+    subprocess.call(cmd, timeout=SUBPROCESS_CALL_TIMEOUT)
