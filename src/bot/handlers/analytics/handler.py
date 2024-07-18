@@ -17,7 +17,7 @@ from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import formatter
 from utils.base import bot_send_msg, send_or_edit, user_in_whitelist
-from utils.watermark import add_watermark
+from utils.watermark import add_watermark_cli
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -109,8 +109,8 @@ async def get_full_version_of_research(
     # Если есть файл - отправляем
     if research.filepath and os.path.exists(research.filepath):
         user = await get_user(session, from_user.id)
-        user_anal_filepath = Path(tempfile.tempdir) / f'{os.path.basename(research["filepath"])}_{from_user.id}_watermarked.pdf'
-        add_watermark(
+        user_anal_filepath = Path(tempfile.gettempdir()) / f'{os.path.basename(research.filepath)}_{from_user.id}_watermarked.pdf'
+        add_watermark_cli(
             research.filepath,
             user_anal_filepath,
             user.user_email,

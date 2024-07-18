@@ -34,7 +34,7 @@ from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
 from utils.macro_view import get_macro_brief_file
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
-from utils.watermark import add_watermark
+from utils.watermark import add_watermark_cli
 
 
 async def tg_newsletter(
@@ -284,8 +284,8 @@ async def send_researches_to_user(bot: Bot, user: models.Whitelist, research_df:
             )
         # Если есть файл, но нет текста - тайтл с файлом
         elif research['filepath'] and os.path.exists(research['filepath']):
-            user_anal_filepath = Path(tempfile.tempdir) / f'{os.path.basename(research["filepath"])}_{user.user_id}_watermarked.pdf'
-            add_watermark(
+            user_anal_filepath = Path(tempfile.gettempdir()) / f'{os.path.basename(research["filepath"])}_{user.user_id}_watermarked.pdf'
+            add_watermark_cli(
                 research['filepath'],
                 user_anal_filepath,
                 user.user_email,
