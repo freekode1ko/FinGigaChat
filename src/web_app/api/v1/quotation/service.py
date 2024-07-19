@@ -122,7 +122,7 @@ async def get_quotation_from_bonds() -> SectionData:
                 params=[
                     Param(
                         name='%день',
-                        value=float(next(filter(lambda x: x[0] == i['name_db'], result_bonds))[5][:-1])
+                        value=float(str(next(filter(lambda x: x[0] == i['name_db'], result_bonds))[5])[:-1])
                     ),
                 ]
             )
