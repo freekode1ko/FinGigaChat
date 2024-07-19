@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(api_router)
+app.include_router(api_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 app.add_middleware(
