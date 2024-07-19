@@ -5,17 +5,17 @@ import type { MenuItem } from './types'
 export const menuItems: Array<MenuItem> = [
   {
     name: 'Котировки',
-    path: '/quotes/show',
+    path: '/quotes',
     icon: ActivityIcon,
   },
   {
     name: 'Дашборд',
-    path: '/dashboard/show',
+    path: '/',
     icon: LayoutDashboardIcon,
   },
   {
     name: 'Новости',
-    path: '/news/show',
+    path: '/news',
     icon: NewspaperIcon,
   },
 ]

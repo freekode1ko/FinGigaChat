@@ -86,3 +86,7 @@ async def create_meeting(
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
+
+@app.get("/", response_class=HTMLResponse)
+async def show_news(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("index.html", {"request": request})

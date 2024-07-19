@@ -115,14 +115,6 @@ services:
             - ./data:/code/data
         restart: always
 
-    webapp_frontend:
-        image: 'nginx:alpine'
-        container_name: web_app_frontend
-        ports:
-        - "80:80"
-        volumes:
-        - ./src/web_app/react_frontend/dist:/usr/share/nginx/html
-        - ./src/web_app/react_frontend/nginx.conf:/etc/nginx/conf.d/default.conf
 
     bert_client_relevance:
         build:

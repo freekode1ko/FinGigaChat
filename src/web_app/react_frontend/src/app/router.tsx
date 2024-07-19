@@ -11,15 +11,15 @@ export const appRouter = () =>
       errorElement: <div>error</div>,
       children: [
         {
-          path: '/news/show',
+          path: '/news',
           element: <NewsPage />,
         },
         {
-          path: '/quotes/show',
+          path: '/quotes',
           element: <QuotesPage />,
         },
         {
-          path: '/dashboard/show',
+          path: '/',
           element: <DashboardPage />,
         },
       ],

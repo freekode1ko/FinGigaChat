@@ -10,7 +10,7 @@ const DashboardPage = () => {
           <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight text-hint-color">
             {section.section_name}
           </h2>
-          <QuotesTable data={section.data} />
+          <QuotesTable data={section.data} params={section.section_params} />
         </div>
       ))}
     </>
