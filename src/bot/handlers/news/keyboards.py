@@ -31,7 +31,7 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
     [ телеграм группа N ]
     [ Клиентские новости ]
     [ Сырьевые новости ]
-    [ Web-app ] /news/show
+    [ Web-app ] /news
     [ Завершить ]
 
     :param telegram_groups: Список тг групп
@@ -59,7 +59,7 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
         ))
     keyboard.row(types.InlineKeyboardButton(
         text='🔥New! Мини-приложение',
-        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news/show')
+        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news')
     ))
 
     keyboard.row(types.InlineKeyboardButton(

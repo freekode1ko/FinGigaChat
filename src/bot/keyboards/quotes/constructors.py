@@ -56,7 +56,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     [ Equity ]
     [ Commodities ]
     [ Ставки ]
-    [ Web-app /quotation/show ]
+    [ Web-app ]   /quotation/show
     [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
@@ -82,7 +82,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='🔥New! Мини-приложение',
-        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/quotation/show')
+        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/quotes')
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
