@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class Param(BaseModel):
     """Параметры, которые могут быть у элементов"""
-    
+
     name: str
     value: Optional[float]
 
@@ -22,6 +22,7 @@ class SectionData(BaseModel):
     """"Секции для дашбордов"""
 
     section_name: str
+    section_params: Optional[list[str]]
     data: list[DataItem]
 
 

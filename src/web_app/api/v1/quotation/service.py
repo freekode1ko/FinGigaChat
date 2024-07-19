@@ -33,6 +33,7 @@ async def get_quotation_from_fx() -> list[SectionData]:
     for data, section_name in result:
         section = SectionData(
             section_name=section_name,
+            section_params=['%день'],
             data=[],
         )
 
@@ -79,6 +80,7 @@ async def get_quotation_from_eco() -> SectionData:
 
     section = SectionData(
         section_name='Процентные ставки и инфляция',
+        section_params=[],
         data=[
             DataItem(
                 name='Ключевая ставка ЦБ',
@@ -127,6 +129,7 @@ async def get_quotation_from_bonds() -> SectionData:
         )
     return SectionData(
         section_name='Доходность ОФЗ',
+        section_params=['%день'],
         data=data
     )
 
@@ -191,6 +194,7 @@ async def get_quotation_from_metals() -> list[DataItem]:
 async def get_quotation_from_commodity() -> SectionData:
     return SectionData(
         section_name='Commodities',
+        section_params=['%мес', '%год'],
         data=[
             *(await get_quotation_from_commodity_pricing()),
             *(await get_quotation_from_metals()),
