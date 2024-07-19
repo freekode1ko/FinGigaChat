@@ -25,13 +25,3 @@ async def dashboard_quotation(request: Request) -> ExchangeSectionData:
             await get_quotation_from_commodity(),
         ]
     )
-
-
-@router.get("/show", response_class=HTMLResponse)
-async def show_quotes(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("quotation.html", {"request": request})
-
-
-@router.get("/dashboard/show", response_class=HTMLResponse)
-async def show_dashboard(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("dashboard.html", {"request": request})

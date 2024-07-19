@@ -38,8 +38,3 @@ async def get_news(page: Optional[int] = 1, size: Optional[int] = 10) -> JSONRes
         )
 
     return JSONResponse({'news': data,})
-
-
-@router.get("/show", response_class=HTMLResponse)
-async def show_news(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("news.html", {"request": request})
