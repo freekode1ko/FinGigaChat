@@ -12,12 +12,12 @@ RUN apt-get install -y tzdata
 
 WORKDIR /code
 
-# install packages
-COPY ./pyproject.toml /code/pyproject.toml
 RUN pip install poetry
-
 # install pdf_watermark that is a cli util
 RUN pip install pdf-watermark
+
+# install packages
+COPY ./pyproject.toml /code/pyproject.toml
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
