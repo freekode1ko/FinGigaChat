@@ -102,7 +102,8 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         async with database.async_session() as session:
             stmt = sa.select(
-                models.Whitelist.user_id, models.Whitelist.username, sa.func.array_agg(self.table.research_type_id)
+                models.Whitelist.user_id, models.Whitelist.username, models.Whitelist.user_email,
+                sa.func.array_agg(self.table.research_type_id),
             ).select_from(
                 self.table
             ).join(
@@ -114,6 +115,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
             columns = [
                 'user_id',
                 'username',
+                'user_email',
                 'research_types',
             ]
             data = await session.execute(stmt)
