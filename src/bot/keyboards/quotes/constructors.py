@@ -56,7 +56,7 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     [ Equity ]
     [ Commodities ]
     [ Ставки ]
-    [ Web-app ]   /quotation/show
+    [ Web-app ]   /quotes
     [ Завершить ]
     """
     keyboard = InlineKeyboardBuilder()
