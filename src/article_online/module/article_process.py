@@ -186,18 +186,16 @@ class ArticleProcess:
         self.df_article = gigachat_filtering(self._logger, self.df_article)
 
     @staticmethod
-    def clean_data_from_html_tags(html_content: str):
+    def clean_data_from_html_tags(html_content: str | None) -> str:
         """
         Очистить данные от html тегов.
 
         Позволяет очистить данные от незакрытых html тегов.
 
         :param html_content: Данные, которые требуется очистить от html тегов.
+        :return: Очищенные данные
         """
-        if not html_content:
-            return ''
-        soup = BeautifulSoup(html_content, 'html.parser')
-        return soup.get_text()
+        return BeautifulSoup(html_content, 'html.parser').get_text() if html_content else ''
 
     def remove_html_tags(self, columns_to_clear: Iterable[str] = ('title', 'text', 'text_sum')) -> None:
         """
