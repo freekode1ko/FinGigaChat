@@ -15,4 +15,19 @@ class CallReportsTexts(BaseSettings):
     CALL_REPORTS_CLOSE: str = 'Меню протоколов встреч закрыто.'
 
 
-CONFIG_CLASSES = [AllListOfTexts, CallReportsTexts]
+class WatermarkConfig(BaseSettings):
+    """Класс для хранения параметров создания watermark"""
+
+    FONT_TYPE: str = 'Helvetica'                            # Шрифт
+    FONT_SIZE: int = 20                                     # Размер шрифта
+    ROTATION: int = 45                                      # Угол наклона текста
+    FONT_COLOR_ALPHA: float = 0.3                           # коэф прозрачности
+    VERTICAL_REPETITIONS: int = 3                           # Кол-во строк на странице с вотермаркой
+    HORIZONTAL_REPETITIONS: int = 3                         # Кол-во повторений слова в строке
+
+
+CONFIG_CLASSES = [
+    AllListOfTexts,
+    CallReportsTexts,
+    WatermarkConfig,
+]
