@@ -1,10 +1,11 @@
 """Модуль обработки новостей."""
 import datetime as dt
 import json
-from typing import Optional
+from typing import Iterable, Optional
 from urllib.parse import unquote
 
 import pandas as pd
+from bs4 import BeautifulSoup
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
@@ -183,6 +184,27 @@ class ArticleProcess:
     def apply_gigachat_filtering(self) -> None:
         """Применяем фильтрацию новостей с помощью gigachat"""
         self.df_article = gigachat_filtering(self._logger, self.df_article)
+
+    @staticmethod
+    def clean_data_from_html_tags(html_content: str | None) -> str:
+        """
+        Очистить данные от html тегов.
+
+        Позволяет очистить данные от незакрытых html тегов.
+
+        :param html_content: Данные, которые требуется очистить от html тегов.
+        :return: Очищенные данные
+        """
+        return BeautifulSoup(html_content, 'html.parser').get_text() if html_content else ''
+
+    def remove_html_tags(self, columns_to_clear: Iterable[str] = ('title', 'text', 'text_sum')) -> None:
+        """
+        Очистить данные self.df_article от html тегов.
+
+        :param columns_to_clear: Список имен столбцов, для которых требуется провести очистку данных от html тегов.
+        """
+        for col in columns_to_clear:
+            self.df_article[col].apply(self.clean_data_from_html_tags)
 
     def save_tables(self) -> list[str]:
         """

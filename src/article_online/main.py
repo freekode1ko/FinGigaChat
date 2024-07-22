@@ -113,6 +113,7 @@ def regular_func() -> tuple[str, list, list]:
                     ap_obj_online.apply_gigachat_filtering()
                 except Exception as e:
                     logger.error('Ошибка при фильтрации новостей с помощью ГигаЧата: %s', e)
+                ap_obj_online.remove_html_tags()
                 subject_links = ap_obj_online.save_tables()
 
                 logger.info('Старт обработки телеграм новостей')
@@ -124,6 +125,7 @@ def regular_func() -> tuple[str, list, list]:
                 if not df_article.empty:
                     ap_obj_online.df_article = df_article
                     ap_obj_online.make_text_sum()
+                    ap_obj_online.remove_html_tags()
                     tg_links = ap_obj_online.save_tg_tables()
 
                 print('Окончание обработки новостей с помощью моделей')
