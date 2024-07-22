@@ -27,8 +27,7 @@ async def update_history_query(user_id: int, history_query: str) -> None:
     :param history_query:   Исторически перефразированный запрос пользователя.
     """
     key = HISTORY_QUERY_KEY.format(user_id=user_id)
-    await redis_client.set(name=key, value=history_query)
-    await redis_client.expire(name=key, time=KEEP_DIALOG_TIME)
+    await redis_client.setex(name=key, value=history_query, time=KEEP_DIALOG_TIME)
 
 
 async def get_dialog(user_id: int) -> list[dict[str, str]]:
