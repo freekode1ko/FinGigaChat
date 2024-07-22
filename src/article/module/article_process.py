@@ -1,9 +1,11 @@
 """Обработчики новостей"""
 import datetime as dt
 import os
+from typing import Iterable
 from urllib.parse import unquote
 
 import pandas as pd
+from bs4 import BeautifulSoup
 from sqlalchemy import text
 
 from db.database import engine
@@ -176,6 +178,29 @@ class ArticleProcess:
         ]
         self._logger.info(f'Количество одинаковых новостей в выгрузках по клиентам и товарам - {len(df_client_commodity)}')
         self._logger.info(f'Количество новостей после объединения выгрузок - {len(df_article)}')
+
+    @staticmethod
+    def clean_data_from_html_tags(html_content: str):
+        """
+        Очистить данные от html тегов.
+
+        Позволяет очистить данные от незакрытых html тегов.
+
+        :param html_content: Данные, которые требуется очистить от html тегов.
+        """
+        if not html_content:
+            return ''
+        soup = BeautifulSoup(html_content, 'html.parser')
+        return soup.get_text()
+
+    def remove_html_tags(self, columns_to_clear: Iterable[str] = ('title', 'text', 'text_sum')) -> None:
+        """
+        Очистить данные self.df_article от html тегов.
+
+        :param columns_to_clear: Список имен столбцов, для которых требуется провести очистку данных от html тегов.
+        """
+        for col in columns_to_clear:
+            self.df_article[col].apply(self.clean_data_from_html_tags)
 
     def save_tables(self) -> list:
         """

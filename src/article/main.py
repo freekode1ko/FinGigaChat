@@ -137,6 +137,7 @@ class ParsePolyanalist:
                 self.ap_obj.drop_duplicate()
                 self.ap_obj.make_text_sum()
                 self.ap_obj.apply_gigachat_filtering()
+                self.ap_obj.remove_html_tags()
                 self.ap_obj.save_tables()
                 parser_source.update_get_datetime(source_name='Полианалист')
             else:
