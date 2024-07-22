@@ -12,9 +12,10 @@ from typing import Any
 
 import pandas as pd
 from aiogram import types
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from configs import config
 from constants import constants
 from db import models
 from handlers.news import callback_data_factories, utils
@@ -30,6 +31,7 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
     [ телеграм группа N ]
     [ Клиентские новости ]
     [ Сырьевые новости ]
+    [ Web-app ] /news/show
     [ Завершить ]
 
     :param telegram_groups: Список тг групп
@@ -55,6 +57,10 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
                 subject=news_subject_group,
             ).pack()
         ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='🔥New! Мини-приложение',
+        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news/show')
+    ))
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
