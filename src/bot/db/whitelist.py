@@ -107,16 +107,4 @@ async def get_user(session: AsyncSession, user_id: int) -> models.Whitelist | No
     :param user_id: whitelist.user_id
     :return:        ORM объект пользователя
     """
-    item = await session.get(models.Whitelist, user_id)
-    return item
-
-
-async def get_users(session: AsyncSession) -> list[models.Whitelist]:
-    """
-    Получить пользователей.
-
-    :param session: Асинхронная сессия базы данных.
-    :return:        Список пользователей
-    """
-    items = await session.scalars(select(models.Whitelist))
-    return list(items)
+    return await session.get(models.Whitelist, user_id)
