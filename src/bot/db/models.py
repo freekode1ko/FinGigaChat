@@ -83,7 +83,7 @@ class Bonds(Base):
 class DateOfLastBuild(Base):
     __tablename__ = 'date_of_last_build'
 
-    id = Column( Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     date_time = Column(Text)
 
 
@@ -132,7 +132,6 @@ class FinancialIndicator(Base):
     year_2022_e = Column('2022E', Float(53))
     year_2019 = Column('2019', Float(53))
     year_2021_est = Column('2021E', Float(53))
-
 
 
 class Industry(Base):
@@ -244,6 +243,7 @@ class ReportExcDay(Base):
     col_1 = Column('1', Text)
     col_2 = Column('2', Text)
 
+
 class ReportExcMon(Base):
     __tablename__ = 'report_exc_mon'
 
@@ -260,6 +260,7 @@ class ReportMetDay(Base):
     col_0 = Column('0', Text)
     col_1 = Column('1', Text)
     col_2 = Column('2', Text)
+
 
 class UserLog(Base):
     __tablename__ = 'user_log'
