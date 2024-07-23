@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
 from db.api.research import research_db
-from db.whitelist import get_user
+from db.user import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter

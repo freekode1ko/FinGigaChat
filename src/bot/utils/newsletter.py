@@ -27,7 +27,7 @@ from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
 from db.database import engine
-from db.whitelist import get_users_subscriptions
+from db.user import get_users_subscriptions
 from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter

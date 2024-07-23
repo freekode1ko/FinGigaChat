@@ -17,6 +17,7 @@ from aiogram.filters import Command
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types.web_app_info import WebAppInfo
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs import config
 from constants.constants import (
@@ -25,7 +26,8 @@ from constants.constants import (
     REGISTRATION_CODE_MAX,
     REGISTRATION_CODE_MIN,
 )
-from db.whitelist import insert_user_email_after_register, is_new_user_email, is_user_email_exist
+from db.user import insert_user_email_after_register, is_new_user_email, is_user_email_exist
+from db.whitelist import is_email_in_whitelist
 from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
@@ -108,8 +110,14 @@ async def user_registration(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(Form.new_user_reg)
-async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
-    """Обработка пользовательской почты и отправка регистрационного кода на нее."""
+async def ask_user_mail(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+    """
+    Обработка пользовательской почты и отправка регистрационного кода на нее.
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param state:   Состояние FSM
+    :param session: Асинхронная сессия базы данных.
+    """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text.strip().lower()
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     if re.search(r'\w+@sber(bank)?.ru', user_msg):
@@ -119,6 +127,12 @@ async def ask_user_mail(message: types.Message, state: FSMContext) -> None:
             await message.answer('Пользователь с такой почтой уже существует! '
                                  'Нажмите /start, чтобы попробовать еще раз.')
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : при регистрации использовалась чужая почта')
+            return
+        elif not (await is_email_in_whitelist(session, user_msg)):
+            await state.clear()
+            await message.answer('Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: @korolkov_m')
+            user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : '
+                                 f'попытка регистрации пользователя, отсутствующего в белом списке')
             return
 
         reg_code = str(random.randint(REGISTRATION_CODE_MIN, REGISTRATION_CODE_MAX))  # генерация уникального кода
