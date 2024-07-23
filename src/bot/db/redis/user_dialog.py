@@ -15,8 +15,7 @@ async def get_history_query(user_id: int) -> str:
     :param user_id: Telegram id пользователя.
     :return:        Исторически перефразированный запрос пользователя.
     """
-    history_query = await redis_client.get(HISTORY_QUERY_KEY.format(user_id=user_id))
-    return history_query if history_query else ''
+    return await redis_client.get(HISTORY_QUERY_KEY.format(user_id=user_id)) or ''
 
 
 async def update_history_query(user_id: int, history_query: str) -> None:
