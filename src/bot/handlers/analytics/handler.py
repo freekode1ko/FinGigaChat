@@ -1,18 +1,24 @@
 """Обработчики для меню Аналитика"""
 import os
+import subprocess
+import tempfile
+from pathlib import Path
 
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
 from db.api.research import research_db
+from db.whitelist import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
-from log.bot_logger import user_logger
+from log.bot_logger import logger, user_logger
 from module import formatter
 from utils.base import bot_send_msg, send_or_edit, user_in_whitelist
+from utils.watermark import add_watermark_cli
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -79,12 +85,17 @@ async def main_menu_command(message: types.Message) -> None:
 
 
 @router.callback_query(callbacks.GetFullResearch.filter())
-async def get_full_version_of_research(callback_query: types.CallbackQuery, callback_data: callbacks.GetFullResearch) -> None:
+async def get_full_version_of_research(
+        callback_query: types.CallbackQuery,
+        callback_data: callbacks.GetFullResearch,
+        session: AsyncSession,
+) -> None:
     """
     Получить полную версию отчета
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию по отчету
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   содержит дополнительную информацию по отчету
+    :param session:         Асинхронная сессия базы данных.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -98,14 +109,26 @@ async def get_full_version_of_research(callback_query: types.CallbackQuery, call
 
     # Если есть файл - отправляем
     if research.filepath and os.path.exists(research.filepath):
-        file = types.FSInputFile(research.filepath)
-        msg_txt = f'Полная версия отчета: <b>{research.header}</b>'
-        await callback_query.message.answer_document(
-            document=file,
-            caption=msg_txt,
-            parse_mode='HTML',
-            protect_content=True,
-        )
+        user = await get_user(session, from_user.id)
+        user_anal_filepath = Path(tempfile.gettempdir()) / f'{os.path.basename(research.filepath)}_{from_user.id}_watermarked.pdf'
+
+        try:
+            add_watermark_cli(
+                research.filepath,
+                user_anal_filepath,
+                user.user_email,
+            )
+        except subprocess.SubprocessError as e:
+            logger.error(f'*{user.user_id}* При рассылке отчета {research["id"]} произошла ошибка: {e}.')
+        else:
+            file = types.FSInputFile(user_anal_filepath)
+            msg_txt = f'Полная версия отчета: <b>{research.header}</b>'
+            await callback_query.message.answer_document(
+                document=file,
+                caption=msg_txt,
+                parse_mode='HTML',
+                protect_content=True,
+            )
 
     try:
         await callback_query.message.delete()
