@@ -2,6 +2,7 @@ import { baseApi } from '@/shared/api'
 import { configureStore } from '@reduxjs/toolkit'
 
 export const store = configureStore({
+  devTools: import.meta.env.VITE_DEBUG === 'true',
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
   },
