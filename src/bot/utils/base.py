@@ -98,7 +98,7 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     """
     user_id = json.loads(user)['id']
     async with async_session() as session:
-        result = await session.execute(select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id))
+        result = await session.execute(select(models.User.user_email).where(models.User.user_id == user_id))
         try:
             user_email = result.scalar_one()
             if not check_email:

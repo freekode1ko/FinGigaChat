@@ -17,7 +17,7 @@ def is_new_user_email(user_email: str) -> bool:
 
 def is_user_email_exist(user_id: int) -> bool:
     """Проверка наличия почты у пользователя"""
-    query = select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id)
+    query = select(models.User.user_email).where(models.User.user_id == user_id)
     with engine.connect() as conn:
         return conn.execute(query).all()
 
@@ -30,8 +30,8 @@ async def get_users_subscriptions() -> pd.DataFrame:
     """
     async with database.async_session() as session:
         stmt = select(
-            models.Whitelist.user_id,
-            models.Whitelist.username,
+            models.User.user_id,
+            models.User.username,
             func.coalesce(
                 func.array_agg(
                     models.UserIndustrySubscriptions.industry_id.distinct()
@@ -56,7 +56,7 @@ async def get_users_subscriptions() -> pd.DataFrame:
             models.UserClientSubscriptions
         ).outerjoin(
             models.UserCommoditySubscriptions
-        ).group_by(models.Whitelist.user_id)
+        ).group_by(models.User.user_id)
         result = await session.execute(stmt)
         return pd.DataFrame(result.all(),
                             columns=['user_id', 'username', 'industry_ids', 'client_ids', 'commodity_ids'])
@@ -76,7 +76,7 @@ async def insert_user_email_after_register(
     :param user_email: Email пользователя
     """
     async with database.async_session() as session:
-        ins = insert_pg(models.Whitelist).values(
+        ins = insert_pg(models.User).values(
             user_id=user_id,
             username=user_username,
             full_name=user_full_name,
@@ -99,7 +99,7 @@ async def insert_user_email_after_register(
         await session.commit()
 
 
-async def get_user(session: AsyncSession, user_id: int) -> models.Whitelist | None:
+async def get_user(session: AsyncSession, user_id: int) -> models.User | None:
     """
     Получить ORM объект пользователя по телеграм user_id.
 
@@ -107,4 +107,4 @@ async def get_user(session: AsyncSession, user_id: int) -> models.Whitelist | No
     :param user_id: whitelist.user_id
     :return:        ORM объект пользователя
     """
-    return await session.get(models.Whitelist, user_id)
+    return await session.get(models.User, user_id)

@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy import select, func, case, literal_column
 from sqlalchemy.orm import Session
 
-from db.models import Whitelist, IndustryAlternative, ClientAlternative, CommodityAlternative
+from db.models import IndustryAlternative, ClientAlternative, CommodityAlternative
 
 # revision identifiers, used by Alembic.
 revision: str = 'cb0c129f1d44'

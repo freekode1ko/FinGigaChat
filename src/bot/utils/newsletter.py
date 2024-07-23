@@ -261,7 +261,7 @@ async def weekly_pulse_newsletter(
     message.add_all(saved_messages)
 
 
-async def send_researches_to_user(bot: Bot, user: models.Whitelist, research_df: pd.DataFrame) -> list[types.Message]:
+async def send_researches_to_user(bot: Bot, user: models.User, research_df: pd.DataFrame) -> list[types.Message]:
     """
     Отправка отчетов пользователю с форматированием
 
@@ -345,7 +345,7 @@ async def send_new_researches_to_users(bot: Bot) -> None:
 
     for _, user_row in user_df.iterrows():
         user_id = user_row['user_id']
-        user = models.Whitelist(user_id=user_id, username=user_row['username'], user_email=user_row['user_email'])
+        user = models.User(user_id=user_id, username=user_row['username'], user_email=user_row['user_email'])
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         # filter by user`s subs and group research_df by research_section_name

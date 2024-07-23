@@ -102,15 +102,15 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         async with database.async_session() as session:
             stmt = sa.select(
-                models.Whitelist.user_id, models.Whitelist.username, models.Whitelist.user_email,
+                models.User.user_id, models.User.username, models.User.user_email,
                 sa.func.array_agg(self.table.research_type_id),
             ).select_from(
                 self.table
             ).join(
-                models.Whitelist, models.Whitelist.user_id == self.table.user_id
+                models.User, models.User.user_id == self.table.user_id
             ).where(
                 self.table.research_type_id.in_(research_type_ids)
-            ).group_by(models.Whitelist.user_id)
+            ).group_by(models.User.user_id)
 
             columns = [
                 'user_id',
