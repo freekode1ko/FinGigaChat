@@ -115,11 +115,10 @@ async def is_admin_user(user: dict) -> bool:
     :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
     """
     user_id = user['id']
-    user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
-    user_type = user_series.values.tolist()[0][0]
-    if user_type == 'admin' or user_type == 'owner':
-        return True
-    return False
+    query = select(models.User.user_type).where(models.User.user_id == user_id)
+    with engine.connect() as conn:
+        user_type = conn.scalar(query)
+    return user_type == 'admin' or user_type == 'owner'
 
 
 def read_curdatetime() -> datetime:

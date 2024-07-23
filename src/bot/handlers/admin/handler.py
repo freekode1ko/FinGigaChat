@@ -99,7 +99,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
         return None
 
     await state.clear()
-    users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
+    users = pd.read_sql_query('SELECT * FROM "user"', con=engine)
     users_ids = users['user_id'].tolist()
     saved_messages: list[dict] = []
     newsletter_type = 'default'

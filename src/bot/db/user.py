@@ -10,9 +10,9 @@ from db.database import engine
 
 def is_new_user_email(user_email: str) -> bool:
     """Проверка на наличие почты в таблице (занята кем-то или нет)"""
-    query = text('SELECT user_email FROM whitelist WHERE LOWER(user_email)=:user_email')
+    query = select(models.User.user_email).where(func.lower(models.User.user_email) == user_email.lower())
     with engine.connect() as conn:
-        return not conn.execute(query.bindparams(user_email=user_email.lower())).scalar()
+        return not conn.execute(query).scalar()
 
 
 def is_user_email_exist(user_id: int) -> bool:
