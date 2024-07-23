@@ -19,5 +19,5 @@ async def is_email_in_whitelist(session: AsyncSession, user_email: str) -> bool:
             (sa.func.count(models.Whitelist.user_email) > 0, True),
             else_=False,
         )
-    ).where(models.Whitelist.user_email == user_email))
+    ).where(sa.func.lower(models.Whitelist.user_email) == user_email.lower()))
     return result.scalar()
