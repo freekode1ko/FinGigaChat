@@ -311,7 +311,8 @@ class ResearchParser:
         for tr in table_soup.find_all('tr'):
             data_row = []
             for td in tr.find_all('td'):
-                data_row.append(td.text.strip())
+                # clear data from line breaking characters and spaces
+                data_row.append(td.text.replace('\n', '').replace(' ', '').strip())
             if data_row:
                 if len(data_row) == 7:
                     data.append(data_row[1:])
