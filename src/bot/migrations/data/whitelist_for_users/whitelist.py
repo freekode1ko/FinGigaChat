@@ -1,10 +1,10 @@
-from configs import config
+import pathlib
 
 
-DATA_FILE_NAME = config.PROJECT_DIR / 'migrations' / 'data' / 'whitelist_for_users' / 'whitelist_data.txt'
+DATA_FILE_NAME = pathlib.Path(__file__).parent / 'whitelist_data.txt'
 
 
-def download_data_from_file(fname: str) -> list[dict[str, str]]:
+def download_data_from_file(fname: pathlib.Path | str) -> list[dict[str, str]]:
     emails = []
     with open(fname, 'r') as rf:
         for line in rf:
