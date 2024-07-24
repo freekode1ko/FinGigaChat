@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.constants import handbook_prefix
 from log.bot_logger import logger, user_logger
-from utils.base import bot_send_msg, show_ref_book_by_request, user_in_whitelist
+from utils.base import bot_send_msg, is_user_has_access, show_ref_book_by_request
 
 # logger = logging.getLogger(__name__)
 router = Router()
@@ -26,7 +26,7 @@ class RefBookStates(StatesGroup):
 async def reference_book(message: types.Message) -> None:
     """Команда справочник"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
 
         keyboard = InlineKeyboardBuilder()

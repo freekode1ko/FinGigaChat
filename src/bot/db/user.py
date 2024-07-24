@@ -1,6 +1,6 @@
 """Запросы к бд связанные с models.user"""
 import pandas as pd
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -104,7 +104,7 @@ async def get_user(session: AsyncSession, user_id: int) -> models.User | None:
     Получить ORM объект пользователя по телеграм user_id.
 
     :param session: Асинхронная сессия базы данных.
-    :param user_id: whitelist.user_id
+    :param user_id: user.user_id
     :return:        ORM объект пользователя
     """
     return await session.get(models.User, user_id)

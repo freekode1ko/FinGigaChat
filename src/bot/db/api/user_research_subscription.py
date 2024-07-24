@@ -29,7 +29,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Удаляет все подписки пользователя на элементы из subject_table
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param section_id: research_section.id
         """
         async with database.async_session() as session:
@@ -47,7 +47,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Список элементов с флагом is_subscribed
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param section_id: research_section.id
         :returns: DataFrame[id, name, is_subscribed]
         """
@@ -78,7 +78,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Добавление подписок на все subject в данном section
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param section_id: id раздела research_section
         """
         async with database.async_session() as session:

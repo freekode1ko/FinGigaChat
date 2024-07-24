@@ -5,8 +5,8 @@ Base = declarative_base()
 metadata = Base.metadata
 
 
-class Whitelist(Base):
-    __tablename__ = 'whitelist'
+class User(Base):
+    __tablename__ = 'user'
 
     user_id = sa.Column(sa.BigInteger, primary_key=True)
     username = sa.Column(sa.Text)
@@ -22,7 +22,7 @@ class UserMeeting(Base):
     __table_args__ = {'comment': 'Перечень встреч пользователей'}
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    user_id = sa.Column(sa.ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user_id = sa.Column(sa.ForeignKey('user.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     theme = sa.Column(sa.Text, nullable=False, default='Напоминание', comment='Тема встречи')
     date_create = sa.Column(sa.DateTime, comment='Время создания встречи (UTC)')
     date_start = sa.Column(sa.DateTime, nullable=False, comment='Время начала встречи (UTC)')

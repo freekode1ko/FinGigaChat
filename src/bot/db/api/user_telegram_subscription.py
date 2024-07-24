@@ -20,7 +20,7 @@ class TelegramSubscriptionInterface(SubscriptionInterface):
         """
         Удаляет все подписки пользователя на элементы из subject_table
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param group_id: bot_telegram_group.id
         """
         async with database.async_session() as session:
@@ -45,7 +45,7 @@ class TelegramSubscriptionInterface(SubscriptionInterface):
         """
         Возвращает список подписок пользователя на элементы из subject_table
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param group_id: bot_telegram_group.id
         :returns: DataFrame[id, name]
         """
@@ -70,7 +70,7 @@ class TelegramSubscriptionInterface(SubscriptionInterface):
         """
         Список элементов с флагом is_subscribed
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param group_id: bot_telegram_group.id
         :returns: DataFrame[id, name, is_subscribed]
         """
@@ -102,7 +102,7 @@ class TelegramSubscriptionInterface(SubscriptionInterface):
         """
         Список элементов с флагом is_subscribed
 
-        :param user_id: whitelist.user_id
+        :param user_id: user.user_id
         :param section_id: bot_telegram_section.id
         :returns: DataFrame[id, name, is_subscribed]
         """

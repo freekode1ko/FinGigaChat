@@ -20,7 +20,7 @@ class UserStatistics:
         query = (
             'SELECT username AS telegram_user_name, user_id '
             # 'empl_fullname, department_name, empl_id '  # Просят передавать ФИО, отдел, табельный номер (нет в БД)
-            'FROM whitelist '
+            'FROM "user" '
             'ORDER BY username;'
         )
 
@@ -37,13 +37,14 @@ class UserStatistics:
         :param to_date:     указывает конец периода, до которого будет собираться статистика (включительно)
         :returns:           DataFrame[telegram_user_name, user_log.user_id, date, qty_of_prompts]
         """
+        user_tbl = '"user"'
         query = (
-            f'SELECT whitelist.username AS telegram_user_name, user_log.user_id, '
+            f'SELECT {user_tbl}.username AS telegram_user_name, user_log.user_id, '
             f"DATE(date) AS date, COUNT(CASE WHEN level='INFO' THEN 1 END) AS qty_of_prompts "
             f'FROM user_log '
-            f'JOIN whitelist ON whitelist.user_id=user_log.user_id '
+            f'JOIN {user_tbl} ON {user_tbl}.user_id=user_log.user_id '
             f"WHERE (level='INFO' OR level='DEBUG') AND DATE(date) >= '{from_date}' AND DATE(date) <= '{to_date}' "
-            f'GROUP BY whitelist.username, user_log.user_id, DATE(date) '
+            f'GROUP BY {user_tbl}.username, user_log.user_id, DATE(date) '
             f'ORDER BY date;'
         )
 

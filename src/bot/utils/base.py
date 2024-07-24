@@ -88,7 +88,7 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     return msg
 
 
-async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
+async def is_user_has_access(user: str, check_email: bool = False) -> bool:
     """
     Проверка, пользователя на наличие в списках на доступ
 

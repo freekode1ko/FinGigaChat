@@ -41,9 +41,9 @@ def upgrade() -> None:
                           onupdate='CASCADE', ondelete='CASCADE')
     op.create_foreign_key('chat_id', 'message', 'user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key(None, 'user_client_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_client_subscription_user_id_fkey', 'user_client_subscription', 'user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key(None, 'user_commodity_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_commodity_subscription_user_id_fkey', 'user_commodity_subscription', 'user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
     op.create_foreign_key('user_industry_subscription_user_id_fkey', 'user_industry_subscription', 'user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')

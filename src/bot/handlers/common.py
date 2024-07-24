@@ -31,7 +31,7 @@ from db.whitelist import is_email_in_whitelist
 from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
-from utils.base import user_in_whitelist
+from utils.base import is_user_has_access
 
 
 class Form(StatesGroup):
@@ -49,7 +49,7 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
     """Вывод приветственного окна, с описанием бота и лицами для связи."""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     check_mail = user_msg == '/start'
-    if await user_in_whitelist(message.from_user.model_dump_json(), check_mail):
+    if await is_user_has_access(message.from_user.model_dump_json(), check_mail):
         help_text = config.help_text
         to_pin = await message.answer(help_text, protect_content=False)
         msg_id = to_pin.message_id
