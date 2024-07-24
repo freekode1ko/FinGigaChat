@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from constants.constants import DISLIKE_FEEDBACK, END_BUTTON_TXT, LIKE_FEEDBACK
 from constants.enums import RetrieverType
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
-from db.redis import del_dialog, get_last_user_msg, update_dialog
+from db.redis import del_dialog_and_history_query, get_history_query, get_last_user_msg, update_dialog, update_history_query
 from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
@@ -39,7 +39,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
         await update_keyboard_of_penultimate_bot_msg(message, state)
-        await del_dialog(message.from_user.id)
+        await del_dialog_and_history_query(message.from_user.id)
         await message.answer('История диалога очищена!')
 
 
@@ -216,6 +216,7 @@ async def ask_with_dialog(
             history_query=history_query
         )
 
+        await update_history_query(chat_id, history_query)
         await state.update_data(rag_last_bot_msg=msg.message_id)
 
 
@@ -243,7 +244,8 @@ async def ask_without_dialog(
             await call.bot.send_message(chat_id, 'Напишите, пожалуйста, свой запрос еще раз')
 
         if callback_data.rephrase_query:
-            rephrase_query = await get_rephrase_query(chat_id, full_name, user_query)
+            history_query = await get_history_query(chat_id)
+            rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
             result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
             kb = get_feedback_regenerate_kb(initially_query=True)
         else:
