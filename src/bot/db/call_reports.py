@@ -2,7 +2,7 @@
 from sqlalchemy import func, select
 
 from db.database import async_session
-from db.models import CallReports, User
+from db.models import CallReports, RegisteredUser
 
 
 async def get_all_sorted_clients_for_user(user_id: int) -> list[str]:
@@ -48,5 +48,5 @@ async def get_user_email_async(user_id: int | str) -> str:
     user_id = int(user_id)
 
     async with async_session() as session:
-        email = await session.execute(select(User.user_email).where(User.user_id == user_id))
+        email = await session.execute(select(RegisteredUser.user_email).where(RegisteredUser.user_id == user_id))
         return email.scalar()

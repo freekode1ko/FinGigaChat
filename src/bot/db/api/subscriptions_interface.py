@@ -39,7 +39,7 @@ class SubscriptionInterface:
         """
         Добавляет подписку на элемент из subject_table
 
-        :param user_id: user.user_id
+        :param user_id: registered_user.user_id
         :param subject_id: subject.id
         """
         async with database.async_session() as session:
@@ -55,7 +55,7 @@ class SubscriptionInterface:
         """
         Удаляет подписку на элемент из subject_table
 
-        :param user_id: user.user_id
+        :param user_id: registered_user.user_id
         :param subject_id: subject.id
         """
         async with database.async_session() as session:
@@ -72,7 +72,7 @@ class SubscriptionInterface:
         """
         Удаляет все подписки пользователя на элементы из subject_table
 
-        :param user_id: user.user_id
+        :param user_id: registered_user.user_id
         """
         async with database.async_session() as session:
             await session.execute(
@@ -87,7 +87,7 @@ class SubscriptionInterface:
         """
         Возвращает список подписок пользователя на элементы из subject_table
 
-        :param user_id: user.user_id
+        :param user_id: registered_user.user_id
         :returns:       DataFrame[id, name]
         """
         async with database.async_session() as session:
@@ -128,7 +128,7 @@ class SubscriptionInterface:
         """
         Добавление множества подписок
 
-        :param user_id: user.user_id (telegram user_id)
+        :param user_id: registered_user.user_id (telegram user_id)
         :param items: DataFrame[id]
         """
         async with database.async_session() as session:

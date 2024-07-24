@@ -24,7 +24,7 @@ class ResearchSectionCRUD(BaseCRUD[models.ResearchSection]):
         Если пользователь подписан на все отчеты в разделе, то у него ставится флаг is_subscribed=True
 
         :param group_id: research_group.id группы CIB Research
-        :param user_id: user.id пользователя
+        :param user_id: registered_user.id пользователя
         :returns: DataFrame[id, name, dropdown_flag, is_subscribed]
         """
         query = sa.text(

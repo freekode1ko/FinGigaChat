@@ -270,8 +270,8 @@ t_user_log = Table(
 )
 
 
-class User(Base):
-    __tablename__ = 'user'
+class RegisteredUser(Base):
+    __tablename__ = 'registered_user'
 
     user_id = Column(BigInteger, primary_key=True)
     username = Column(Text)
@@ -340,14 +340,14 @@ class Message(Base):
     __table_args__ = {'comment': 'Хранилище отправленных пользователям сообщений'}
 
     id = Column(BigInteger, primary_key=True)
-    user_id = Column(ForeignKey('user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     message_id = Column(BigInteger, nullable=False)
     message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     function_name = Column(Text, nullable=False)
     send_datetime = Column(DateTime(True),)
 
     message_type = relationship('MessageType', back_populates='message')
-    user = relationship('User', back_populates='message')
+    user = relationship('RegisteredUser', back_populates='message')
 
 
 class ParserSource(Base):
@@ -378,7 +378,7 @@ class TelegramChannel(Base):
     industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
     industry = relationship('Industry', back_populates='telegram_channel')
-    user = relationship('User', secondary='user_telegram_subscription', back_populates='telegram')
+    user = relationship('RegisteredUser', secondary='user_telegram_subscription', back_populates='telegram')
     relation_telegram_article = relationship('RelationTelegramArticle', back_populates='telegram')
 
 
@@ -462,7 +462,7 @@ class RelationTelegramArticle(Base):
 
 t_user_telegram_subscription = Table(
     'user_telegram_subscription', metadata,
-    Column('user_id', ForeignKey('user.user_id', ondelete='CASCADE', onupdate='CASCADE'),
+    Column('user_id', ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'),
            primary_key=True, nullable=False),
     Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'),
            primary_key=True, nullable=False)
@@ -546,7 +546,7 @@ class UserResearchSubscriptions(Base):
     __tablename__ = 'user_research_subscription'
     __table_args__ = {'comment': 'Справочник подписок пользователей на отчеты CIB Research'}
 
-    user_id = Column(ForeignKey('user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 

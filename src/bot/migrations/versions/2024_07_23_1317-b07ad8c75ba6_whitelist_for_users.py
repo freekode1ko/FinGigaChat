@@ -35,23 +35,27 @@ def upgrade() -> None:
     op.drop_constraint('user_research_subscription_user_id_fkey', 'user_research_subscription', type_='foreignkey')
     op.drop_constraint('user_id', 'user_telegram_subscription', type_='foreignkey')
 
-    op.rename_table('whitelist', 'user')
+    op.rename_table('whitelist', 'registered_user')
 
-    op.create_foreign_key('bot_call_reports_user_id_fkey', 'bot_call_reports', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('bot_call_reports_user_id_fkey', 'bot_call_reports', 'registered_user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('chat_id', 'message', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('chat_id', 'message', 'registered_user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('user_client_subscription_user_id_fkey', 'user_client_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_client_subscription_user_id_fkey', 'user_client_subscription', 'registered_user',
+                          ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('user_commodity_subscription_user_id_fkey', 'user_commodity_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_commodity_subscription_user_id_fkey', 'user_commodity_subscription', 'registered_user',
+                          ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('user_industry_subscription_user_id_fkey', 'user_industry_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_industry_subscription_user_id_fkey', 'user_industry_subscription', 'registered_user',
+                          ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('user_meeting_user_id_fkey', 'user_meeting', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_meeting_user_id_fkey', 'user_meeting', 'registered_user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('user_research_subscription_user_id_fkey', 'user_research_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_research_subscription_user_id_fkey', 'user_research_subscription', 'registered_user',
+                          ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
-    op.create_foreign_key('user_id', 'user_telegram_subscription', 'user', ['user_id'], ['user_id'],
+    op.create_foreign_key('user_id', 'user_telegram_subscription', 'registered_user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')
 
     whitelist_table = op.create_table('whitelist',
@@ -76,7 +80,7 @@ def downgrade() -> None:
     op.drop_constraint('chat_id', 'message', type_='foreignkey')
     op.drop_constraint('bot_call_reports_user_id_fkey', 'bot_call_reports', type_='foreignkey')
 
-    op.rename_table('user', 'whitelist')
+    op.rename_table('registered_user', 'whitelist')
 
     op.create_foreign_key('user_id', 'user_telegram_subscription', 'whitelist', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')

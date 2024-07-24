@@ -10,14 +10,14 @@ from db.database import engine
 
 def is_new_user_email(user_email: str) -> bool:
     """Проверка на наличие почты в таблице (занята кем-то или нет)"""
-    query = select(models.User.user_email).where(func.lower(models.User.user_email) == user_email.lower())
+    query = select(models.RegisteredUser.user_email).where(func.lower(models.RegisteredUser.user_email) == user_email.lower())
     with engine.connect() as conn:
         return not conn.execute(query).scalar()
 
 
 def is_user_email_exist(user_id: int) -> bool:
     """Проверка наличия почты у пользователя"""
-    query = select(models.User.user_email).where(models.User.user_id == user_id)
+    query = select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id)
     with engine.connect() as conn:
         return conn.execute(query).all()
 
@@ -30,8 +30,8 @@ async def get_users_subscriptions() -> pd.DataFrame:
     """
     async with database.async_session() as session:
         stmt = select(
-            models.User.user_id,
-            models.User.username,
+            models.RegisteredUser.user_id,
+            models.RegisteredUser.username,
             func.coalesce(
                 func.array_agg(
                     models.UserIndustrySubscriptions.industry_id.distinct()
@@ -56,7 +56,7 @@ async def get_users_subscriptions() -> pd.DataFrame:
             models.UserClientSubscriptions
         ).outerjoin(
             models.UserCommoditySubscriptions
-        ).group_by(models.User.user_id)
+        ).group_by(models.RegisteredUser.user_id)
         result = await session.execute(stmt)
         return pd.DataFrame(result.all(),
                             columns=['user_id', 'username', 'industry_ids', 'client_ids', 'commodity_ids'])
@@ -76,7 +76,7 @@ async def insert_user_email_after_register(
     :param user_email: Email пользователя
     """
     async with database.async_session() as session:
-        ins = insert_pg(models.User).values(
+        ins = insert_pg(models.RegisteredUser).values(
             user_id=user_id,
             username=user_username,
             full_name=user_full_name,
@@ -99,7 +99,7 @@ async def insert_user_email_after_register(
         await session.commit()
 
 
-async def get_user(session: AsyncSession, user_id: int) -> models.User | None:
+async def get_user(session: AsyncSession, user_id: int) -> models.RegisteredUser | None:
     """
     Получить ORM объект пользователя по телеграм user_id.
 
@@ -107,4 +107,4 @@ async def get_user(session: AsyncSession, user_id: int) -> models.User | None:
     :param user_id: user.user_id
     :return:        ORM объект пользователя
     """
-    return await session.get(models.User, user_id)
+    return await session.get(models.RegisteredUser, user_id)

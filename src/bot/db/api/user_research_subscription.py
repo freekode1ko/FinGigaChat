@@ -29,7 +29,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Удаляет все подписки пользователя на элементы из subject_table
 
-        :param user_id: user.user_id
+        :param user_id: registered_"user.user_id
         :param section_id: research_section.id
         """
         async with database.async_session() as session:
@@ -47,7 +47,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Список элементов с флагом is_subscribed
 
-        :param user_id: user.user_id
+        :param user_id: registered_user.user_id
         :param section_id: research_section.id
         :returns: DataFrame[id, name, is_subscribed]
         """
@@ -78,7 +78,7 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         Добавление подписок на все subject в данном section
 
-        :param user_id: user.user_id
+        :param user_id: registered_user.user_id
         :param section_id: id раздела research_section
         """
         async with database.async_session() as session:
@@ -102,15 +102,15 @@ class ResearchSubscriptionInterface(SubscriptionInterface):
         """
         async with database.async_session() as session:
             stmt = sa.select(
-                models.User.user_id, models.User.username, models.User.user_email,
+                models.RegisteredUser.user_id, models.RegisteredUser.username, models.RegisteredUser.user_email,
                 sa.func.array_agg(self.table.research_type_id),
             ).select_from(
                 self.table
             ).join(
-                models.User, models.User.user_id == self.table.user_id
+                models.RegisteredUser, models.RegisteredUser.user_id == self.table.user_id
             ).where(
                 self.table.research_type_id.in_(research_type_ids)
-            ).group_by(models.User.user_id)
+            ).group_by(models.RegisteredUser.user_id)
 
             columns = [
                 'user_id',

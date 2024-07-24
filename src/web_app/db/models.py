@@ -5,8 +5,8 @@ Base = declarative_base()
 metadata = Base.metadata
 
 
-class User(Base):
-    __tablename__ = 'user'
+class RegisteredUser(Base):
+    __tablename__ = 'registered_user'
 
     user_id = sa.Column(sa.BigInteger, primary_key=True)
     username = sa.Column(sa.Text)
@@ -22,7 +22,7 @@ class UserMeeting(Base):
     __table_args__ = {'comment': 'Перечень встреч пользователей'}
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    user_id = sa.Column(sa.ForeignKey('user.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user_id = sa.Column(sa.ForeignKey('registered_user.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     theme = sa.Column(sa.Text, nullable=False, default='Напоминание', comment='Тема встречи')
     date_create = sa.Column(sa.DateTime, comment='Время создания встречи (UTC)')
     date_start = sa.Column(sa.DateTime, nullable=False, comment='Время начала встречи (UTC)')
@@ -60,6 +60,7 @@ class ParserSource(Base):
 
     source_group = relationship('SourceGroup', back_populates='parser_source')
 
+
 class ExcType(Base):
     __tablename__ = 'bot_exc_type'
     __table_args__ = {'comment': 'Справочник типов курсов валют'}
@@ -68,6 +69,7 @@ class ExcType(Base):
     name = sa.Column(sa.String(64), nullable=False, comment='Наименование типа курсов валют')
     description = sa.Column(sa.Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
     display_order = sa.Column(sa.Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+
 
 class Exc(Base):
     __tablename__ = 'exc'

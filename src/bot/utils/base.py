@@ -98,7 +98,7 @@ async def is_user_has_access(user: str, check_email: bool = False) -> bool:
     """
     user_id = json.loads(user)['id']
     async with async_session() as session:
-        result = await session.execute(select(models.User.user_email).where(models.User.user_id == user_id))
+        result = await session.execute(select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id))
         try:
             user_email = result.scalar_one()
             if not check_email:
@@ -115,7 +115,7 @@ async def is_admin_user(user: dict) -> bool:
     :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
     """
     user_id = user['id']
-    query = select(models.User.user_type).where(models.User.user_id == user_id)
+    query = select(models.RegisteredUser.user_type).where(models.RegisteredUser.user_id == user_id)
     with engine.connect() as conn:
         user_type = conn.scalar(query)
     return user_type == 'admin' or user_type == 'owner'

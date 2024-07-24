@@ -20,7 +20,7 @@ class UserStatistics:
         query = (
             'SELECT username AS telegram_user_name, user_id '
             # 'empl_fullname, department_name, empl_id '  # Просят передавать ФИО, отдел, табельный номер (нет в БД)
-            'FROM "user" '
+            'FROM registered_user '
             'ORDER BY username;'
         )
 
@@ -37,7 +37,7 @@ class UserStatistics:
         :param to_date:     указывает конец периода, до которого будет собираться статистика (включительно)
         :returns:           DataFrame[telegram_user_name, user_log.user_id, date, qty_of_prompts]
         """
-        user_tbl = '"user"'
+        user_tbl = 'registered_user'
         query = (
             f'SELECT {user_tbl}.username AS telegram_user_name, user_log.user_id, '
             f"DATE(date) AS date, COUNT(CASE WHEN level='INFO' THEN 1 END) AS qty_of_prompts "
