@@ -312,7 +312,7 @@ class ResearchParser:
             data_row = []
             for td in tr.find_all('td'):
                 # clear data from line breaking characters and spaces
-                data_row.append(td.text.replace('\n', '').replace(' ', '').strip())
+                data_row.append(re.sub(r'\s+', ' ', td.text).strip())
                 # Если есть желание оставить пробел между числом и символом %
                 # data_row.append(' '.join(i for i in td.text.replace('\n', '').split(' ') if i))
             if data_row:
