@@ -85,7 +85,7 @@ class AsyncLimiter(AbstractAsyncContextManager):
         return None
 
     async def __aenter__(self) -> None:
-        """async enter context"""
+        """Async enter context"""
         await self.acquire()
         return None
 
@@ -95,7 +95,7 @@ class AsyncLimiter(AbstractAsyncContextManager):
             exc: Optional[BaseException],
             tb: Optional[TracebackType],
     ) -> None:
-        """async exit context"""
+        """Async exit context"""
         return None
 
 

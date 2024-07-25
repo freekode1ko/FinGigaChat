@@ -32,9 +32,9 @@ from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
 from module.article_process import ArticleProcess
-from src.bot.utils.message_limiter import limiter
 from utils.base import bot_send_msg
 from utils.macro_view import get_macro_brief_file
+from utils.message_limiter import limiter
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
 from utils.watermark import add_watermark_cli
 
