@@ -176,3 +176,5 @@ help_text = (
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 WHISPER_MODEL = 'small'
+
+NUBER_OF_MESSAGES_TG_BOT_CAN_SEND = 30
