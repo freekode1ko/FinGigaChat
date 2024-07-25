@@ -1,3 +1,5 @@
+"""Реализация ограничителя по отправки сообщений в ТГ"""
+
 import asyncio
 from contextlib import AbstractAsyncContextManager
 from types import TracebackType
@@ -83,6 +85,7 @@ class AsyncLimiter(AbstractAsyncContextManager):
         return None
 
     async def __aenter__(self) -> None:
+        """async enter context"""
         await self.acquire()
         return None
 
@@ -92,6 +95,7 @@ class AsyncLimiter(AbstractAsyncContextManager):
             exc: Optional[BaseException],
             tb: Optional[TracebackType],
     ) -> None:
+        """async exit context"""
         return None
 
 

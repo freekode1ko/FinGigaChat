@@ -15,10 +15,11 @@ import time
 from pathlib import Path
 from typing import List
 
-import module.data_transformer as dt
 import pandas as pd
 from aiogram import Bot, exceptions, types
 from aiogram.utils.media_group import MediaGroupBuilder
+
+import module.data_transformer as dt
 from configs import config
 from db import message, models, parser_source
 from db.api.research import research_db
@@ -31,12 +32,11 @@ from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
 from module.article_process import ArticleProcess
+from src.bot.utils.message_limiter import limiter
 from utils.base import bot_send_msg
 from utils.macro_view import get_macro_brief_file
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
 from utils.watermark import add_watermark_cli
-
-from src.bot.utils.message_limiter import limiter
 
 
 async def tg_newsletter(
