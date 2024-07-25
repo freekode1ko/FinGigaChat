@@ -36,6 +36,7 @@ def upgrade() -> None:
     op.drop_constraint('user_id', 'user_telegram_subscription', type_='foreignkey')
 
     op.rename_table('whitelist', 'registered_user')
+    op.create_table_comment('registered_user', 'Справочник зарегистрированных пользователей')
 
     op.create_foreign_key('bot_call_reports_user_id_fkey', 'bot_call_reports', 'registered_user', ['user_id'], ['user_id'],
                           onupdate='CASCADE', ondelete='CASCADE')

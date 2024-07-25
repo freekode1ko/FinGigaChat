@@ -266,6 +266,7 @@ t_user_log = Table(
 
 class RegisteredUser(Base):
     __tablename__ = 'registered_user'
+    __table_args__ = {'comment': 'Справочник зарегистрированных пользователей'}
 
     user_id = Column(BigInteger, primary_key=True)
     username = Column(Text)
