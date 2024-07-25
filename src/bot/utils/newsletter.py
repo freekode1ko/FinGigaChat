@@ -385,7 +385,7 @@ async def send_new_researches_to_users(bot: Bot) -> None:
     )
 
 
-async def file_for_weekly_check_up(bot, user_id, document, logger):
+async def tasks_for_send_file_for_weekly_check_up(bot, user_id, document, logger):
     newsletter_type = 'weekly_check_up_newsletter'
     msg_text = "Weekly 'Check up'"
 
@@ -421,7 +421,7 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
         return
 
     tasks = [
-        file_for_weekly_check_up(
+        tasks_for_send_file_for_weekly_check_up(
             bot,
             user_row['user_id'],
             weekly_check_up_document,
