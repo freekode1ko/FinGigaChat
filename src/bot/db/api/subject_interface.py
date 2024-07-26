@@ -126,7 +126,7 @@ class SubjectInterface:
         async with database.async_session() as session:
             stmt = select(self.table).where(func.lower(self.table.name) == name.lower())
             result = await session.execute(stmt)
-            data = result.scalar()
+            data = result.scalar_one()
             return {c: getattr(data, c) for c in self.columns}
 
     async def get_articles_by_subject_ids(

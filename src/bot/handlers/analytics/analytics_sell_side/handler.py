@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from aiogram import types
 from aiogram.filters.callback_data import CallbackData
+from sqlalchemy import orm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs import config
@@ -272,13 +273,17 @@ async def cib_client_analytical_indicators(
 
     research_info = await research_type_db.get(research_type_id)
 
+    client_id = 0
     # Ищем клиента по имени отчета
-    client = await client_db.get_by_name(research_info.name)
-
-    # Проверяем, что есть фин показатели для клиента
-    ap_obj = ArticleProcess(logger)
-    client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
-    client_id = 0 if client_fin_tables.empty else client['id']
+    try:
+        client = await client_db.get_by_name(research_info.name)
+    except orm.exc.NoResultFound:
+        logger.info(f'Не удалось найти клиента {research_info.name} ({research_type_id}) в таблице clients')
+    else:
+        # Проверяем, что есть фин показатели для клиента
+        ap_obj = ArticleProcess(logger)
+        client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
+        client_id = 0 if client_fin_tables.empty else client['id']
 
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(research_info, client_id)
