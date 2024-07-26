@@ -80,7 +80,11 @@ async def send_news_with_next_button(
 
     sent_messages = await bot_send_msg(bot, chat_id, articles_upto_limit)
     if keyboard:
-        await bot.edit_message_reply_markup(chat_id, message_id=sent_messages[-1].message_id, reply_markup=keyboard)
+        await bot.edit_message_reply_markup(
+            chat_id=chat_id,
+            message_id=sent_messages[-1].message_id,
+            reply_markup=keyboard
+        )
 
 
 @router.callback_query(NextNewsCallback.filter())
