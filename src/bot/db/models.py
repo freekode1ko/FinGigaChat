@@ -8,7 +8,6 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
-    DOUBLE_PRECISION,
     Float,
     ForeignKey,
     Identity,
@@ -58,76 +57,81 @@ class Article(Base):
     relation_telegram_article = relationship('RelationTelegramArticle', back_populates='article')
 
 
-t_bonds = Table(
-    'bonds', metadata,
-    Column('Название', Text),
-    Column('Доходность', Float(53)),
-    Column('Осн,', Float(53)),
-    Column('Макс,', Float(53)),
-    Column('Мин,', Float(53)),
-    Column('Изм,', Text),
-    Column('Изм, %', Text),
-    Column('Время', Text),
-    Column('Unnamed: 0', Float(53)),
-    Column('Unnamed: 9', Float(53)),
-    Column('0', Float(53)),
-    Column('1', Text),
-    Column('2', Text),
-    Column('3', Float(53)),
-    Column('4', Text),
-    Column('5', Float(53)),
-    Column('6', Float(53))
-)
+class Bonds(Base):
+    __tablename__ = 'bonds'
+    __table_args__ = {'comment': 'Котировки'}
+
+    name = Column('Название', Text)
+    profitability = Column('Доходность', Float(53))
+    main_value = Column('Осн,', Float(53))
+    max_value = Column('Макс,', Float(53))
+    min_value = Column('Мин,', Float(53))
+    change = Column('Изм,', Text)
+    change_percent = Column('Изм, %', Text)
+    time = Column('Время', Text)
+    unnamed_0 = Column('Unnamed: 0', Float(53))
+    unnamed_9 = Column('Unnamed: 9', Float(53))
+    col_0 = Column('0', Float(53))
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
+    col_3 = Column('3', Float(53))
+    col_4 = Column('4', Text)
+    col_5 = Column('5', Float(53))
+    col_6 = Column('6', Float(53))
 
 
-t_date_of_last_build = Table(
-    'date_of_last_build', metadata,
-    Column('date_time', Text)
-)
+class DateOfLastBuild(Base):
+    __tablename__ = 'date_of_last_build'
+
+    id = Column(Integer, primary_key=True)
+    date_time = Column(Text)
 
 
-t_eco_global_stake = Table(
-    'eco_global_stake', metadata,
-    Column('Country', Text),
-    Column('Last', Float(53)),
-    Column('Previous', Float(53)),
-    Column('Reference', Text),
-    Column('Unit', Text)
-)
+class EcoGlobalStake(Base):
+    __tablename__ = 'eco_global_stake'
+
+    id = Column(Integer, primary_key=True)
+    country = Column('Country', Text)
+    last = Column('Last', Float(53))
+    previous = Column('Previous', Float(53))
+    reference = Column('Reference', Text)
+    unit = Column('Unit', Text)
 
 
-t_eco_rus_influence = Table(
-    'eco_rus_influence', metadata,
-    Column('Дата', Float(53)),
-    Column('Ключевая ставка, % годовых', Float(53)),
-    Column('Инфляция, % г/г', Float(53)),
-    Column('Цель по инфляции, %', Float(53))
-)
+class EcoRusInfluence(Base):
+    __tablename__ = 'eco_rus_influence'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column('Дата', Float(53))
+    key_rate_annual = Column('Ключевая ставка, % годовых', Float(53))
+    inflation_annual = Column('Инфляция, % г/г', Float(53))
+    inflation_target = Column('Цель по инфляции, %', Float(53))
 
 
-t_eco_stake = Table(
-    'eco_stake', metadata,
-    Column('0', Text),
-    Column('1', Text)
-)
+class EcoStake(Base):
+    __tablename__ = 'eco_stake'
+
+    id = Column(Integer, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
 
 
-t_financial_indicators = Table(
-    'financial_indicators', metadata,
-    Column('name', Text),
-    Column('2021', Text),
-    Column('2022', Text),
-    Column('2023E', Text),
-    Column('2024E', Text),
-    Column('2025E', Text),
-    Column('alias', Text),
-    Column('company', Text),
-    Column('2020', Float(53)),
-    Column('2022E', Float(53)),
-    Column('2019', Float(53)),
-    Column('2021E', Float(53)),
-    Column('id', BigInteger)
-)
+class FinancialIndicator(Base):
+    __tablename__ = 'financial_indicators'
+
+    id = Column(BigInteger, primary_key=True)
+    name = Column(Text)
+    year_2021 = Column('2021', Text)
+    year_2022 = Column('2022', Text)
+    year_2023_e = Column('2023E', Text)
+    year_2024_e = Column('2024E', Text)
+    year_2025_e = Column('2025E', Text)
+    alias = Column(Text)
+    company = Column(Text)
+    year_2020 = Column('2020', Float(53))
+    year_2022_e = Column('2022E', Float(53))
+    year_2019 = Column('2019', Float(53))
+    year_2021_est = Column('2021E', Float(53))
 
 
 class Industry(Base):
@@ -144,16 +148,16 @@ class Industry(Base):
     industry_alternative = relationship('IndustryAlternative', back_populates='industry')
 
 
-t_key_eco = Table(
-    'key_eco', metadata,
-    Column('id', BigInteger),
-    Column('name', Text),
-    Column('2021', Text),
-    Column('2022', Text),
-    Column('2023E', Text),
-    Column('2024E', Text),
-    Column('alias', Text)
-)
+class KeyEco(Base):
+    __tablename__ = 'key_eco'
+
+    id = Column(BigInteger, primary_key=True)
+    name = Column(Text)
+    year_2021 = Column('2021', Text)
+    year_2022 = Column('2022', Text)
+    year_2023_e = Column('2023E', Text)
+    year_2024_e = Column('2024E', Text)
+    alias = Column(Text)
 
 
 class MessageType(Base):
@@ -170,17 +174,18 @@ class MessageType(Base):
     message = relationship('Message', back_populates='message_type')
 
 
-t_metals = Table(
-    'metals', metadata,
-    Column('Metals', Text),
-    Column('Price', DOUBLE_PRECISION(precision=53)),
-    Column('Day', DOUBLE_PRECISION(precision=53)),
-    Column('%', Text),
-    Column('Weekly', Text),
-    Column('Monthly', Text),
-    Column('YoY', Text),
-    Column('Date', Text)
-)
+class Metals(Base):
+    __tablename__ = 'metals'
+
+    id = Column(BigInteger, primary_key=True)
+    metal = Column('Metals', Text)
+    price = Column('Price', Float(53))
+    day = Column('Day', Float(53))
+    percentage = Column('%', Text)
+    weekly = Column('Weekly', Text)
+    monthly = Column('Monthly', Text)
+    year_over_year = Column('YoY', Text)
+    date = Column('Date', Text)
 
 
 class SourceGroup(Base):
@@ -194,74 +199,80 @@ class SourceGroup(Base):
     parser_source = relationship('ParserSource', back_populates='source_group')
 
 
-t_report_bon_day = Table(
-    'report_bon_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportBonDay(Base):
+    __tablename__ = 'report_bon_day'
+
+    id = Column(BigInteger, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_report_bon_mon = Table(
-    'report_bon_mon', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportBonMon(Base):
+    __tablename__ = 'report_bon_mon'
+
+    id = Column(BigInteger, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_report_eco_day = Table(
-    'report_eco_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportEcoDay(Base):
+    __tablename__ = 'report_eco_day'
+
+    id = Column(BigInteger, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_report_eco_mon = Table(
-    'report_eco_mon', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportEcoMon(Base):
+    __tablename__ = 'report_eco_mon'
+
+    id = Column(BigInteger, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_report_exc_day = Table(
-    'report_exc_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportExcDay(Base):
+    __tablename__ = 'report_exc_day'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_report_exc_mon = Table(
-    'report_exc_mon', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportExcMon(Base):
+    __tablename__ = 'report_exc_mon'
+
+    id = Column(BigInteger, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_report_met_day = Table(
-    'report_met_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
+class ReportMetDay(Base):
+    __tablename__ = 'report_met_day'
+
+    id = Column(BigInteger, primary_key=True)
+    col_0 = Column('0', Text)
+    col_1 = Column('1', Text)
+    col_2 = Column('2', Text)
 
 
-t_user_log = Table(
-    'user_log', metadata,
-    Column('id', BigInteger, Identity(always=True, start=1, increment=1, minvalue=1,
-           maxvalue=9223372036854775807, cycle=False, cache=1), nullable=False),
-    Column('level', Text, nullable=False),
-    Column('date', DateTime, nullable=False),
-    Column('file_name', Text),
-    Column('func_name', Text),
-    Column('line_no', Integer),
-    Column('message', Text),
-    Column('user_id', BigInteger)
-)
+class UserLog(Base):
+    __tablename__ = 'user_log'
+
+    id = Column(BigInteger, primary_key=True)
+    level = Column(Text, nullable=False)
+    date = Column(DateTime, nullable=False)
+    file_name = Column(Text)
+    func_name = Column(Text)
+    line_no = Column(Integer)
+    message = Column(Text)
+    user_id = Column(BigInteger)
 
 
 class Whitelist(Base):
