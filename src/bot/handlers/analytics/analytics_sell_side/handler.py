@@ -278,7 +278,7 @@ async def cib_client_analytical_indicators(
     try:
         client = await client_db.get_by_name(research_info.name)
     except orm.exc.NoResultFound:
-        logger.info(f'Не удалось найти клиента {research_info.name} ({research_type_id}) в таблице clients')
+        logger.warning(f'Не удалось найти клиента {research_info.name} ({research_type_id}) в таблице clients')
     else:
         # Проверяем, что есть фин показатели для клиента
         ap_obj = ArticleProcess(logger)
