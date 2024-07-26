@@ -2,6 +2,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from constants.constants import ids_to_type
+
 
 class Param(BaseModel):
     """Параметры, которые могут быть у элементов"""
@@ -16,6 +18,19 @@ class DataItem(BaseModel):
     name: str
     value: Optional[float]
     params: list[Param]
+    research_item_id: Optional[int] = None
+    tv_type: str = 'TVC:GOLD'  # FIXME
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.research_item_id = self.get_id()
+
+    def get_id(self) -> int | None:
+        """Получить айди для запросов к CIB"""
+        for i in ids_to_type:
+            if self.name in i['name']:
+                return i['research_type_id']
+        return 19  # FIXME
 
 
 class SectionData(BaseModel):

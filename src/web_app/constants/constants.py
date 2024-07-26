@@ -58,3 +58,10 @@ metals_pricing_names = [
         'name_db': 'Coal USD/T'
     },
 ]
+
+ids_to_type = [
+    {
+        'name': ['EUR/RUB',],
+        'research_type_id': 20,
+    }
+]

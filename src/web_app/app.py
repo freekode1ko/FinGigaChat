@@ -88,13 +88,7 @@ async def create_meeting(
     return 'OK'
 
 @app.get("/", response_class=HTMLResponse)
-async def show_home(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request})
-
 @app.get("/news", response_class=HTMLResponse)
-async def show_news(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request})
-
 @app.get("/quotes", response_class=HTMLResponse)
 async def show_quotes(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("index.html", {"request": request})
