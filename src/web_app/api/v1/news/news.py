@@ -1,40 +1,33 @@
 """API для работы новостей"""
+from datetime import datetime
 from typing import Optional
 
-import sqlalchemy as sa
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
-from constants.constants import CLIENT_SCORE_ARTICLE, BASE_DATE_FORMAT
-from db.database import async_session
-from db.models import Article, RelationClientArticle
-from utils.templates import templates
-
+from api.v1.news.service import get_news_from_article, get_cib_news
+from api.v1.news.schemas import News
+from constants.constants import BASE_DATE_FORMAT
 
 router = APIRouter()
 
 
 @router.get('/')
-async def get_news(page: Optional[int] = 1, size: Optional[int] = 10) -> JSONResponse:
-    async with async_session() as session:
-        stmt = (
-            sa.select(Article,)
-            .join(RelationClientArticle)
-            .where(RelationClientArticle.client_score > CLIENT_SCORE_ARTICLE)
-            .order_by(Article.date.desc())
-            .offset((page - 1) * size).limit(size)
-        )
-        result = await session.scalars(stmt)
-    data = []
+async def get_news(page: Optional[int] = 1, size: Optional[int] = 10) -> News:
+    """Получить все новости отсортированные по дате"""
 
-    for article in result:
-        data.append(
-            {
-                'section': article.date.strftime(BASE_DATE_FORMAT),
-                'title': article.title,
-                'text': article.text_sum,
-                'date': article.date.strftime(BASE_DATE_FORMAT),
-            }
-        )
+    return (await get_news_from_article(page, size))
 
-    return JSONResponse({'news': data,})
+
+@router.get('/{quotation_id}')
+async def news_for_quotation(quotation_id: int) -> News:
+    article_news = await get_news_from_article(page=1, size=10)
+    cib_news = await get_cib_news(quotation_id)
+
+    return News(
+        news=sorted(
+            [*article_news.news, *cib_news.news],
+            key=lambda x: datetime.strptime(x.date, BASE_DATE_FORMAT).date(),
+            reverse=True
+        )[:10],
+    )
