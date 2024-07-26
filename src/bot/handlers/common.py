@@ -145,6 +145,8 @@ async def ask_user_mail(message: types.Message, state: FSMContext, session: Asyn
                 config.mail_register_subject,
                 config.reg_mail_text.format(reg_code),
             )
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : '
+                             f'код для регистрации отправлен на почту {user_msg}')
 
         await state.clear()
         await state.set_state(Form.continue_user_reg)

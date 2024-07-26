@@ -116,8 +116,8 @@ async def is_admin_user(user: dict) -> bool:
     """
     user_id = user['id']
     query = select(models.RegisteredUser.user_type).where(models.RegisteredUser.user_id == user_id)
-    with engine.connect() as conn:
-        user_type = conn.scalar(query)
+    async with async_session() as session:
+        user_type = await session.scalar(query)
     return user_type == 'admin' or user_type == 'owner'
 
 
