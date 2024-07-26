@@ -96,7 +96,7 @@ class GigaChat:
         token = response.json()['access_token']
         return token
 
-    def post_giga_query(self, text: str, prompt: str = '', temperature: float = TEMPERATURE) -> str:
+    def post_giga_query(self, text: str, prompt: str, temperature: float) -> str:
         """
         Получение ответа от модели GigaChat.
 
@@ -120,7 +120,7 @@ class GigaChat:
         :return:              Ответ от GigaChat.
         """
         try:
-            giga_answer = self.post_giga_query(text=text, prompt=prompt)
+            giga_answer = self.post_giga_query(text=text, prompt=prompt, temperature=temperature)
         except AttributeError:
             self.token = self.get_user_token()
             giga_answer = self.post_giga_query(text=text, prompt=prompt, temperature=temperature)
@@ -140,7 +140,7 @@ class GigaChat:
             token = response['access_token']
             return token
 
-    async def apost_giga_query(self, text: str, prompt: str = '', temperature: float = TEMPERATURE) -> str:
+    async def apost_giga_query(self, text: str, prompt: str, temperature: float) -> str:
         """
         Асинхронное получение ответа от модели GigaChat.
 
