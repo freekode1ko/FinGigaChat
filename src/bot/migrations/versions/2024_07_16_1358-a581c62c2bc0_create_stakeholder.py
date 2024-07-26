@@ -19,6 +19,8 @@ down_revision: Union[str, None] = '48a5cebeea11'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+STAKEHOLDER_DATA_PATH = 'migrations/data/create_stakeholder/stakeholders_data.json'
+
 
 def insert_stakeholders(session: sa.orm.Session, data: dict[str, dict]) -> list[Stakeholder]:
     """
@@ -109,7 +111,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    with open('migrations/data/create_stakeholder/stakeholders_data.json', encoding='utf-8') as file:
+    with open(STAKEHOLDER_DATA_PATH, encoding='utf-8') as file:
         data = json.load(file)
 
     stakeholders = insert_stakeholders(session, data)

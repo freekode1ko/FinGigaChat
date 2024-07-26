@@ -162,6 +162,6 @@ class FormatType(IntEnum):
 class StakeholderType(str, Enum):
     """Тип того, кем является стейкхолдер для клиента."""
 
-    lpr = 'ЛПР'
-    beneficiary = 'Бенефициар'
-    undefined = 'Неопределенно'
+    lpr = 'лпр'
+    beneficiary = 'бенефициар'
+    undefined = 'не определено'
