@@ -20,6 +20,7 @@ class DataItem(BaseModel):
     params: list[Param]
     research_item_id: Optional[int] = None
     tv_type: str = 'TVC:GOLD'  # FIXME
+    image_path: Optional[str] = 'static/img/test_img.svg'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
