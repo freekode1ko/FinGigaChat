@@ -345,7 +345,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         if await is_client_in_message(message) or await is_stakeholder_in_message(message, session):
             return
 

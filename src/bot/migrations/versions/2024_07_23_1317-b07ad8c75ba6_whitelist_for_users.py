@@ -14,7 +14,7 @@ from migrations.data.whitelist_for_users import whitelist
 
 # revision identifiers, used by Alembic.
 revision: str = 'b07ad8c75ba6'
-down_revision: Union[str, None] = '48a5cebeea11'
+down_revision: Union[str, None] = 'a581c62c2bc0'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
