@@ -88,7 +88,7 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     return msg
 
 
-async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
+async def is_user_has_access(user: str, check_email: bool = False) -> bool:
     """
     Проверка, пользователя на наличие в списках на доступ
 
@@ -98,7 +98,7 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     """
     user_id = json.loads(user)['id']
     async with async_session() as session:
-        result = await session.execute(select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id))
+        result = await session.execute(select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id))
         try:
             user_email = result.scalar_one()
             if not check_email:
@@ -115,11 +115,10 @@ async def is_admin_user(user: dict) -> bool:
     :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
     """
     user_id = user['id']
-    user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
-    user_type = user_series.values.tolist()[0][0]
-    if user_type == 'admin' or user_type == 'owner':
-        return True
-    return False
+    query = select(models.RegisteredUser.user_type).where(models.RegisteredUser.user_id == user_id)
+    async with async_session() as session:
+        user_type = await session.scalar(query)
+    return user_type == 'admin' or user_type == 'owner'
 
 
 def read_curdatetime() -> datetime:

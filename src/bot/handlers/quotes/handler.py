@@ -83,7 +83,7 @@ async def main_menu_command(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await utils.base.user_in_whitelist(message.from_user.model_dump_json()):
+    if await utils.base.is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await main_menu(message)
     else:

@@ -14,7 +14,7 @@ import pandas as pd
 from sqlalchemy import case, ColumnElement, func, select
 from sqlalchemy.orm import InstrumentedAttribute
 
-from configs.config import OTHER_NEWS_COUNT, TOP_NEWS_COUNT
+from configs.config import TOP_NEWS_COUNT
 from db import database
 from db.models import Article, Base
 
@@ -126,7 +126,7 @@ class SubjectInterface:
         async with database.async_session() as session:
             stmt = select(self.table).where(func.lower(self.table.name) == name.lower())
             result = await session.execute(stmt)
-            data = result.scalar()
+            data = result.scalar_one()
             return {c: getattr(data, c) for c in self.columns}
 
     async def get_articles_by_subject_ids(
@@ -188,7 +188,7 @@ class SubjectInterface:
     async def get_sort_articles_by_id(
             self,
             subject_id: int,
-            limit_val: Optional[int] = None,
+            limit_val: int,
             offset_val: int = 0
     ) -> list[tuple[str, datetime.datetime, str, str]]:
         """
@@ -219,7 +219,7 @@ class SubjectInterface:
                 top_articles = []  # Для очистки в send_next_news топ новостей
 
             # Получение оставшихся новостей
-            limit_val = limit_val if limit_val else OTHER_NEWS_COUNT
+            limit_val = limit_val - TOP_NEWS_COUNT if top_articles else limit_val
             stmt_other = (
                 base_stmt
                 .where(Article.link.notin_(links_of_top))

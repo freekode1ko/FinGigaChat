@@ -14,7 +14,7 @@ from db.api.user_telegram_subscription import user_telegram_subscription_db
 from handlers.subscriptions.handler import router, subs_menu_end
 from keyboards.subscriptions.news.telegram import callbacks as callback_factory, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import get_page_data_and_info, send_or_edit, user_in_whitelist
+from utils.base import get_page_data_and_info, is_user_has_access, send_or_edit
 
 
 @router.callback_query(callback_factory.TelegramSubsMenuData.filter(
@@ -68,7 +68,7 @@ async def tg_subscriptions_menu(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         await tg_subs_menu(message)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
