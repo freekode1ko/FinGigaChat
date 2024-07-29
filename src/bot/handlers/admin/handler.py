@@ -21,7 +21,7 @@ from keyboards.admin.callbacks import ApproveDeleteMessageByType, DeleteMessageB
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
-from utils.base import file_cleaner, is_admin_user, send_msg_to, user_in_whitelist
+from utils.base import file_cleaner, is_admin_user, is_user_has_access, send_msg_to
 from utils.newsletter import subscriptions_newsletter
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
@@ -51,7 +51,7 @@ async def message_to_all(message: types.Message, state: FSMContext) -> None:
     user = json.loads(message.from_user.model_dump_json())
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(user_str):
+    if await is_user_has_access(user_str):
         if await is_admin_user(user):
             await state.set_state(AdminStates.send_to_users)
             await message.answer(
@@ -99,7 +99,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
         return None
 
     await state.clear()
-    users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
+    users = pd.read_sql_query('SELECT * FROM registered_user', con=engine)
     users_ids = users['user_id'].tolist()
     saved_messages: list[dict] = []
     newsletter_type = 'default'

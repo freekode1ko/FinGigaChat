@@ -27,7 +27,7 @@ from db.api.research_group import research_group_db
 from db.api.research_section import research_section_db
 from db.api.research_type import research_type_db
 from db.api.user_research_subscription import user_research_subscription_db
-from db.whitelist import get_user
+from db.user import get_user
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger

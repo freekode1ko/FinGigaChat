@@ -30,7 +30,7 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, process_fin_table, send_or_edit, user_in_whitelist
+from utils.base import bot_send_msg, is_user_has_access, process_fin_table, send_or_edit
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
@@ -149,7 +149,7 @@ async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         newsletter_dict = dt.Newsletter.get_newsletter_dict()  # {тип рассылки: заголовок рассылки}
         callback_func = 'send_newsletter_by_button'  # функция по отображению рассылки
 
@@ -345,7 +345,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         if await is_client_in_message(message) or await is_stakeholder_in_message(message, session):
             return
 

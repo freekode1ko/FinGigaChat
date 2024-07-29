@@ -13,11 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
 from db.api.research import research_db
-from db.whitelist import get_user
+from db.user import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
-from utils.base import bot_send_msg, send_or_edit, user_in_whitelist
+from utils.base import bot_send_msg, is_user_has_access, send_or_edit
 from utils.watermark import add_watermark_cli
 
 router = Router()
@@ -77,7 +77,7 @@ async def main_menu_command(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await main_menu(message)
     else:

@@ -15,7 +15,7 @@ from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
-from utils.base import clear_text_from_url, user_in_whitelist
+from utils.base import clear_text_from_url, is_user_has_access
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 from utils.rag_utils.rag_router import RAGRouter
 
@@ -54,7 +54,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext, session: Async
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         await state.set_state(RagState.rag_mode)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 

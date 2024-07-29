@@ -27,7 +27,7 @@ from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
 from db.database import engine
-from db.whitelist import get_users_subscriptions
+from db.user import get_users_subscriptions
 from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
@@ -261,7 +261,7 @@ async def weekly_pulse_newsletter(
     message.add_all(saved_messages)
 
 
-async def send_researches_to_user(bot: Bot, user: models.Whitelist, research_df: pd.DataFrame) -> list[types.Message]:
+async def send_researches_to_user(bot: Bot, user: models.RegisteredUser, research_df: pd.DataFrame) -> list[types.Message]:
     """
     Отправка отчетов пользователю с форматированием
 
@@ -345,7 +345,7 @@ async def send_new_researches_to_users(bot: Bot) -> None:
 
     for _, user_row in user_df.iterrows():
         user_id = user_row['user_id']
-        user = models.Whitelist(user_id=user_id, username=user_row['username'], user_email=user_row['user_email'])
+        user = models.RegisteredUser(user_id=user_id, username=user_row['username'], user_email=user_row['user_email'])
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         # filter by user`s subs and group research_df by research_section_name
