@@ -82,9 +82,12 @@ research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
 api_key_gpt = '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'
 
-TOP_NEWS_COUNT = 3
-OTHER_NEWS_COUNT = 7
-NEWS_LIMIT = 10
+# Константы для отображения новостей в тг
+TOP_NEWS_COUNT = 3  # кол-во новостей из топ источников
+NEWS_LIMIT = 10  # кол-во новостей для выдачи за раз
+OTHER_NEWS_COUNT = NEWS_LIMIT - TOP_NEWS_COUNT  # кол-во новостей не из топ источников
+NEWS_LIMIT_SH = 5  # кол-во новостей для выдачи за раз из меню стейкхолдеров
+OTHER_NEWS_COUNT_SH = NEWS_LIMIT_SH - TOP_NEWS_COUNT  # # кол-во новостей не из топ источников из меню стейкхолдеров
 PAGE_ELEMENTS_COUNT = 10
 CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 USER_SUBSCRIPTIONS_LIMIT = 70
@@ -118,7 +121,8 @@ reg_mail_text = (
 new_user_start = (
     'Рады приветствовать Вас в AI-помощнике банкира!\n'
     'Для того, чтобы начать пользоваться ботом нужно пройти идентификацию.\n\n'
-    'Введите корпоративную почту, на нее будет выслан код для завершения регистрации.'
+    'Введите корпоративную почту, на нее будет выслан код для завершения регистрации.\n'
+    f'❗ Код действителен не более {STATE_TIMEOUT.total_seconds() // 60} минут.'
 )
 
 

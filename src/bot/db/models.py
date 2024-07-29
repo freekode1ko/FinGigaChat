@@ -9,6 +9,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     DOUBLE_PRECISION,
+    Enum,
     Float,
     ForeignKey,
     Identity,
@@ -264,8 +265,9 @@ t_user_log = Table(
 )
 
 
-class Whitelist(Base):
-    __tablename__ = 'whitelist'
+class RegisteredUser(Base):
+    __tablename__ = 'registered_user'
+    __table_args__ = {'comment': 'Справочник зарегистрированных пользователей'}
 
     user_id = Column(BigInteger, primary_key=True)
     username = Column(Text)
@@ -276,6 +278,13 @@ class Whitelist(Base):
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+
+
+class Whitelist(Base):
+    __tablename__ = 'whitelist'
+    __table_args__ = {'comment': 'Белый список email`ов, которые могут зарегистрироваться в боте'}
+
+    user_email = Column(Text, primary_key=True)
 
 
 class ArticleNameImpact(Base):
@@ -302,7 +311,7 @@ class Client(Base):
     industry = relationship('Industry', back_populates='client')
     client_alternative = relationship('ClientAlternative', back_populates='client')
     relation_client_article = relationship('RelationClientArticle', back_populates='client')
-    beneficiaries = relationship('Beneficiary', secondary='relation_client_beneficiary', back_populates='clients')
+    stakeholders = relationship('Stakeholder', secondary='relation_client_stakeholder', back_populates='clients')
 
 
 class Commodity(Base):
@@ -335,14 +344,14 @@ class Message(Base):
     __table_args__ = {'comment': 'Хранилище отправленных пользователям сообщений'}
 
     id = Column(BigInteger, primary_key=True)
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     message_id = Column(BigInteger, nullable=False)
     message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     function_name = Column(Text, nullable=False)
     send_datetime = Column(DateTime(True),)
 
     message_type = relationship('MessageType', back_populates='message')
-    user = relationship('Whitelist', back_populates='message')
+    user = relationship('RegisteredUser', back_populates='message')
 
 
 class ParserSource(Base):
@@ -374,7 +383,7 @@ class TelegramChannel(Base):
                         comment='Связь телеграм канала с разделом (например, отрасль "Недвижимость")')
 
     section = relationship('TelegramSection', back_populates='telegram_channel')
-    user = relationship('Whitelist', secondary='user_telegram_subscription', back_populates='telegram')
+    user = relationship('RegisteredUser', secondary='user_telegram_subscription', back_populates='telegram')
     relation_telegram_article = relationship('RelationTelegramArticle', back_populates='telegram')
 
 
@@ -458,7 +467,7 @@ class RelationTelegramArticle(Base):
 
 t_user_telegram_subscription = Table(
     'user_telegram_subscription', metadata,
-    Column('user_id', ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'),
+    Column('user_id', ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'),
            primary_key=True, nullable=False),
     Column('telegram_id', ForeignKey('telegram_channel.id', ondelete='CASCADE', onupdate='CASCADE'),
            primary_key=True, nullable=False)
@@ -556,7 +565,7 @@ class UserResearchSubscriptions(Base):
     __tablename__ = 'user_research_subscription'
     __table_args__ = {'comment': 'Справочник подписок пользователей на отчеты CIB Research'}
 
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     research_type_id = Column(ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 
@@ -575,7 +584,7 @@ class UserMeeting(Base):
     __table_args__ = {'comment': 'Перечень встреч пользователей'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(ForeignKey('whitelist.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user_id = Column(ForeignKey('registered_user.user_id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     theme = Column(Text, nullable=False, default='Напоминание', comment='Тема встречи')
     date_create = Column(DateTime, comment='Время создания встречи (UTC)')
     date_start = Column(DateTime, nullable=False, comment='Время начала встречи (UTC)')
@@ -590,7 +599,7 @@ class CallReports(Base):
     __table_args__ = {'comment': 'Записи call reports'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'),
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'),
                      primary_key=True, comment='Айди пользователя')
     client = Column(String(255), nullable=False, comment='Клиент')
     report_date = Column(Date, nullable=False, comment='Дата проведения встречи')
@@ -620,7 +629,7 @@ class UserClientSubscriptions(Base):
     __tablename__ = 'user_client_subscription'
     __table_args__ = {'comment': 'Справочник подписок пользователей на клиентов'}
 
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 
@@ -628,7 +637,7 @@ class UserCommoditySubscriptions(Base):
     __tablename__ = 'user_commodity_subscription'
     __table_args__ = {'comment': 'Справочник подписок пользователей на сырьевые товары'}
 
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     commodity_id = Column(ForeignKey('commodity.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 
@@ -636,7 +645,7 @@ class UserIndustrySubscriptions(Base):
     __tablename__ = 'user_industry_subscription'
     __table_args__ = {'comment': 'Справочник подписок пользователей на отрасли'}
 
-    user_id = Column(ForeignKey('whitelist.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     industry_id = Column(ForeignKey('industry.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
 
 
@@ -757,32 +766,34 @@ class Exc(Base):
     parser_source = relationship('ParserSource')
 
 
-class Beneficiary(Base):
-    __tablename__ = 'beneficiary'
-    __table_args__ = {'comment': 'Таблица с именами бенефициаров'}
+class Stakeholder(Base):
+    __tablename__ = 'stakeholder'
+    __table_args__ = {'comment': 'Таблица с именами стейкхолдеров'}
 
     id = Column(Integer(), autoincrement=True, primary_key=True)
-    name = Column(String(255), nullable=False, unique=True, comment='ФИО бенефициара')
+    name = Column(String(255), nullable=False, unique=True, comment='ФИО стейкхолдера')
+    forbes_link = Column(Text, comment='Ссылка на био стейкхолдера')
 
-    alternatives = relationship('BeneficiaryAlternative', back_populates='beneficiary')
-    clients = relationship('Client', secondary='relation_client_beneficiary', back_populates='beneficiaries')
+    alternatives = relationship('StakeholderAlternative', back_populates='stakeholder')
+    clients = relationship('Client', secondary='relation_client_stakeholder', back_populates='stakeholders')
 
 
-class BeneficiaryAlternative(Base):
-    __tablename__ = 'beneficiary_alternative'
-    __table_args__ = {'comment': 'Таблица с альтернативными именами бенефициаров'}
+class StakeholderAlternative(Base):
+    __tablename__ = 'stakeholder_alternative'
+    __table_args__ = {'comment': 'Таблица с альтернативными именами стейкхолдеров'}
 
     id = Column(Integer(), autoincrement=True, primary_key=True)
-    beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'),
-                            nullable=False, comment='id бенефициара')
-    other_name = Column(String(255), nullable=False, unique=True, comment='альтернативное ФИО бенефициара')
+    stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'),
+                            nullable=False, comment='id стейкхолдера')
+    other_name = Column(String(255), nullable=False, unique=True, comment='Альтернативное ФИО стейкхолдера')
 
-    beneficiary = relationship('Beneficiary', back_populates='alternatives')
+    stakeholder = relationship('Stakeholder', back_populates='alternatives')
 
 
-class RelationClientBeneficiary(Base):
-    __tablename__ = 'relation_client_beneficiary'
-    __table_args__ = {'comment': 'Таблица отношений бенефициаров к клиентам'}
+class RelationClientStakeholder(Base):
+    __tablename__ = 'relation_client_stakeholder'
+    __table_args__ = {'comment': 'Таблица отношений стейкхолдеров к клиентам'}
 
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    stakeholder_type = Column(Enum(enums.StakeholderType), nullable=False, comment='Тип стейкхолдера')

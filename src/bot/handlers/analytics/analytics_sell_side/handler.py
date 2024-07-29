@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 from aiogram import types
 from aiogram.filters.callback_data import CallbackData
+from sqlalchemy import orm
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs import config
 from constants import enums
@@ -26,6 +28,7 @@ from db.api.research_group import research_group_db
 from db.api.research_section import research_section_db
 from db.api.research_type import research_type_db
 from db.api.user_research_subscription import user_research_subscription_db
+from db.user import get_user
 from handlers.analytics.handler import router
 from keyboards.analytics.analytics_sell_side import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
@@ -141,6 +144,7 @@ async def get_cib_research_data(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
         logger: logging.Logger,
+        session: AsyncSession,
 ) -> None:
     """
     Изменяет сообщение, предлагая пользователю выбрать период, за который он хочет получить сводку новостей
@@ -148,6 +152,7 @@ async def get_cib_research_data(
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
     :param logger:          логгер
+    :param session:         Асинхронная сессия базы данных.
     """
     summary_type = callback_data.summary_type
 
@@ -155,7 +160,7 @@ async def get_cib_research_data(
         case enums.ResearchSummaryType.periodic.value:
             await select_period_to_get_researches(callback_query, callback_data)
         case enums.ResearchSummaryType.last_actual.value:
-            await get_last_actual_research(callback_query, callback_data)
+            await get_last_actual_research(callback_query, callback_data, session)
         case enums.ResearchSummaryType.analytical_indicators.value:
             await cib_client_analytical_indicators(callback_query, callback_data, logger)
         case enums.ResearchSummaryType.exc_rate_prediction_table.value:
@@ -167,7 +172,7 @@ async def get_cib_research_data(
         case enums.ResearchSummaryType.economy_daily.value:
             await economy_daily_callback(callback_query, callback_data)
         case enums.ResearchSummaryType.economy_monthly.value:
-            await economy_monthly_callback(callback_query, callback_data)
+            await economy_monthly_callback(callback_query, callback_data, session)
         case _:
             pass
 
@@ -217,14 +222,16 @@ async def select_period_to_get_researches(
 async def get_last_actual_research(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        session: AsyncSession,
 ) -> None:
     """
     Получение последнего актуального отчета
 
     Отправляет копию меню в конце, если были отправлены отчеты
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param session:         Асинхронная сессия базы данных.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -235,8 +242,9 @@ async def get_last_actual_research(
 
     research_df = await research_db.get_researches_by_type(research_type_id)
     if not research_df.empty:
+        user = await get_user(session, from_user.id)
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
-        await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+        await send_researches_to_user(callback_query.bot, user, last_research)
         await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
@@ -265,13 +273,17 @@ async def cib_client_analytical_indicators(
 
     research_info = await research_type_db.get(research_type_id)
 
+    client_id = 0
     # Ищем клиента по имени отчета
-    client = await client_db.get_by_name(research_info.name)
-
-    # Проверяем, что есть фин показатели для клиента
-    ap_obj = ArticleProcess(logger)
-    client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
-    client_id = 0 if client_fin_tables.empty else client['id']
+    try:
+        client = await client_db.get_by_name(research_info.name)
+    except orm.exc.NoResultFound:
+        logger.warning(f'Не удалось найти клиента {research_info.name} ({research_type_id}) в таблице clients')
+    else:
+        # Проверяем, что есть фин показатели для клиента
+        ap_obj = ArticleProcess(logger)
+        client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
+        client_id = 0 if client_fin_tables.empty else client['id']
 
     msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(research_info, client_id)
@@ -445,14 +457,16 @@ async def data_mart_callback(
 async def economy_monthly_callback(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetCIBResearchData,
+        session: AsyncSession,
 ) -> None:
     """
     Получение последнего актуального ежемесячного отчета по Экономике РФ
 
     Отправляет копию меню в конце, если были отправлены отчеты
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета и способ получения новостей (по подпискам или по всем каналам)
+    :param session:         Асинхронная сессия базы данных.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -470,7 +484,8 @@ async def economy_monthly_callback(
         last_research = research_df[research_df['publication_date'] == max(research_df['publication_date'])]
 
     if not last_research.empty:
-        await send_researches_to_user(callback_query.bot, from_user.id, full_name, last_research)
+        user = await get_user(session, from_user.id)
+        await send_researches_to_user(callback_query.bot, user, last_research)
         await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
@@ -495,6 +510,7 @@ async def economy_daily_callback(
 async def get_researches_over_period(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetResearchesOverDays,
+        session: AsyncSession,
         header_not_contains: Optional[str] = '',
 ) -> None:
     """
@@ -502,15 +518,15 @@ async def get_researches_over_period(
 
     Отправляет копию меню в конце, если были отправлены отчеты
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
+    :param callback_query:      Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:       Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
+    :param session:             Асинхронная сессия базы данных.
     :param header_not_contains: фильтрация полученных отчетов по header
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    user_id = callback_query.from_user.id
 
     research_type_id = callback_data.research_type_id
     days = callback_data.days_count
@@ -523,7 +539,8 @@ async def get_researches_over_period(
         researches_df = researches_df[~researches_df['header'].str.contains(header_not_contains, case=False)]
 
     if not researches_df.empty:
-        await send_researches_to_user(callback_query.bot, user_id, full_name, researches_df)
+        user = await get_user(session, from_user.id)
+        await send_researches_to_user(callback_query.bot, user, researches_df)
         await send_full_copy_of_message(callback_query)
     else:
         msg_text = 'На текущий момент, отчеты временно отсутствуют'
@@ -536,16 +553,19 @@ async def get_researches_over_period(
 async def get_economy_daily_researches_over_period(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetResearchesOverDays,
+        session: AsyncSession,
 ) -> None:
     """
     Отправка пользователю сводки ежедневных отчетов по экономике РФ за указанный период
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Выбранный тип отчета, кол-во дней, за которые пользователь хочет получить сводку
+    :param session:         Асинхронная сессия базы данных.
     """
     await get_researches_over_period(
         callback_query,
         callback_data,
+        session=session,
         header_not_contains=analytics_sell_side.ECONOMY_MONTHLY_HEADER_CONTAINS,
     )
 

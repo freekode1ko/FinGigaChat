@@ -7,7 +7,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from constants import subscriptions as callback_prefixes
 from keyboards.subscriptions import constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import send_or_edit, user_in_whitelist
+from utils.base import is_user_has_access, send_or_edit
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -67,7 +67,7 @@ async def subscriptions_menu(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await subs_menu(message)
     else:

@@ -9,7 +9,10 @@
 import asyncio
 import datetime
 import os
+import subprocess
+import tempfile
 import time
+from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -18,13 +21,13 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 import module.data_transformer as dt
 from configs import config
-from db import message, parser_source
+from db import message, models, parser_source
 from db.api.research import research_db
 from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
 from db.database import engine
-from db.whitelist import get_users_subscriptions
+from db.user import get_users_subscriptions
 from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
@@ -32,6 +35,7 @@ from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
 from utils.macro_view import get_macro_brief_file
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
+from utils.watermark import add_watermark_cli
 
 
 async def tg_newsletter(
@@ -257,43 +261,57 @@ async def weekly_pulse_newsletter(
     message.add_all(saved_messages)
 
 
-async def send_researches_to_user(bot: Bot, user_id: int, user_name: str, research_df: pd.DataFrame) -> list[types.Message]:
+async def send_researches_to_user(bot: Bot, user: models.RegisteredUser, research_df: pd.DataFrame) -> list[types.Message]:
     """
     Отправка отчетов пользователю с форматированием
 
     :param bot: объект тг бота
-    :param user_id: телеграм id пользователя, которому отправляются отчеты
-    :param user_name: имя пользователя для логирования
+    :param user: телеграм пользователь, которому отправляются отчеты
     :param research_df: DataFrame[id, research_type_id, filepath, header, text, parse_datetime, publication_date, report_id]
     :returns: Список объектов отправленных сообщений
     """
     sent_msg_list = []
 
     for _, research in research_df.iterrows():
-        user_logger.debug(f'*{user_id}* Пользователю {user_name} отправляется рассылка отчета {research["id"]}.')
+        user_logger.debug(f'*{user.user_id}* Пользователю {user.username} отправляется рассылка отчета {research["id"]}.')
 
         # Если есть текст, то чисто тайтл и кнопку.
         # Если есть текст и файл, то тайтл и кнопку.
         if research['text']:
             formatted_msg_txt = formatter.ResearchFormatter.format_min(research)
             keyboard = anal_keyboards.get_full_research_kb(research['id'])
-            msg = await bot.send_message(user_id, formatted_msg_txt, reply_markup=keyboard, protect_content=False, parse_mode='HTML')
+            msg = await bot.send_message(
+                user.user_id, formatted_msg_txt, reply_markup=keyboard, protect_content=False, parse_mode='HTML'
+            )
         # Если есть файл, но нет текста - тайтл с файлом
         elif research['filepath'] and os.path.exists(research['filepath']):
-            file = types.FSInputFile(research['filepath'])
-            msg_txt = f'<b>{research["header"]}</b>'
-            msg = await bot.send_document(
-                document=file,
-                chat_id=user_id,
-                caption=msg_txt,
-                parse_mode='HTML',
-                protect_content=True,
-            )
+            tmp_file_name = f'{os.path.basename(research["filepath"])}_{user.user_id}_watermarked.pdf'
+            user_anal_filepath = Path(tempfile.gettempdir()) / tmp_file_name
+
+            try:
+                add_watermark_cli(
+                    research['filepath'],
+                    user_anal_filepath,
+                    user.user_email,
+                )
+            except subprocess.SubprocessError as e:
+                logger.error(f'*{user.user_id}* При рассылке отчета {research["id"]} произошла ошибка: {e}.')
+                continue
+            else:
+                file = types.FSInputFile(user_anal_filepath)
+                msg_txt = f'<b>{research["header"]}</b>'
+                msg = await bot.send_document(
+                    document=file,
+                    chat_id=user.user_id,
+                    caption=msg_txt,
+                    parse_mode='HTML',
+                    protect_content=True,
+                )
         else:
             continue
 
         sent_msg_list.append(msg)
-        user_logger.debug(f'*{user_id}* Пользователю {user_name} пришла рассылка отчета {research["id"]}.')
+        user_logger.debug(f'*{user.user_id}* Пользователю {user.username} пришла рассылка отчета {research["id"]}.')
         await asyncio.sleep(1.1)
 
     return sent_msg_list
@@ -327,7 +345,7 @@ async def send_new_researches_to_users(bot: Bot) -> None:
 
     for _, user_row in user_df.iterrows():
         user_id = user_row['user_id']
-        user_name = user_row['username']
+        user = models.RegisteredUser(user_id=user_id, username=user_row['username'], user_email=user_row['user_email'])
         logger.info(f'Рассылка отчетов пользователю {user_id}')
 
         # filter by user`s subs and group research_df by research_section_name
@@ -342,7 +360,7 @@ async def send_new_researches_to_users(bot: Bot) -> None:
             start_msg = f'Ваша новостная рассылка по подпискам на отчеты по разделу <b>{research_section_name}</b>:'
             try:
                 msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
-                sent_msg_list = await send_researches_to_user(bot, user_id, user_name, section_researches_df)
+                sent_msg_list = await send_researches_to_user(bot, user, section_researches_df)
             except exceptions.TelegramForbiddenError as e:
                 logger.error(f'При рассылке по подпискам на отчеты пользователю {user_id} произошла ошибка: %s', e)
                 break

@@ -1,0 +1,15 @@
+import pathlib
+
+
+DATA_FILE_NAME = pathlib.Path(__file__).parent / 'whitelist_data.txt'
+
+
+def download_data_from_file(fname: pathlib.Path | str) -> list[dict[str, str]]:
+    emails = []
+    with open(fname, 'r') as rf:
+        for line in rf:
+            emails.append({'user_email': line.strip()})
+    return emails
+
+
+data = download_data_from_file(DATA_FILE_NAME)

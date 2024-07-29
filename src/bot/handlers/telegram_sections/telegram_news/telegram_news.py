@@ -13,7 +13,7 @@ from handlers.telegram_sections.handler import router
 from keyboards.telegram_news import callbacks
 from keyboards.telegram_news import constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import bot_send_msg, user_in_whitelist
+from utils.base import bot_send_msg, is_user_has_access
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
@@ -46,7 +46,7 @@ async def select_section_to_get_tg_articles(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         await list_sections(message)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:

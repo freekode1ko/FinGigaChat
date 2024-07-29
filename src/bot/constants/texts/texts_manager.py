@@ -1,6 +1,5 @@
 """Клас для получения файла из конфига редиса"""
-
-from constants.texts.texts import CONFIG_CLASSES
+from constants.texts.features import CONFIG_CLASSES
 from db.redis.client import redis_client_sync as redis_client
 
 

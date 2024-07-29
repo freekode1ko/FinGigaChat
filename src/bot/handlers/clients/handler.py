@@ -18,6 +18,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from constants import constants
@@ -37,7 +38,7 @@ from keyboards.analytics.analytics_sell_side import callbacks as analytics_callb
 from log.bot_logger import user_logger
 from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import get_page_data_and_info, send_or_edit, send_pdf, user_in_whitelist
+from utils.base import get_page_data_and_info, is_user_has_access, send_or_edit, send_pdf
 from utils.handler_utils import get_client_financial_indicators
 
 router = Router()
@@ -108,7 +109,7 @@ async def main_menu_command(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await main_menu(message)
     else:
@@ -664,12 +665,14 @@ async def not_implemented(
 async def get_anal_reports(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
+        session: AsyncSession,
 ) -> None:
     """
     Отправка отчетов за указанный период
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Хранит research_type_id
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param callback_data:   Хранит research_type_id
+    :param session:         Асинхронная сессия базы данных.
     """
     await get_researches_over_period(
         callback_query,
@@ -677,4 +680,5 @@ async def get_anal_reports(
             research_type_id=callback_data.research_type_id,
             days_count=callback_data.days_count,
         ),
+        session=session,
     )

@@ -6,7 +6,7 @@
 Меню выбора тг разделов.
 Меню выбора клиентов и сырья.
 Меню выбора периода получения новостей.
-Меню выбора клиента бенефициара.
+Меню выбора клиента стейкхолдера.
 """
 from typing import Any
 
@@ -375,10 +375,10 @@ def get_periods_kb(
     return keyboard.as_markup()
 
 
-def get_select_beneficiary_clients_kb(
-        beneficiary_id: int,
-        ben_clients: list[models.Client],
-        callback_data: callback_data_factories.BeneficiaryData | None = None,
+def get_select_stakeholder_clients_kb(
+        stakeholder_id: int,
+        sh_clients: list[models.Client],
+        callback_data: callback_data_factories.StakeholderData | None = None,
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида.
@@ -389,10 +389,10 @@ def get_select_beneficiary_clients_kb(
     [Получить новости]
     [Завершить]
 
-    :param beneficiary_id:      ID бенефициара, по которому нужно получить меню клиентов.
-    :param ben_clients:         Клиенты бенефициара.
+    :param stakeholder_id:      ID стейкхолдера, по которому нужно получить меню клиентов.
+    :param sh_clients:          Клиенты стейкхолдера.
     :param callback_data:       Данные о текущем меню.
-    :return:                    Клавиатуру с клиентами бенефициара.
+    :return:                    Клавиатуру с клиентами стейкхолдера.
     """
     keyboard = InlineKeyboardBuilder()
     if callback_data:
@@ -403,37 +403,37 @@ def get_select_beneficiary_clients_kb(
         subject_ids_list = []
 
     all_clients = []
-    for ben_client in ben_clients:
-        button_call = callback_data_factories.BeneficiaryData(
-            menu=callback_data_factories.NewsMenusEnum.choose_beneficiary_clients,
-            beneficiary_id=beneficiary_id,
-            subject_id=ben_client.id,
+    for sh_client in sh_clients:
+        button_call = callback_data_factories.StakeholderData(
+            menu=callback_data_factories.NewsMenusEnum.choose_stakeholder_clients,
+            stakeholder_id=stakeholder_id,
+            subject_id=sh_client.id,
             subject_ids=subject_ids,
         ).pack()
-        all_clients.append(ben_client.id)
+        all_clients.append(sh_client.id)
 
-        mark = constants.SELECTED if ben_client.id in subject_ids_list else constants.UNSELECTED
+        mark = constants.SELECTED if sh_client.id in subject_ids_list else constants.UNSELECTED
         keyboard.row(
             types.InlineKeyboardButton(text=mark, callback_data=button_call),
-            types.InlineKeyboardButton(text=ben_client.name, callback_data=button_call)
+            types.InlineKeyboardButton(text=sh_client.name, callback_data=button_call)
         )
 
     if subject_ids != '0':
         keyboard.row(types.InlineKeyboardButton(
             text='Получить новости',
-            callback_data=callback_data_factories.BeneficiaryData(
+            callback_data=callback_data_factories.StakeholderData(
                 menu=callback_data_factories.NewsMenusEnum.show_news,
                 subject_ids=subject_ids,
-                beneficiary_id=beneficiary_id,
+                stakeholder_id=stakeholder_id,
             ).pack()
         ))
 
     keyboard.row(types.InlineKeyboardButton(
         text='Получить по всем',
-        callback_data=callback_data_factories.BeneficiaryData(
+        callback_data=callback_data_factories.StakeholderData(
             menu=callback_data_factories.NewsMenusEnum.show_news,
             subject_ids=utils.wrap_selected_ids(all_clients),
-            beneficiary_id=beneficiary_id,
+            stakeholder_id=stakeholder_id,
         ).pack()
     ))
     keyboard.row(types.InlineKeyboardButton(
