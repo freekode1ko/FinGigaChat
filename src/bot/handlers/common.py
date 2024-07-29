@@ -225,3 +225,14 @@ async def open_meeting_app(message: types.Message) -> None:
         resize_keyboard=True
     )
     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+
+
+@router.message(F.text.lower().in_({'етс', 'единые трансфертные ставки'}))
+async def get_eco_inavigator(message: types.Message) -> None:
+    """
+    Получить ссылку на навигатор ETC
+
+    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
+    msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
+    await message.answer(msg_text, parse_mode='HTML', protect_content=False)
