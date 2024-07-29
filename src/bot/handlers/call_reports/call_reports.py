@@ -34,7 +34,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text='Создать новый протокол встречи',
+            text='Создать новую заметку',
             callback_data=CRCreateNew(menu=CRMenusEnum.create_new).pack()
         )
     )
@@ -63,7 +63,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
         )
 
 
-@router.message(Command('call_reports'))
+@router.message(Command('notes'))
 async def call_reports_enter_command(message: Message, state: FSMContext, ) -> None:
     """
     Входная точка для создания или просмотра call report'ов
