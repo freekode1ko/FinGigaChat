@@ -1,30 +1,36 @@
-import { baseApi, ENDPOINTS } from '@/shared/api'
+import { baseApi } from '@/shared/api'
+import { API_ENDPOINTS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
 import type { Quotes } from '../model'
 
-interface QuotesResponse {
+interface QuotesSection {
   section_name: string
   section_params: Array<string>
   data: Array<Quotes>
 }
 
-const newsApi = baseApi.injectEndpoints({
+interface QuotesResponse {
+  sections: Array<QuotesSection>
+}
+
+const quotesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getPopularQuotes: build.query<{ sections: Array<QuotesResponse> }, void>({
+    getPopularQuotes: build.query<QuotesResponse, void>({
       query: () => ({
-        url: ENDPOINTS.popularQuotes,
+        url: API_ENDPOINTS.popularQuotes,
         method: 'GET',
       }),
-      keepUnusedDataFor: 120,
+      keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
-    getDashboardQuotes: build.query<{ sections: Array<QuotesResponse> }, void>({
+    getDashboardQuotes: build.query<QuotesResponse, void>({
       query: () => ({
-        url: ENDPOINTS.dashboardQuotes,
+        url: API_ENDPOINTS.dashboardQuotes,
         method: 'GET',
       }),
-      keepUnusedDataFor: 120,
+      keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
   }),
 })
 
-export const { useGetPopularQuotesQuery, useGetDashboardQuotesQuery } = newsApi
+export const { useGetPopularQuotesQuery, useGetDashboardQuotesQuery } =
+  quotesApi

@@ -4,16 +4,20 @@ import React from 'react'
 import { cn } from '../lib'
 
 const buttonVariants = cva(
-  'rounded-lg disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'text-white bg-primary-500 hover:bg-primary-600',
-        secondary: 'text-secondary-700 bg-secondary-100 hover:bg-secondary-200',
+        default: 'bg-button-color text-button-text-color',
+        secondary: 'bg-secondary-bg-color text-text-color',
+        outline:
+          'border border-text-color transparent hover:bg-secondary-bg-color',
       },
       size: {
-        default: 'px-4 py-2',
-        large: 'px-4 py-4',
+        default: 'h-10 px-4 py-2',
+        icon: 'h-10 w-10',
+        sm: 'h-9 rounded-md px-3',
+        lg: 'h-11 rounded-md px-8',
       },
     },
     defaultVariants: {
@@ -25,18 +29,13 @@ const buttonVariants = cva(
 
 interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  mobileFull?: boolean
-}
+    VariantProps<typeof buttonVariants> {}
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, mobileFull = false, ...props }, ref) => {
+  ({ className, variant, size, ...props }, ref) => {
     return (
       <button
-        className={cn(
-          buttonVariants({ variant, size, className }),
-          mobileFull && 'w-full md:w-fit'
-        )}
+        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       />

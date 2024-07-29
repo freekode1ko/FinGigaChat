@@ -1,10 +1,13 @@
 interface QuotesParams {
-  name: string
-  value: Optional<number>
+  readonly name: string
+  readonly value: Optional<number>
 }
 
 export interface Quotes {
-  name: string
-  value: Optional<number>
-  params: Array<QuotesParams>
+  readonly name: string
+  readonly value: Optional<number>
+  readonly params: Array<QuotesParams>
+  readonly research_item_id: number
+  readonly tv_type: string
+  readonly image_path: string
 }

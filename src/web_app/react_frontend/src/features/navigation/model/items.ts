@@ -1,6 +1,15 @@
-import { ActivityIcon, LayoutDashboardIcon, NewspaperIcon } from 'lucide-react'
+import {
+  ActivityIcon,
+  LayoutDashboardIcon,
+  type LucideIcon,
+  NewspaperIcon,
+} from 'lucide-react'
 
-import type { MenuItem } from './types'
+interface MenuItem {
+  name: string
+  path: string
+  icon: LucideIcon
+}
 
 export const menuItems: Array<MenuItem> = [
   {

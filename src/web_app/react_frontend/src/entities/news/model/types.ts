@@ -3,4 +3,5 @@ export interface News {
   title: string
   text: string
   date: string
+  news_id: string
 }
