@@ -37,7 +37,7 @@ async def get_cib_news(research_type_id) -> News:
         research_section = await session.get(ResearchSection, research_type.research_section_id)
         stmt = (
             sa.select(
-                Research.header, Research.text, Research.publication_date)
+                Research.header, Research.text, Research.publication_date, Research.report_id)
             .select_from(ResearchResearchType)
             .join(Research, Research.id == ResearchResearchType.research_id)
             .filter(ResearchResearchType.research_type_id == research_type_id)
@@ -54,7 +54,8 @@ async def get_cib_news(research_type_id) -> News:
                 title=research['header'],
                 text=research['text'],
                 date=research['publication_date'].strftime(BASE_DATE_FORMAT),
-                news_type=NewsTypeEnum.cib
+                news_type=NewsTypeEnum.cib,
+                news_id=research['report_id']
             ) for research in result
         ]
     )
