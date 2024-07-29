@@ -10,23 +10,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from configs import config
-from constants import aliases
-from db import parser_source
-from db.api.client import client_db
+from constants import aliases, enums
+from constants.texts.texts_manager import texts_manager
+from db import models, parser_source
+from db.api import stakeholder
+from db.api.client import client_db, get_research_type_id_by_name
 from db.api.commodity import commodity_db
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
+from handlers.clients.keyboards import get_client_menu_kb
 from handlers.clients.utils import is_client_in_message
-from handlers.news.handler import is_beneficiary_in_message, router
+from handlers.news import callback_data_factories, keyboards, utils
+from handlers.news.handler import router
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, is_user_has_access, process_fin_table
+from utils.base import bot_send_msg, is_user_has_access, process_fin_table, send_or_edit
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
@@ -35,6 +39,7 @@ class NextNewsCallback(CallbackData, prefix='next_news'):
     subject: str
     subject_id: int
     offset: int
+    limit: int
 
 
 async def send_news_with_next_button(
@@ -59,12 +64,13 @@ async def send_news_with_next_button(
     """
     articles_all = reply_msg.split('\n\n', articles_limit)
     if len(articles_all) > articles_limit:
-        articles_upto_limit = '\n\n'.join(articles_all[:articles_limit])
+        articles_upto_limit = '\n\n'.join(articles_all[:articles_limit + 1])
         keyboard = InlineKeyboardBuilder()
         callback_meta = NextNewsCallback(
             subject_id=subject_id,
             subject=subject,
             offset=next_news_offset,
+            limit=articles_limit,
         )
         keyboard.add(types.InlineKeyboardButton(text='Еще новости', callback_data=callback_meta.pack()))
         keyboard = keyboard.as_markup()
@@ -72,8 +78,13 @@ async def send_news_with_next_button(
         articles_upto_limit = reply_msg
         keyboard = None
 
-    sent_messages = await utils.base.bot_send_msg(bot, chat_id, articles_upto_limit)
-    await bot.edit_message_reply_markup(chat_id, message_id=sent_messages[-1].message_id, reply_markup=keyboard)
+    sent_messages = await bot_send_msg(bot, chat_id, articles_upto_limit)
+    if keyboard:
+        await bot.edit_message_reply_markup(
+            chat_id=chat_id,
+            message_id=sent_messages[-1].message_id,
+            reply_markup=keyboard
+        )
 
 
 @router.callback_query(NextNewsCallback.filter())
@@ -81,7 +92,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
     """Отправляет пользователю еще новостей по client или commodity"""
     subject_id = callback_data.subject_id
     subject = callback_data.subject
-    limit_all = config.NEWS_LIMIT + 1
+    limit_all = callback_data.limit
     offset_all = callback_data.offset
     user_msg = callback_data.pack()
 
@@ -95,7 +106,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
     ap_obj = ArticleProcess(logger)
 
     _, reply_msg = await ap_obj.process_user_alias(subject_id, subject, limit_all, offset_all)
-    new_offset = offset_all + config.NEWS_LIMIT
+    new_offset = offset_all + callback_data.limit
 
     if reply_msg and isinstance(reply_msg, str):
         await send_news_with_next_button(call.bot, chat_id, reply_msg, subject_id, subject, new_offset, limit_all)
@@ -258,8 +269,9 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
             await message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
 
         if isinstance(reply_msg, str):
-            await send_news_with_next_button(message.bot, chat_id, reply_msg, subject_id, subject,
-                                             config.OTHER_NEWS_COUNT, config.NEWS_LIMIT + 1)
+            await send_news_with_next_button(
+                message.bot, chat_id, reply_msg, subject_id, subject, config.OTHER_NEWS_COUNT, config.NEWS_LIMIT
+            )
 
             if subject == 'client':
                 await send_client_navi_link(message, subject_id, ap_obj)
@@ -333,8 +345,8 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        if await is_client_in_message(message) or await is_beneficiary_in_message(message):
+    if await user_in_whitelist(message.from_user.model_dump_json()):
+        if await is_client_in_message(message) or await is_stakeholder_in_message(message, session):
             return
 
         return_ans = await send_news(message, user_msg, full_name)
@@ -364,3 +376,148 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+async def is_stakeholder_in_message(message: types.Message, session: AsyncSession, fuzzy_score: int = 95) -> bool:
+    """
+    Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
+
+    :param session:      Сессия для взаимодействия с бд.
+    :param message:      Сообщение от пользователя.
+    :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
+    :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
+    """
+    sh_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
+        message.text,
+        subject_types=[models.StakeholderAlternative, ],
+        score=fuzzy_score
+    )
+
+    if len(set(sh_ids)) != 1:
+        return False
+
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, sh_ids[0])
+    if not sh_obj.clients:  # такого случая по факту не должно быть
+        await message.answer('Пока нет новостей на эту тему', reply_markeup=types.ReplyKeyboardRemove())
+        return True
+
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
+    if len(sh_obj.clients) > 1:
+        msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+        keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    else:
+        ap_obj = ArticleProcess(logger)
+        msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj, sh_obj.clients[0].name)
+        await send_stakeholder_articles(message, ap_obj, sh_obj.clients[0].id, sh_obj.clients[0].name, msg_text)
+
+    return True
+
+
+@router.callback_query(callback_data_factories.StakeholderData.filter(
+    F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholder_clients
+))
+async def choose_stakeholder_clients(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.StakeholderData,
+        session: AsyncSession
+) -> None:
+    """
+    Обновление меню клиентов стейкхолдера.
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
+    :param session:         Сессия для взаимодействия с бд.
+    """
+    chat_id = callback_query.message.chat.id
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
+    selected_ids = utils.get_selected_ids_from_callback_data(callback_data)
+    selected_ids = utils.update_selected_ids(selected_ids, callback_data.subject_id)
+    callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
+
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
+
+    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = keyboards.get_select_stakeholder_clients_kb(callback_data.stakeholder_id, sh_obj.clients, callback_data)
+    await send_or_edit(callback_query, msg_text, keyboard)
+    user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
+
+
+@router.callback_query(
+    callback_data_factories.StakeholderData.filter(F.menu == callback_data_factories.NewsMenusEnum.show_news)
+)
+async def show_stakeholder_articles(
+        callback_query: types.CallbackQuery,
+        callback_data: callback_data_factories.StakeholderData,
+        session: AsyncSession,
+) -> None:
+    """
+    Отправка новостей по выбранным клиентам стейкхолдера.
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
+    :param session:         Сессия для взаимодействия с бд.
+    """
+    clients_ids = utils.get_selected_ids_from_callback_data(callback_data)
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
+    msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj)
+    await callback_query.message.edit_text(msg_text, parse_mode='HTML')
+
+    ap_obj = ArticleProcess(logger)
+    for client_id in clients_ids:
+        await send_stakeholder_articles(callback_query, ap_obj, client_id)
+
+
+async def send_stakeholder_articles(
+        tg_obj: types.CallbackQuery | types.Message,
+        ap_obj: ArticleProcess,
+        client_id: int,
+        client_name: str = '',
+        extra_text: str = ''
+) -> None:
+    """
+    Отправка новостей о клиенте стейкхолдера.
+
+    :param tg_obj:          Telegram-объект для отправки сообщения и получения данных о пользователе.
+    :param ap_obj:          Экземпляр ArticleProcess.
+    :param client_id:       ID клиента.
+    :param client_name:     Имя клиента.
+    :param extra_text:      Дополнительный текст к сообщению.
+    """
+    _, articles = await ap_obj.process_user_alias(
+        subject=enums.SubjectType.client,
+        subject_id=client_id,
+        limit_val=config.NEWS_LIMIT_SH
+    )
+    await send_news_with_next_button(
+        tg_obj.bot,
+        tg_obj.from_user.id,
+        extra_text + articles,
+        client_id,
+        enums.SubjectType.client,
+        config.OTHER_NEWS_COUNT_SH,
+        config.NEWS_LIMIT_SH
+    )
+    if not client_name:
+        client_dict = await client_db.get(client_id)
+        client_name = client_dict['name']
+
+    kb = get_client_menu_kb(
+        client_id,
+        current_page=0,
+        research_type_id=await get_research_type_id_by_name(client_name),
+        with_back_button=False,
+    )
+
+    msg_obj = tg_obj if isinstance(tg_obj, types.Message) else tg_obj.message
+    await msg_obj.answer(
+        texts_manager.CLIENT_MENU_START.format(client=client_name),
+        parse_mode='HTML',
+        reply_markup=kb
+    )
+
+    user_logger.info(f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - получил новости по {client_name}')

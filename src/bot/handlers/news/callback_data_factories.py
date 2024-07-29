@@ -174,8 +174,8 @@ class NewsMenusEnum(IntEnum):
     news_by_period = auto()             # выдача новостей за период
     industry_news_by_period = auto()             # выдача новостей за период
 
-    # меню для бенефициаров
-    choose_beneficiary_clients = auto()  # выбор клиентов бенефициаров
+    # меню для стейкхолдеров
+    choose_stakeholder_clients = auto()  # выбор клиентов стейкхолдера
     show_news = auto()  # выдача новостей по выбранным клиентам
 
 
@@ -211,9 +211,9 @@ class SubjectData(NewsMenuData, prefix=MENU):
     subject_id: int = 0
 
 
-class BeneficiaryData(NewsMenuData, prefix=MENU):
-    """Выгрузка новостей по бенефициарам"""
+class StakeholderData(NewsMenuData, prefix=MENU):
+    """Выгрузка новостей по стейкхолдерам."""
 
-    beneficiary_id: int = 0
+    stakeholder_id: int = 0
     selected_ids: int = 0
     subject_id: int = 0

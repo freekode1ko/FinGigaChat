@@ -9,6 +9,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     DOUBLE_PRECISION,
+    Enum,
     Float,
     ForeignKey,
     Identity,
@@ -310,7 +311,7 @@ class Client(Base):
     industry = relationship('Industry', back_populates='client')
     client_alternative = relationship('ClientAlternative', back_populates='client')
     relation_client_article = relationship('RelationClientArticle', back_populates='client')
-    beneficiaries = relationship('Beneficiary', secondary='relation_client_beneficiary', back_populates='clients')
+    stakeholders = relationship('Stakeholder', secondary='relation_client_stakeholder', back_populates='clients')
 
 
 class Commodity(Base):
@@ -765,32 +766,34 @@ class Exc(Base):
     parser_source = relationship('ParserSource')
 
 
-class Beneficiary(Base):
-    __tablename__ = 'beneficiary'
-    __table_args__ = {'comment': 'Таблица с именами бенефициаров'}
+class Stakeholder(Base):
+    __tablename__ = 'stakeholder'
+    __table_args__ = {'comment': 'Таблица с именами стейкхолдеров'}
 
     id = Column(Integer(), autoincrement=True, primary_key=True)
-    name = Column(String(255), nullable=False, unique=True, comment='ФИО бенефициара')
+    name = Column(String(255), nullable=False, unique=True, comment='ФИО стейкхолдера')
+    forbes_link = Column(Text, comment='Ссылка на био стейкхолдера')
 
-    alternatives = relationship('BeneficiaryAlternative', back_populates='beneficiary')
-    clients = relationship('Client', secondary='relation_client_beneficiary', back_populates='beneficiaries')
+    alternatives = relationship('StakeholderAlternative', back_populates='stakeholder')
+    clients = relationship('Client', secondary='relation_client_stakeholder', back_populates='stakeholders')
 
 
-class BeneficiaryAlternative(Base):
-    __tablename__ = 'beneficiary_alternative'
-    __table_args__ = {'comment': 'Таблица с альтернативными именами бенефициаров'}
+class StakeholderAlternative(Base):
+    __tablename__ = 'stakeholder_alternative'
+    __table_args__ = {'comment': 'Таблица с альтернативными именами стейкхолдеров'}
 
     id = Column(Integer(), autoincrement=True, primary_key=True)
-    beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'),
-                            nullable=False, comment='id бенефициара')
-    other_name = Column(String(255), nullable=False, unique=True, comment='альтернативное ФИО бенефициара')
+    stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'),
+                            nullable=False, comment='id стейкхолдера')
+    other_name = Column(String(255), nullable=False, unique=True, comment='Альтернативное ФИО стейкхолдера')
 
-    beneficiary = relationship('Beneficiary', back_populates='alternatives')
+    stakeholder = relationship('Stakeholder', back_populates='alternatives')
 
 
-class RelationClientBeneficiary(Base):
-    __tablename__ = 'relation_client_beneficiary'
-    __table_args__ = {'comment': 'Таблица отношений бенефициаров к клиентам'}
+class RelationClientStakeholder(Base):
+    __tablename__ = 'relation_client_stakeholder'
+    __table_args__ = {'comment': 'Таблица отношений стейкхолдеров к клиентам'}
 
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-    beneficiary_id = Column(ForeignKey('beneficiary.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    stakeholder_type = Column(Enum(enums.StakeholderType), nullable=False, comment='Тип стейкхолдера')

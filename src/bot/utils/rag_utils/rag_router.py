@@ -3,8 +3,7 @@ import json
 import re
 import urllib.parse
 
-import requests
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession
 
 from configs import config, prompts
 from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_FOOTER, GIGA_RAG_FOOTER
@@ -131,7 +130,7 @@ class RAGRouter:
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
                              (self.chat_id, self.full_name, self.query, rag_answer))
 
-        except requests.RequestException as e:
+        except ClientError as e:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
                                  (self.chat_id, self.full_name, self.query, e))
