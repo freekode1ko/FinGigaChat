@@ -1,4 +1,5 @@
 import { CheckCheck, Send } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import {
   Button,
@@ -14,8 +15,17 @@ import { useSendCibReportMutation } from '../api'
 import type { News } from '../model'
 
 export const NewsCard = ({ title, text, date, news_id }: News) => {
+  const [userId, setUserId] = useState<number>(0)
   const [trigger, { isSuccess }] = useSendCibReportMutation()
-  const tgUserId = window.Telegram.WebApp.initDataUnsafe.user.id
+  // ЭТО УБРАТЬ
+  useEffect(() => {
+    if (window.Telegram && window.Telegram.WebApp) {
+      const user = window.Telegram.WebApp.initDataUnsafe?.user;
+      if (user) {
+        setUserId(user.id)
+      }
+    }
+  }, [])
   return (
     <Card>
       <CardHeader>
@@ -27,7 +37,7 @@ export const NewsCard = ({ title, text, date, news_id }: News) => {
               <CheckCheck className="h-4 w-4" /> Отчет отправлен
             </Button>
           ) : (
-            <Button size="sm" onClick={() => trigger({newsId: news_id, tgUserId: tgUserId.toString()})}>
+            <Button size="sm" onClick={() => trigger({newsId: news_id, tgUserId: userId.toString()})}>
               <Send className="h-4 w-4" /> Отправить отчет CIB
             </Button>
           )}
