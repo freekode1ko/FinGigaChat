@@ -1,15 +1,13 @@
 import datetime as dt
 from typing import Any, Optional
 
-from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import BOT_API_TOKEN, REMEMBER_TIME, BASE_TIME_FORMAT
 from db.meeting import change_notify_counter, get_user_meetings_for_notification
 from log.logger_base import Logger
+from utils.bot import bot
 
-
-bot = Bot(BOT_API_TOKEN)
 scheduler = AsyncIOScheduler()
 
 

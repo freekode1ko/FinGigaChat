@@ -2,12 +2,14 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 
-from api.v1.news.service import get_news_from_article, get_cib_news
+from fastapi import APIRouter, status
+
 from api.v1.news.schemas import News
+from api.v1.news.service import get_news_from_article, get_cib_news
 from constants.constants import BASE_DATE_FORMAT
+from utils.bot_interaction import send_cib_report_to_user
+
 
 router = APIRouter()
 
@@ -31,3 +33,9 @@ async def news_for_quotation(quotation_id: int) -> News:
             reverse=True
         )[:10],
     )
+
+
+@router.post('/send', status_code=status.HTTP_202_ACCEPTED)
+async def send_news_to_user(user_id: int, news_id: str):
+    await send_cib_report_to_user(user_id, news_id)
+    return None

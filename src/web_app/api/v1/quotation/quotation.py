@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
 
 from api.v1.quotation.service import *
 from api.v1.quotation.schemas import ExchangeSectionData
-from utils.templates import templates
 
 router = APIRouter()
 
