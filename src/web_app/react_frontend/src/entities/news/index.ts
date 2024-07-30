@@ -1,4 +1,5 @@
 export {
+  useGetNewsForMainQuery,
   useGetNewsQuery,
   useLazyGetNewsForQuotationQuery,
   useSendCibReportMutation,

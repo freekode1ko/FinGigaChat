@@ -35,6 +35,13 @@ const newsApi = baseApi.injectEndpoints({
       },
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
+    getNewsForMain: build.query<NewsResponse, void>({
+      query: () => ({
+        url: API_ENDPOINTS.news,
+        method: 'GET',
+      }),
+      keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
+    }),
     getNewsForQuotation: build.query<NewsResponse, GetNewsForQuotationQuery>({
       query: ({ quotationId }) => ({
         url: `${API_ENDPOINTS.news}/${quotationId}`,
@@ -55,4 +62,5 @@ export const {
   useGetNewsQuery,
   useLazyGetNewsForQuotationQuery,
   useSendCibReportMutation,
+  useGetNewsForMainQuery,
 } = newsApi

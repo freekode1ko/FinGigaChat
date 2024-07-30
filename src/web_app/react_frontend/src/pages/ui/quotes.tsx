@@ -1,7 +1,7 @@
-import { ArrowRightCircle } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { NewsCard, SkeletonNewsCard, useGetNewsQuery } from '@/entities/news'
+import { NewsCard, SkeletonNewsCard, useGetNewsForMainQuery } from '@/entities/news'
 import { QuotesTable, useGetPopularQuotesQuery } from '@/entities/quotes'
 import { PAGE_SIZE } from '@/shared/model'
 import { TradingViewWidget } from '@/shared/ui'
@@ -14,10 +14,7 @@ const QuotesPage = () => {
     'TVC:GOLD',
   ]
   const { data: quotesData } = useGetPopularQuotesQuery()
-  const { data: newsData, isLoading: newsIsLoading } = useGetNewsQuery({
-    page: 1,
-    size: PAGE_SIZE,
-  })
+  const { data: newsData, isLoading: newsIsLoading } = useGetNewsForMainQuery()
 
   return (
     <>
@@ -37,7 +34,7 @@ const QuotesPage = () => {
         </div>
       ))}
       <div className="mt-4">
-        <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight text-hint-color">
+        <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight text-hint-color mb-2">
           Последние новости
         </h2>
         <div className="flex flex-col gap-2">
@@ -49,13 +46,13 @@ const QuotesPage = () => {
               <SkeletonNewsCard key={idx} />
             ))}
         </div>
-        <div className="mx-auto py-2">
+        <div className="py-2 text-center">
           <Link
             to="/news"
-            className="inline-flex items-center text-hint-color hover:text-accent-text-color no-underline"
+            className="mx-auto inline-flex items-center gap-1 text-hint-color hover:text-accent-text-color no-underline"
           >
             Все новости
-            <ArrowRightCircle className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
