@@ -18,5 +18,24 @@
         --section-separator-color: #708499;
         --subtitle-text-color: #708499;
         --destructive-text-color: #ce1313;
-    }    
+    }
+
+    ::-webkit-scrollbar {
+        width: 0.6rem;
+        height: 0.6rem;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--bg-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--hint-color);
+        border-radius: 100vh;
+        border: 3px solid var(--secondary-bg-color);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-text-color);
+    }
 }

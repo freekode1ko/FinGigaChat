@@ -24,7 +24,7 @@ export const Navigation = () => {
         className="border-none"
         onClick={() => setIsOpen(true)}
       >
-        <LayoutGrid className="h-4 w-4" />
+        <LayoutGrid className="h-6 w-6" />
       </Button>
       <SheetContent side="left">
         <SheetHeader>

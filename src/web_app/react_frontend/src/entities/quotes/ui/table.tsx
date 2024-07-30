@@ -47,8 +47,8 @@ const QuotesTableRow = (quote: Quotes) => {
     <TableRow>
       <TableCell className="cursor-pointer font-medium">
         <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-          <button
-            className="inline-flex items-center gap-4"
+          <span
+            className="inline-flex items-center gap-2"
             onClick={() => handleDrawerOpen(quote.research_item_id)}
           >
             <img
@@ -57,7 +57,7 @@ const QuotesTableRow = (quote: Quotes) => {
               className="h-4 w-4"
             />{' '}
             {quote.name}
-          </button>
+          </span>
           <DrawerContent className="h-[90vh]">
             <div className="mx-auto w-full pt-6 text-text-color overflow-y-auto">
               <DrawerHeader>
@@ -95,14 +95,16 @@ const QuotesTableRow = (quote: Quotes) => {
         </TableCell>
       ))}
       <TableCell className="text-right">
-        <TradingViewWidget
-          symbol={quote.tv_type}
-          chartOnly
-          width="80"
-          height="60"
-          autosize={false}
-          noTimeScale
-        />
+        {quote.tv_type ? (
+            <TradingViewWidget
+              symbol={quote.tv_type}
+              chartOnly
+              width="80"
+              height="60"
+              autosize={false}
+              noTimeScale
+            />
+        ) : 'N/A'}
       </TableCell>
     </TableRow>
   )
@@ -120,6 +122,7 @@ export const QuotesTable = ({ data, params }: QuotesTableProps) => {
               {param}
             </TableHead>
           ))}
+          <TableHead className="text-right">График</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

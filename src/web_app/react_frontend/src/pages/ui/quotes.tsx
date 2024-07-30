@@ -2,7 +2,7 @@ import { QuotesTable, useGetPopularQuotesQuery } from '@/entities/quotes'
 import { TradingViewWidget } from '@/shared/ui'
 
 const QuotesPage = () => {
-  const TV_DATA = ['MOEX:SBER', 'MOEX:RGBI', 'BLACKBULL:BRENT', 'TVC:GOLD']
+  const TV_DATA = ['FX_IDC:CNYRUB', 'FX_IDC:USDCNY', 'BLACKBULL:BRENT', 'TVC:GOLD']
   const { data } = useGetPopularQuotesQuery()
 
   return (

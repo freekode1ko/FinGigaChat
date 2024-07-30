@@ -7,7 +7,7 @@ type Props = {
 
 const Layout = ({ headerSlot }: Props) => {
   return (
-    <div className="bg-bg-color text-text-color min-h-screen">
+    <div className="bg-bg-color text-text-color min-h-screen scroll-smooth">
       {headerSlot}
       <div className="flex flex-col flex-grow gap-4 p-4 lg:max-w-screen-lg lg:m-auto">
         <Outlet />
