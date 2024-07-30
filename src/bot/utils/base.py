@@ -21,6 +21,7 @@ import module.data_transformer as dt
 from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants
 from constants.constants import research_footer
+from constants.texts import texts_manager
 from db import models
 from db.database import async_session, engine
 from log.logger_base import Logger
@@ -72,7 +73,13 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     if file_name:
         if file_type == 'photo':
             file = types.FSInputFile('sources/{}.jpg'.format(file_name))
-            msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_photo(
+                photo=file,
+                chat_id=user_id,
+                caption=message_text,
+                parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
+            )
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
             msg = await bot.send_document(
@@ -80,10 +87,10 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
                 chat_id=user_id,
                 caption=message_text,
                 parse_mode='HTML',
-                protect_content=True
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
     else:
-        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
     return msg
 
@@ -171,11 +178,15 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
             text_group.append(text[batch: batch + batch_size])
         for summ_part in text_group:
             await message.answer(
-                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
+                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer),
+                parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
     else:
         await message.answer(
-            '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date), parse_mode='HTML', protect_content=True
+            '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date),
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
         )
 
 
@@ -186,7 +197,7 @@ async def __sent_photo_and_msg(
     month: list[list] = None,
     title: str = '',
     source: str = '',
-    protect_content: bool = True,
+    protect_content: bool = texts_manager.PROTECT_CONTENT,
 ) -> None:
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
@@ -371,9 +382,9 @@ async def __create_fin_table(message: types.Message | types.CallbackQuery, clien
     )
     photo = types.FSInputFile(png_path)
     if isinstance(message, types.Message):
-        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
     elif isinstance(message, types.CallbackQuery):
-        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
 
 async def process_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
@@ -540,7 +551,7 @@ async def send_pdf(
         callback_query: types.CallbackQuery,
         pdf_files: list[Path],
         caption: str,
-        protect_content: bool = False,
+        protect_content: bool = texts_manager.PROTECT_CONTENT,
 ) -> bool:
     """
     Отправка сообщения перед файлами

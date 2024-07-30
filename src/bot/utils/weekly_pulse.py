@@ -3,6 +3,7 @@ from aiogram import Bot, types
 
 from configs import config
 from constants.constants import sample_of_img_title
+from constants.texts import texts_manager
 from db import parser_source
 
 
@@ -22,7 +23,7 @@ async def key_rate_dynamics_table(bot: Bot, chat_id: int) -> None:
 
     title = sample_of_img_title.format(title, data_source, parse_datetime)
     photo = types.FSInputFile(png_path)
-    await bot.send_photo(chat_id, photo, caption=title, parse_mode='HTML', protect_content=True)
+    await bot.send_photo(chat_id, photo, caption=title, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
 
 async def exc_rate_prediction_table(bot: Bot, chat_id: int) -> None:
@@ -35,4 +36,4 @@ async def exc_rate_prediction_table(bot: Bot, chat_id: int) -> None:
 
     title = sample_of_img_title.format(title, data_source, parse_datetime)
     photo = types.FSInputFile(png_path)
-    await bot.send_photo(chat_id, photo, caption=title, parse_mode='HTML', protect_content=True)
+    await bot.send_photo(chat_id, photo, caption=title, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)

@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from constants import constants
+from constants.texts import texts_manager
 from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
@@ -342,9 +343,9 @@ async def get_client_industry_analytics(
 
     files = await get_industry_analytic_files(industry_id=client_info['industry_id'])
     files = [p for f in files if (p := Path(f.file_path)).exists()]
-    if not await send_pdf(callback_query, files, msg_text, protect_content=True):
+    if not await send_pdf(callback_query, files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
         msg_text += '\nФункционал появится позднее'
-        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+        await callback_query.message.answer(msg_text, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
     else:
         await utils.base.send_full_copy_of_message(callback_query)
 
