@@ -64,7 +64,7 @@ class FuzzyAlternativeNames:
 
                 if is_format_name:
                     data = {
-                        other_name: texts_manager.FORMAT_BUTTON_NEAREST_TO_SUBJECT(
+                        other_name: texts_manager.FORMAT_BUTTON_NEAREST_TO_SUBJECT.format(
                             subject_name=main_name,
                             additional_info=additional_info,
                         )
