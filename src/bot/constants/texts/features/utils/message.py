@@ -5,4 +5,4 @@ from pydantic_settings import BaseSettings
 class TelegramMessageParams(BaseSettings):
     """Класс для хранения параметров отправки сообщений в тг боте"""
 
-    PROTECT_CONTENT: bool = False
+    PROTECT_CONTENT: str = 'True'

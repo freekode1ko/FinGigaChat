@@ -27,7 +27,12 @@ from db.database import async_session, engine
 from log.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = '\n\n', prefix: str = '') -> list[types.Message]:
+async def bot_send_msg(bot: Bot,
+                       user_id: int | str,
+                       msg: str,
+                       delimiter: str = '\n\n',
+                       prefix: str = '',
+                       protect_content: bool = texts_manager.PROTECT_CONTENT) -> list[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -36,6 +41,7 @@ async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = 
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
+    :param protect_content: Защищать ли сообщения от скринов и перессылки
     return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
@@ -54,7 +60,13 @@ async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = 
         batches.append(current_batch.strip())
 
     for batch in batches:
-        msg = await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
+        msg = await bot.send_message(
+            user_id,
+            text=batch,
+            parse_mode='HTML',
+            disable_web_page_preview=True,
+            protect_content=protect_content,
+        )
         messages.append(msg)
     return messages
 
