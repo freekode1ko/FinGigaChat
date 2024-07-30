@@ -34,6 +34,7 @@ from module import formatter
 from module.article_process import ArticleProcess
 from utils.base import bot_send_msg
 from utils.macro_view import get_macro_brief_file
+from utils.message_limiter import limiter
 from utils.telegram_news import get_tg_channel_news_msg, group_news_by_tg_channels
 from utils.watermark import add_watermark_cli
 
@@ -384,6 +385,23 @@ async def send_new_researches_to_users(bot: Bot) -> None:
     )
 
 
+async def task_for_send_file_for_weekly_check_up(bot, user_id, document, logger):
+    """Функция для отправки weekly_check_up с ограничителям сообщений"""
+    newsletter_type = 'weekly_check_up_newsletter'
+    msg_text = "Weekly 'Check up'"
+
+    logger.info(f'Рассылка Weekly Check up пользователю {user_id}')
+    # отправка отчета пользователю
+    try:
+        async with limiter:
+            msg = await bot.send_document(user_id, document=document, caption=msg_text,
+                                          protect_content=True, parse_mode='HTML')
+    except exceptions.TelegramAPIError as e:
+        logger.error(f'При рассылке weekly check up пользователю {user_id} произошла ошибка: %s', e)
+    else:
+        return dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type)
+
+
 async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> None:
     """
     Функция рассылки weekly check up
@@ -403,24 +421,20 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
         logger.error('Не удалось найти документ Weekly Check up')
         return
 
-    # Сохранение отправленных сообщений
-    saved_messages = []
-    newsletter_type = 'weekly_check_up_newsletter'
-    msg_text = "Weekly 'Check up'"
+    tasks = [
+        task_for_send_file_for_weekly_check_up(
+            bot,
+            user_row['user_id'],
+            weekly_check_up_document,
+            logger,
+        )
+        for _, user_row
+        in user_df.iterrows()
+    ]
 
-    for _, user_row in user_df.iterrows():
-        user_id = user_row['user_id']
-        logger.info(f'Рассылка Weekly Check up пользователю {user_id}')
-        # отправка отчета пользователю
-        try:
-            msg = await bot.send_document(user_id, document=weekly_check_up_document, caption=msg_text,
-                                          protect_content=True, parse_mode='HTML')
-        except exceptions.TelegramAPIError as e:
-            logger.error(f'При рассылке weekly check up пользователю {user_id} произошла ошибка: %s', e)
-        else:
-            saved_messages.append(dict(user_id=user_id, message_id=msg.message_id, message_type=newsletter_type))
-
-    message.add_all(saved_messages)
+    message.add_all(
+        [x for x in (await asyncio.gather(*tasks)) if x is not None]
+    )
 
     work_time = time.time() - start_tm
     users_cnt = len(user_df)
