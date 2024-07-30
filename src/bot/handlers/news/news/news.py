@@ -6,6 +6,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
+from fuzzywuzzy import process
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
@@ -340,13 +341,34 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
     await utils.base.send_full_copy_of_message(callback_query)
 
 
+async def is_eco_in_message(message: types.Message, score_cutoff: int = config.ECO_FUZZY_SEARCH_SCORE_CUTOFF) -> bool:
+    """
+    Есть ли ETC в тексте сообщения.
+
+    Проверяет сходство сообщения пользователя с единые трансфертные ставки.
+    Если процент совпадения выше score_cutoff, то выдает ссылку на inavigator.
+
+    :param message:         Объект, содержащий сообщение пользователя и инфу о пользователе
+    :param score_cutoff:    Минимальный требуемый процент совпадения
+    :return:                Есть ли ЕТС в тексте сообщения
+    """
+    if flag := bool(process.extractOne(message.text.lower(), config.ECO_NAMES, score_cutoff=score_cutoff)):
+        msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
+        await message.answer(msg_text, parse_mode='HTML', protect_content=False)
+    return flag
+
+
 @router.message(F.text)
 async def find_news(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await is_user_has_access(message.from_user.model_dump_json()):
-        if await is_client_in_message(message) or await is_stakeholder_in_message(message, session):
+        if (
+            await is_client_in_message(message) or
+            await is_stakeholder_in_message(message, session) or
+            await is_eco_in_message(message)
+        ):
             return
 
         return_ans = await send_news(message, user_msg, full_name)
