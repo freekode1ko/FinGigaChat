@@ -28,7 +28,7 @@ class ResearchFormatter:
             f'<b>{research.header}:</b>\n\n'
             f'{research.text}\n\n'
             # f'<i>Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}</i>\n'
-            f'Источник: {texts_manager.REPOSRT_SOURCE}\n'
+            f'Источник: {texts_manager.REPORT_SOURCE}\n'
             # f'подробнее на <a href="{config.RESEARCH_SOURCE_URL}{research.report_id}" >портале</a>\n'
         )
 
@@ -45,7 +45,7 @@ class ResearchFormatter:
         formatted_text = (
             f'<b>{research_row["header"]}:</b>\n\n'
             f'<i>Дата публикации: {research_row["publication_date"].strftime(config.BASE_DATE_FORMAT)}</i>\n'
-            f'Источник: {texts_manager.REPOSRT_SOURCE}\n'
+            f'Источник: {texts_manager.REPORT_SOURCE}\n'
             # f'подробнее на <a href="{config.RESEARCH_SOURCE_URL}{research_row["report_id"]}" >портале</a>\n'
         )
 
