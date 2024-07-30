@@ -1,6 +1,4 @@
-import { ArrowLeftCircle } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
 import {
   NewsCard,
@@ -55,7 +53,7 @@ const QuotesTableRow = (quote: Quotes) => {
               src={quote.image_path}
               alt={`${quote.name} image`}
               className="h-4 w-4"
-            />{' '}
+            />
             {quote.name}
           </span>
           <DrawerContent className="h-[90vh]">
@@ -73,15 +71,6 @@ const QuotesTableRow = (quote: Quotes) => {
                     <SkeletonNewsCard key={idx} />
                   ))}
               </div>
-              <div className="flex justify-center py-2">
-                <Link
-                  to="/news"
-                  className="no-underline text-hint-color inline-flex items-center"
-                >
-                  <ArrowLeftCircle className="h-4 w-4" />
-                  Все новости
-                </Link>
-              </div>
             </div>
           </DrawerContent>
         </Drawer>
@@ -96,15 +85,17 @@ const QuotesTableRow = (quote: Quotes) => {
       ))}
       <TableCell className="text-right">
         {quote.tv_type ? (
-            <TradingViewWidget
-              symbol={quote.tv_type}
-              chartOnly
-              width="80"
-              height="60"
-              autosize={false}
-              noTimeScale
-            />
-        ) : 'N/A'}
+          <TradingViewWidget
+            symbol={quote.tv_type}
+            chartOnly
+            width="80"
+            height="60"
+            autosize={false}
+            noTimeScale
+          />
+        ) : (
+          'N/A'
+        )}
       </TableCell>
     </TableRow>
   )

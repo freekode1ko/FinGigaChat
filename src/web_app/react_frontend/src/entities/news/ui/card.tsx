@@ -1,4 +1,4 @@
-import { CheckCheck, Send } from 'lucide-react'
+import { CheckCheck, LoaderCircle, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import {
@@ -16,11 +16,11 @@ import type { News } from '../model'
 
 export const NewsCard = ({ title, text, date, news_id }: News) => {
   const [userId, setUserId] = useState<number>(0)
-  const [trigger, { isSuccess }] = useSendCibReportMutation()
+  const [trigger, { isSuccess, isLoading }] = useSendCibReportMutation()
   // ЭТО УБРАТЬ
   useEffect(() => {
     if (window.Telegram && window.Telegram.WebApp) {
-      const user = window.Telegram.WebApp.initDataUnsafe?.user;
+      const user = window.Telegram.WebApp.initDataUnsafe?.user
       if (user) {
         setUserId(user.id)
       }
@@ -36,8 +36,23 @@ export const NewsCard = ({ title, text, date, news_id }: News) => {
             <Button size="sm" variant="secondary" disabled>
               <CheckCheck className="h-4 w-4" /> Отчет отправлен
             </Button>
+          ) : isLoading ? (
+            <Button
+              size="sm"
+              disabled
+              onClick={() =>
+                trigger({ newsId: news_id, tgUserId: userId.toString() })
+              }
+            >
+              <LoaderCircle className="animate-spin h-4 w-4" /> Отправляем...
+            </Button>
           ) : (
-            <Button size="sm" onClick={() => trigger({newsId: news_id, tgUserId: userId.toString()})}>
+            <Button
+              size="sm"
+              onClick={() =>
+                trigger({ newsId: news_id, tgUserId: userId.toString() })
+              }
+            >
               <Send className="h-4 w-4" /> Отправить отчет CIB
             </Button>
           )}
