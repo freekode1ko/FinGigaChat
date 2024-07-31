@@ -12,4 +12,4 @@ class FuzzySearchTexts(BaseSettings):
     CLIENT_ADDITIONAL_INFO: str = '(получить инфо о компании)'
     COMMODITY_ADDITIONAL_INFO: str = '(получить новости по сырью)'
     INDUSTRY_ADDITIONAL_INFO: str = '(получить новости по отрасли)'
-    STAKEHOLDER_ADDITIONAL_INFO: str = '(получить новости по клиенту)'
+    STAKEHOLDER_ADDITIONAL_INFO: str = '(получить новости из СМИ)'
