@@ -77,11 +77,11 @@ def get_menu_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder) -> str
     """
     match ''.join(sh_types):
         case StakeholderType.lpr:
-            msg_text = texts_manager.LPR_MENU_NEWS.format(sh_name=sh_obj.name.title())
+            msg_text = texts_manager.LPR_MENU_NEWS
         case StakeholderType.beneficiary:
-            msg_text = texts_manager.BEN_MENU_NEWS.format(sh_name=decline_words(sh_obj.name))
+            msg_text = texts_manager.BEN_MENU_NEWS
         case _:
-            msg_text = texts_manager.COMMON_MENU_NEWS.format(sh_name=decline_words(sh_obj.name, case='ablt'))
+            msg_text = texts_manager.COMMON_MENU_NEWS
 
     forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
     return msg_text + forbes_link
@@ -96,20 +96,20 @@ def get_show_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder, client
     :param client:      Имя единственного клиента стейкхолдера, если клиент единственный.
     :return:            Строку для формирования сообщения.
     """
-    forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
+    # forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
     match ''.join(sh_types):
         case StakeholderType.lpr:
-            sh_name = sh_obj.name.title()
+            # sh_name = sh_obj.name.title()
             if client:
-                return texts_manager.ONE_LPR_SHOW_NEWS.format(client=client, sh_name=sh_name, link=forbes_link)
-            return texts_manager.FEW_LPR_SHOW_NEWS.format(sh_name=sh_name)
+                return texts_manager.ONE_LPR_SHOW_NEWS.format(client=client)
+            return texts_manager.FEW_LPR_SHOW_NEWS
         case StakeholderType.beneficiary:
-            sh_name = decline_words(sh_obj.name)
+            # sh_name = decline_words(sh_obj.name)
             if client:
-                return texts_manager.ONE_BEN_SHOW_NEWS.format(sh_name=sh_name, link=forbes_link)
-            return texts_manager.FEW_BEN_SHOW_NEWS.format(sh_name=sh_name)
+                return texts_manager.ONE_BEN_SHOW_NEWS
+            return texts_manager.FEW_BEN_SHOW_NEWS
         case _:
-            sh_name = decline_words(sh_obj.name, case='ablt')
+            # sh_name = decline_words(sh_obj.name, case='ablt')
             if client:
-                return texts_manager.ONE_COMMON_SHOW_NEWS.format(sh_name=sh_name, link=forbes_link)
-            return texts_manager.FEW_COMMON_SHOW_NEWS.format(sh_name=sh_name)
+                return texts_manager.ONE_COMMON_SHOW_NEWS
+            return texts_manager.FEW_COMMON_SHOW_NEWS
