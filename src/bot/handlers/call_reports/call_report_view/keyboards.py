@@ -26,7 +26,7 @@ def get_keyboard_for_view_call_report(
     """
     keyboard = InlineKeyboardBuilder()
     if custom_send_mail_button:
-        send_mail_text = 'Протокол на почту отправлен'
+        send_mail_text = 'Заметка отправлена на почту'
     else:
         send_mail_text = 'Отправить на почту'
 

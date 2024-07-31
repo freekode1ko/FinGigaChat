@@ -121,7 +121,7 @@ async def call_reports_edit_report_name(
     await state.update_data(**callback_data.model_dump())
     await callback_query.message.edit_text(
         (
-            f'Изменение имени клиента.\n\n'
+            f'Изменение заголовка заметки.\n\n'
             f'Предыдущее значение: {report.client}\n\n'
             f'Введите новое значение в чат!'
         ),
