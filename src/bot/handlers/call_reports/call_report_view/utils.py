@@ -26,11 +26,11 @@ async def send_to_mail(user_email: str, client: str, date: str, description: str
         SS.send_msg(
             config.MAIL_RU_LOGIN,
             user_email,
-            f'Протокол Встречи: {client} {date}',
+            f'Заметка: {client} {date}',
             (
-                f'Клиент: {client}\n'
-                f'Дата: {date}\n'
-                f'Запись встречи: {description}\n'
+                f'Заголовок: {client}\n'
+                f'Дата: {date}\n\n'
+                f'{description}\n'
             ),
         )
 
@@ -54,10 +54,9 @@ async def call_report_view_answer(
     :param custom_send_mail_button: Параметр отвечающий за название кнопки отправки call report'а на почту
     """
     text = (
-        'Протокол встречи:\n'
-        f'Клиент: {report.client}\n'
-        f'Дата: {report.date()}\n'
-        f'Запись встречи: {report.description}\n'
+        f'Заметка: {report.client}\n'
+        f'Дата: {report.date()}\n\n'
+        f'{report.description}\n'
     )
     keyboard = get_keyboard_for_view_call_report(report._id, return_menu, custom_send_mail_button, sub_menu=sub_menu).as_markup()
     if edit_message:
@@ -83,10 +82,9 @@ async def call_report_edit_answer(
     :param edit_message: Параметр для указания нужно ли редактировать сообщение или отправить новое
     """
     message_text = (
-        'Протокол встречи:\n'
-        f'Клиент: {report.client}\n'
-        f'Дата: {report.date()}\n'
-        f'Запись встречи: {report.description}\n'
+        f'Заметка: {report.client}\n'
+        f'Дата: {report.date()}\n\n'
+        f'{report.description}\n'
     )
     reply_markup = get_keyboard_for_edit_call_report(report._id, return_menu, sub_menu=sub_menu).as_markup()
 

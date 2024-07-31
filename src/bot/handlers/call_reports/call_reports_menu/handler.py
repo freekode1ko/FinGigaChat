@@ -34,7 +34,7 @@ async def call_reports_handler_my_reports(
         keyboard = InlineKeyboardBuilder()
         keyboard.row(
             types.InlineKeyboardButton(
-                text='Создать новый протокол встречи',
+                text='Создать новую заметку',
                 callback_data=CRCreateNew(menu=CRMenusEnum.create_new).pack()
             )
         )
@@ -45,7 +45,7 @@ async def call_reports_handler_my_reports(
             )
         )
         await callback_query.message.edit_text(
-            'Похоже у вас еще нет протоколов встреч',
+            'Похоже у вас еще нет заметок',
             reply_markup=keyboard.as_markup(),
         )
     else:
@@ -93,7 +93,7 @@ async def call_reports_handler_my_reports(
             )
         keyboard.row(*keyboard_footer)
         await callback_query.message.edit_text(
-            'Существующие протоколы встреч:',
+            'Существующие заметки:',
             reply_markup=keyboard.as_markup(),
         )
 
@@ -195,7 +195,7 @@ async def call_reports_handler_my_reports_date(
         )
     )
     await callback_query.message.edit_text(
-        f'Протокол встречи для клиента: "{callback_data.client}"',
+        f'Заметка: "{callback_data.client}"',
         reply_markup=keyboard.as_markup(),
     )
 
