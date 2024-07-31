@@ -26,8 +26,8 @@ PUBLIC_COMMANDS: list[dict] = [
         'description': 'Меню подписок',
     },
     {
-        'command': 'call_reports',
-        'description': 'Call reports (Beta)',
+        'command': 'notes',
+        'description': 'Заметки',
     },
     {
         'command': 'meeting',
