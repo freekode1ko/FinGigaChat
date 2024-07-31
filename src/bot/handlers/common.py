@@ -26,6 +26,7 @@ from constants.constants import (
     REGISTRATION_CODE_MAX,
     REGISTRATION_CODE_MIN,
 )
+from constants.texts import texts_manager
 from db.user import insert_user_email_after_register, is_new_user_email, is_user_email_exist
 from db.whitelist import is_email_in_whitelist
 from handlers.ai.rag.rag import clear_user_dialog_if_need
@@ -51,7 +52,7 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
     check_mail = user_msg == '/start'
     if await is_user_has_access(message.from_user.model_dump_json(), check_mail):
         help_text = config.help_text
-        to_pin = await message.answer(help_text, protect_content=False)
+        to_pin = await message.answer(help_text, protect_content=texts_manager.PROTECT_CONTENT)
         msg_id = to_pin.message_id
         await message.bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
 
@@ -106,7 +107,7 @@ async def user_registration(message: types.Message, state: FSMContext) -> None:
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
     await state.set_state(Form.new_user_reg)
     new_user_start = config.new_user_start
-    await message.answer(new_user_start, protect_content=False)
+    await message.answer(new_user_start, protect_content=texts_manager.PROTECT_CONTENT)
 
 
 @router.message(Form.new_user_reg)

@@ -12,6 +12,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
+from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
@@ -127,7 +128,7 @@ async def get_full_version_of_research(
                 document=file,
                 caption=msg_txt,
                 parse_mode='HTML',
-                protect_content=True,
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
 
     try:

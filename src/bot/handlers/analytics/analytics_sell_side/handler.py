@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from configs import config
 from constants import enums
 from constants.analytics import analytics_sell_side
+from constants.texts import texts_manager
 from db import database
 from db.api import client as client_db_api
 from db.api.client import client_db
@@ -343,7 +344,7 @@ async def data_mart_body(message: types.Message) -> None:
 
     spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
     title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
-    await message.answer(text=title, parse_mode='HTML', protect_content=True)
+    await message.answer(text=title, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
     for table in spld_keys_eco:
         table.reset_index(drop=True, inplace=True)

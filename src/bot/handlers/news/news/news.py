@@ -187,8 +187,8 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     media = MediaGroupBuilder(caption=weekly_pulse_date_str)
     for path in img_path_list:
         media.add_photo(types.FSInputFile(path))
-    await callback_query.message.answer(text=newsletter, parse_mode='HTML', protect_content=True)
-    await callback_query.message.answer_media_group(media=media.build(), protect_content=True)
+    await callback_query.message.answer(text=newsletter, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+    await callback_query.message.answer_media_group(media=media.build(), protect_content=texts_manager.PROTECT_CONTENT)
     user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
@@ -212,7 +212,13 @@ async def send_nearest_subjects(message: types.Message) -> None:
         keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
     )
 
-    await message.answer(response, parse_mode='HTML', protect_content=False, disable_web_page_preview=True, reply_markup=keyboard)
+    await message.answer(
+        response,
+        parse_mode='HTML',
+        protect_content=texts_manager.PROTECT_CONTENT,
+        disable_web_page_preview=True,
+        reply_markup=keyboard,
+    )
     user_logger.info(
         f'*{chat_id}* {full_name} - "{user_msg}" : На запрос пользователя найдены схожие запросы {", ".join(nearest_subjects)}'
     )
@@ -396,7 +402,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
                 await send_nearest_subjects(message)
 
     else:
-        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=False)
+        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=texts_manager.PROTECT_CONTENT)
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
