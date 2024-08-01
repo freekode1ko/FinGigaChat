@@ -248,7 +248,13 @@ async def send_news(message: types.Message, user_msg: str, full_name: str) -> bo
     chat_id = message.chat.id
 
     ap_obj = ArticleProcess(logger)
-    msg_text = user_msg.replace('«', '"').replace('»', '"')
+    msg_text = (
+        user_msg.replace('«', '"').replace('»', '"')
+        .replace(texts_manager.CLIENT_ADDITIONAL_INFO, '')
+        .replace(texts_manager.COMMODITY_ADDITIONAL_INFO, '')
+        .replace(texts_manager.INDUSTRY_ADDITIONAL_INFO, '')
+        .replace(texts_manager.STAKEHOLDER_ADDITIONAL_INFO, '')
+    )
 
     return_ans = False
 
@@ -416,7 +422,7 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
     sh_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text,
+        message.text.replace(texts_manager.STAKEHOLDER_ADDITIONAL_INFO, ''),
         subject_types=[models.StakeholderAlternative, ],
         score=fuzzy_score
     )

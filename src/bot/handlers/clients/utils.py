@@ -1,6 +1,7 @@
 """Дополнительные функции для работы с клиентами"""
 from aiogram import types
 
+from constants.texts import texts_manager
 from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from handlers.clients import keyboards
@@ -20,7 +21,7 @@ async def is_client_in_message(
     :return: булевое значение о том ли сообщение совпадает с именем клиента
     """
     clients_id = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text,
+        message.text.replace(texts_manager.CLIENT_ADDITIONAL_INFO, ''),
         subject_types=[models.ClientAlternative],
         score=fuzzy_score
     )
