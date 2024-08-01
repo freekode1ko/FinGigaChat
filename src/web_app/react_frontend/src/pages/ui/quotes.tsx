@@ -1,7 +1,11 @@
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { NewsCard, SkeletonNewsCard, useGetNewsForMainQuery } from '@/entities/news'
+import {
+  NewsCard,
+  SkeletonNewsCard,
+  useGetNewsForMainQuery,
+} from '@/entities/news'
 import { QuotesTable, useGetPopularQuotesQuery } from '@/entities/quotes'
 import { PAGE_SIZE } from '@/shared/model'
 import { TradingViewWidget } from '@/shared/ui'

@@ -11,10 +11,10 @@ import '@/shared/index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <TelegramWrapper>
-      <ReduxProvider store={store}>
+    <ReduxProvider store={store}>
+      <TelegramWrapper>
         <RouterProvider router={appRouter()} />
-      </ReduxProvider>
-    </TelegramWrapper>
+      </TelegramWrapper>
+    </ReduxProvider>
   </React.StrictMode>
 )

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 
+import { SendCIBReportButton } from '@/features/cib-report'
 import { NewsCard, SkeletonNewsCard, useGetNewsQuery } from '@/entities/news'
 import { PAGE_SIZE } from '@/shared/model'
 
@@ -29,7 +30,13 @@ const NewsPage = () => {
 
   return (
     <div className="flex flex-col gap-2">
-      {data?.news.map((item, itemIdx) => <NewsCard {...item} key={itemIdx} />)}
+      {data?.news.map((item, itemIdx) => (
+        <NewsCard
+          {...item}
+          sendReportButton={<SendCIBReportButton newsId={item.news_id} />}
+          key={itemIdx}
+        />
+      ))}
       {isFetching &&
         Array.from({ length: PAGE_SIZE }).map((_, idx) => (
           <SkeletonNewsCard key={idx} />

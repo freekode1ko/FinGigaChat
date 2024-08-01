@@ -1,19 +1,21 @@
 import React, { useEffect } from 'react'
 
-import { applyTelegramTheme } from '@/shared/lib'
+import { applyTelegramTheme, useWebApp } from '@/shared/lib'
 
 export const TelegramWrapper = ({ children }: React.PropsWithChildren) => {
+  const tg = useWebApp()
+
   useEffect(() => {
-    if (window.Telegram && window.Telegram.WebApp) {
-      const tg = window.Telegram.WebApp
-      if (tg.themeParams) {
-        applyTelegramTheme(tg.themeParams)
-      }
+    if (tg) {
+      applyTelegramTheme(tg.themeParams)
+      tg.expand()
       tg.ready()
     } else {
-      console.warn('Telegram WebApp недоступен')
+      console.warn(
+        'Приложение открыто не в Telegram: некоторые функции недоступны'
+      )
     }
-  }, [])
+  }, [tg])
 
   return <>{children}</>
 }
