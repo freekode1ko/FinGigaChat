@@ -99,7 +99,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum, 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text='Изменить клиента',
+            text='Изменить заголовок',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.edit_report_name,
                 report_id=report_id,
