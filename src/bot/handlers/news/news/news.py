@@ -1,4 +1,5 @@
 """Хендлеры новостей новостей новостей"""
+import utils.base
 from aiogram import Bot, F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -24,6 +25,7 @@ from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
 from handlers.clients.keyboards import get_client_menu_kb
 from handlers.clients.utils import is_client_in_message
+from handlers.commodity.keyboards import get_menu_kb as get_commodity_menu_kb
 from handlers.news import callback_data_factories, keyboards, utils
 from handlers.news.handler import router
 from keyboards.news import callbacks
@@ -371,9 +373,11 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
 
     if await is_user_has_access(message.from_user.model_dump_json()):
         if (
-            await is_client_in_message(message) or
-            await is_stakeholder_in_message(message, session) or
-            await is_eco_in_message(message)
+                await is_client_in_message(message) or
+                await is_stakeholder_in_message(message, session) or
+                await is_eco_in_message(message) or
+                await is_commodity_in_message(message)
+
         ):
             return
 
@@ -440,6 +444,36 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
         await send_stakeholder_articles(message, ap_obj, sh_obj.clients[0].id, sh_obj.clients[0].name, msg_text)
 
     return True
+
+
+async def is_commodity_in_message(
+        message: types.Message,
+        send_message_if_commodity_in_message: bool = True,
+        fuzzy_score: int = 95,
+) -> bool:
+    """
+    Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
+
+    :param message:      Сообщение от пользователя.
+    :param send_message_if_commodity_in_message: нужно ли отправлять в сообщении
+    :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
+    :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
+    """
+    commodity_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
+        message.text,
+        subject_types=[models.CommodityAlternative, ],
+        score=fuzzy_score
+    )
+    commodities = await commodity_db.get_by_ids(commodity_ids[:1])
+
+    if len(commodities) >= 1:  # больше одного клиента найтись скорее всего не может, если большой процент совпадения стоит
+        if send_message_if_commodity_in_message:
+            commodity_name = commodities['name'].iloc[0]
+            keyboard = get_commodity_menu_kb(commodity_ids[0])
+            msg_text = f'Выберите раздел для получения данных по клиенту <b>{commodity_name}</b>'
+            await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+        return True
+    return False
 
 
 @router.callback_query(callback_data_factories.StakeholderData.filter(
