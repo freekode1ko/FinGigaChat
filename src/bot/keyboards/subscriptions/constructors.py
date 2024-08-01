@@ -9,6 +9,10 @@ from constants.subscriptions import research
 from constants.subscriptions.news import client
 from constants.subscriptions.news import commodity
 from constants.subscriptions.news import industry
+from keyboards.subscriptions import callbacks
+from keyboards.subscriptions.news.client import callbacks as client_callback_factory
+from keyboards.subscriptions.news.commodity import callbacks as commodity_callback_factory
+from keyboards.subscriptions.news.industry import callbacks as industry_callback_factory
 from keyboards.subscriptions.news.telegram import callbacks as telegram_callback_factory
 
 
@@ -26,7 +30,38 @@ def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: st
     return keyboard.as_markup()
 
 
-def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
+def get_main_menu_kb() -> InlineKeyboardMarkup:
+    """
+    fuck that shit
+
+    :return: keyboard for subscriptions main menu
+    """
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(
+        text='Просмотреть подписки',
+        callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.my_subscriptions).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Добавить новые подписки',
+        callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.change_subscriptions).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Удалить подписки',
+        callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.delete_subscriptions).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Удалить все подписки',
+        callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Посмотреть все мои подписка',
+        callback_data=const.SHOW_ALL_SUBS,
+    ))
+    keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
+    return keyboard.as_markup()
+
+
+def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
@@ -37,32 +72,56 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
     [ Подписки на аналитические отчеты ]
     [ Завершить  ]
     """
+    match menu_type:
+        case callbacks.SubsMenusEnum.my_subscriptions:
+            buttons = {
+                'Подписки на клиентов': client_callback_factory.GetUserSubs().pack(),
+                'Подписки на сырьевые товары': commodity_callback_factory.GetUserSubs().pack(),
+                'Подписки на отрасли': industry_callback_factory.GetUserSubs().pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
+                    menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                ).pack(),
+                'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
+            }
+        case callbacks.SubsMenusEnum.change_subscriptions:
+            buttons = {
+                'Подписки на клиентов': client_callback_factory.ChangeUserSubs().pack(),
+                'Подписки на сырьевые товары': commodity_callback_factory.ChangeUserSubs().pack(),
+                'Подписки на отрасли': industry_callback_factory.ChangeUserSubs().pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
+                        menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    ).pack(),
+                'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
+            }
+        case callbacks.SubsMenusEnum.delete_subscriptions:
+            buttons = {
+                'Подписки на клиентов': client_callback_factory.DeleteUserSub().pack(),
+                'Подписки на сырьевые товары': commodity_callback_factory.DeleteUserSub().pack(),
+                'Подписки на отрасли': industry_callback_factory.DeleteUserSub().pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
+                        menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    ).pack(),
+                'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
+            }
+        case callbacks.SubsMenusEnum.delete_all_subscriptions:
+            buttons = {
+                'Подписки на клиентов': client_callback_factory.PrepareDeleteAllSubs().pack(),
+                'Подписки на сырьевые товары': commodity_callback_factory.PrepareDeleteAllSubs().pack(),
+                'Подписки на отрасли': industry_callback_factory.PrepareDeleteAllSubs().pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
+                        menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    ).pack(),
+                'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
+            }
+        case _:
+            buttons = {}
+    return __inner_get_subscriptions_menu_kb(buttons)
+
+
+def __inner_get_subscriptions_menu_kb(buttons: dict[str, str]) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на клиентов',
-        callback_data=client.CLIENT_SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на сырьевые товары',
-        callback_data=commodity.COMMODITY_SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на отрасли',
-        callback_data=industry.INDUSTRY_SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на телеграм-каналы',
-        callback_data=telegram_callback_factory.TelegramSubsMenuData(
-            menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
-        ).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Подписки на аналитические отчеты',
-        callback_data=research.GET_CIB_RESEARCH_SUBS_MENU
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Посмотреть все мои подписка',
-        callback_data=const.SHOW_ALL_SUBS,
-    ))
+    for button_text, button_callback in buttons.items():
+        keyboard.row(types.InlineKeyboardButton(text=button_text, callback_data=button_callback))
+    keyboard.row(types.InlineKeyboardButton(text=constants.BACK_BUTTON_TXT, callback_data=const.SUBS_MENU))
     keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()

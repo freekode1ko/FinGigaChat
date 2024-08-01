@@ -19,7 +19,7 @@ from constants import constants
 from constants.subscriptions import const
 from constants.subscriptions import research as callback_prefixes
 from db import models
-from keyboards.subscriptions import constructors
+from keyboards.subscriptions import callbacks as main_callbacks, constructors
 from keyboards.subscriptions.research import callbacks
 from utils.base import unwrap_callback_data, wrap_callback_data
 
@@ -92,7 +92,7 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
 
     keyboard.add(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+        callback_data=main_callbacks.SubsMenuData(menu=main_callbacks.SubsMenusEnum.my_subscriptions).pack(),  # FIXME
     ))
 
     if page < max_pages - 1:
@@ -164,7 +164,7 @@ def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
     # ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU
+        callback_data=main_callbacks.SubsMenuData(menu=main_callbacks.SubsMenusEnum.change_subscriptions).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
@@ -282,8 +282,8 @@ def get_research_subs_approve_delete_all_kb() -> InlineKeyboardMarkup:
     """
     return constructors.get_approve_action_kb(
         callback_prefixes.CIB_RESEARCH_SUBS_DELETE_ALL,
-        callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
-        callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+        main_callbacks.SubsMenuData(menu=main_callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
+        main_callbacks.SubsMenuData(menu=main_callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
     )
 
 
@@ -296,6 +296,6 @@ def get_back_to_research_subs_main_menu_kb() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU,
+        callback_data=main_callbacks.SubsMenuData(menu=main_callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
     ))
     return keyboard.as_markup()

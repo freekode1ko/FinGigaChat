@@ -10,7 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants.subscriptions import const
 from keyboards.base import get_pagination_kb
-from keyboards.subscriptions import constructors
+from keyboards.subscriptions import constructors, callbacks
 
 
 class BaseKeyboard:
@@ -35,8 +35,8 @@ class BaseKeyboard:
         """
         return constructors.get_approve_action_kb(
             self.callbacks.DeleteAllSubs().pack(),
-            self.callbacks.Menu().pack(),
-            self.callbacks.Menu().pack(),
+            callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
+            callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
         )
 
     def get_back_to_subscriptions_menu_kb(self) -> InlineKeyboardMarkup:
@@ -48,7 +48,7 @@ class BaseKeyboard:
         keyboard = InlineKeyboardBuilder()
         keyboard.row(types.InlineKeyboardButton(
             text=constants.BACK_BUTTON_TXT,
-            callback_data=self.callbacks.Menu().pack(),
+            callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.delete_all_subscriptions).pack(),
         ))
         return keyboard.as_markup()
 
@@ -101,7 +101,7 @@ class BaseKeyboard:
         ))
         keyboard.row(types.InlineKeyboardButton(
             text=constants.BACK_BUTTON_TXT,
-            callback_data=self.callbacks.Menu().pack(),
+            callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.change_subscriptions).pack(),
         ))
         keyboard.row(types.InlineKeyboardButton(
             text=constants.END_BUTTON_TXT,
@@ -155,7 +155,7 @@ class BaseKeyboard:
             max_pages,
             next_page_callback=self.callbacks.DeleteUserSub(page=current_page + 1).pack(),
             prev_page_callback=self.callbacks.DeleteUserSub(page=current_page - 1).pack(),
-            back_callback=self.callbacks.Menu().pack(),
+            back_callback=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.delete_subscriptions).pack(),
             end_callback=const.END_WRITE_SUBS,
             reverse=True,
         )
@@ -187,7 +187,7 @@ class BaseKeyboard:
             max_pages,
             next_page_callback=self.callbacks.GetUserSubs(page=current_page + 1).pack(),
             prev_page_callback=self.callbacks.GetUserSubs(page=current_page - 1).pack(),
-            back_callback=self.callbacks.Menu().pack(),
+            back_callback=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.my_subscriptions).pack(),
             end_callback=const.END_WRITE_SUBS,
         )
 
