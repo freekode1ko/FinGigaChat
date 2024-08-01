@@ -61,5 +61,9 @@ def get_subscriptions_menu_kb() -> InlineKeyboardMarkup:
         text='Подписки на аналитические отчеты',
         callback_data=research.GET_CIB_RESEARCH_SUBS_MENU
     ))
+    keyboard.row(types.InlineKeyboardButton(
+        text='Посмотреть все мои подписка',
+        callback_data=const.SHOW_ALL_SUBS,
+    ))
     keyboard.row(types.InlineKeyboardButton(text=constants.END_BUTTON_TXT, callback_data=const.END_WRITE_SUBS))
     return keyboard.as_markup()

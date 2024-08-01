@@ -4,7 +4,14 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 
+
 from constants import subscriptions as callback_prefixes
+from db.api.telegram_group import telegram_group_db
+from db.api.user_client_subscription import user_client_subscription_db
+from db.api.user_commodity_subscription import user_commodity_subscription_db
+from db.api.user_industry_subscription import user_industry_subscription_db
+from db.api.user_research_subscription import user_research_subscription_db
+from db.api.user_telegram_subscription import user_telegram_subscription_db
 from keyboards.subscriptions import constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import is_user_has_access, send_or_edit
@@ -72,3 +79,32 @@ async def subscriptions_menu(message: types.Message) -> None:
         await subs_menu(message)
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+
+
+@router.callback_query(F.data.startswith(callback_prefixes.SHOW_ALL_SUBS))
+async def show_all_subs(callback_query: types.CallbackQuery) -> None:
+    user_id = callback_query.from_user.id
+
+    list_of_subs = [
+        ('*Подиски на клиентов:*\n\n', user_client_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на сырьевые товары:*\n\n', user_commodity_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на отрасли:*\n\n', user_industry_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на аналитические отчеты:*\n\n', user_research_subscription_db.get_subscription_df(user_id)),
+    ]
+    for tg_group in await telegram_group_db.get_all():
+        list_of_subs.append((
+            f'*{tg_group.name}:*\n\n',
+            user_telegram_subscription_db.get_subscription_df_by_group_id(user_id=user_id, group_id=tg_group.id)
+        ))
+
+    subs_not_exist = True
+
+    for sub_title, get_sub_func in list_of_subs:
+        if sub_names_list := list((await get_sub_func)['name']):
+            subs_not_exist = False
+            for name in sub_names_list:
+                sub_title += f'- {name}\n'
+            await callback_query.message.answer(text=sub_title, parse_mode='Markdown')
+
+    if subs_not_exist:
+        callback_query.message.answer(text='У вас нет активных подписок')
