@@ -83,10 +83,15 @@ async def subscriptions_menu(message: types.Message) -> None:
 
 @router.callback_query(F.data.startswith(callback_prefixes.SHOW_ALL_SUBS))
 async def show_all_subs(callback_query: types.CallbackQuery) -> None:
+    """
+    Вывести список всех подписок
+
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    """
     user_id = callback_query.from_user.id
 
     list_of_subs = [
-        ('*Подиски на клиентов:*\n\n', user_client_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на клиентов:*\n\n', user_client_subscription_db.get_subscription_df(user_id)),
         ('*Подписки на сырьевые товары:*\n\n', user_commodity_subscription_db.get_subscription_df(user_id)),
         ('*Подписки на отрасли:*\n\n', user_industry_subscription_db.get_subscription_df(user_id)),
         ('*Подписки на аналитические отчеты:*\n\n', user_research_subscription_db.get_subscription_df(user_id)),
