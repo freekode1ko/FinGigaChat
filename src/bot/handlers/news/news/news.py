@@ -465,7 +465,7 @@ async def is_commodity_in_message(
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
     commodity_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text.replace(texts_manager.СOMMODITY_ADDITIONAL_INFO, ''),
+        message.text.replace(texts_manager.COMMODITY_ADDITIONAL_INFO, ''),
         subject_types=[models.CommodityAlternative, ],
         score=fuzzy_score
     )
