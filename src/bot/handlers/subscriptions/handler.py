@@ -20,10 +20,22 @@ router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
 
 MENU_HEADERS = {
-    callbacks.SubsMenusEnum.my_subscriptions: 'Просмотр подписок',
-    callbacks.SubsMenusEnum.change_subscriptions: 'Изменение подписок',
-    callbacks.SubsMenusEnum.delete_subscriptions: 'Удаление подписок',
-    callbacks.SubsMenusEnum.delete_all_subscriptions: 'Удаление всех подписок',
+    callbacks.SubsMenusEnum.my_subscriptions: (
+        'Просмотр подписок\n\n'
+        'Выберете раздел для просмотра подписок'
+    ),
+    callbacks.SubsMenusEnum.change_subscriptions: (
+        'Изменение подписок\n\n'
+        'Выберете раздел, в котором хотите изменить подписки'
+    ),
+    callbacks.SubsMenusEnum.delete_subscriptions: (
+        'Удаление подписок\n\n'
+        'Выберете раздел, из которого хотите удалить подписки поштучно'
+    ),
+    callbacks.SubsMenusEnum.delete_all_subscriptions: (
+        'Удаление всех подписок\n\n'
+        'Выберете раздел для удаления всех подписок'
+    ),
 }
 
 
@@ -54,7 +66,9 @@ async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
     await send_or_edit(message, msg_text, keyboard)
 
 
-@router.callback_query(F.data.startswith(callback_prefixes.SUBS_MENU))
+@router.callback_query(callbacks.SubsMenuData.filter(
+    F.menu == callbacks.SubsMenusEnum.main_menu,
+))
 async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> None:
     """
     Получение меню для взаимодействия с подписками
@@ -121,10 +135,12 @@ async def show_all_subs(callback_query: types.CallbackQuery) -> None:
 
 
 @router.callback_query(callbacks.SubsMenuData.filter(
-    F.menu == callbacks.SubsMenusEnum.my_subscriptions or
-    F.menu == callbacks.SubsMenusEnum.change_subscriptions or
-    F.menu == callbacks.SubsMenusEnum.delete_subscriptions or
-    F.menu == callbacks.SubsMenusEnum.delete_all_subscriptions
+    F.menu.in_({
+        callbacks.SubsMenusEnum.my_subscriptions,
+        callbacks.SubsMenusEnum.change_subscriptions,
+        callbacks.SubsMenusEnum.delete_subscriptions,
+        callbacks.SubsMenusEnum.delete_all_subscriptions,
+    })
 ))
 async def choose_group_menu(callback_query: types.CallbackQuery, callback_data: callbacks.SubsMenuData) -> None:
     """
@@ -133,11 +149,6 @@ async def choose_group_menu(callback_query: types.CallbackQuery, callback_data: 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: меню, описывающее действие, которое можно совершить с подписками
     """
-    msg_text = (
-        MENU_HEADERS.get(callback_data.menu, '') +
-        'Выберете раздел подписок.\n\n'
-        'Новости из телеграм каналов и доверенных источников\n\n'
-        'Аналитика - SberCIB Investment Research\n\n'
-    )
+    msg_text = MENU_HEADERS.get(callback_data.menu, '')
     keyboard = keyboards.get_subscriptions_menu_kb(callback_data.menu)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')

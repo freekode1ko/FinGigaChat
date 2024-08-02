@@ -16,7 +16,6 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
-from constants.subscriptions import const
 from constants.subscriptions import research as callback_prefixes
 from db import models
 from keyboards.subscriptions import callbacks as main_callbacks, constructors
@@ -24,40 +23,12 @@ from keyboards.subscriptions.research import callbacks
 from utils.base import unwrap_callback_data, wrap_callback_data
 
 
-def get_research_subscriptions_main_menu_kb() -> InlineKeyboardMarkup:
-    """
-    Формирует Inline клавиатуру вида:
-
-    [ Просмотреть подписки ]
-    [ Изменить подписки    ]
-    [ Удалить все подписки ]
-    [      Завершить       ]
-    """
-    keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(
-        text='Просмотреть подписки',
-        callback_data=callbacks.GetUserCIBResearchSubs(page=0).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Изменить подписки',
-        callback_data=callbacks.GetCIBGroups().pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Удалить все подписки',
-        callback_data=callback_prefixes.CIB_RESEARCH_SUBS_APPROVE_DELETE_ALL,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text=constants.BACK_BUTTON_TXT,
-        callback_data=const.SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text=constants.END_BUTTON_TXT,
-        callback_data=callback_prefixes.CIB_RESEARCH_END_WRITE_SUBS,
-    ))
-    return keyboard.as_markup()
-
-
-def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int) -> InlineKeyboardMarkup:
+def get_user_research_subs_kb(
+        page_data: pd.DataFrame,
+        page: int,
+        max_pages: int,
+        action: main_callbacks.SubsMenusEnum = main_callbacks.SubsMenusEnum.my_subscriptions,
+) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
@@ -69,6 +40,7 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
     :param page_data: Данные о подписках на отчеты из CIB Research на данной странице
     :param page: Номер страницы. Нужен для формирования callback_data
     :param max_pages: Всего страниц
+    :param action: Действие, указывает, в какое подменю мы должны попасть при нажатии кнопки НАЗАД
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -76,29 +48,29 @@ def get_user_research_subs_kb(page_data: pd.DataFrame, page: int, max_pages: int
         more_info_call = callbacks.GetCIBResearchTypeMoreInfo(
             research_id=sub['id'],
             is_subscribed=True,
-            back=wrap_callback_data(callbacks.GetUserCIBResearchSubs(page=page).pack()),
+            back=wrap_callback_data(callbacks.GetUserCIBResearchSubs(page=page, action=action).pack()),
         ).pack()
-        delete_call = callbacks.GetUserCIBResearchSubs(page=page, del_sub_id=sub['id']).pack()
+        delete_call = callbacks.GetUserCIBResearchSubs(page=page, del_sub_id=sub['id'], action=action).pack()
         keyboard.row(types.InlineKeyboardButton(text=sub['name'], callback_data=more_info_call))
         keyboard.add(types.InlineKeyboardButton(text=constants.DELETE_CROSS, callback_data=delete_call))
 
     if page != 0:
         keyboard.row(types.InlineKeyboardButton(
             text=constants.PREV_PAGE,
-            callback_data=callbacks.GetUserCIBResearchSubs(page=page - 1).pack(),
+            callback_data=callbacks.GetUserCIBResearchSubs(page=page - 1, action=action).pack(),
         ))
     else:
         keyboard.row(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))
 
     keyboard.add(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=main_callbacks.SubsMenuData(menu=main_callbacks.SubsMenusEnum.my_subscriptions).pack(),  # FIXME
+        callback_data=main_callbacks.SubsMenuData(menu=action).pack(),
     ))
 
     if page < max_pages - 1:
         keyboard.add(types.InlineKeyboardButton(
             text=constants.NEXT_PAGE,
-            callback_data=callbacks.GetUserCIBResearchSubs(page=page + 1).pack(),
+            callback_data=callbacks.GetUserCIBResearchSubs(page=page + 1, action=action).pack(),
         ))
     else:
         keyboard.add(types.InlineKeyboardButton(text=constants.STOP, callback_data='constants.STOP'))

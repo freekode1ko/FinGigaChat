@@ -221,7 +221,7 @@ def get_sections_menu_kb(
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
+            menu=callback_factory.TelegramSubsMenusEnum.main_menu,
             group_id=group_id,
             action=callbacks.SubsMenusEnum.change_subscriptions,
         ).pack(),

@@ -6,10 +6,8 @@
 Изменение подписок.
 Удаление подписок.
 """
-from typing import Union
 
 from aiogram import F, types
-from aiogram.filters import Command
 
 from constants.constants import DELETE_CROSS, SELECTED, UNSELECTED
 from constants.subscriptions import research as callback_prefixes
@@ -23,7 +21,7 @@ from db.api.user_research_subscription import user_research_subscription_db
 from handlers.subscriptions.handler import router
 from keyboards.subscriptions.research import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import get_page_data_and_info, is_user_has_access, send_or_edit
+from utils.base import get_page_data_and_info
 
 
 @router.callback_query(callbacks.GetUserCIBResearchSubs.filter())
@@ -56,7 +54,7 @@ async def get_my_research_subscriptions(
         f'Для получения более детальной информации об отчете - нажмите на него\n\n'
         f'Для удаления подписки - нажмите на "{DELETE_CROSS}"'
     )
-    keyboard = keyboards.get_user_research_subs_kb(page_data, page, max_pages)
+    keyboard = keyboards.get_user_research_subs_kb(page_data, page, max_pages, action=callback_data.action)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -314,41 +312,3 @@ async def research_subs_menu_end(callback_query: types.CallbackQuery) -> None:
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     await callback_query.message.edit_text(text='Формирование подписок завершено')
-
-
-async def cib_research_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
-    """Подписки на аналитические отчеты"""
-    keyboard = keyboards.get_research_subscriptions_main_menu_kb()
-    msg_text = 'Подписки на аналитические отчеты'
-    await send_or_edit(message, msg_text, keyboard)
-
-
-@router.callback_query(F.data.startswith(callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU))
-async def back_cib_subs_menu(callback_query: types.CallbackQuery) -> None:
-    """
-    Фозвращает пользователя в меню (меняет сообщение, с которым связан колбэк)
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await cib_research_subs_menu(callback_query)
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-
-
-@router.message(Command(callback_prefixes.GET_CIB_RESEARCH_SUBS_MENU))
-async def cib_research_subscriptions_menu(message: types.Message) -> None:
-    """
-    Получение меню для взаимодействия с подписками на cib_research
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        await cib_research_subs_menu(message)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
