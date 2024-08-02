@@ -249,7 +249,10 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     group_df = await research_group_db.get_all()
-    msg_text = 'Изменить подписки'
+    msg_text = (
+        'Изменить подписки\n\n'
+        'Выберете категорию материалов аналитики'
+    )
     keyboard = keyboards.get_research_groups_menu_kb(group_df)
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -294,10 +297,10 @@ async def approve_delete_all_research_subs(callback_query: types.CallbackQuery) 
     user_subs = await user_research_subscription_db.get_subscription_df(user_id=user_id)
 
     if user_subs.empty:
-        msg_text = 'У вас отсутствуют подписки'
+        msg_text = 'У вас отсутствуют подписки на аналитические отчеты'
         keyboard = keyboards.get_back_to_research_subs_main_menu_kb()
     else:
-        msg_text = 'Вы уверены, что хотите удалить все подписки?'
+        msg_text = 'Вы уверены, что хотите удалить все подписки на аналитические отчеты?'
         keyboard = keyboards.get_research_subs_approve_delete_all_kb()
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)

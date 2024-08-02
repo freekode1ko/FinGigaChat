@@ -3,6 +3,7 @@
 from aiogram import F, types
 from aiogram.fsm.context import FSMContext
 
+from constants import subscriptions
 from constants.constants import DELETE_CROSS, SELECTED, UNSELECTED
 from db import models
 from db.api.telegram_channel import telegram_channel_db
@@ -47,7 +48,7 @@ async def get_tg_groups_menu(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     groups = await telegram_group_db.get_all()
     keyboard = keyboards.get_groups_kb(groups, callback_data.action)
-    msg_text = 'Выберите подборку телеграм-каналов'  # FIXME text
+    msg_text = subscriptions.MENU_HEADERS.get(callback_data.action, '') + 'Выберите подборку телеграм-каналов'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 

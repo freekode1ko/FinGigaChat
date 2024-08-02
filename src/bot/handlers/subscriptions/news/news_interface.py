@@ -21,6 +21,7 @@ from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import SubscriptionInterface
 from db.api.user_research_subscription import user_research_subscription_db
+from handlers.news.utils import decline_words
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
 from log.bot_logger import user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
@@ -111,6 +112,7 @@ class NewsHandler:
         self.subject_inf = subject_name_nominative  # 'клиенты'   # сырьевые товары | отрасли
         self.subject_par = subject_name_genitive    # 'клиентов'  # сырьевых товаров | отраслей
         self.subject_vin = subject_name_accusative  # 'клиентов'  # сырьевые товары | отрасли
+        self.subject_datv = decline_words(subject_name_nominative, ('datv', 'plur'), str.lower)
 
     def setup(self):
         """Сетап"""
@@ -118,7 +120,7 @@ class NewsHandler:
         async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext) -> None:
             keyboard = self.keyboards.change_subs_menu()
             await state.clear()
-            await callback_query.message.edit_text('Как вы хотите заполнить подписки?', reply_markup=keyboard)
+            await callback_query.message.edit_text(f'Как вы хотите заполнить подписки по {self.subject_datv}?', reply_markup=keyboard)
 
         @self.router.callback_query(self.callbacks.WriteSubs.filter())
         async def write_new_subscriptions_callback(
@@ -479,10 +481,10 @@ class NewsHandler:
             user_subs_df = await self.subscription_db.get_subscription_df(user_id=user_id)
 
             if user_subs_df.empty:
-                msg_text = 'У вас отсутствуют подписки'
+                msg_text = f'У вас отсутствуют подписки на {self.subject_vin}'
                 keyboard = self.keyboards.get_back_to_subscriptions_menu_kb()
             else:
-                msg_text = 'Вы уверены, что хотите удалить все подписки?'
+                msg_text = f'Вы уверены, что хотите удалить все подписки на {self.subject_vin}?'
                 keyboard = self.keyboards.get_prepare_subs_delete_all_kb()
 
             await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
