@@ -1,5 +1,4 @@
 """Хендлеры новостей новостей новостей"""
-import utils.base
 from aiogram import Bot, F, types
 from aiogram.enums import ChatAction
 from aiogram.filters import Command
@@ -460,7 +459,7 @@ async def is_commodity_in_message(
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
     commodity_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text,
+        message.text.replace(texts_manager.СOMMODITY_ADDITIONAL_INFO, ''),
         subject_types=[models.CommodityAlternative, ],
         score=fuzzy_score
     )
@@ -470,7 +469,7 @@ async def is_commodity_in_message(
         if send_message_if_commodity_in_message:
             commodity_name = commodities['name'].iloc[0]
             keyboard = get_commodity_menu_kb(commodity_ids[0])
-            msg_text = f'Выберите раздел для получения данных по клиенту <b>{commodity_name}</b>'
+            msg_text = f'Выберите раздел для получения данных по <b>{commodity_name}</b>'
             await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
         return True
     return False

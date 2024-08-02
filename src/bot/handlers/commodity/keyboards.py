@@ -1,3 +1,10 @@
+"""
+Модуль для формирования клавиатур для меню комодов.
+
+Главное меню.
+Меню для вывода новостей или котировок по одному комоду.
+Меню выбора интервала для новостей.
+"""
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder

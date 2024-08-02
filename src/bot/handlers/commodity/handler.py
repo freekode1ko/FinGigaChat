@@ -15,8 +15,9 @@ import utils
 from db import models
 from db.api.commodity import commodity_db
 from handlers.commodity.callbacks import CommodityMenuData, CommodityMenusEnum
-from handlers.commodity.keyboards import get_period_kb, get_menu_kb
+from handlers.commodity.keyboards import get_menu_kb, get_period_kb
 from handlers.quotes import metal_info_command
+from log.bot_logger import user_logger
 from module.article_process import FormatText
 
 router = Router()
@@ -34,11 +35,18 @@ async def commodity_menu(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
     """
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+
     commodity_info = await commodity_db.get(callback_data.commodity_id)
     keyboard = get_menu_kb(callback_data.commodity_id)
     msg_text = f'Выберите раздел для получения данных по клиенту <b>{commodity_info["name"].capitalize()}</b>'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.choice_period))
@@ -56,6 +64,12 @@ async def commodity_choice_news_menu(
     msg_text = f'Выберите период для получения новостей по клиенту <b>{commodity_info["name"].capitalize()}</b>'
 
     await callback_query.message.edit_text(msg_text, reply_markup=get_period_kb(callback_data.commodity_id), parse_mode='HTML')
+
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.news))
@@ -96,6 +110,11 @@ async def commodity_news_menu(
         await utils.base.bot_send_msg(callback_query.bot, callback_query.from_user.id, frmt_msg)
         await utils.base.send_full_copy_of_message(callback_query)
 
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 @router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.quotes))
 async def commodity_quotes_menu(
@@ -110,6 +129,12 @@ async def commodity_quotes_menu(
     """
     await metal_info_command(callback_query.message)
     await utils.base.send_full_copy_of_message(callback_query)
+
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.close))
@@ -127,3 +152,9 @@ async def commodity_close_menu(
         text='Просмотр по сырьевому товару завершен',
         reply_markup=None,
     )
+
+    chat_id = callback_query.message.chat.id
+    user_msg = callback_data.pack()
+    from_user = callback_query.from_user
+    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
