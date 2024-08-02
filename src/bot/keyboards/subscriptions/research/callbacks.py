@@ -2,6 +2,7 @@
 from aiogram.filters.callback_data import CallbackData
 
 from constants.subscriptions import research as callback_prefixes
+from keyboards.subscriptions import callbacks
 
 
 class GetUserCIBResearchSubs(CallbackData, prefix=callback_prefixes.USER_CIB_RESEARCH_SUBS):
@@ -13,6 +14,7 @@ class GetUserCIBResearchSubs(CallbackData, prefix=callback_prefixes.USER_CIB_RES
 
     page: int = 0
     del_sub_id: int = 0
+    action: callbacks.SubsMenusEnum = callbacks.SubsMenusEnum.my_subscriptions
 
 
 class GetCIBResearchTypeMoreInfo(CallbackData, prefix=callback_prefixes.CIB_RESEARCH_INFO):

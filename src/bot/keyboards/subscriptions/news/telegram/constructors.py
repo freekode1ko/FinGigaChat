@@ -5,9 +5,8 @@ from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
-from constants.subscriptions import const
 from db import models
-from keyboards.subscriptions import constructors
+from keyboards.subscriptions import callbacks, constructors
 from keyboards.subscriptions.news.telegram import callbacks as callback_factory
 
 
@@ -32,6 +31,7 @@ def get_tg_info_kb(callback_data: callback_factory.TelegramSubsMenuData) -> Inli
         is_subscribed=not callback_data.is_subscribed,
         need_add=not callback_data.is_subscribed,
         back_menu=callback_data.back_menu,
+        action=callback_data.action,
     )
 
     back_call = callback_factory.TelegramSubsMenuData(
@@ -39,6 +39,7 @@ def get_tg_info_kb(callback_data: callback_factory.TelegramSubsMenuData) -> Inli
         group_id=callback_data.group_id,
         section_id=callback_data.section_id,
         back_menu=callback_data.back_menu,
+        action=callback_data.action,
     )
     keyboard.row(types.InlineKeyboardButton(text=add_del_text, callback_data=action_call.pack()))
     keyboard.row(types.InlineKeyboardButton(
@@ -48,7 +49,7 @@ def get_tg_info_kb(callback_data: callback_factory.TelegramSubsMenuData) -> Inli
     return keyboard.as_markup()
 
 
-def get_groups_kb(groups: list[models.TelegramGroup]) -> InlineKeyboardMarkup:
+def get_groups_kb(groups: list[models.TelegramGroup], action: callbacks.SubsMenusEnum) -> InlineKeyboardMarkup:
     """
     Формирует клавиатуру вида
 
@@ -58,13 +59,27 @@ def get_groups_kb(groups: list[models.TelegramGroup]) -> InlineKeyboardMarkup:
     [ Back ]
     [ End ]
     :param groups: Список групп, выделенных среди тг каналов
+    :param action: Действие, указывает, в какое подменю мы должны попасть после выбора группы
     """
     keyboard = InlineKeyboardBuilder()
 
+    match action:
+        case callbacks.SubsMenusEnum.my_subscriptions:
+            next_menu = callback_factory.TelegramSubsMenusEnum.my_subscriptions
+        case callbacks.SubsMenusEnum.change_subscriptions:
+            next_menu = callback_factory.TelegramSubsMenusEnum.change_subscriptions
+        case callbacks.SubsMenusEnum.delete_subscriptions:
+            next_menu = callback_factory.TelegramSubsMenusEnum.my_subscriptions
+        case callbacks.SubsMenusEnum.delete_all_subscriptions:
+            next_menu = callback_factory.TelegramSubsMenusEnum.approve_delete_menu
+        case _:
+            next_menu = callback_factory.TelegramSubsMenusEnum.group_main_menu
+
     for group in groups:
         callback_data = callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
+            menu=next_menu,
             group_id=group.id,
+            action=action,
         )
 
         keyboard.row(types.InlineKeyboardButton(
@@ -74,54 +89,8 @@ def get_groups_kb(groups: list[models.TelegramGroup]) -> InlineKeyboardMarkup:
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
-        callback_data=const.SUBS_MENU,
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text=constants.END_BUTTON_TXT,
-        callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.end_menu,
-        ).pack(),
-    ))
-    return keyboard.as_markup()
-
-
-def get_group_main_menu_kb(group_id: int) -> InlineKeyboardMarkup:
-    """
-    Формирует Inline клавиатуру вида:
-
-    [ Просмотреть подписки ]
-    [ Изменить подписки    ]
-    [ Удалить все подписки ]
-    [ Назад ]
-    [ Завершить ]
-    :param group_id: bot_telegram_group.id
-    """
-    keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(
-        text='Просмотреть подписки',
-        callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.my_subscriptions,
-            group_id=group_id,
-        ).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Изменить подписки',
-        callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.change_subscriptions,
-            group_id=group_id,
-        ).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='Удалить все подписки',
-        callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.approve_delete_menu,
-            group_id=group_id,
-        ).pack(),
-    ))
-    keyboard.row(types.InlineKeyboardButton(
-        text=constants.BACK_BUTTON_TXT,
-        callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.main_menu,
+        callback_data=callbacks.SubsMenuData(
+            menu=action,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -133,7 +102,13 @@ def get_group_main_menu_kb(group_id: int) -> InlineKeyboardMarkup:
     return keyboard.as_markup()
 
 
-def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, group_id: int) -> InlineKeyboardMarkup:
+def get_my_subscriptions_kb(
+        page_data: pd.DataFrame,
+        page: int,
+        max_pages: int,
+        group_id: int,
+        action: callbacks.SubsMenusEnum,
+) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
@@ -146,6 +121,7 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
     :param page: Номер страницы. Нужен для формирования callback_data
     :param max_pages: Всего страниц
     :param group_id: bot_telegram_group.id
+    :param action: Действие, указывает, в какое подменю мы должны попасть после выбора группы
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -157,6 +133,7 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
             telegram_id=item['id'],
             is_subscribed=True,
             back_menu=callback_factory.TelegramSubsMenusEnum.my_subscriptions,
+            action=action,
         )
         delete_call = callback_factory.TelegramSubsMenuData(
             menu=callback_factory.TelegramSubsMenusEnum.my_subscriptions,
@@ -164,6 +141,7 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
             page=page,
             telegram_id=item['id'],
             is_subscribed=True,
+            action=action,
         )
         keyboard.row(types.InlineKeyboardButton(text=item['name'], callback_data=more_info_call.pack()))
         keyboard.add(types.InlineKeyboardButton(text=constants.DELETE_CROSS, callback_data=delete_call.pack()))
@@ -175,6 +153,7 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
                 menu=callback_factory.TelegramSubsMenusEnum.my_subscriptions,
                 group_id=group_id,
                 page=page - 1,
+                action=action,
             ).pack(),
         ))
     else:
@@ -183,8 +162,8 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
     keyboard.add(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
-            group_id=group_id,
+            menu=callback_factory.TelegramSubsMenusEnum.main_menu,
+            action=action,
         ).pack(),
     ))
 
@@ -195,6 +174,7 @@ def get_my_subscriptions_kb(page_data: pd.DataFrame, page: int, max_pages: int, 
                 menu=callback_factory.TelegramSubsMenusEnum.my_subscriptions,
                 group_id=group_id,
                 page=page + 1,
+                action=action,
             ).pack(),
         ))
     else:
@@ -234,14 +214,16 @@ def get_sections_menu_kb(
                 group_id=group_id,
                 section_id=section.id,
                 back_menu=callback_factory.TelegramSubsMenusEnum.change_subscriptions,
+                action=callbacks.SubsMenusEnum.change_subscriptions,
             ).pack(),
         ))
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
+            menu=callback_factory.TelegramSubsMenusEnum.main_menu,
             group_id=group_id,
+            action=callbacks.SubsMenusEnum.change_subscriptions,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -279,6 +261,7 @@ def get_change_subscriptions_kb(
             telegram_id=item['id'],
             is_subscribed=item['is_subscribed'],
             back_menu=callback_data.back_menu,
+            action=callbacks.SubsMenusEnum.change_subscriptions,
         )
         more_info_call = callback_factory.TelegramSubsMenuData(
             menu=callback_factory.TelegramSubsMenusEnum.telegram_channel_info,
@@ -287,6 +270,7 @@ def get_change_subscriptions_kb(
             telegram_id=item['id'],
             is_subscribed=item['is_subscribed'],
             back_menu=callback_data.menu,
+            action=callbacks.SubsMenusEnum.change_subscriptions,
         )
 
         mark = constants.SELECTED if item['is_subscribed'] else constants.UNSELECTED
@@ -300,6 +284,7 @@ def get_change_subscriptions_kb(
             group_id=callback_data.group_id,
             section_id=callback_data.section_id,
             back_menu=callback_data.back_menu,
+            action=callbacks.SubsMenusEnum.change_subscriptions,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -322,10 +307,11 @@ def get_prepare_tg_subs_delete_all_kb(group_id: int) -> InlineKeyboardMarkup:
     delete_subs_callback_data = callback_factory.TelegramSubsMenuData(
         menu=callback_factory.TelegramSubsMenusEnum.delete_subscriptions_by_group,
         group_id=group_id,
+        action=callbacks.SubsMenusEnum.delete_all_subscriptions,
     ).pack()
     back_callback_data = callback_factory.TelegramSubsMenuData(
-        menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
-        group_id=group_id,
+        menu=callback_factory.TelegramSubsMenusEnum.main_menu,
+        action=callbacks.SubsMenusEnum.delete_all_subscriptions,
     ).pack()
     return constructors.get_approve_action_kb(
         delete_subs_callback_data,
@@ -334,7 +320,7 @@ def get_prepare_tg_subs_delete_all_kb(group_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def get_back_to_tg_subs_menu_kb(group_id: int) -> InlineKeyboardMarkup:
+def get_back_to_tg_subs_menu_kb() -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
@@ -345,8 +331,8 @@ def get_back_to_tg_subs_menu_kb(group_id: int) -> InlineKeyboardMarkup:
     keyboard.row(types.InlineKeyboardButton(
         text=constants.BACK_BUTTON_TXT,
         callback_data=callback_factory.TelegramSubsMenuData(
-            menu=callback_factory.TelegramSubsMenusEnum.group_main_menu,
-            group_id=group_id,
+            menu=callback_factory.TelegramSubsMenusEnum.main_menu,
+            action=callbacks.SubsMenusEnum.delete_all_subscriptions,
         ).pack(),
     ))
     return keyboard.as_markup()

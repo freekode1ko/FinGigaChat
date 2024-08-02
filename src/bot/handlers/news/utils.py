@@ -5,7 +5,7 @@
 Обновляет список выбранных субъектов.
 Оборачивает в строку список выбранных субъектов.
 """
-from typing import Callable, Sequence
+from typing import Callable, Iterable, Sequence
 
 from pymorphy2 import MorphAnalyzer
 
@@ -53,7 +53,7 @@ def wrap_selected_ids(selected_ids: list[int]) -> str:
     return ','.join(map(str, selected_ids)) or '0'
 
 
-def decline_words(words: str, case: str = 'gent', str_func: Callable = str.title) -> str:
+def decline_words(words: str, case: Iterable[str] = 'gent', str_func: Callable = str.title) -> str:
     """
     Склоняет слова в заданный падеж.
 
@@ -63,7 +63,7 @@ def decline_words(words: str, case: str = 'gent', str_func: Callable = str.title
     :return:            Слова в нужном падеже.
     """
     name_parts = words.strip().split()
-    words = ' '.join(morph.parse(name_part)[0].inflect({case}).word for name_part in name_parts)
+    words = ' '.join(morph.parse(name_part)[0].inflect(set(case)).word for name_part in name_parts)
     return str_func(words)
 
 
