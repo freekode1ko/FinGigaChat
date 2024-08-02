@@ -1,8 +1,6 @@
 """Файл с хендлерами подписок на новости на телеграм каналы"""
-from typing import Union
 
 from aiogram import F, types
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from constants.constants import DELETE_CROSS, SELECTED, UNSELECTED
@@ -14,7 +12,7 @@ from db.api.user_telegram_subscription import user_telegram_subscription_db
 from handlers.subscriptions.handler import router, subs_menu_end
 from keyboards.subscriptions.news.telegram import callbacks as callback_factory, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import get_page_data_and_info, is_user_has_access, send_or_edit
+from utils.base import get_page_data_and_info, send_or_edit
 
 
 @router.callback_query(callback_factory.TelegramSubsMenuData.filter(
@@ -30,18 +28,10 @@ async def end_menu(callback_query: types.CallbackQuery, state: FSMContext) -> No
     await subs_menu_end(callback_query, state)
 
 
-async def tg_subs_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
-    """Меню для подписок по телеграм каналы"""
-    groups = await telegram_group_db.get_all()
-    keyboard = keyboards.get_groups_kb(groups)
-    msg_text = 'Выберите подборку телеграм-каналов'
-    await send_or_edit(message, msg_text, keyboard)
-
-
 @router.callback_query(callback_factory.TelegramSubsMenuData.filter(
     F.menu == callback_factory.TelegramSubsMenusEnum.main_menu,
 ))
-async def back_to_tg_subs_menu(
+async def get_tg_groups_menu(
         callback_query: types.CallbackQuery,
         callback_data: callback_factory.TelegramSubsMenuData,
 ) -> None:
@@ -55,50 +45,10 @@ async def back_to_tg_subs_menu(
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await tg_subs_menu(callback_query)
-    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-
-
-@router.message(Command(callback_factory.TelegramSubsMenuData.__prefix__))
-async def tg_subscriptions_menu(message: types.Message) -> None:
-    """
-    Получение меню для взаимодействия с подписками на telegram каналы (влияет на сводку новостей по отрасли)
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        await tg_subs_menu(message)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-
-
-@router.callback_query(callback_factory.TelegramSubsMenuData.filter(
-    F.menu == callback_factory.TelegramSubsMenusEnum.group_main_menu,
-))
-async def group_main_menu(
-        callback_query: types.CallbackQuery,
-        callback_data: callback_factory.TelegramSubsMenuData,
-) -> None:
-    """
-    Формирует меню управления подписками на тг каналы определенной группы (bot_telegram_group)
-
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: Содержит информацию о текущем меню
-    """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_data.pack()
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-
-    group_id = callback_data.group_id
-    telegram_group_info = await telegram_group_db.get(group_id)
-
-    keyboard = keyboards.get_group_main_menu_kb(group_id)
-    msg_text = f'Меню управления подписками на {telegram_group_info.name.lower()}\n\n'
-    await send_or_edit(callback_query, msg_text, keyboard)
+    groups = await telegram_group_db.get_all()
+    keyboard = keyboards.get_groups_kb(groups, callback_data.action)
+    msg_text = 'Выберите подборку телеграм-каналов'  # FIXME text
+    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -138,7 +88,7 @@ async def my_subscriptions(
         f'Для получения более детальной информации о канале - нажмите на него\n\n'
         f'Для удаления канала из подписок - нажмите на "{DELETE_CROSS}" рядом с каналом'
     )
-    keyboard = keyboards.get_my_subscriptions_kb(page_data, page, max_pages, group_id=group_id)
+    keyboard = keyboards.get_my_subscriptions_kb(page_data, page, max_pages, group_id=group_id, action=callback_data.action)
 
     await send_or_edit(callback_query, msg_text, keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -166,7 +116,7 @@ async def change_subscriptions(
     telegram_group_info = await telegram_group_db.get(group_id)
 
     if telegram_group_info.is_show_all_channels:
-        callback_data.back_menu = callback_factory.TelegramSubsMenusEnum.group_main_menu
+        callback_data.back_menu = callback_factory.TelegramSubsMenusEnum.main_menu
         await __show_telegram_channels_by_group(callback_query, callback_data, telegram_group_info)
     else:
         await __show_telegram_sections_by_group(callback_query, callback_data, telegram_group_info)
@@ -354,7 +304,7 @@ async def delete_subscriptions_by_group(
     await user_telegram_subscription_db.delete_all_by_group_id(user_id, group_id)
 
     msg_text = f'Ваши подписки на {telegram_group_info.name.lower()} были удалены'
-    keyboard = keyboards.get_back_to_tg_subs_menu_kb(group_id)
+    keyboard = keyboards.get_back_to_tg_subs_menu_kb()
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -385,7 +335,7 @@ async def approve_delete_menu(
 
     if user_tg_subs.empty:
         msg_text = f'У вас отсутствуют подписки на {telegram_group_info.name.lower()}'
-        keyboard = keyboards.get_back_to_tg_subs_menu_kb(group_id)
+        keyboard = keyboards.get_back_to_tg_subs_menu_kb()
     else:
         msg_text = f'Вы уверены, что хотите удалить все подписки на {telegram_group_info.name.lower()}?'
         keyboard = keyboards.get_prepare_tg_subs_delete_all_kb(group_id)

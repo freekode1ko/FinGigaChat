@@ -10,7 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants.subscriptions import const
 from keyboards.base import get_pagination_kb
-from keyboards.subscriptions import constructors, callbacks
+from keyboards.subscriptions import callbacks, constructors
 
 
 class BaseKeyboard:

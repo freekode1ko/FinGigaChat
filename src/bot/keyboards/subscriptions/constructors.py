@@ -6,9 +6,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import constants
 from constants.subscriptions import const
 from constants.subscriptions import research
-from constants.subscriptions.news import client
-from constants.subscriptions.news import commodity
-from constants.subscriptions.news import industry
 from keyboards.subscriptions import callbacks
 from keyboards.subscriptions.news.client import callbacks as client_callback_factory
 from keyboards.subscriptions.news.commodity import callbacks as commodity_callback_factory
@@ -32,9 +29,9 @@ def get_approve_action_kb(yes_callback: str, no_callback: str, back_callback: st
 
 def get_main_menu_kb() -> InlineKeyboardMarkup:
     """
-    fuck that shit
+    Главное меню подписок
 
-    :return: keyboard for subscriptions main menu
+    :return: keyboard для главного меню подписок
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
@@ -78,8 +75,9 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
                 'Подписки на клиентов': client_callback_factory.GetUserSubs().pack(),
                 'Подписки на сырьевые товары': commodity_callback_factory.GetUserSubs().pack(),
                 'Подписки на отрасли': industry_callback_factory.GetUserSubs().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
                     menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    action=callbacks.SubsMenusEnum.my_subscriptions,
                 ).pack(),
                 'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
             }
@@ -88,9 +86,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
                 'Подписки на клиентов': client_callback_factory.ChangeUserSubs().pack(),
                 'Подписки на сырьевые товары': commodity_callback_factory.ChangeUserSubs().pack(),
                 'Подписки на отрасли': industry_callback_factory.ChangeUserSubs().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
-                        menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
-                    ).pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                    menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    action=callbacks.SubsMenusEnum.change_subscriptions,
+                ).pack(),
                 'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
             }
         case callbacks.SubsMenusEnum.delete_subscriptions:
@@ -98,9 +97,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
                 'Подписки на клиентов': client_callback_factory.DeleteUserSub().pack(),
                 'Подписки на сырьевые товары': commodity_callback_factory.DeleteUserSub().pack(),
                 'Подписки на отрасли': industry_callback_factory.DeleteUserSub().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
-                        menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
-                    ).pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                    menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    action=callbacks.SubsMenusEnum.delete_subscriptions,
+                ).pack(),
                 'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
             }
         case callbacks.SubsMenusEnum.delete_all_subscriptions:
@@ -108,9 +108,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
                 'Подписки на клиентов': client_callback_factory.PrepareDeleteAllSubs().pack(),
                 'Подписки на сырьевые товары': commodity_callback_factory.PrepareDeleteAllSubs().pack(),
                 'Подписки на отрасли': industry_callback_factory.PrepareDeleteAllSubs().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(  # FIXME callbacks
-                        menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
-                    ).pack(),
+                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                    menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
+                    action=callbacks.SubsMenusEnum.delete_all_subscriptions,
+                ).pack(),
                 'Подписки на аналитические отчеты': research.GET_CIB_RESEARCH_SUBS_MENU,  # FIXME callbacks
             }
         case _:

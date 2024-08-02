@@ -12,7 +12,7 @@ from db.api.user_commodity_subscription import user_commodity_subscription_db
 from db.api.user_industry_subscription import user_industry_subscription_db
 from db.api.user_research_subscription import user_research_subscription_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
-from keyboards.subscriptions import constructors as keyboards, callbacks
+from keyboards.subscriptions import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import is_user_has_access, send_or_edit
 

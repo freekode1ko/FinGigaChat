@@ -1,6 +1,5 @@
 """CallbackData по подпискам на каналы в телеграмме"""
 from enum import auto, IntEnum
-from typing import Optional
 
 from aiogram.filters.callback_data import CallbackData
 
