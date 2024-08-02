@@ -1,4 +1,4 @@
 export { useAppDispatch, useAppSelector } from './redux-hooks'
-export { applyTelegramTheme } from './set-theme'
-export { useInitData, useWebApp } from './telegram-hooks'
+export { applyTheme } from './set-theme'
+export { useInitData, useThemeParams, useWebApp } from './telegram-hooks'
 export { cn } from './tw-merge'

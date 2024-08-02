@@ -15,4 +15,12 @@ const useInitData = (): readonly [
   return [WebApp?.initDataUnsafe, WebApp?.initData]
 }
 
-export { useInitData, useWebApp }
+const useThemeParams = (): readonly [
+  TelegramWebApps.WebApp['themeParams'] | undefined,
+  TelegramWebApps.WebApp['colorScheme'] | undefined,
+] => {
+  const WebApp = useWebApp()
+  return [WebApp?.themeParams, WebApp?.colorScheme]
+}
+
+export { useInitData, useThemeParams, useWebApp }

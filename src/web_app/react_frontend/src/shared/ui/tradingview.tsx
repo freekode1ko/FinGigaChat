@@ -5,11 +5,13 @@ export const TradingViewAdvancedWidget = ({
   autosize,
   width,
   height,
+  theme = 'dark',
 }: {
   symbol: string
   width?: string
   height?: string
   autosize?: boolean
+  theme?: 'dark' | 'light'
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -25,7 +27,7 @@ export const TradingViewAdvancedWidget = ({
       autosize: autosize,
       interval: 'D',
       timezone: 'Etc/UTC',
-      theme: 'dark',
+      theme: theme,
       style: '1',
       locale: 'ru',
       allow_symbol_change: false,
@@ -51,6 +53,7 @@ export const TradingViewWidget = ({
   autosize = true,
   chartOnly = false,
   noTimeScale = false,
+  theme = 'dark',
 }: {
   symbol: string
   width?: string
@@ -58,6 +61,7 @@ export const TradingViewWidget = ({
   chartOnly?: boolean
   autosize?: boolean
   noTimeScale?: boolean
+  theme?: 'dark' | 'light'
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -73,7 +77,7 @@ export const TradingViewWidget = ({
       height: height,
       locale: 'ru',
       dateRange: '12M',
-      colorTheme: 'dark',
+      colorTheme: theme,
       isTransparent: false,
       largeChartUrl: '',
       chartOnly: chartOnly,

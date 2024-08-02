@@ -24,7 +24,7 @@ export const NewsCard = ({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <div className="flex py-2 items-center justify-between">
-          <p className="text-accent-text-color">{date}</p>
+          <small>{date}</small>
           {sendReportButton}
         </div>
       </CardHeader>

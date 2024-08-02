@@ -40,8 +40,8 @@ export const Navigation = () => {
                   cn(
                     'flex gap-2 no-underline py-2',
                     isActive
-                      ? 'font-medium border-b-2 border-accent-text-color text-accent-text-color'
-                      : 'text-text-color hover:text-accent-text-color'
+                      ? 'font-medium border-b-2 border-primary-800 text-primary-800 dark:border-primary-300 dark:text-primary-300'
+                      : 'text-dark-blue hover:text-primary-800 dark:text-white dark:hover:text-primary-300'
                   )
                 }
                 onClick={() => setIsOpen(false)}

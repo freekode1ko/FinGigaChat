@@ -1,4 +1,4 @@
-import { CheckCheck, LoaderCircle, Lock, Send } from 'lucide-react'
+import { CheckCheck, LoaderCircle, Send } from 'lucide-react'
 
 import { useSendCibReportMutation } from '@/entities/news'
 import { useInitData } from '@/shared/lib'
@@ -8,12 +8,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   const [trigger, { isSuccess, isLoading }] = useSendCibReportMutation()
   const [userData] = useInitData()
 
-  if (!userData?.user)
-    return (
-      <Button size="sm" variant="outline" disabled>
-        <Lock className="h-4 w-4" /> Отправить отчет CIB
-      </Button>
-    )
+  if (!userData?.user) return
 
   if (isSuccess)
     return (

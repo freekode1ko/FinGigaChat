@@ -1,8 +1,7 @@
-export const applyTelegramTheme = (theme: TelegramWebApps.ThemeParams) => {
-  const root = document.documentElement
-  for (const [key, value] of Object.entries(theme)) {
-    if (value) {
-      root.style.setProperty(`--${key}`, value)
-    }
+export const applyTheme = (theme: 'dark' | 'light') => {
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
   }
 }
