@@ -116,6 +116,7 @@ async def commodity_news_menu(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+
 @router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.quotes))
 async def commodity_quotes_menu(
         callback_query: CallbackQuery,
