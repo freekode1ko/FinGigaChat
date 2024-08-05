@@ -17,8 +17,8 @@ from db.api.commodity import commodity_db
 from handlers.commodity.callbacks import CommodityMenuData, CommodityMenusEnum
 from handlers.commodity.keyboards import get_menu_kb, get_period_kb
 from handlers.quotes import metal_info_command
-from log.bot_logger import user_logger
-from module.article_process import FormatText
+from log.bot_logger import logger, user_logger
+from module.article_process import ArticleProcess, FormatText
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -128,6 +128,12 @@ async def commodity_quotes_menu(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
     """
+    ap_obj = ArticleProcess(logger)
+    com_price, reply_msg = await ap_obj.process_user_alias(callback_data.commodity_id, 'commodity')
+
+    if com_price and reply_msg:
+        await callback_query.message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
+
     await metal_info_command(callback_query.message)
     await utils.base.send_full_copy_of_message(callback_query)
 
