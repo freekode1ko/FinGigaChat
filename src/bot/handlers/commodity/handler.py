@@ -134,7 +134,7 @@ async def commodity_quotes_menu(
     if com_price and reply_msg:
         await callback_query.message.answer(com_price, parse_mode='HTML', disable_web_page_preview=True)
 
-    await metal_info_command(callback_query.message)
+    await metal_info_command(callback_query.message, with_table=False)
     await utils.base.send_full_copy_of_message(callback_query)
 
     chat_id = callback_query.message.chat.id

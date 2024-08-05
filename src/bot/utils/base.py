@@ -204,10 +204,10 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 async def __sent_photo_and_msg(
     message: types.Message,
-    photo: types.InputFile | str,
+    photo: types.InputFile | str | None = None,
     day: list[list] = None,
     month: list[list] = None,
-    title: str = '',
+    title: str | None = '',
     source: str = '',
     protect_content: bool = texts_manager.PROTECT_CONTENT,
 ) -> None:
@@ -234,7 +234,8 @@ async def __sent_photo_and_msg(
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
-    await message.answer_photo(photo, caption=title, parse_mode='HTML', protect_content=protect_content)
+    if photo:
+        await message.answer_photo(photo, caption=title, parse_mode='HTML', protect_content=protect_content)
 
 
 def __replacer(data: str) -> str:
