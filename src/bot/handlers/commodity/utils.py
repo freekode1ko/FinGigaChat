@@ -51,6 +51,14 @@ async def send_anal_report(
         .filter(Commodity.id == commodity_id)
     )
     if not len(result := result.all()):
+        name = (
+            await session.execute(
+                sa.select(Commodity.name)
+                .where(Commodity.id == commodity_id)
+            )
+        ).scalar().capitalize()
+        await message.answer(
+            f'На данный момент отчеты по "<b>{name}<b>" отсутствуют', parse_mode='HTML')
         return None
     commodity, commodity_research = result[0]
     com_name = commodity.name.capitalize()
@@ -59,7 +67,7 @@ async def send_anal_report(
     file_name = commodity_research.file_name
 
     if not title:
-        title = f'<b>Аналитика по {com_name}<b>'
+        title = f'<b>Аналитический обзор по "{com_name}"<b>'
 
     message_text = title + '\n\n' + text
 
