@@ -16,9 +16,14 @@ ENV: Environment = Environment.from_str(_env_value)
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
-STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
+
+DATA_DIR = PROJECT_DIR / 'data'
+STATIC_ASSETS_PATH = DATA_DIR / 'assets'
+TMP_VOICE_FILE_DIR = DATA_DIR / 'voice'
+
 PATH_TO_SOURCES = PROJECT_DIR / 'sources'
-TMP_VOICE_FILE_DIR = PROJECT_DIR / 'data' / 'voice'
+PATH_TO_COMMODITY_REPORTS = PATH_TO_SOURCES / 'commodity_reports'
+
 TMP_VOICE_FILE_DIR.mkdir(parents=True, exist_ok=True)
 
 DEBUG: bool = env.bool('DEBUG', default=False)

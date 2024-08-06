@@ -266,12 +266,21 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def metal_info_command(message: types.Message) -> None:
+async def metal_info_command(
+        message: types.Message,
+        with_table: bool = True,
+) -> None:
     """
     Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param with_table: Отправлять ли таблицу с котировками
     """
+    day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
+    if not with_table:
+        await utils.base.__sent_photo_and_msg(message, None, day)
+        return
+
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
         'JOIN relation_commodity_metals rcm ON rcm.name_from_source=metals."Metals" '
@@ -290,12 +299,14 @@ async def metal_info_command(message: types.Message) -> None:
     transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
 
     png_path = PATH_TO_SOURCES / 'img' / 'metal_table.png'
-    day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
     photo = types.FSInputFile(png_path)
     title = 'Сырьевые товары'
     data_source = 'LME, Bloomberg, investing.com'
     await utils.base.__sent_photo_and_msg(
-        message, photo, day, title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime())
+        message,
+        photo,
+        day,
+        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
     )
 
 

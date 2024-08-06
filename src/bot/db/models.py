@@ -326,6 +326,26 @@ class Commodity(Base):
     commodity_alternative = relationship('CommodityAlternative', back_populates='commodity')
     commodity_pricing = relationship('CommodityPricing', back_populates='commodity')
     relation_commodity_article = relationship('RelationCommodityArticle', back_populates='commodity')
+    commodity_research = relationship('CommodityResearch', uselist=False, back_populates='commodity')
+
+
+class CommodityResearch(Base):
+    __tablename__ = 'commodity_research'
+    __table_args__ = {'comment': 'Таблица с отчетами аналитики по commodity'}
+
+    id = Column(Integer, primary_key=True)
+    commodity_id = Column(
+        Integer,
+        ForeignKey('commodity.id', onupdate='CASCADE', ondelete='CASCADE'),
+        nullable=False,
+        unique=True,
+        comment='Ссылка на commodity'
+    )
+    title = Column(sa.Text, nullable=True, comment='Заголовок отчета')
+    text = Column(Text, nullable=False, comment='Текст отчета')
+    file_name = Column(sa.Text, nullable=True, comment='Файл отчета')
+
+    commodity = relationship('Commodity', back_populates='commodity_research')
 
 
 class IndustryAlternative(Base):

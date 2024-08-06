@@ -10,13 +10,14 @@ import datetime
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 from aiogram.utils.chat_action import ChatActionMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils
 from db import models
 from db.api.commodity import commodity_db
 from handlers.commodity.callbacks import CommodityMenuData, CommodityMenusEnum
 from handlers.commodity.keyboards import get_menu_kb, get_period_kb
-from handlers.quotes import metal_info_command
+from handlers.commodity.utils import send_anal_report
 from log.bot_logger import user_logger
 from module.article_process import FormatText
 
@@ -117,19 +118,19 @@ async def commodity_news_menu(
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.quotes))
-async def commodity_quotes_menu(
+@router.callback_query(CommodityMenuData.filter(F.menu == CommodityMenusEnum.anal))
+async def commodity_anal_menu(
         callback_query: CallbackQuery,
         callback_data: CommodityMenuData,
+        session: AsyncSession,
 ) -> None:
     """
-    Отправка котировок
+    Отправка аналитики
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: Объект, содержащий дополнительную информацию
     """
-    await metal_info_command(callback_query.message)
-    await utils.base.send_full_copy_of_message(callback_query)
+    await send_anal_report(callback_query.message, callback_data.commodity_id, session)
 
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()

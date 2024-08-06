@@ -11,7 +11,7 @@ class CommodityMenusEnum(IntEnum):
 
     commodity_menu = auto()
     news = auto()
-    quotes = auto()
+    anal = auto()
     choice_period = auto()
     close = auto()
 
