@@ -1,6 +1,7 @@
 """Доп функции для меню комодов."""
 import sqlalchemy as sa
 from aiogram import types
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs.config import PATH_TO_COMMODITY_REPORTS
 from constants.enums import SubjectType
@@ -10,8 +11,8 @@ from module.article_process import ArticleProcess
 
 
 async def send_or_get_commodity_quotes_message(
-        message,
-        commodity_id,
+        message: types.Message,
+        commodity_id: int,
         send: bool = True
 
 ) -> str | None:
@@ -33,9 +34,9 @@ async def send_or_get_commodity_quotes_message(
 
 
 async def send_anal_report(
-        message,
-        commodity_id,
-        session,
+        message: types.Message,
+        commodity_id: int,
+        session: AsyncSession,
 ) -> None:
     """
     Отправить аналитический отчет по комодам
