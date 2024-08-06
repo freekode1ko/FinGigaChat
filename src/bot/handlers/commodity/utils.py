@@ -50,10 +50,12 @@ async def send_anal_report(
         .join(CommodityResearch, Commodity.id == CommodityResearch.commodity_id)
         .filter(Commodity.id == commodity_id)
     )
-    commodity, commodity_research = result.all()[0]
+    if not len(result := result.all()):
+        return None
+    commodity, commodity_research = result[0]
     com_name = commodity.name.capitalize()
     title = commodity_research.title
-    text = commodity_research.text
+    text = commodity_research.text or ''
     file_name = commodity_research.file_name
 
     if not title:
