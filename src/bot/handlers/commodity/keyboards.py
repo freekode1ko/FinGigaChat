@@ -17,8 +17,8 @@ def get_menu_kb(commodity_id: int) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
 
-    [ Новости ]
-    [ Котировки ]
+    [  Новости  ]
+    [ Аналитика ]
     [ Завершить ]
 
     :param commodity_id: Айди комода
@@ -35,9 +35,9 @@ def get_menu_kb(commodity_id: int) -> InlineKeyboardMarkup:
     )
     keyboard.row(
         types.InlineKeyboardButton(
-            text='Котировки',
+            text='Аналитика',
             callback_data=callbacks.CommodityMenuData(
-                menu=callbacks.CommodityMenusEnum.quotes,
+                menu=callbacks.CommodityMenusEnum.anal,
                 commodity_id=commodity_id,
             ).pack()
         )

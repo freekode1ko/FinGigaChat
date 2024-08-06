@@ -25,6 +25,7 @@ from handlers.analytics import analytics_sell_side
 from handlers.clients.keyboards import get_client_menu_kb
 from handlers.clients.utils import is_client_in_message
 from handlers.commodity.keyboards import get_menu_kb as get_commodity_menu_kb
+from handlers.commodity.utils import send_or_get_commodity_quotes_message
 from handlers.news import callback_data_factories, keyboards, utils
 from handlers.news.handler import router
 from keyboards.news import callbacks
@@ -473,9 +474,11 @@ async def is_commodity_in_message(
 
     if len(commodities) >= 1:  # больше одного клиента найтись скорее всего не может, если большой процент совпадения стоит
         if send_message_if_commodity_in_message:
+            commodity_id = commodity_ids[0]
             commodity_name = commodities['name'].iloc[0]
-            keyboard = get_commodity_menu_kb(commodity_ids[0])
-            msg_text = f'Выберите раздел для получения данных по <b>{commodity_name}</b>'
+            await send_or_get_commodity_quotes_message(message, commodity_id)
+            keyboard = get_commodity_menu_kb(commodity_id)
+            msg_text = f'Выберите раздел для получения данных по <b>{commodity_name.capitalize()}</b>'
             await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
         return True
     return False
