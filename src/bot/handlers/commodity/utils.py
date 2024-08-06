@@ -67,7 +67,7 @@ async def send_anal_report(
     file_name = commodity_research.file_name
 
     if not title:
-        title = f'<b>Аналитика по {com_name}<b>'
+        title = f'<b>Аналитический обзор по "{com_name}"<b>'
 
     message_text = title + '\n\n' + text
 
