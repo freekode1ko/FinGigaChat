@@ -1,3 +1,4 @@
+"""Доп функции для меню комодов."""
 import sqlalchemy as sa
 from aiogram import types
 
@@ -7,12 +8,22 @@ from db.models import Commodity, CommodityResearch
 from log.bot_logger import logger
 from module.article_process import ArticleProcess
 
+
 async def send_or_get_commodity_quotes_message(
         message,
         commodity_id,
         send: bool = True
 
 ) -> str | None:
+    """
+    Отправить или получить сообщение с котировками
+
+    :param message:      Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param commodity_id: Айди комода.
+    :param send:         Отправить или получить.
+
+    :return:             Строка с текстом сообщения.
+    """
     ap_obj = ArticleProcess(logger)
     com_price, _ = await ap_obj.process_user_alias(commodity_id, SubjectType.commodity)
     if com_price:
@@ -25,15 +36,24 @@ async def send_anal_report(
         message,
         commodity_id,
         session,
-):
-    """Отправить аналитический отчет по комодам"""
+) -> None:
+    """
+    Отправить аналитический отчет по комодам
+
+    :param message:      Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param commodity_id: Айди комода.
+    :param session:      Асинхронная сессия базы данных.
+    """
     result = await session.execute(
         sa.select(Commodity, CommodityResearch)
         .join(CommodityResearch, Commodity.id == CommodityResearch.commodity_id)
         .filter(Commodity.id == commodity_id)
     )
     commodity, commodity_research = result.all()[0]
-    com_name, title, text, file_name = commodity.name.capitalize(), commodity_research.title, commodity_research.text, commodity_research.file_name
+    com_name = commodity.name.capitalize()
+    title = commodity_research.title
+    text = commodity_research.text
+    file_name = commodity_research.file_name
 
     if not title:
         title = f'<b>Аналитика по {com_name}<b>'

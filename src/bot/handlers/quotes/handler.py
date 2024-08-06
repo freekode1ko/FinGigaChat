@@ -268,9 +268,8 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
 
 async def metal_info_command(
         message: types.Message,
-        with_table:bool = True,
+        with_table: bool = True,
 ) -> None:
-
     """
     Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
@@ -281,7 +280,6 @@ async def metal_info_command(
     if not with_table:
         await utils.base.__sent_photo_and_msg(message, None, day)
         return
-
 
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
