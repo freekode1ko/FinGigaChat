@@ -23,4 +23,4 @@ const useThemeParams = (): readonly [
   return [WebApp?.themeParams, WebApp?.colorScheme]
 }
 
-export { useInitData, useThemeParams, useWebApp }
+export { getWebAppFromGlobal, useInitData, useThemeParams, useWebApp }

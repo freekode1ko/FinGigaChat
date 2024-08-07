@@ -1,4 +1,5 @@
 import { QuotesTable, useGetDashboardQuotesQuery } from '@/entities/quotes'
+import { TypographyH2 } from '@/shared/ui'
 
 const DashboardPage = () => {
   const { data } = useGetDashboardQuotesQuery()
@@ -7,9 +8,7 @@ const DashboardPage = () => {
     <>
       {data?.sections.map((section, sectionIdx) => (
         <div key={sectionIdx} className="first:mt-4">
-          <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight text-hint-color">
-            {section.section_name}
-          </h2>
+          <TypographyH2>{section.section_name}</TypographyH2>
           <QuotesTable data={section.data} params={section.section_params} />
         </div>
       ))}

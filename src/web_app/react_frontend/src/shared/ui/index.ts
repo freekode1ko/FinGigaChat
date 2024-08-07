@@ -7,6 +7,7 @@ export {
   CardHeader,
   CardTitle,
 } from './card'
+export { Checkbox } from './checkbox'
 export {
   Drawer,
   DrawerClose,
@@ -19,6 +20,7 @@ export {
   DrawerTitle,
   DrawerTrigger,
 } from './drawer'
+export { Label } from './label'
 export { Layout } from './layout'
 export {
   Sheet,
@@ -43,4 +45,4 @@ export {
   TableHeader,
   TableRow,
 } from './table'
-export { TradingViewAdvancedWidget, TradingViewWidget } from './tradingview'
+export { Paragraph, TypographyH1, TypographyH2 } from './typography'

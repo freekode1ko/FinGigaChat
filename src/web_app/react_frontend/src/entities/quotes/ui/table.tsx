@@ -1,19 +1,14 @@
 import { useState } from 'react'
 
+import { NewsList } from '@/widgets/news-list'
+import { useLazyGetNewsForQuotationQuery } from '@/entities/news'
+import { selectAppTheme } from '@/entities/theme'
 import {
-  NewsCard,
-  SkeletonNewsCard,
-  useLazyGetNewsForQuotationQuery,
-} from '@/entities/news'
-import { PAGE_SIZE } from '@/shared/model'
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  TradingViewAdvancedWidget,
-  TradingViewWidget,
-} from '@/shared/ui'
+  TradingViewAdvancedChart,
+  TradingViewMiniChart,
+} from '@/entities/tradingview'
+import { useAppSelector } from '@/shared/lib'
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/shared/ui'
 import {
   Table,
   TableBody,
@@ -33,14 +28,14 @@ interface QuotesTableProps {
 // ВРЕМЕННОЕ РЕШЕНИЕ: нужна декомпозиция
 
 const QuotesTableRow = (quote: Quotes) => {
-  const [trigger, { data: quoteData, isFetching: quoteIsFetching }] =
+  const appTheme = useAppSelector(selectAppTheme)
+  const [trigger, { data: newsData, isLoading: newsIsLoading }] =
     useLazyGetNewsForQuotationQuery()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const handleDrawerOpen = (quotationId: number) => {
     setIsDrawerOpen(true)
     trigger({ quotationId: quotationId })
   }
-
   return (
     <TableRow>
       <TableCell className="cursor-pointer font-medium">
@@ -61,16 +56,12 @@ const QuotesTableRow = (quote: Quotes) => {
               <DrawerHeader>
                 <DrawerTitle>{quote.name}</DrawerTitle>
               </DrawerHeader>
-              <TradingViewAdvancedWidget symbol={quote.tv_type} height="400" />
-              <div className="flex flex-col gap-2 mt-4">
-                {quoteData?.news.map((news, newsIdx) => (
-                  <NewsCard {...news} key={newsIdx} />
-                ))}
-                {quoteIsFetching &&
-                  Array.from({ length: PAGE_SIZE }).map((_, idx) => (
-                    <SkeletonNewsCard key={idx} />
-                  ))}
-              </div>
+              <TradingViewAdvancedChart
+                symbol={quote.tv_type}
+                height="360"
+                theme={appTheme}
+              />
+              <NewsList news={newsData?.news} showSkeleton={newsIsLoading} />
             </div>
           </DrawerContent>
         </Drawer>
@@ -85,8 +76,8 @@ const QuotesTableRow = (quote: Quotes) => {
       ))}
       <TableCell className="text-right">
         {quote.tv_type ? (
-          <TradingViewWidget
-            symbol={quote.tv_type}
+          <TradingViewMiniChart
+            symbol="TVC:GOLD"
             chartOnly
             width="80"
             height="60"

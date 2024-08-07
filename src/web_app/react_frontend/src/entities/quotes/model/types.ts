@@ -11,3 +11,11 @@ export interface Quotes {
   readonly tv_type: string
   readonly image_path: string
 }
+
+export type PopularQuotes =
+  | 'TVC:GOLD'
+  | 'TVC:SILVER'
+  | 'TVC:PLATINUM'
+  | 'BLACKBULL:BRENT'
+  | 'FX_IDC:CNYRUB'
+  | 'FX_IDC:USDCNY'

@@ -8,7 +8,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   const [trigger, { isSuccess, isLoading }] = useSendCibReportMutation()
   const [userData] = useInitData()
 
-  if (!userData?.user) return
+  // if (!userData?.user) return
 
   if (isSuccess)
     return (
@@ -28,7 +28,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
     <Button
       size="sm"
       onClick={() =>
-        trigger({ newsId: newsId, tgUserId: userData.user!.id.toString() })
+        trigger({ newsId: newsId, tgUserId: userData!.user!.id.toString() })
       }
     >
       <Send className="h-4 w-4" /> Отправить отчет CIB

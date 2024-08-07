@@ -1,3 +1,5 @@
+import React from 'react'
+
 import {
   Card,
   CardContent,
@@ -10,7 +12,7 @@ import {
 import type { News } from '../model'
 
 interface NewsCardProps extends News {
-  sendReportButton?: JSX.Element
+  sendReportButton?: React.ReactNode
 }
 
 export const NewsCard = ({

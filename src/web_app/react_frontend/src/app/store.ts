@@ -1,13 +1,30 @@
+import { favoriteQuotesSlice } from '@/entities/quotes'
+import { themeSlice } from '@/entities/theme'
 import { baseApi } from '@/shared/api'
+import { loadFromLocalStorage, saveToLocalStorage } from '@/shared/lib/redux'
 import { configureStore } from '@reduxjs/toolkit'
+
+const preloadedState = {
+  [favoriteQuotesSlice.name]: loadFromLocalStorage(favoriteQuotesSlice.name),
+}
 
 export const store = configureStore({
   // devTools: import.meta.env.VITE_DEBUG === 'true',
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
+    [themeSlice.name]: themeSlice.reducer,
+    [favoriteQuotesSlice.name]: favoriteQuotesSlice.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(baseApi.middleware),
+  preloadedState,
+})
+
+store.subscribe(() => {
+  saveToLocalStorage(
+    favoriteQuotesSlice.name,
+    store.getState()[favoriteQuotesSlice.name]
+  )
 })
 
 export type RootState = ReturnType<typeof store.getState>
