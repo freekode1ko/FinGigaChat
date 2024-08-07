@@ -58,7 +58,7 @@ async def send_anal_report(
             )
         ).scalar().capitalize()
         await message.answer(
-            f'На данный момент отчеты по "<b>{name}<b>" отсутствуют', parse_mode='HTML')
+            f'На данный момент отчеты по "<b>{name}</b>" отсутствуют', parse_mode='HTML')
         return None
     commodity, commodity_research = result[0]
     com_name = commodity.name.capitalize()
@@ -67,7 +67,7 @@ async def send_anal_report(
     file_name = commodity_research.file_name
 
     if not title:
-        title = f'<b>Аналитический обзор по "{com_name}"<b>'
+        title = f'<b>Аналитический обзор по "{com_name}"</b>'
 
     message_text = title + '\n\n' + text
 
