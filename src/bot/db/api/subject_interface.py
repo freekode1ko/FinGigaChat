@@ -29,6 +29,7 @@ class SubjectInterface:
             relation_alternative: InstrumentedAttribute,
             relation_article: Optional[InstrumentedAttribute] = None,
             table_relation_article: Optional[Type[Base]] = None,
+            score_lower_limit: int = 0,
     ) -> None:
         """
         Инициализация объекта, предоставляющего интерфейс для взаимодействия с таблицей table.
@@ -38,12 +39,14 @@ class SubjectInterface:
         :param relation_alternative:    sqlalchemy.orm.relationship связь с таблицей альтернаивных имен.
         :param table_relation_article:  Таблица sqlalchemy.orm со связью с новостями и скорами.
         :param relation_article:        sqlalchemy.orm.relationship связь с таблицей новостей (необязательна).
+        :param score_lower_limit:       Нижняя граница отсечения новостей (score_col > lower_limit).
         """
         self.table = table
         self.table_alternative = table_alternative
         self.relation_alternative = relation_alternative
         self.relation_article = relation_article
         self.table_relation_article = table_relation_article
+        self.score_lower_limit = score_lower_limit
 
         self.columns = [i.name for i in self.table.__table__.columns]
         self.fields = [getattr(self.table, c) for c in self.columns]
@@ -155,7 +158,7 @@ class SubjectInterface:
                 .join(self.relation_article)
                 .join(self.table)
                 .where(self.table.id.in_(subject_ids))
-                .where(score_col > 0)
+                .where(score_col > self.score_lower_limit)
                 .order_by(self.table.id)
             )
 
