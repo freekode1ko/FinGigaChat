@@ -440,14 +440,9 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
         return True
 
     stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
-    if len(sh_obj.clients) > 1:
-        msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-        keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
-        await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
-    else:
-        ap_obj = ArticleProcess(logger)
-        msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj, sh_obj.clients[0].name)
-        await send_stakeholder_articles(message, ap_obj, sh_obj.clients[0].id, sh_obj.clients[0].name, msg_text)
+    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
+    await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
     return True
 
@@ -533,6 +528,8 @@ async def show_stakeholder_articles(
     """
     clients_ids = utils.get_selected_ids_from_callback_data(callback_data)
     sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
+    if callback_data.get_all:
+        clients_ids = [c.id for c in sh_obj.clients]
     stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
     msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj)
     await callback_query.message.edit_text(msg_text, parse_mode='HTML')
