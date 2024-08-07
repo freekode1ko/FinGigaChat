@@ -21,4 +21,5 @@ telegram_channel_article_db = SubjectInterface(
     None,
     models.RelationTelegramArticle.article,
     models.RelationTelegramArticle,
+    -1,
 )
