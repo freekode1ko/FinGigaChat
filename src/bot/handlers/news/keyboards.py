@@ -432,8 +432,8 @@ def get_select_stakeholder_clients_kb(
         text='Получить по всем',
         callback_data=callback_data_factories.StakeholderData(
             menu=callback_data_factories.NewsMenusEnum.show_news,
-            subject_ids=utils.wrap_selected_ids(all_clients),
             stakeholder_id=stakeholder_id,
+            get_all=True,
         ).pack()
     ))
     keyboard.row(types.InlineKeyboardButton(
