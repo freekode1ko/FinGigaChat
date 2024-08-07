@@ -57,10 +57,10 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
                 subject=news_subject_group,
             ).pack()
         ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='🔥New! Мини-приложение',
-        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news/show')
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='🔥New! Мини-приложение',
+    #     web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news/show')
+    # ))
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,

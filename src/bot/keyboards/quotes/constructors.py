@@ -80,10 +80,10 @@ def get_menu_kb() -> InlineKeyboardMarkup:
         text='Ставки',
         callback_data=quotes.ECO,
     ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='🔥New! Мини-приложение',
-        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/quotation/show')
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='🔥New! Мини-приложение',
+    #     web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/quotation/show')
+    # ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
         callback_data=quotes.END_MENU,
