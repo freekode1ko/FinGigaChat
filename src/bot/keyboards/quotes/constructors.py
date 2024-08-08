@@ -4,10 +4,9 @@ from typing import Type
 import pandas as pd
 from aiogram import types
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from configs import config
 from constants import constants, quotes
 
 
@@ -80,10 +79,10 @@ def get_menu_kb() -> InlineKeyboardMarkup:
         text='Ставки',
         callback_data=quotes.ECO,
     ))
-    keyboard.row(types.InlineKeyboardButton(
-        text='🔥New! Мини-приложение',
-        web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/quotation/show')
-    ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='🔥New! Мини-приложение',
+    #     web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/quotation/show')
+    # ))
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,
         callback_data=quotes.END_MENU,
