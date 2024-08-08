@@ -4,10 +4,9 @@ from typing import Type
 import pandas as pd
 from aiogram import types
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from configs import config
 from constants import constants, quotes
 
 

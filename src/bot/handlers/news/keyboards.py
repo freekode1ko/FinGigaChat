@@ -12,10 +12,9 @@ from typing import Any
 
 import pandas as pd
 from aiogram import types
-from aiogram.types import InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from configs import config
 from constants import constants
 from db import models
 from handlers.news import callback_data_factories, utils
