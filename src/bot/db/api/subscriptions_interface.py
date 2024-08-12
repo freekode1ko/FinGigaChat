@@ -14,6 +14,7 @@ from typing import Type
 
 import pandas as pd
 import sqlalchemy as sa
+from sqlalchemy import orm
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from db import database
@@ -23,7 +24,11 @@ from db.models import Base
 class SubscriptionInterface:
     """Интерфейс для взаимодействия с подписками."""
 
-    def __init__(self, table: Type[Base], subject_id_field: str, subject_table: Type[Base]) -> None:
+    def __init__(self,
+                 table: Type[Base],
+                 subject_id_field: str,
+                 subject_table: Type[Base],
+                 order_fields: list[orm.attributes.InstrumentedAttribute]) -> None:
         """
         Инициализация объекта, предоставляющего интерфейс для взаимодействия с подписками с таблицей table
 
@@ -34,6 +39,7 @@ class SubscriptionInterface:
         self.table = table
         self.subject_table = subject_table
         self.subject_id_field = subject_id_field
+        self.order_fields = order_fields if order_fields else [self.subject_table.name]
 
     async def add_subscription(self, user_id: int, subject_id: int) -> None:
         """
@@ -95,7 +101,7 @@ class SubscriptionInterface:
                 sa.select(self.subject_table.id, self.subject_table.name)
                 .join(self.table, getattr(self.table, self.subject_id_field) == self.subject_table.id)
                 .where(self.table.user_id == user_id)
-                .order_by(self.subject_table.name)
+                .order_by(*self.order_fields)
             )
             data = result.all()
             return pd.DataFrame(data, columns=['id', 'name'])
@@ -119,7 +125,7 @@ class SubscriptionInterface:
                 ).outerjoin(
                     self.table,
                     ((getattr(self.table, self.subject_id_field) == self.subject_table.id) & (self.table.user_id == user_id))
-                ).order_by(self.subject_table.name)
+                ).order_by(*self.order_fields)
             )
             data = result.all()
             return pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])

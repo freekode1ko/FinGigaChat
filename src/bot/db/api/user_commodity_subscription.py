@@ -7,4 +7,9 @@ from db import models
 from db.api.subscriptions_interface import SubscriptionInterface
 
 
-user_commodity_subscription_db = SubscriptionInterface(models.UserCommoditySubscriptions, 'commodity_id', models.Commodity)
+user_commodity_subscription_db = SubscriptionInterface(
+    models.UserCommoditySubscriptions,
+    'commodity_id',
+    models.Commodity,
+    [models.Commodity.name],
+)
