@@ -82,16 +82,26 @@ async def tg_newsletter(
                 continue
 
             start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по разделу <b>{section.name}</b>:'
-            msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
-            saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
+            try:
+                msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
+            except Exception as e:
+                user_logger.error(f'ERROR *{user_id}* {user_name} - {e}')
+                break
+            else:
+                saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 
             tg_news = group_news_by_tg_channels(tg_news)
 
             for tg_chan_name, articles in tg_news.items():
                 msg_text = get_tg_channel_news_msg(tg_chan_name, articles)
-                messages = await bot_send_msg(bot, user_id, msg_text)
-                for m in messages:
-                    saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
+                try:
+                    messages = await bot_send_msg(bot, user_id, msg_text)
+                except Exception as e:
+                    user_logger.error(f'ERROR *{user_id}* {user_name} - {e}')
+                    break
+                else:
+                    for m in messages:
+                        saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
 
             user_logger.debug(
                 f'*{user_id}* Пользователю {user_name} пришла рассылка сводки новостей из telegram каналов по отрасли '
