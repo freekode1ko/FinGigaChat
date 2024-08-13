@@ -734,5 +734,3 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
                 info_msg = f'Не удалось удалить сообщение с меню подписок у пользователя {user_id}, {message_id}: %s'
                 logger.error(info_msg, e)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-
-
