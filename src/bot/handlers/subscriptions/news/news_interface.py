@@ -8,6 +8,7 @@ from typing import Protocol, Type
 
 import pandas as pd
 from aiogram import Router, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
@@ -22,8 +23,9 @@ from db.api.subject_interface import SubjectInterface
 from db.api.subscriptions_interface import IndustryChildrenSubscriptionInterface, SubscriptionInterface
 from db.api.user_research_subscription import user_research_subscription_db
 from handlers.news.utils import decline_words
+from handlers.subscriptions.news import utils
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
-from log.bot_logger import user_logger
+from log.bot_logger import logger, user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit
 
@@ -611,12 +613,17 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
     def _setup_scroller(self) -> None:
         """Выгрузка элементов по industry_id"""
         @self.router.callback_query(self.callbacks.SelectSubs.filter())
-        async def scroller(callback_query: types.CallbackQuery, callback_data: CallbacksModule.SelectSubs) -> None:
+        async def scroller(
+                callback_query: types.CallbackQuery,
+                callback_data: CallbacksModule.SelectSubs,
+                state: FSMContext,
+        ) -> None:
             """
             Меню с пагинацией для добавления подписок
 
             :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
             :param callback_data: номер страницы, id субъекта, на которого пользователь подписывается или отписывается
+            :param state: Состояние FSM
             """
             chat_id = callback_query.message.chat.id
             user_msg = callback_data.pack()
@@ -630,6 +637,12 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
             subject_id = callback_data.subject_id
             need_add = callback_data.need_add
             industry_id = callback_data.industry_id
+
+            await state.set_state(self.write_subscriptions_state)
+            await state.set_data({
+                'callback_data': callback_data.model_dump(),
+                'message_id': callback_query.message.message_id,
+            })
 
             if subject_id:
                 if need_add:
@@ -650,3 +663,76 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
 
             await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+    def _setup_set_user_subscriptions(self) -> None:
+        """Setup set_user_subscriptions menu"""
+        @self.router.message(self.write_subscriptions_state)
+        async def set_user_subscriptions(message: types.Message, state: FSMContext) -> None:
+            """
+            Обработка сообщения от пользователя и запись известных объектов новостей в подписки
+
+            :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+            :param state: конечный автомат о состоянии
+            """
+            chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: поиск {self.subject_par}')
+            user_id = message.from_user.id
+
+            # clear user message
+            user_request = utils.clear_user_request(user_msg)
+
+            # get state data
+            data = await state.get_data()
+            message_id = data['message_id']
+            callback_data = data['callback_data']
+
+            industry_id = callback_data['industry_id']
+
+            # get subjects by industry_id
+            subject_df = await self.subscription_db.get_subject_df_by_industry_id(user_id, industry_id=industry_id)
+            # full match search
+            page = utils.find_page_by_subject_name(subject_df, user_request)
+
+            # fuzzy search
+            if page == -1:
+                fuzzy_searcher = FuzzyAlternativeNames()
+                nearest_subjects_id = await fuzzy_searcher.find_subjects_id_by_name(
+                    user_request,
+                    subject_types=[self.subject_db.table_alternative],
+                )
+                subject_ids = subject_df['id'].values.tolist()
+                nearest_subjects_id = tuple(i for i in nearest_subjects_id if i in subject_ids)
+
+                if not nearest_subjects_id:
+                    await message.answer(f'Не удалось найти {self.subject_vin} по запросу "{user_msg}"', parse_mode='HTML')
+                    return
+
+                page = utils.find_page_by_subject_id(subject_df, nearest_subjects_id[0])
+
+            title = f'Подборка {self.subject_par}'
+            page_data, page_info, max_pages = get_page_data_and_info(subject_df, page)
+            msg_text = (
+                f'{title}\n<b>{page_info}</b>\n\n'
+                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно'
+            )
+            keyboard = self.keyboards.get_subjects_kb_by_industry_id(page_data, page, max_pages, industry_id=industry_id)
+
+            # Новое сбщ с меню подписок на нужной странице
+            msg = await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+            # Обновление данных о сбщ с меню подписок (если повторится поиск)
+            await state.set_data({
+                'callback_data': {
+                    'industry_id': industry_id,
+                    'page': page,
+                },
+                'message_id': msg.message_id,
+            })
+            # удаляем старое меню подписок
+            try:
+                await message.bot.delete_message(message.chat.id, message_id, config.DELETE_TG_MESSAGES_TIMEOUT)
+            except TelegramBadRequest as e:
+                info_msg = f'Не удалось удалить сообщение с меню подписок у пользователя {user_id}, {message_id}: %s'
+                logger.error(info_msg, e)
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+
