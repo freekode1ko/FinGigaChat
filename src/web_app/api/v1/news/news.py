@@ -14,14 +14,14 @@ from utils.bot_interaction import send_cib_report_to_user
 router = APIRouter()
 
 
-@router.get('/')
+@router.get('/', tags=["news"])
 async def get_news(page: Optional[int] = 1, size: Optional[int] = 10) -> News:
     """Получить все новости отсортированные по дате"""
 
     return (await get_news_from_article(page, size))
 
 
-@router.get('/{quotation_id}')
+@router.get('/{quotation_id}', tags=["news"])
 async def news_for_quotation(quotation_id: int) -> News:
     article_news = await get_news_from_article(page=1, size=10)
     cib_news = await get_cib_news(quotation_id)
@@ -35,7 +35,7 @@ async def news_for_quotation(quotation_id: int) -> News:
     )
 
 
-@router.post('/send', status_code=status.HTTP_202_ACCEPTED)
+@router.post('/send', status_code=status.HTTP_202_ACCEPTED, tags=["news"])
 async def send_news_to_user(user_id: int, news_id: str):
     await send_cib_report_to_user(user_id, news_id)
     return None

@@ -6,14 +6,14 @@ from api.v1.quotation.schemas import ExchangeSectionData
 router = APIRouter()
 
 
-@router.get('/popular')
+@router.get('/popular', tags=["quotation"])
 async def popular_quotation(request: Request) -> ExchangeSectionData:
     return ExchangeSectionData(
         sections=(await get_quotation_from_fx()),
     )
 
 
-@router.get('/dashboard')
+@router.get('/dashboard', tags=["quotation"])
 async def dashboard_quotation(request: Request) -> ExchangeSectionData:
     return ExchangeSectionData(
         sections=[
