@@ -84,7 +84,7 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
             buttons = {
                 'Подписки на клиентов': client_callback_factory.ChangeUserSubs().pack(),
                 'Подписки на сырьевые товары': commodity_callback_factory.ChangeUserSubs().pack(),
-                'Подписки на отрасли': industry_callback_factory.ChangeUserSubs().pack(),
+                'Подписки на отрасли': industry_callback_factory.SelectSubs().pack(),
                 'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
                     menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
                     action=callbacks.SubsMenusEnum.change_subscriptions,

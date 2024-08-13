@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 
-from db import database
+from db import database, models
 from db.models import Base
 
 
@@ -28,7 +28,7 @@ class SubscriptionInterface:
                  table: Type[Base],
                  subject_id_field: str,
                  subject_table: Type[Base],
-                 order_fields: list[orm.attributes.InstrumentedAttribute]) -> None:
+                 order_fields: list[orm.attributes.InstrumentedAttribute] | None = None) -> None:
         """
         Инициализация объекта, предоставляющего интерфейс для взаимодействия с подписками с таблицей table
 
@@ -181,3 +181,37 @@ class SubscriptionInterface:
             ).from_select(['user_id', self.subject_id_field], select_query).on_conflict_do_nothing()
             await session.execute(stmt)
             await session.commit()
+
+
+class IndustryChildrenSubscriptionInterface(SubscriptionInterface):
+    """Интерфейс взаимодействия с подписками на элементы, которые связаны с отраслями"""
+
+    async def get_subject_df_by_industry_id(self, user_id: int, industry_id: int | None = None) -> pd.DataFrame:
+        """
+        Список элементов с флагом is_subscribed
+
+        :param user_id: telegram user_id
+        :param industry_id: industry.id
+        :returns:       DataFrame[id, name, is_subscribed]
+        """
+        async with database.async_session() as session:
+            query = sa.select(
+                self.subject_table.id,
+                self.subject_table.name,
+                sa.case(
+                    (self.table.user_id.is_(None), False),
+                    else_=True,
+                ).label('is_subscribed'),
+            ).outerjoin(
+                self.table,
+                ((getattr(self.table, self.subject_id_field) == self.subject_table.id) & (self.table.user_id == user_id))
+            ).outerjoin(
+                models.Industry, models.Industry.id == self.subject_table.industry_id
+            ).order_by(*self.order_fields)
+
+            if industry_id is not None:
+                query = query.where(models.Industry.id == industry_id)
+
+            result = await session.execute(query)
+            data = result.all()
+            return pd.DataFrame(data, columns=['id', 'name', 'is_subscribed'])
