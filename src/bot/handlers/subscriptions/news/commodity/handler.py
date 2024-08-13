@@ -8,6 +8,7 @@ from handlers.subscriptions.handler import router
 from handlers.subscriptions.news.news_interface import ClientAndCommoditySubscriptionsHandler
 from keyboards.subscriptions.news.commodity import callbacks
 from keyboards.subscriptions.news.commodity.constructors import keyboard
+from utils.decorators import singleton
 
 
 class CommoditySubscriptionsStates(StatesGroup):
@@ -16,7 +17,8 @@ class CommoditySubscriptionsStates(StatesGroup):
     commodity_user_subscriptions = State()
 
 
-class CommoditySubscriptionsHandler(ClientAndCommoditySubscriptionsHandler):  # FIXME add singleton
+@singleton
+class CommoditySubscriptionsHandler(ClientAndCommoditySubscriptionsHandler):
     """Обработчик меню подписок на сырье"""
 
     def __init__(self) -> None:
