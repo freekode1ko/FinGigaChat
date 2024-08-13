@@ -600,6 +600,7 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
             subject_name_genitive,
             subject_name_accusative,
         )
+        self.subject_gent_sing = decline_words(subject_name_nominative, ('sing', 'gent'), str.lower)
 
     def _setup_change_user_subs(self) -> None:
         """Меню выбора отрасли, к которой принадлежат клиенты/сырье"""
@@ -657,7 +658,8 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
             page_data, page_info, max_pages = get_page_data_and_info(subject_df, page)
             msg_text = (
                 f'{title}\n<b>{page_info}</b>\n\n'
-                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно'
+                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно\n\n'
+                f'Для поиска введите сообщение с названием {self.subject_gent_sing}'
             )
             keyboard = self.keyboards.get_subjects_kb_by_industry_id(page_data, page, max_pages, industry_id=industry_id)
 
@@ -713,7 +715,8 @@ class ClientAndCommoditySubscriptionsHandler(NewsHandler):
             page_data, page_info, max_pages = get_page_data_and_info(subject_df, page)
             msg_text = (
                 f'{title}\n<b>{page_info}</b>\n\n'
-                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно'
+                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно\n\n'
+                f'Для поиска введите сообщение с названием {self.subject_gent_sing}'
             )
             keyboard = self.keyboards.get_subjects_kb_by_industry_id(page_data, page, max_pages, industry_id=industry_id)
 
