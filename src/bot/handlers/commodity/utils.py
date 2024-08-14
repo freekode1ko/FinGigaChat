@@ -46,11 +46,11 @@ async def send_anal_report(
     :param session:      Асинхронная сессия базы данных.
     """
     result = await session.execute(
-            sa.select(Commodity, CommodityResearch)
-            .join(RelationCommodityCommodityResearch, RelationCommodityCommodityResearch.commodity_id == Commodity.id)
-            .join(CommodityResearch, CommodityResearch.id == RelationCommodityCommodityResearch.commodity_research_id)
-            .filter(Commodity.id == commodity_id)
-        )
+        sa.select(Commodity, CommodityResearch)
+        .join(RelationCommodityCommodityResearch, RelationCommodityCommodityResearch.commodity_id == Commodity.id)
+        .join(CommodityResearch, CommodityResearch.id == RelationCommodityCommodityResearch.commodity_research_id)
+        .filter(Commodity.id == commodity_id)
+    )
     if not len(result := result.all()):
         name = (
             await session.execute(
