@@ -217,4 +217,3 @@ class StakeholderData(NewsMenuData, prefix=MENU):
     stakeholder_id: int = 0
     selected_ids: int = 0
     subject_id: int = 0
-    get_all: bool = False

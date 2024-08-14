@@ -506,7 +506,7 @@ async def choose_stakeholder_clients(
     stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
 
     msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = keyboards.get_select_stakeholder_clients_kb(callback_data.stakeholder_id, sh_obj.clients, callback_data)
+    keyboard = keyboards.get_select_stakeholder_clients_kb(callback_data.stakeholder_id, sh_obj.clients)
     await send_or_edit(callback_query, msg_text, keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
@@ -526,10 +526,8 @@ async def show_stakeholder_articles(
     :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
     :param session:         Сессия для взаимодействия с бд.
     """
-    clients_ids = utils.get_selected_ids_from_callback_data(callback_data)
     sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
-    if callback_data.get_all:
-        clients_ids = [c.id for c in sh_obj.clients]
+    clients_ids = [c.id for c in sh_obj.clients]
     stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
     msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj)
     await callback_query.message.edit_text(msg_text, parse_mode='HTML')
