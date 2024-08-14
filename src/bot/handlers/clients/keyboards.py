@@ -125,7 +125,7 @@ def get_stakeholder_menu_kb(
         )
 
     keyboard.row(types.InlineKeyboardButton(
-        text='Получить по всем',
+        text='Получить новости по всем упоминаниям',
         callback_data=callback_data_factories.ClientsMenuData(
             menu=callback_data_factories.ClientsMenusEnum.show_news_from_sh,
         ).pack()
