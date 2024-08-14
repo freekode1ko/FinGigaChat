@@ -4,14 +4,15 @@
 Предоставляет стандартный интерфейс взаимодействия с таблицей.
 Дает возможность поиска по имени
 """
-from typing import Optional
+from typing import Optional, Type
 
+import pandas as pd
 from sqlalchemy import func, select
 
 from constants import enums
 from db import database
 from db.api.subject_interface import SubjectInterface
-from db.models import Industry, IndustryAlternative, IndustryDocuments
+from db.models import Base, Industry, IndustryAlternative, IndustryDocuments
 
 
 async def get_by_name(name: str) -> Optional[Industry]:
@@ -51,4 +52,31 @@ async def get_industry_analytic_files(
         return list(result.scalars())
 
 
-industry_db = SubjectInterface(Industry, IndustryAlternative, Industry.industry_alternative)
+class IndustryInterface(SubjectInterface):
+    """Интейрфейс взаимодействия с отраслями"""
+
+    def __init__(self) -> None:
+        super().__init__(
+            Industry,
+            IndustryAlternative,
+            Industry.industry_alternative,
+        )
+
+    async def get_industries_from_table(self, table: Type[Base]) -> pd.DataFrame:
+        """
+        Получить отрасли, которые присутствуют в таблице table.
+
+        :param table: таблицы, где ищем отрасли
+        :return: отрасли [id, name, display_order]
+        """
+        async with database.async_session() as session:
+            subquery = select(table.industry_id.distinct()).subquery()
+            stmt = select(
+                *self.fields
+            ).where(self.table.id.in_(subquery))
+            result = await session.execute(stmt)
+            data = result.fetchall()
+            return pd.DataFrame(data, columns=self.columns)
+
+
+industry_db = IndustryInterface()
