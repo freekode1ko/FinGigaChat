@@ -557,7 +557,7 @@ async def send_stakeholder_articles(
         ap_obj: ArticleProcess,
         client_id: int,
         client_name: str = '',
-        extra_text: str = '',
+        extra_text: str = ''
 ) -> None:
     """
     Отправка новостей о клиенте стейкхолдера.
