@@ -51,6 +51,10 @@ class ClientsMenusEnum(IntEnum):
     # Выгрузка отчетов за период
     get_anal_reports = auto()
 
+    # меню для стейкхолдеров
+    choose_stakeholder_clients = auto()  # выбор клиентов стейкхолдера
+    show_news = auto()  # выдача новостей по выбранным клиентам
+
 
 class ClientsMenuData(CallbackData, prefix=MENU):
     """Меню клиенты"""
@@ -62,3 +66,4 @@ class ClientsMenuData(CallbackData, prefix=MENU):
     days_count: int = 1
     page: int = 0
     fin_indicator_type: FinancialIndicatorsType | None = None
+    stakeholder_id: int = 0

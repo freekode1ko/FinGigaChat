@@ -22,11 +22,11 @@ from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
-from handlers.clients.keyboards import get_client_menu_kb
-from handlers.clients.utils import is_client_in_message
+from handlers.clients.callback_data_factories import ClientsMenuData, ClientsMenusEnum
+from handlers.clients.keyboards import get_client_menu_kb, get_stakeholder_menu_kb
+from handlers.clients.utils import get_menu_msg_by_sh_type, get_show_msg_by_sh_type, is_client_in_message
 from handlers.commodity.keyboards import get_menu_kb as get_commodity_menu_kb
 from handlers.commodity.utils import send_or_get_commodity_quotes_message
-from handlers.news import callback_data_factories, keyboards, utils
 from handlers.news.handler import router
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
@@ -440,8 +440,8 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
         return True
 
     stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
-    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
+    msg_text = get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = get_stakeholder_menu_kb(sh_obj.id, sh_obj.clients)
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
     return True
@@ -479,12 +479,10 @@ async def is_commodity_in_message(
     return False
 
 
-@router.callback_query(callback_data_factories.StakeholderData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholder_clients
-))
+@router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.choose_stakeholder_clients))
 async def choose_stakeholder_client(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.StakeholderData,
+        callback_data: ClientsMenuData,
 ) -> None:
     """
     Отображение меню выбранного клиента стейкхолдера.
@@ -496,14 +494,15 @@ async def choose_stakeholder_client(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    client_dict = await client_db.get(callback_data.subject_id)
+    client_dict = await client_db.get(callback_data.client_id)
     client_name: str = client_dict['name']
 
     keyboard = get_client_menu_kb(
-        callback_data.subject_id,
+        callback_data.client_id,
         current_page=0,
         research_type_id=await get_research_type_id_by_name(client_name),
-        with_back_button=False,
+        with_back_button=True,
+        stakeholder_id=callback_data.stakeholder_id,
     )
     await send_or_edit(
         callback_query,
@@ -513,12 +512,10 @@ async def choose_stakeholder_client(
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
 
-@router.callback_query(
-    callback_data_factories.StakeholderData.filter(F.menu == callback_data_factories.NewsMenusEnum.show_news)
-)
+@router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.show_news))
 async def show_stakeholder_articles(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.StakeholderData,
+        callback_data: ClientsMenuData,
         session: AsyncSession,
 ) -> None:
     """
@@ -531,7 +528,7 @@ async def show_stakeholder_articles(
     sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
     clients_ids = [c.id for c in sh_obj.clients]
     stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
-    msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj)
+    msg_text = get_show_msg_by_sh_type(stakeholder_types, sh_obj)
     await callback_query.message.edit_text(msg_text, parse_mode='HTML')
 
     ap_obj = ArticleProcess(logger)

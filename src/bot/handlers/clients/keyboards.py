@@ -8,6 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
 from constants.enums import FinancialIndicatorsType
+from db import models
 from handlers.clients import callback_data_factories
 from keyboards.base import get_pagination_kb
 
@@ -95,12 +96,60 @@ def get_clients_list_kb(
     )
 
 
+def get_stakeholder_menu_kb(
+        stakeholder_id: int,
+        sh_clients: list[models.Client],
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида.
+
+    [Имя клиента 1]
+    [...]
+    [Имя клиента N]
+    [Получить новости]
+    [Завершить]
+
+    :param stakeholder_id:      ID стейкхолдера, по которому нужно получить меню клиентов.
+    :param sh_clients:          Клиенты стейкхолдера.
+    :return:                    Клавиатуру с клиентами стейкхолдера.
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    for sh_client in sh_clients:
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=sh_client.name,
+                callback_data=callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.choose_stakeholder_clients,
+                    stakeholder_id=stakeholder_id,
+                    client_id=sh_client.id,
+                ).pack()
+            )
+        )
+
+    keyboard.row(types.InlineKeyboardButton(
+        text='Получить по всем',
+        callback_data=callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.show_news,
+            stakeholder_id=stakeholder_id,
+        ).pack()
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.end_menu
+        ).pack()
+    ))
+    return keyboard.as_markup()
+
+
 def get_client_menu_kb(
         client_id: int,
         current_page: int,
         subscribed: bool = False,
         research_type_id: Optional[int] = None,
         with_back_button: bool = True,
+        stakeholder_id: int = 0,
 ) -> InlineKeyboardMarkup:
     """
     Получение клавиатуры для клиента
@@ -119,6 +168,7 @@ def get_client_menu_kb(
     :param subscribed: ClientsMenuData.subscribed
     :param research_type_id: research_type.id | None
     :param with_back_button: нужна ли кнопка назад
+    :param stakeholder_id: id стейкхолдера
     :return: клавиатура
     """
     keyboard = InlineKeyboardBuilder()
@@ -130,6 +180,7 @@ def get_client_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
 
@@ -142,6 +193,7 @@ def get_client_menu_kb(
                 research_type_id=research_type_id,
                 page=current_page,
                 subscribed=subscribed,
+                stakeholder_id=stakeholder_id,
             ).pack(),
         ))
 
@@ -152,6 +204,7 @@ def get_client_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -161,6 +214,7 @@ def get_client_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -170,6 +224,7 @@ def get_client_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     # keyboard.row(types.InlineKeyboardButton(
@@ -179,6 +234,7 @@ def get_client_menu_kb(
     #         client_id=client_id,
     #         page=current_page,
     #         subscribed=subscribed,
+    #         stakeholder_id = stakeholder_id,
     #     ).pack(),
     # ))
     # keyboard.row(types.InlineKeyboardButton(
@@ -188,6 +244,7 @@ def get_client_menu_kb(
     #         client_id=client_id,
     #         page=current_page,
     #         subscribed=subscribed,
+    #         stakeholder_id = stakeholder_id,
     #     ).pack(),
     # ))
     if with_back_button:
@@ -197,6 +254,7 @@ def get_client_menu_kb(
                 menu=callback_data_factories.ClientsMenusEnum.clients_list,
                 page=current_page,
                 subscribed=subscribed,
+                stakeholder_id=stakeholder_id,
             ).pack(),
         ))
     keyboard.row(types.InlineKeyboardButton(
@@ -212,6 +270,7 @@ def get_news_menu_kb(
         client_id: int,
         current_page: int,
         subscribed: bool,
+        stakeholder_id: int = 0,
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
@@ -222,6 +281,7 @@ def get_news_menu_kb(
     :param client_id: client.id
     :param current_page: ClientsMenuData.page
     :param subscribed: ClientsMenuData.subscribed
+    :param stakeholder_id: id стейкхолдера
     """
     keyboard = InlineKeyboardBuilder()
     # keyboard.row(types.InlineKeyboardButton(
@@ -240,6 +300,7 @@ def get_news_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
 
@@ -250,6 +311,7 @@ def get_news_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -269,6 +331,7 @@ def get_periods_kb(
         periods: list[dict[str, Any]],
         select_period_menu: callback_data_factories.ClientsMenusEnum,
         back_menu: callback_data_factories.ClientsMenusEnum,
+        stakeholder_id: int = 0,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура с выбором периода, за который выгружаются новости по клиенту
@@ -280,6 +343,7 @@ def get_periods_kb(
     :param periods: list[dict[text: str, days: int]]
     :param select_period_menu: callback_data_factories.ClientsMenusEnum пункт меню, в который ведет выбор периода
     :param back_menu: callback_data_factories.ClientsMenusEnum пункт меню, в который ведет кнопка Назад
+    :param stakeholder_id: id стейкхолдера
     return:
     [ period.text ]
     ...
@@ -298,6 +362,7 @@ def get_periods_kb(
                 days_count=period['days'],
                 page=current_page,
                 subscribed=subscribed,
+                stakeholder_id=stakeholder_id,
             ).pack(),
         ))
 
@@ -309,6 +374,7 @@ def get_periods_kb(
             research_type_id=research_type_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -324,6 +390,7 @@ def get_products_menu_kb(
         client_id: int,
         current_page: int,
         subscribed: bool,
+        stakeholder_id: int = 0,
 ) -> InlineKeyboardMarkup:
     """
     Получение клавиатуры для продуктов
@@ -334,6 +401,7 @@ def get_products_menu_kb(
     :param client_id: client.id
     :param current_page: ClientsMenuData.page
     :param subscribed: ClientsMenuData.subscribed
+    :param stakeholder_id: id стейкхолдера
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -344,6 +412,7 @@ def get_products_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
 
@@ -354,6 +423,7 @@ def get_products_menu_kb(
             client_id=client_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
@@ -371,6 +441,7 @@ def client_analytical_indicators_kb(
         subscribed: bool,
         research_type_id: int,
         with_financial_indicators: bool,
+        stakeholder_id: int = 0,
 ) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
@@ -388,6 +459,7 @@ def client_analytical_indicators_kb(
     :param subscribed:                  ClientsMenuData.subscribed
     :param research_type_id:            ClientsMenuData.research_type_id
     :param with_financial_indicators:   Добавлять ли кнопки для получения фин показателей?
+    :param stakeholder_id: id стейкхолдера
     """
     keyboard = InlineKeyboardBuilder()
 
@@ -400,6 +472,7 @@ def client_analytical_indicators_kb(
                 research_type_id=research_type_id,
                 page=current_page,
                 subscribed=subscribed,
+                stakeholder_id=stakeholder_id,
             ).pack(),
         },
     ]
@@ -412,6 +485,7 @@ def client_analytical_indicators_kb(
                     menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
                     client_id=client_id,
                     fin_indicator_type=FinancialIndicatorsType.review_table,
+                    stakeholder_id=stakeholder_id,
                 ).pack(),
             },
             {
@@ -420,6 +494,7 @@ def client_analytical_indicators_kb(
                     menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
                     client_id=client_id,
                     fin_indicator_type=FinancialIndicatorsType.pl_table,
+                    stakeholder_id=stakeholder_id,
                 ).pack(),
             },
             {
@@ -428,6 +503,7 @@ def client_analytical_indicators_kb(
                     menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
                     client_id=client_id,
                     fin_indicator_type=FinancialIndicatorsType.balance_table,
+                    stakeholder_id=stakeholder_id,
                 ).pack(),
             },
             {
@@ -436,6 +512,7 @@ def client_analytical_indicators_kb(
                     menu=callback_data_factories.ClientsMenusEnum.financial_indicators,
                     client_id=client_id,
                     fin_indicator_type=FinancialIndicatorsType.money_table,
+                    stakeholder_id=stakeholder_id,
                 ).pack(),
             },
         ]
@@ -454,6 +531,7 @@ def client_analytical_indicators_kb(
             research_type_id=research_type_id,
             page=current_page,
             subscribed=subscribed,
+            stakeholder_id=stakeholder_id,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
