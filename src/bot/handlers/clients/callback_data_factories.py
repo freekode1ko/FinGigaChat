@@ -66,4 +66,3 @@ class ClientsMenuData(CallbackData, prefix=MENU):
     days_count: int = 1
     page: int = 0
     fin_indicator_type: FinancialIndicatorsType | None = None
-    stakeholder_id: int = 0
