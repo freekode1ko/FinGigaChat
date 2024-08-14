@@ -48,7 +48,7 @@ async def set_rag_mode(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
-        user_msg: str | None = None
+        user_msg: str | None = None,
 ) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС).
@@ -111,7 +111,7 @@ async def _get_response(
         full_name: str,
         user_query: str,
         use_rephrase: bool,
-        rephrase_query: str = ''
+        rephrase_query: str = '',
 ) -> tuple[RetrieverType, str, str]:
     """
     Получение ответа от Базы Знаний или GigaChat.
@@ -188,7 +188,7 @@ async def ask_with_dialog(
         state: FSMContext,
         session: AsyncSession,
         user_msg: str | None = None,
-        first_user_query: str = ''
+        first_user_query: str = '',
 ) -> None:
     """
     Отправляет ответ на запрос пользователя, используя историю диалога.
@@ -233,7 +233,7 @@ async def ask_without_dialog(
         call: types.CallbackQuery,
         callback_data: RegenerateResponse,
         state: FSMContext,
-        session: AsyncSession
+        session: AsyncSession,
 ) -> None:
     """
     Отправляет ответ на запрос пользователя без использования истории диалога.
