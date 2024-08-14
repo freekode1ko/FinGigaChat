@@ -53,7 +53,7 @@ class ClientsMenusEnum(IntEnum):
 
     # меню для стейкхолдеров
     choose_stakeholder_clients = auto()  # выбор клиентов стейкхолдера
-    show_news = auto()  # выдача новостей по выбранным клиентам
+    show_news_from_sh = auto()  # выдача новостей по всем клиентам стейкхолдера
 
 
 class ClientsMenuData(CallbackData, prefix=MENU):

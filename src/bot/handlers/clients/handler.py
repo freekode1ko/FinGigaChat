@@ -91,7 +91,7 @@ async def main_sh_menu(message: types.CallbackQuery | types.Message, session: As
     sh_obj = await stakeholder.get_stakeholder_by_id(session, stakeholder_id)
     stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
     msg_text = get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = keyboards.get_stakeholder_menu_kb(sh_obj.id, sh_obj.clients)
+    keyboard = keyboards.get_stakeholder_menu_kb(sh_obj.clients)
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -158,9 +158,11 @@ async def clients_list(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = from_user.id
 
-    if callback_data.stakeholder_id:
-        await main_sh_menu(callback_query, session, callback_data.stakeholder_id)
-        return
+    if state:
+        data = await state.get_data()
+        if sh_id := data.get('stakeholder_id'):
+            await main_sh_menu(callback_query, session, sh_id)
+            return
 
     subscribed = callback_data.subscribed
     page = callback_data.page
@@ -255,7 +257,6 @@ async def get_client_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
-        stakeholder_id=callback_data.stakeholder_id,
     )
     msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_info['name'].capitalize())
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -286,7 +287,6 @@ async def get_client_news_menu(
         client_id,
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
-        stakeholder_id=callback_data.stakeholder_id,
     )
     msg_text = f'Какие новости вы хотите получить по клиенту <b>{client_info["name"].capitalize()}</b>'
 
@@ -331,7 +331,6 @@ async def get_client_analytic_indicators(
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
         with_financial_indicators=not client_fin_tables.empty,
-        stakeholder_id=callback_data.stakeholder_id,
     )
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -399,7 +398,6 @@ async def get_client_products_menu(
         callback_data.client_id,
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
-        stakeholder_id=callback_data.stakeholder_id,
     )
 
     msg_text = f'Продуктовые предложения по клиенту <b>{client_info["name"].capitalize()}</b>'
@@ -544,7 +542,6 @@ async def get_client_select_period_menu(
         periods=constants.EXTENDED_GET_NEWS_PERIODS,
         select_period_menu=select_period_menu,
         back_menu=back_menu,
-        stakeholder_id=callback_data.stakeholder_id,
     )
     msg_text = f'Выберите период для получения новостей по клиенту <b>{client_info["name"].capitalize()}</b>'
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')

@@ -4,6 +4,7 @@ from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 from fuzzywuzzy import process
@@ -34,6 +35,12 @@ from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, is_user_has_access, process_fin_table, send_or_edit
+
+
+class StakeholderState(StatesGroup):
+    """Состояние для возвращения к меню стейкхолдера."""
+
+    choosing_from_stakeholder = State()
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
@@ -380,7 +387,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     if await is_user_has_access(message.from_user.model_dump_json()):
         if (
                 await is_client_in_message(message) or
-                await is_stakeholder_in_message(message, session) or
+                await is_stakeholder_in_message(message, state, session) or
                 await is_eco_in_message(message) or
                 await is_commodity_in_message(message)
 
@@ -416,12 +423,18 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
 
 
-async def is_stakeholder_in_message(message: types.Message, session: AsyncSession, fuzzy_score: int = 95) -> bool:
+async def is_stakeholder_in_message(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        fuzzy_score: int = 95
+) -> bool:
     """
     Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
 
-    :param session:      Сессия для взаимодействия с бд.
     :param message:      Сообщение от пользователя.
+    :param state:        Состояние пользователя.
+    :param session:      Сессия для взаимодействия с бд.
     :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
@@ -441,8 +454,11 @@ async def is_stakeholder_in_message(message: types.Message, session: AsyncSessio
 
     stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
     msg_text = get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = get_stakeholder_menu_kb(sh_obj.id, sh_obj.clients)
+    keyboard = get_stakeholder_menu_kb(sh_obj.clients)
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+
+    await state.set_state(StakeholderState.choosing_from_stakeholder)
+    await state.update_data(stakeholder_id=sh_ids[0])
 
     return True
 
@@ -502,7 +518,6 @@ async def choose_stakeholder_client(
         current_page=0,
         research_type_id=await get_research_type_id_by_name(client_name),
         with_back_button=True,
-        stakeholder_id=callback_data.stakeholder_id,
     )
     await send_or_edit(
         callback_query,
@@ -512,28 +527,29 @@ async def choose_stakeholder_client(
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
 
-@router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.show_news))
+@router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.show_news_from_sh))
 async def show_stakeholder_articles(
         callback_query: types.CallbackQuery,
-        callback_data: ClientsMenuData,
         session: AsyncSession,
+        state: FSMContext
 ) -> None:
     """
     Отправка новостей по выбранным клиентам стейкхолдера.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
-    :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
+    :param state:           Состояние пользователя.
     :param session:         Сессия для взаимодействия с бд.
     """
-    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
+    data = await state.get_data()
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, data['stakeholder_id'])
     clients_ids = [c.id for c in sh_obj.clients]
-    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, data['stakeholder_id'])
     msg_text = get_show_msg_by_sh_type(stakeholder_types, sh_obj)
     await callback_query.message.edit_text(msg_text, parse_mode='HTML')
 
     ap_obj = ArticleProcess(logger)
     for client_id in clients_ids:
-        await send_stakeholder_articles(callback_query, ap_obj, client_id, stakeholder_id=callback_data.stakeholder_id)
+        await send_stakeholder_articles(callback_query, ap_obj, client_id, stakeholder_id=data['stakeholder_id'])
 
 
 async def send_stakeholder_articles(
@@ -577,7 +593,6 @@ async def send_stakeholder_articles(
         current_page=0,
         research_type_id=await get_research_type_id_by_name(client_name),
         with_back_button=False,
-        stakeholder_id=stakeholder_id
     )
 
     msg_obj = tg_obj if isinstance(tg_obj, types.Message) else tg_obj.message
