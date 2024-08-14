@@ -61,7 +61,7 @@ async def subs_menu(message: types.CallbackQuery | types.Message) -> None:
     keyboard = keyboards.get_main_menu_kb()
     msg_text = (
         'Меню управления подписками:\n\n'
-        'Выберете действие, которое хотели бы сделать с подписками'
+        'Выберите действие'
     )
     await send_or_edit(message, msg_text, keyboard)
 

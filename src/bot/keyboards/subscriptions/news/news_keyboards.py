@@ -87,18 +87,25 @@ class BaseKeyboard:
         ))
         return keyboard.as_markup()
 
-    def change_subs_menu(self) -> InlineKeyboardMarkup:
-        """Меню изменение подписок"""
+    def change_subs_menu(self, industry_df: pd.DataFrame) -> InlineKeyboardMarkup:
+        """
+        Меню изменение подписок
+
+        :param industry_df: отрасли [id, name]
+        :return: Клавиатура вида
+        [ industry1 ]
+        [ ... ]
+        [ industryN ]
+        [ BACK ]
+        [ END ]
+        """
         keyboard = InlineKeyboardBuilder()
-        if self.can_write_subs:
+
+        for _, row in industry_df.iterrows():
             keyboard.row(types.InlineKeyboardButton(
-                text='Напишу сам/Справочник по подпискам',
-                callback_data=self.callbacks.WriteSubs().pack(),
+                text=row['name'],
+                callback_data=self.callbacks.SelectSubs(industry_id=row['id']).pack(),
             ))
-        keyboard.row(types.InlineKeyboardButton(
-            text='Выберу из меню',
-            callback_data=self.callbacks.SelectSubs().pack(),
-        ))
         keyboard.row(types.InlineKeyboardButton(
             text=constants.BACK_BUTTON_TXT,
             callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.change_subscriptions).pack(),
@@ -178,6 +185,10 @@ class BaseKeyboard:
         :param current_page: текущая страница меню, которую надо отобразить
         :param max_pages: всего страниц (для блокировки кнопок <- и ->, если достигли начала или конца)
         """
+        page_data['action'] = constants.DELETE_CROSS
+        page_data['action_callback'] = page_data['id'].apply(
+            lambda x: self.callbacks.GetUserSubs(page=current_page, subject_id=x).pack()
+        )
         page_data['item_callback'] = page_data['id'].apply(
             lambda x: self.watch_subject_news_callback_factory(subject_id=x).pack()
         )
@@ -189,7 +200,85 @@ class BaseKeyboard:
             prev_page_callback=self.callbacks.GetUserSubs(page=current_page - 1).pack(),
             back_callback=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.my_subscriptions).pack(),
             end_callback=const.END_WRITE_SUBS,
+            reverse=True,
         )
+
+    def get_subjects_kb(self, page_data: pd.DataFrame, current_page: int, max_pages: int) -> InlineKeyboardMarkup:
+        """
+        Формирует Inline клавиатуру вида:
+
+        [][ item 1 ]
+        ...
+        [][ item N ]
+        [<-][ Назад ][->]
+        [ Завершить ]
+        :param page_data: DataFrame[id, name, is_subscribed]
+        :param current_page: текущая страница меню, которую надо отобразить
+        :param max_pages: всего страниц (для блокировки кнопок <- и ->, если достигли начала или конца)
+        """
+        page_data['action'] = page_data['is_subscribed'].apply(
+            lambda x: constants.SELECTED if x else constants.UNSELECTED
+        )
+        page_data['action_callback'] = page_data.apply(
+            lambda x: self.callbacks.SelectSubs(
+                page=current_page, subject_id=x['id'], need_add=not x['is_subscribed']
+            ).pack(),
+            axis=1,
+        )
+        page_data['item_callback'] = page_data['action_callback']
+        return get_pagination_kb(
+            page_data,
+            current_page,
+            max_pages,
+            next_page_callback=self.callbacks.SelectSubs(page=current_page + 1).pack(),
+            prev_page_callback=self.callbacks.SelectSubs(page=current_page - 1).pack(),
+            back_callback=self.callbacks.ChangeUserSubs().pack(),
+            end_callback=const.END_WRITE_SUBS,
+        )
+
+    def get_subjects_kb_by_industry_id(
+            self,
+            page_data: pd.DataFrame,
+            current_page: int,
+            max_pages: int,
+            industry_id: int = 0,
+    ) -> InlineKeyboardMarkup:
+        """
+        Формирует Inline клавиатуру вида:
+
+        [][ item 1 ]
+        ...
+        [][ item N ]
+        [<-][ Назад ][->]
+        [ Завершить ]
+        :param page_data: DataFrame[id, name, is_subscribed]
+        :param current_page: текущая страница меню, которую надо отобразить
+        :param max_pages: всего страниц (для блокировки кнопок <- и ->, если достигли начала или конца)
+        :param industry_id: industry.id, из которого вынимаются элементы
+        """
+        page_data['action'] = page_data['is_subscribed'].apply(
+            lambda x: constants.SELECTED if x else constants.UNSELECTED
+        )
+        page_data['action_callback'] = page_data.apply(
+            lambda x: self.callbacks.SelectSubs(
+                page=current_page, subject_id=x['id'], need_add=not x['is_subscribed'], industry_id=industry_id,
+            ).pack(),
+            axis=1,
+        )
+        page_data['item_callback'] = page_data['action_callback']
+        return get_pagination_kb(
+            page_data,
+            current_page,
+            max_pages,
+            next_page_callback=self.callbacks.SelectSubs(page=current_page + 1, industry_id=industry_id).pack(),
+            prev_page_callback=self.callbacks.SelectSubs(page=current_page - 1, industry_id=industry_id).pack(),
+            back_callback=self.callbacks.ChangeUserSubs().pack(),
+            end_callback=const.END_WRITE_SUBS,
+        )
+
+
+class IndustryKeyboards(BaseKeyboard):
+    """Клавиатура для отраслей"""
 
     def get_subjects_kb(self, page_data: pd.DataFrame, current_page: int, max_pages: int) -> InlineKeyboardMarkup:
         """
@@ -220,6 +309,6 @@ class BaseKeyboard:
             max_pages,
             next_page_callback=self.callbacks.SelectSubs(page=current_page + 1).pack(),
             prev_page_callback=self.callbacks.SelectSubs(page=current_page - 1).pack(),
-            back_callback=self.callbacks.ChangeUserSubs().pack(),
+            back_callback=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.change_subscriptions).pack(),
             end_callback=const.END_WRITE_SUBS,
         )

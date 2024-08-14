@@ -14,6 +14,7 @@ class GetUserSubs(CallbackData, prefix=callback_prefixes.GET_MY_SUBS):
     """Меню просмотра своих подписок на клиентов"""
 
     page: int = 0
+    subject_id: int = 0
 
 
 class ChangeUserSubs(CallbackData, prefix=callback_prefixes.CHANGE_MY_SUBS):
@@ -47,6 +48,7 @@ class SelectSubs(CallbackData, prefix=callback_prefixes.SELECT_SUBS):
     page: int = 0
     subject_id: int = 0
     need_add: bool = False
+    industry_id: int
 
 
 class WriteSubs(CallbackData, prefix=callback_prefixes.WRITE_SUBS):

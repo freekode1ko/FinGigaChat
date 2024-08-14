@@ -7,18 +7,7 @@ from configs.config import (
     giga_chat_url,
     giga_oauth_url,
 )
-
-
-def singleton(cls):
-    """Сингелтон"""
-    instances = {}
-
-    def get_instance(*args, **kwargs):
-        if cls not in instances:
-            instances[cls] = cls(*args, **kwargs)
-        return instances[cls]
-
-    return get_instance
+from utils.decorators import singleton
 
 
 class BaseClient:
