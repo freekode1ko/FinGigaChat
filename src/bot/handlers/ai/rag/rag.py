@@ -86,7 +86,7 @@ async def set_rag_mode(
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_with_dialog(message, state, session, first_user_query, user_msg)
+            await ask_with_dialog(message, state, session, user_msg, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
