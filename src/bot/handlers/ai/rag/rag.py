@@ -44,15 +44,20 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
 
 
 @router.message(Command('knowledgebase'))
-async def set_rag_mode(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def set_rag_mode(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        user_msg: str | None = None) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС).
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
     :param session:     Асинхронная сессия базы данных.
+    :param user_msg:    Сообщение пользователя
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
 
     if await is_user_has_access(message.from_user.model_dump_json()):
         await state.set_state(RagState.rag_mode)
@@ -181,6 +186,7 @@ async def ask_with_dialog(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
+        user_msg: str,
         first_user_query: str = ''
 ) -> None:
     """
@@ -189,9 +195,10 @@ async def ask_with_dialog(
     :param state:              Состояние.
     :param message:            Message от пользователя.
     :param session:            Асинхронная сессия базы данных.
+    :param user_msg:           Сообщение пользователя
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name = message.chat.id, message.from_user.full_name
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):

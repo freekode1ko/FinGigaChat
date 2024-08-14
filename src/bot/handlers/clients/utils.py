@@ -10,18 +10,20 @@ from module.fuzzy_search import FuzzyAlternativeNames
 
 async def is_client_in_message(
         message: types.Message,
+        user_msg: str,
         send_message_if_client_in_message: bool = True,
         fuzzy_score: int = 95
 ) -> bool:
     """Функция для проверки, что введенное сообщение совпадает с именем клиента и отправки меню клиента
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param user_msg: Сообщение пользователя
     :param send_message_if_client_in_message: отправлять ли сообщение с меню пользователя
     :param fuzzy_score: величина в процентах совпадение с референсными именами клиентов
     :return: булевое значение о том ли сообщение совпадает с именем клиента
     """
     clients_id = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text.replace(texts_manager.CLIENT_ADDITIONAL_INFO, ''),
+        user_msg.replace(texts_manager.CLIENT_ADDITIONAL_INFO, ''),
         subject_types=[models.ClientAlternative],
         score=fuzzy_score
     )
