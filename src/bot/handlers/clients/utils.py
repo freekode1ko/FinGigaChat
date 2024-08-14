@@ -29,14 +29,14 @@ async def is_client_in_message(
 
     if len(clients) >= 1:  # больше одного клиента найтись скорее всего не может, если большой процент совпадения стоит
         if send_message_if_client_in_message:
-            client_name = clients['name'].iloc[0]
+            client_name: str = clients['name'].iloc[0]
             keyboard = keyboards.get_client_menu_kb(
                 clients['id'].iloc[0],
                 current_page=0,
                 research_type_id=await get_research_type_id_by_name(client_name),
                 with_back_button=False,
             )
-            msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
+            msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize())
             await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
         return True
     return False

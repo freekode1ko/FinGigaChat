@@ -482,32 +482,34 @@ async def is_commodity_in_message(
 @router.callback_query(callback_data_factories.StakeholderData.filter(
     F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholder_clients
 ))
-async def choose_stakeholder_clients(
+async def choose_stakeholder_client(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.StakeholderData,
-        session: AsyncSession
 ) -> None:
     """
-    Обновление меню клиентов стейкхолдера.
+    Отображение меню выбранного клиента стейкхолдера.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
-    :param session:         Сессия для взаимодействия с бд.
     """
     chat_id = callback_query.message.chat.id
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    selected_ids = utils.get_selected_ids_from_callback_data(callback_data)
-    selected_ids = utils.update_selected_ids(selected_ids, callback_data.subject_id)
-    callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
+    client_dict = await client_db.get(callback_data.subject_id)
+    client_name: str = client_dict['name']
 
-    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
-    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
-
-    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = keyboards.get_select_stakeholder_clients_kb(callback_data.stakeholder_id, sh_obj.clients)
-    await send_or_edit(callback_query, msg_text, keyboard)
+    keyboard = get_client_menu_kb(
+        callback_data.subject_id,
+        current_page=0,
+        research_type_id=await get_research_type_id_by_name(client_name),
+        with_back_button=False,
+    )
+    await send_or_edit(
+        callback_query,
+        texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize()),
+        keyboard
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
 

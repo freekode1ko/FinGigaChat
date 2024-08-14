@@ -200,7 +200,7 @@ async def clients_subscriptions_list(
             subscribed=subscribed,
             research_type_id=await get_research_type_id_by_name(client_name),
         )
-        msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
+        msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize())
     else:
         msg_text = 'Не нашелся, введите имя клиента по-другому'
         keyboard = None
@@ -236,7 +236,7 @@ async def get_client_menu(
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
     )
-    msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_info["name"].capitalize()}</b>'
+    msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_info['name'].capitalize())
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
