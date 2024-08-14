@@ -401,7 +401,6 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
                 await is_stakeholder_in_message(message, user_msg, state, session) or
                 await is_eco_in_message(message, user_msg) or
                 await is_commodity_in_message(message, user_msg)
-
         ):
             return
 
