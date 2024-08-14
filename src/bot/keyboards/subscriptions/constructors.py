@@ -40,7 +40,7 @@ def get_main_menu_kb() -> InlineKeyboardMarkup:
         callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.change_subscriptions).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Просмотреть подписки',
+        text='Посмотреть подписки',
         callback_data=callbacks.SubsMenuData(menu=callbacks.SubsMenusEnum.my_subscriptions).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
