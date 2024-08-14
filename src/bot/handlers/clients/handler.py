@@ -158,11 +158,10 @@ async def clients_list(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = from_user.id
 
-    if state:
-        data = await state.get_data()
-        if sh_id := data.get('stakeholder_id'):
-            await main_sh_menu(callback_query, session, sh_id)
-            return
+    data = await state.get_data()
+    if sh_id := data.get('stakeholder_id'):
+        await main_sh_menu(callback_query, session, sh_id)
+        return
 
     subscribed = callback_data.subscribed
     page = callback_data.page
