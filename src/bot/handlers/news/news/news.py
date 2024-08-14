@@ -398,7 +398,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     if await is_user_has_access(message.from_user.model_dump_json()):
         if (
                 await is_client_in_message(message, user_msg) or
-                await is_stakeholder_in_message(message, state, user_msg, session) or
+                await is_stakeholder_in_message(message, user_msg, state, session) or
                 await is_eco_in_message(message, user_msg) or
                 await is_commodity_in_message(message, user_msg)
 
@@ -436,8 +436,8 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
 
 async def is_stakeholder_in_message(
         message: types.Message,
-        state: FSMContext,
         user_msg: str,
+        state: FSMContext,
         session: AsyncSession,
         fuzzy_score: int = 95
 ) -> bool:
@@ -445,8 +445,8 @@ async def is_stakeholder_in_message(
     Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
 
     :param message:      Сообщение от пользователя.
-    :param state:        Состояние пользователя.
     :param user_msg:     Сообщение пользователя
+    :param state:        Состояние пользователя.
     :param session:      Сессия для взаимодействия с бд.
     :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
