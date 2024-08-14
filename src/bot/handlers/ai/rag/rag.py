@@ -48,7 +48,8 @@ async def set_rag_mode(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
-        user_msg: str | None = None) -> None:
+        user_msg: str | None = None
+) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС).
 
@@ -85,7 +86,7 @@ async def set_rag_mode(
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_with_dialog(message, state, session, first_user_query)
+            await ask_with_dialog(message, state, session, first_user_query, user_msg)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -186,7 +187,7 @@ async def ask_with_dialog(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
-        user_msg: str,
+        user_msg: str | None = None,
         first_user_query: str = ''
 ) -> None:
     """
@@ -198,7 +199,7 @@ async def ask_with_dialog(
     :param user_msg:           Сообщение пользователя
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
-    chat_id, full_name = message.chat.id, message.from_user.full_name
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):

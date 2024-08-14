@@ -359,7 +359,8 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
 async def is_eco_in_message(
         message: types.Message,
         user_msg: str,
-        score_cutoff: int = config.ECO_FUZZY_SEARCH_SCORE_CUTOFF) -> bool:
+        score_cutoff: int = config.ECO_FUZZY_SEARCH_SCORE_CUTOFF
+) -> bool:
     """
     Есть ли ETC в тексте сообщения.
 
