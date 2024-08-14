@@ -549,7 +549,7 @@ async def show_stakeholder_articles(
 
     ap_obj = ArticleProcess(logger)
     for client_id in clients_ids:
-        await send_stakeholder_articles(callback_query, ap_obj, client_id, stakeholder_id=data['stakeholder_id'])
+        await send_stakeholder_articles(callback_query, ap_obj, client_id)
 
 
 async def send_stakeholder_articles(
@@ -558,7 +558,6 @@ async def send_stakeholder_articles(
         client_id: int,
         client_name: str = '',
         extra_text: str = '',
-        stakeholder_id: int = 0,
 ) -> None:
     """
     Отправка новостей о клиенте стейкхолдера.
@@ -568,7 +567,6 @@ async def send_stakeholder_articles(
     :param client_id:       ID клиента.
     :param client_name:     Имя клиента.
     :param extra_text:      Дополнительный текст к сообщению.
-    :param stakeholder_id:  ID стейкхолдера.
     """
     _, articles = await ap_obj.process_user_alias(
         subject=enums.SubjectType.client,
