@@ -5,13 +5,10 @@
 Обновляет список выбранных субъектов.
 Оборачивает в строку список выбранных субъектов.
 """
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable
 
 from pymorphy2 import MorphAnalyzer
 
-from constants.enums import StakeholderType
-from constants.texts.texts_manager import texts_manager
-from db.models import Stakeholder
 from handlers.news import callback_data_factories
 
 morph = MorphAnalyzer()
@@ -65,51 +62,3 @@ def decline_words(words: str, case: Iterable[str] = ('gent', ), str_func: Callab
     name_parts = words.strip().split()
     words = ' '.join(morph.parse(name_part)[0].inflect(set(case)).word for name_part in name_parts)
     return str_func(words)
-
-
-def get_menu_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder) -> str:
-    """
-    Получение текста для меню стейкхолдеров в зависимости от того, кем является стейкхолдер по отношению к клиентам.
-
-    :param sh_types:    Последовательность уникальных StakeholderType.
-    :param sh_obj:      Сущность стейкхолдера.
-    :return:            Строка для формирования сообщения.
-    """
-    match ''.join(sh_types):
-        case StakeholderType.lpr:
-            msg_text = texts_manager.LPR_MENU_NEWS
-        case StakeholderType.beneficiary:
-            msg_text = texts_manager.BEN_MENU_NEWS
-        case _:
-            msg_text = texts_manager.COMMON_MENU_NEWS
-
-    forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
-    return msg_text + forbes_link
-
-
-def get_show_msg_by_sh_type(sh_types: Sequence[str], sh_obj: Stakeholder, client: str = '') -> str:
-    """
-    Получение текста для отображения новостей в зависимости от того, кем является стейкхолдер по отношению к клиентам(у).
-
-    :param sh_types:    Последовательность уникальных StakeholderType.
-    :param sh_obj:      Сущность стейкхолдера.
-    :param client:      Имя единственного клиента стейкхолдера, если клиент единственный.
-    :return:            Строку для формирования сообщения.
-    """
-    # forbes_link = texts_manager.BIO_LINK.format(link=sh_obj.forbes_link) if sh_obj.forbes_link else ''
-    match ''.join(sh_types):
-        case StakeholderType.lpr:
-            # sh_name = sh_obj.name.title()
-            if client:
-                return texts_manager.ONE_LPR_SHOW_NEWS.format(client=client)
-            return texts_manager.FEW_LPR_SHOW_NEWS
-        case StakeholderType.beneficiary:
-            # sh_name = decline_words(sh_obj.name)
-            if client:
-                return texts_manager.ONE_BEN_SHOW_NEWS
-            return texts_manager.FEW_BEN_SHOW_NEWS
-        case _:
-            # sh_name = decline_words(sh_obj.name, case='ablt')
-            if client:
-                return texts_manager.ONE_COMMON_SHOW_NEWS
-            return texts_manager.FEW_COMMON_SHOW_NEWS

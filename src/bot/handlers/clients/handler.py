@@ -24,6 +24,7 @@ import utils.base
 from constants import constants
 from constants.texts import texts_manager
 from db import models
+from db.api import stakeholder
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product import product_db
@@ -32,8 +33,8 @@ from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
 from handlers import products
 from handlers.analytics.analytics_sell_side.handler import get_researches_over_period
-from handlers.clients import callback_data_factories
-from handlers.clients import keyboards
+from handlers.clients import callback_data_factories, keyboards
+from handlers.clients.utils import get_menu_msg_by_sh_type
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import user_logger
@@ -76,6 +77,21 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     """
     keyboard = keyboards.get_menu_kb()
     msg_text = 'Клиенты'
+    await send_or_edit(message, msg_text, keyboard)
+
+
+async def main_sh_menu(message: types.CallbackQuery | types.Message, session: AsyncSession, stakeholder_id: int) -> None:
+    """
+    Формирует меню стейкхолдера.
+
+    :param message:         types.CallbackQuery | types.Message
+    :param session:         Сессия бд.
+    :param stakeholder_id:  ID стейкхолдера.
+    """
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
+    msg_text = get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = keyboards.get_stakeholder_menu_kb(sh_obj.clients)
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -124,6 +140,7 @@ async def clients_list(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
         state: FSMContext,
+        session: AsyncSession,
 ) -> None:
     """
     Получение списка клиентов
@@ -131,6 +148,7 @@ async def clients_list(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия бд
     """
     msg_text = ''
 
@@ -140,12 +158,16 @@ async def clients_list(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = from_user.id
 
+    data = await state.get_data()
+    if sh_id := data.get('stakeholder_id'):
+        await main_sh_menu(callback_query, session, sh_id)
+        return
+
     subscribed = callback_data.subscribed
     page = callback_data.page
     clients = await client_db.get_all()
     client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
     if subscribed:
-
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
         await state.set_state(ChooseClient.choosing_from_subscribed_clients)
     else:
@@ -174,7 +196,6 @@ async def clients_subscriptions_list(
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state:   Объект, который хранит состояние FSM для пользователя
-    :param logger:  логгер
     """
     subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
 
@@ -200,7 +221,7 @@ async def clients_subscriptions_list(
             subscribed=subscribed,
             research_type_id=await get_research_type_id_by_name(client_name),
         )
-        msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
+        msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize())
     else:
         msg_text = 'Не нашелся, введите имя клиента по-другому'
         keyboard = None
@@ -236,7 +257,7 @@ async def get_client_menu(
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
     )
-    msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_info["name"].capitalize()}</b>'
+    msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_info['name'].capitalize())
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
