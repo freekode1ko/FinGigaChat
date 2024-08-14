@@ -195,9 +195,9 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
-async def send_nearest_subjects(message: types.Message) -> None:
+async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
     nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
 
@@ -420,7 +420,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
             else:
                 await state.set_state(rag.RagState.rag_query)
                 await state.update_data(rag_query=user_msg)
-                await send_nearest_subjects(message)
+                await send_nearest_subjects(message, user_msg)
 
     else:
         await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=texts_manager.PROTECT_CONTENT)

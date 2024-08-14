@@ -16,6 +16,7 @@ from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
 from utils.base import clear_text_from_url, is_user_has_access
+from utils.handler_utils import audio_to_text
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 from utils.rag_utils.rag_router import RAGRouter
 
@@ -48,7 +49,6 @@ async def set_rag_mode(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
-        user_msg: str | None = None,
 ) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС).
@@ -56,9 +56,8 @@ async def set_rag_mode(
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
     :param session:     Асинхронная сессия базы данных.
-    :param user_msg:    Сообщение пользователя
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if await is_user_has_access(message.from_user.model_dump_json()):
         await state.set_state(RagState.rag_mode)
@@ -86,7 +85,7 @@ async def set_rag_mode(
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_with_dialog(message, state, session, first_user_query, user_msg)
+            await ask_with_dialog(message, state, session, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -103,7 +102,11 @@ async def handler_rag_mode(message: types.Message, state: FSMContext, session: A
     :param state:       Состояние FSM.
     :param session:     Асинхронная сессия базы данных.
     """
-    await ask_with_dialog(message, state, session)
+    if message.voice:
+        user_msg = await audio_to_text(message)
+    else:
+        user_msg = message.text
+    await ask_with_dialog(message, state, session, user_msg)
 
 
 async def _get_response(
@@ -187,7 +190,6 @@ async def ask_with_dialog(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
-        user_msg: str | None = None,
         first_user_query: str = '',
 ) -> None:
     """
@@ -196,10 +198,9 @@ async def ask_with_dialog(
     :param state:              Состояние.
     :param message:            Message от пользователя.
     :param session:            Асинхронная сессия базы данных.
-    :param user_msg:           Сообщение пользователя
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
