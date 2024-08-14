@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs.config import PATH_TO_COMMODITY_REPORTS
 from constants.enums import SubjectType
-from db.models import Commodity, CommodityResearch
+from db.models import Commodity, CommodityResearch, RelationCommodityCommodityResearch
 from log.bot_logger import logger
 from module.article_process import ArticleProcess
 
@@ -47,7 +47,8 @@ async def send_anal_report(
     """
     result = await session.execute(
         sa.select(Commodity, CommodityResearch)
-        .join(CommodityResearch, Commodity.id == CommodityResearch.commodity_id)
+        .join(RelationCommodityCommodityResearch, RelationCommodityCommodityResearch.commodity_id == Commodity.id)
+        .join(CommodityResearch, CommodityResearch.id == RelationCommodityCommodityResearch.commodity_research_id)
         .filter(Commodity.id == commodity_id)
     )
     if not len(result := result.all()):
@@ -60,24 +61,25 @@ async def send_anal_report(
         await message.answer(
             f'На данный момент отчеты по "<b>{name}</b>" отсутствуют', parse_mode='HTML')
         return None
-    commodity, commodity_research = result[0]
-    com_name = commodity.name.capitalize()
-    title = commodity_research.title
-    text = commodity_research.text or ''
-    file_name = commodity_research.file_name
+    for report in result:
+        commodity, commodity_research = report
+        com_name = commodity.name.capitalize()
+        title = commodity_research.title
+        text = commodity_research.text or ''
+        file_name = commodity_research.file_name
 
-    if not title:
-        title = f'<b>Аналитический обзор по "{com_name}"</b>'
+        if not title:
+            title = f'<b>Аналитический обзор по "{com_name}"</b>'
 
-    message_text = title + '\n\n' + text
+        message_text = title + '\n\n' + text
 
-    if file_name and (file_path := PATH_TO_COMMODITY_REPORTS / file_name).exists():
-        file = types.FSInputFile(file_path)
-        await message.answer_document(
-            document=file,
-            caption=message_text,
-            parse_mode='HTML',
-        )
-        return
+        if file_name and (file_path := PATH_TO_COMMODITY_REPORTS / file_name).exists():
+            file = types.FSInputFile(file_path)
+            await message.answer_document(
+                document=file,
+                caption=message_text,
+                parse_mode='HTML',
+            )
+            continue
 
-    await message.answer(message_text, parse_mode='HTML')
+        await message.answer(message_text, parse_mode='HTML')

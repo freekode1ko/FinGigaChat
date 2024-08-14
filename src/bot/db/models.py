@@ -317,35 +317,48 @@ class Client(Base):
 class Commodity(Base):
     __tablename__ = 'commodity'
 
-    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    name = Column(Text, nullable=False)
-    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.Text, nullable=False)
+    industry_id = sa.Column(sa.ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
 
     industry = relationship('Industry', back_populates='commodity')
     commodity_alternative = relationship('CommodityAlternative', back_populates='commodity')
     commodity_pricing = relationship('CommodityPricing', back_populates='commodity')
     relation_commodity_article = relationship('RelationCommodityArticle', back_populates='commodity')
-    commodity_research = relationship('CommodityResearch', uselist=False, back_populates='commodity')
+
+    commodity_research = relationship(
+        'CommodityResearch',
+        secondary='relation_commodity_commodity_research',
+        back_populates='commodities'
+    )
 
 
 class CommodityResearch(Base):
     __tablename__ = 'commodity_research'
     __table_args__ = {'comment': 'Таблица с отчетами аналитики по commodity'}
 
-    id = Column(Integer, primary_key=True)
-    commodity_id = Column(
-        Integer,
-        ForeignKey('commodity.id', onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=False,
-        unique=True,
-        comment='Ссылка на commodity'
-    )
-    title = Column(sa.Text, nullable=True, comment='Заголовок отчета')
-    text = Column(Text, nullable=False, comment='Текст отчета')
-    file_name = Column(sa.Text, nullable=True, comment='Файл отчета')
+    id = sa.Column(sa.Integer, primary_key=True)
+    title = sa.Column(sa.Text, nullable=True, comment='Заголовок отчета')
+    text = sa.Column(sa.Text, nullable=False, comment='Текст отчета')
+    file_name = sa.Column(sa.Text, nullable=True, comment='Файл отчета')
 
-    commodity = relationship('Commodity', back_populates='commodity_research')
+    commodities = relationship(
+        'Commodity',
+        secondary='relation_commodity_commodity_research',
+        back_populates='commodity_research'
+    )
+
+
+class RelationCommodityCommodityResearch(Base):
+    __tablename__ = 'relation_commodity_commodity_research'
+    __table_args__ = {'comment': 'Таблица со связью отчетов аналитики по commodity'}
+
+    commodity_id = sa.Column(sa.Integer, ForeignKey('commodity.id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    commodity_research_id = sa.Column(
+        sa.Integer,
+        ForeignKey('commodity_research.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
+    )
 
 
 class IndustryAlternative(Base):

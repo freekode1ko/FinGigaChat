@@ -43,7 +43,7 @@ async def commodity_menu(
 
     commodity_info = await commodity_db.get(callback_data.commodity_id)
     keyboard = get_menu_kb(callback_data.commodity_id)
-    msg_text = f'Выберите раздел для получения данных по клиенту <b>{commodity_info["name"].capitalize()}</b>'
+    msg_text = f'Выберите раздел для получения данных по сырьевому товару <b>{commodity_info["name"].capitalize()}</b>'
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
@@ -62,7 +62,7 @@ async def commodity_choice_news_menu(
     :param callback_data: Объект, содержащий дополнительную информацию
     """
     commodity_info = await commodity_db.get(callback_data.commodity_id)
-    msg_text = f'Выберите период для получения новостей по клиенту <b>{commodity_info["name"].capitalize()}</b>'
+    msg_text = f'Выберите период для получения новостей по сырьевому товару <b>{commodity_info["name"].capitalize()}</b>'
 
     await callback_query.message.edit_text(msg_text, reply_markup=get_period_kb(callback_data.commodity_id), parse_mode='HTML')
 
@@ -91,7 +91,7 @@ async def commodity_news_menu(
     to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
-    msg_text = f'Новости по клиенту <b>{commodity_info["name"].capitalize()}</b> за {days} дней\n'
+    msg_text = f'Новости по сырьевому товару <b>{commodity_info["name"].capitalize()}</b> за {days} дней\n'
     articles = await commodity_db.get_articles_by_subject_ids(commodity_id, from_date, to_date, order_by=models.Article.date.desc())
 
     if not articles:
