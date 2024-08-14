@@ -50,7 +50,7 @@ def wrap_selected_ids(selected_ids: list[int]) -> str:
     return ','.join(map(str, selected_ids)) or '0'
 
 
-def decline_words(words: str, case: Iterable[str] = 'gent', str_func: Callable = str.title) -> str:
+def decline_words(words: str, case: Iterable[str] = ('gent', ), str_func: Callable = str.title) -> str:
     """
     Склоняет слова в заданный падеж.
 
