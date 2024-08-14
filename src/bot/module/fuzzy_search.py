@@ -1,5 +1,5 @@
 """Неточный поиск по клиентам, сырью, отраслям."""
-from typing import Optional
+from typing import Optional, Type
 
 import sqlalchemy as sa
 from fuzzywuzzy import process
@@ -167,7 +167,7 @@ class FuzzyAlternativeNames:
             self,
             name: str,
             score: int = 80,
-            subject_types: Optional[list[models.Base]] = None,
+            subject_types: Optional[list[Type[models.Base]]] = None,
     ) -> list[int]:
         """
         Поиск ближайших похожих имен из таблиц subject_types по имени

@@ -4,6 +4,7 @@ from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.media_group import MediaGroupBuilder
 from fuzzywuzzy import process
@@ -22,11 +23,11 @@ from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
 from handlers.ai.rag import rag
 from handlers.analytics import analytics_sell_side
-from handlers.clients.keyboards import get_client_menu_kb
-from handlers.clients.utils import is_client_in_message
+from handlers.clients.callback_data_factories import ClientsMenuData, ClientsMenusEnum
+from handlers.clients.keyboards import get_client_menu_kb, get_stakeholder_menu_kb
+from handlers.clients.utils import get_menu_msg_by_sh_type, get_show_msg_by_sh_type, is_client_in_message
 from handlers.commodity.keyboards import get_menu_kb as get_commodity_menu_kb
 from handlers.commodity.utils import send_or_get_commodity_quotes_message
-from handlers.news import callback_data_factories, keyboards, utils
 from handlers.news.handler import router
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
@@ -35,6 +36,12 @@ from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, is_user_has_access, process_fin_table, send_or_edit
 from utils.handler_utils import audio_to_text
+
+
+class StakeholderState(StatesGroup):
+    """Состояние для возвращения к меню стейкхолдера."""
+
+    choosing_from_stakeholder = State()
 
 
 class NextNewsCallback(CallbackData, prefix='next_news'):
@@ -391,10 +398,9 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     if await is_user_has_access(message.from_user.model_dump_json()):
         if (
                 await is_client_in_message(message, user_msg) or
-                await is_stakeholder_in_message(message, user_msg, session) or
+                await is_stakeholder_in_message(message, user_msg, state, session) or
                 await is_eco_in_message(message, user_msg) or
                 await is_commodity_in_message(message, user_msg)
-
         ):
             return
 
@@ -430,13 +436,16 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
 async def is_stakeholder_in_message(
         message: types.Message,
         user_msg: str,
+        state: FSMContext,
         session: AsyncSession,
-        fuzzy_score: int = 95) -> bool:
+        fuzzy_score: int = 95
+) -> bool:
     """
     Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
 
     :param message:      Сообщение от пользователя.
     :param user_msg:     Сообщение пользователя
+    :param state:        Состояние пользователя.
     :param session:      Сессия для взаимодействия с бд.
     :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
@@ -456,9 +465,12 @@ async def is_stakeholder_in_message(
         return True
 
     stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
-    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = keyboards.get_select_stakeholder_clients_kb(sh_obj.id, sh_obj.clients)
+    msg_text = get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = get_stakeholder_menu_kb(sh_obj.clients)
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+
+    await state.set_state(StakeholderState.choosing_from_stakeholder)
+    await state.update_data(stakeholder_id=sh_ids[0])
 
     return True
 
@@ -497,59 +509,56 @@ async def is_commodity_in_message(
     return False
 
 
-@router.callback_query(callback_data_factories.StakeholderData.filter(
-    F.menu == callback_data_factories.NewsMenusEnum.choose_stakeholder_clients
-))
-async def choose_stakeholder_clients(
+@router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.choose_stakeholder_clients))
+async def choose_stakeholder_client(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.StakeholderData,
-        session: AsyncSession
+        callback_data: ClientsMenuData,
 ) -> None:
     """
-    Обновление меню клиентов стейкхолдера.
+    Отображение меню выбранного клиента стейкхолдера.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
-    :param session:         Сессия для взаимодействия с бд.
     """
     chat_id = callback_query.message.chat.id
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    selected_ids = utils.get_selected_ids_from_callback_data(callback_data)
-    selected_ids = utils.update_selected_ids(selected_ids, callback_data.subject_id)
-    callback_data.subject_ids = utils.wrap_selected_ids(selected_ids)
+    client_dict = await client_db.get(callback_data.client_id)
+    client_name: str = client_dict['name']
 
-    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
-    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
-
-    msg_text = utils.get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
-    keyboard = keyboards.get_select_stakeholder_clients_kb(callback_data.stakeholder_id, sh_obj.clients, callback_data)
-    await send_or_edit(callback_query, msg_text, keyboard)
+    keyboard = get_client_menu_kb(
+        callback_data.client_id,
+        current_page=0,
+        research_type_id=await get_research_type_id_by_name(client_name),
+        with_back_button=True,
+    )
+    await send_or_edit(
+        callback_query,
+        texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize()),
+        keyboard
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
 
 
-@router.callback_query(
-    callback_data_factories.StakeholderData.filter(F.menu == callback_data_factories.NewsMenusEnum.show_news)
-)
+@router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.show_news_from_sh))
 async def show_stakeholder_articles(
         callback_query: types.CallbackQuery,
-        callback_data: callback_data_factories.StakeholderData,
         session: AsyncSession,
+        state: FSMContext
 ) -> None:
     """
     Отправка новостей по выбранным клиентам стейкхолдера.
 
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
-    :param callback_data:   Информация о выбранной группе клиентов стейкхолдера.
+    :param state:           Состояние пользователя.
     :param session:         Сессия для взаимодействия с бд.
     """
-    clients_ids = utils.get_selected_ids_from_callback_data(callback_data)
-    sh_obj = await stakeholder.get_stakeholder_by_id(session, callback_data.stakeholder_id)
-    if callback_data.get_all:
-        clients_ids = [c.id for c in sh_obj.clients]
-    stakeholder_types = await stakeholder.get_stakeholder_types(session, callback_data.stakeholder_id)
-    msg_text = utils.get_show_msg_by_sh_type(stakeholder_types, sh_obj)
+    data = await state.get_data()
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, data['stakeholder_id'])
+    clients_ids = [c.id for c in sh_obj.clients]
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, data['stakeholder_id'])
+    msg_text = get_show_msg_by_sh_type(stakeholder_types, sh_obj)
     await callback_query.message.edit_text(msg_text, parse_mode='HTML')
 
     ap_obj = ArticleProcess(logger)
