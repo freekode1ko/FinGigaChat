@@ -46,9 +46,9 @@ router = Router()
 
 
 @router.message(Command('start', 'help'))
-async def help_handler(message: types.Message, state: FSMContext) -> None:
+async def help_handler(message: types.Message, state: FSMContext, user_msg: str | None = None) -> None:
     """Вывод приветственного окна, с описанием бота и лицами для связи."""
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
     check_mail = user_msg == '/start'
     if await is_user_has_access(message.from_user.model_dump_json(), check_mail):
         help_text = config.help_text
@@ -59,7 +59,7 @@ async def help_handler(message: types.Message, state: FSMContext) -> None:
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
-        await user_registration(message, state)
+        await user_registration(message, user_msg, state)
 
 
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
@@ -101,9 +101,9 @@ async def cancel_callback(callback_query: types.CallbackQuery) -> None:
         await callback_query.message.edit_text(text='Действие отменено', reply_markup=None)
 
 
-async def user_registration(message: types.Message, state: FSMContext) -> None:
+async def user_registration(message: types.Message, user_msg: str, state: FSMContext) -> None:
     """Регистрация нового пользователя в боте: запрос пользовательской почты."""
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name = message.chat.id, message.from_user.full_name
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
     await state.set_state(Form.new_user_reg)
     new_user_start = config.new_user_start

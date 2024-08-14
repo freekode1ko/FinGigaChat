@@ -5,11 +5,12 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from handlers.call_reports.call_report_create.utils import audio_to_text, validate_and_parse_date
+from handlers.call_reports.call_report_create.utils import validate_and_parse_date
 from handlers.call_reports.call_report_view.utils import call_report_view_answer
 from handlers.call_reports.call_reports import CallReport
 from handlers.call_reports.callbackdata import CRCreateNew, CRMenusEnum
 from log.bot_logger import logger
+from utils.handler_utils import audio_to_text
 
 router = Router()
 
@@ -100,13 +101,11 @@ async def enter_description(
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session:  Асинхронная сессия базы данных
     """
     logger.info(f'Call Report: Сохранения текста/аудио в call report для {message.chat.id}')
 
-    if message.voice:
-        result = await audio_to_text(message)
-    else:
-        result = message.text
+    result = await audio_to_text(message) if message.voice else message.text
 
     await state.update_data(
         text=result,

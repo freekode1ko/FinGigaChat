@@ -44,15 +44,21 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
 
 
 @router.message(Command('knowledgebase'))
-async def set_rag_mode(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def set_rag_mode(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        user_msg: str | None = None,
+) -> None:
     """
     Переключение в режим общения с Вопросно-ответной системой (ВОС).
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
     :param session:     Асинхронная сессия базы данных.
+    :param user_msg:    Сообщение пользователя
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
 
     if await is_user_has_access(message.from_user.model_dump_json()):
         await state.set_state(RagState.rag_mode)
@@ -80,7 +86,7 @@ async def set_rag_mode(message: types.Message, state: FSMContext, session: Async
         if first_user_query:
             await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
                                  reply_markup=keyboard)
-            await ask_with_dialog(message, state, session, first_user_query)
+            await ask_with_dialog(message, state, session, user_msg, first_user_query)
         else:
             await message.answer(msg_text, reply_markup=keyboard)
 
@@ -105,7 +111,7 @@ async def _get_response(
         full_name: str,
         user_query: str,
         use_rephrase: bool,
-        rephrase_query: str = ''
+        rephrase_query: str = '',
 ) -> tuple[RetrieverType, str, str]:
     """
     Получение ответа от Базы Знаний или GigaChat.
@@ -181,7 +187,8 @@ async def ask_with_dialog(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
-        first_user_query: str = ''
+        user_msg: str | None = None,
+        first_user_query: str = '',
 ) -> None:
     """
     Отправляет ответ на запрос пользователя, используя историю диалога.
@@ -189,9 +196,10 @@ async def ask_with_dialog(
     :param state:              Состояние.
     :param message:            Message от пользователя.
     :param session:            Асинхронная сессия базы данных.
+    :param user_msg:           Сообщение пользователя
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
@@ -225,7 +233,7 @@ async def ask_without_dialog(
         call: types.CallbackQuery,
         callback_data: RegenerateResponse,
         state: FSMContext,
-        session: AsyncSession
+        session: AsyncSession,
 ) -> None:
     """
     Отправляет ответ на запрос пользователя без использования истории диалога.

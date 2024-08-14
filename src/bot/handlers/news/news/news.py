@@ -35,6 +35,7 @@ from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, is_user_has_access, process_fin_table, send_or_edit
+from utils.handler_utils import audio_to_text
 
 
 class StakeholderState(StatesGroup):
@@ -362,35 +363,44 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
     await utils.base.send_full_copy_of_message(callback_query)
 
 
-async def is_eco_in_message(message: types.Message, score_cutoff: int = config.ECO_FUZZY_SEARCH_SCORE_CUTOFF) -> bool:
+async def is_eco_in_message(
+        message: types.Message,
+        user_msg: str,
+        score_cutoff: int = config.ECO_FUZZY_SEARCH_SCORE_CUTOFF,
+) -> bool:
     """
     Есть ли ETC в тексте сообщения.
 
     Проверяет сходство сообщения пользователя с единые трансфертные ставки.
     Если процент совпадения выше score_cutoff, то выдает ссылку на inavigator.
 
-    :param message:         Объект, содержащий сообщение пользователя и инфу о пользователе
-    :param score_cutoff:    Минимальный требуемый процент совпадения
-    :return:                Есть ли ЕТС в тексте сообщения
+    :param message:       Объект, содержащий сообщение пользователя и инфу о пользователе
+    :param user_msg:      Сообщение пользователя
+    :param score_cutoff:  Минимальный требуемый процент совпадения
+    :return:              Есть ли ЕТС в тексте сообщения
     """
-    if flag := bool(process.extractOne(message.text.lower(), config.ECO_NAMES, score_cutoff=score_cutoff)):
+    if flag := bool(process.extractOne(user_msg.lower(), config.ECO_NAMES, score_cutoff=score_cutoff)):
         msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
         await message.answer(msg_text, parse_mode='HTML', protect_content=False)
     return flag
 
 
-@router.message(F.text)
+@router.message(F.content_type.in_({'voice', 'text'}))
 async def find_news(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка пользовательского сообщения"""
-    chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    chat_id, full_name = message.chat.id, message.from_user.full_name
+
+    if message.voice:
+        user_msg = await audio_to_text(message)
+    else:
+        user_msg = message.text
 
     if await is_user_has_access(message.from_user.model_dump_json()):
         if (
-                await is_client_in_message(message) or
-                await is_stakeholder_in_message(message, state, session) or
-                await is_eco_in_message(message) or
-                await is_commodity_in_message(message)
-
+                await is_client_in_message(message, user_msg) or
+                await is_stakeholder_in_message(message, user_msg, state, session) or
+                await is_eco_in_message(message, user_msg) or
+                await is_commodity_in_message(message, user_msg)
         ):
             return
 
@@ -400,7 +410,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
         else:
             aliases_dict = {
-                **{alias: (common.help_handler, {}) for alias in aliases.help_aliases},
+                **{alias: (common.help_handler, {'state': state, 'user_msg': user_msg}) for alias in aliases.help_aliases},
                 **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
                 **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
                 **{alias: (quotes.bonds_info_command, {}) for alias in aliases.bonds_aliases},
@@ -409,13 +419,13 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
                 **{alias: (quotes.exchange_info_command, {}) for alias in aliases.exchange_aliases},
                 **{alias: (analytics_sell_side.data_mart_body, {}) for alias in aliases.view_aliases},
             }
-            message_text = message.text.lower().strip()
+            message_text = user_msg.lower().strip()
             function_to_call, kwargs = aliases_dict.get(message_text, (None, None))
             if function_to_call:
                 await function_to_call(message, **kwargs)
             else:
                 await state.set_state(rag.RagState.rag_query)
-                await state.update_data(rag_query=message.text)
+                await state.update_data(rag_query=user_msg)
                 await send_nearest_subjects(message)
 
     else:
@@ -425,6 +435,7 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
 
 async def is_stakeholder_in_message(
         message: types.Message,
+        user_msg: str,
         state: FSMContext,
         session: AsyncSession,
         fuzzy_score: int = 95
@@ -433,13 +444,14 @@ async def is_stakeholder_in_message(
     Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
 
     :param message:      Сообщение от пользователя.
+    :param user_msg:     Сообщение пользователя
     :param state:        Состояние пользователя.
     :param session:      Сессия для взаимодействия с бд.
     :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
     :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
     sh_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text.replace(texts_manager.STAKEHOLDER_ADDITIONAL_INFO, ''),
+        user_msg.replace(texts_manager.STAKEHOLDER_ADDITIONAL_INFO, ''),
         subject_types=[models.StakeholderAlternative, ],
         score=fuzzy_score
     )
@@ -465,19 +477,21 @@ async def is_stakeholder_in_message(
 
 async def is_commodity_in_message(
         message: types.Message,
+        user_msg: str,
         send_message_if_commodity_in_message: bool = True,
         fuzzy_score: int = 95,
 ) -> bool:
     """
     Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
 
-    :param message:      Сообщение от пользователя.
+    :param message: Сообщение от пользователя.
+    :param user_msg: Сообщение пользователя
     :param send_message_if_commodity_in_message: нужно ли отправлять в сообщении
-    :param fuzzy_score:  Величина в процентах совпадение с референтными именами стейкхолдеров.
-    :return:             Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
+    :param fuzzy_score: Величина в процентах совпадение с референтными именами стейкхолдеров.
+    :return: Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
     """
     commodity_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        message.text.replace(texts_manager.COMMODITY_ADDITIONAL_INFO, ''),
+        user_msg.replace(texts_manager.COMMODITY_ADDITIONAL_INFO, ''),
         subject_types=[models.CommodityAlternative, ],
         score=fuzzy_score
     )
