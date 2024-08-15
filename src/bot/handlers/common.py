@@ -106,8 +106,7 @@ async def user_registration(message: types.Message, user_msg: str, state: FSMCon
     chat_id, full_name = message.chat.id, message.from_user.full_name
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : начал процесс регистрации')
     await state.set_state(Form.new_user_reg)
-    new_user_start = config.new_user_start
-    await message.answer(new_user_start, protect_content=texts_manager.PROTECT_CONTENT)
+    await message.answer(texts_manager.REGISTRATION_START, protect_content=texts_manager.PROTECT_CONTENT)
 
 
 @router.message(Form.new_user_reg)
@@ -125,13 +124,12 @@ async def ask_user_mail(message: types.Message, state: FSMContext, session: Asyn
         # проверка на существования пользователя с введенной почтой
         if not is_new_user_email(user_msg):
             await state.clear()
-            await message.answer('Пользователь с такой почтой уже существует! '
-                                 'Нажмите /start, чтобы попробовать еще раз.')
+            await message.answer(texts_manager.REGISTRATION_NOT_UNIQUE_EMAIL)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : при регистрации использовалась чужая почта')
             return
         elif not (await is_email_in_whitelist(session, user_msg)):
             await state.clear()
-            await message.answer('Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: @korolkov_m')
+            await message.answer(texts_manager.REGISTRATION_NOT_WHITELIST_EMAIL)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : '
                                  f'попытка регистрации пользователя, отсутствующего в белом списке')
             return
@@ -144,7 +142,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext, session: Asyn
                 config.MAIL_RU_LOGIN,
                 user_msg,
                 config.mail_register_subject,
-                config.reg_mail_text.format(reg_code),
+                texts_manager.REGISTRATION_EMAIL_TEXT.format(code=reg_code),
             )
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : '
                              f'код для регистрации отправлен на почту {user_msg}')
@@ -156,7 +154,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext, session: Asyn
             reg_code=reg_code,
             attempts_left=MAX_REGISTRATION_CODE_ATTEMPTS
         )
-        await message.answer('Для завершения регистрации, введите код, отправленный вам на почту.')
+        await message.answer(texts_manager.REGISTRATION_REQUEST_CODE)
     else:
         keyboard = types.ReplyKeyboardMarkup(
             keyboard=[[types.KeyboardButton(text='отмена')], ],
@@ -164,7 +162,7 @@ async def ask_user_mail(message: types.Message, state: FSMContext, session: Asyn
             input_field_placeholder='Введите корпоративную почту',
             one_time_keyboard=True
         )
-        await message.answer('Указана не корпоративная почта', reply_markup=keyboard)
+        await message.answer(texts_manager.REGISTRATION_NOT_CORPORATE_EMAIL, reply_markup=keyboard)
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -184,15 +182,13 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         user_id = user_raw['id']
         user_email = reg_info['user_email']
 
-        welcome_msg = f'Добро пожаловать, {full_name}!'
-        exc_msg = 'Во время авторизации произошла ошибка, попробуйте позже.'
         try:
             await insert_user_email_after_register(user_id, user_username, full_name, user_email)
-            await message.answer(welcome_msg)
+            await message.answer(texts_manager.REGISTRATION_WELCOME.format(user_name=full_name))
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : новый пользователь')
             await help_handler(message, state)
         except Exception as e:
-            await message.answer(exc_msg)
+            await message.answer(texts_manager.REGISTRATION_ERROR)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : ошибка авторизации ({e})')
         finally:
             await state.clear()
@@ -201,12 +197,12 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
         attempts_left = reg_info['attempts_left'] - 1
         if not attempts_left:
             await state.clear()
-            await message.answer('Вы истратили все попытки. Попробуйте заново, используя команду /start.')
+            await message.answer(texts_manager.REGISTRATION_NOT_ATTEMPTS_LEFT)
             user_logger.critical(f'*{chat_id}* {full_name} - {user_msg} : неуспешная регистрация')
             return
 
         await state.update_data(attempts_left=attempts_left)
-        await message.answer(f'Вы ввели некорректный регистрационный код. Осталось {attempts_left} попытки.')
+        await message.answer(texts_manager.REGISTRATION_NOT_CORRECT_CODE.format(attempts=attempts_left))
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : пользователь ввел некорректный код, '
                             f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
 
