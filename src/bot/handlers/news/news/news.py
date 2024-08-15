@@ -379,7 +379,7 @@ async def is_eco_in_message(
     :param score_cutoff:  Минимальный требуемый процент совпадения
     :return:              Есть ли ЕТС в тексте сообщения
     """
-    if flag := bool(process.extractOne(user_msg.lower(), config.ECO_NAMES, score_cutoff=score_cutoff)):
+    if flag := bool(process.extractOne(user_msg.lower(), aliases.ECO_NAMES, score_cutoff=score_cutoff)):
         msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
         await message.answer(msg_text, parse_mode='HTML', protect_content=False)
     return flag

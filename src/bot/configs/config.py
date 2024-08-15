@@ -116,11 +116,7 @@ ECO_INAVIGATOR_URL = (
     'https://upd.mobile.sbrf.ru:10443/ios/dl/gdash/9845/1964'
     '#ewogICJ3aWRnZXRzIiA6IHsKICAgICIyODM2NDEiIDogewoKICAgIH0KICB9Cn0='
 )
-ECO_NAMES = (
-    'етс',
-    'единые трансфертные ставки',
-    'единая трансфертная ставка',
-)
+
 ECO_FUZZY_SEARCH_SCORE_CUTOFF: int = 90
 
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
