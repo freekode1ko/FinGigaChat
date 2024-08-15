@@ -537,6 +537,9 @@ class ResearchGroup(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
+    display_order = Column(Integer, nullable=True, server_default=sa.text('0'), comment='Порядок отображения групп')
+    expand = Column(Boolean, server_default=sa.text('false'),
+                    comment='Флаг, указывающий, что вместо отображения группы, надо отобразить ее разделы')
 
 
 class ResearchSection(Base):

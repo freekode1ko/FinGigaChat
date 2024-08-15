@@ -126,7 +126,7 @@ def get_research_groups_menu_kb(group_df: pd.DataFrame) -> InlineKeyboardMarkup:
         )
 
         keyboard.row(types.InlineKeyboardButton(
-            text=item['name'].capitalize(),
+            text=item['name'],
             callback_data=get_group_sections_callback.pack()),
         )
 
