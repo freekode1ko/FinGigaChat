@@ -51,8 +51,7 @@ async def help_handler(message: types.Message, state: FSMContext, user_msg: str 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
     check_mail = user_msg == '/start'
     if await is_user_has_access(message.from_user.model_dump_json(), check_mail):
-        help_text = config.help_text
-        to_pin = await message.answer(help_text, protect_content=texts_manager.PROTECT_CONTENT)
+        to_pin = await message.answer(texts_manager.HELP_TEXT, protect_content=texts_manager.PROTECT_CONTENT)
         msg_id = to_pin.message_id
         await message.bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
 
