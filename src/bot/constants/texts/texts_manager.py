@@ -16,7 +16,7 @@ class TextsManager:
         for config_class in self.__configs:
             for key, value in config_class.dict().items():
                 redis_value = redis_client.get(f'{self.PATTERN}{key}')
-                if redis_value == str(value):
+                if not redis_value or redis_value == str(value):
                     redis_client.set(f'{self.PATTERN}{key}', value)
                 else:
                     raise ValueError(

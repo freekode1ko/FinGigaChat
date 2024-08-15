@@ -652,7 +652,5 @@ async def not_implemented_functionality(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    msg_text = 'Функционал появится позднее'
-
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    await callback_query.message.answer(texts_manager.COMMON_FEATURE_WILL_APPEAR.strip(), parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')

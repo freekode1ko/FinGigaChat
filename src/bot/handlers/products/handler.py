@@ -11,6 +11,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 import configs.config
 from constants import enums
+from constants.texts import texts_manager
 from db import models
 from db.api.product import product_db
 from handlers.products import callbacks
@@ -174,13 +175,13 @@ async def get_product_documents(callback_query: types.CallbackQuery, product: mo
         case enums.FormatType.group_files:
             pdf_files = [Path(i.file_path) for i in documents]
             if not await send_pdf(callback_query, pdf_files, msg_text):
-                msg_text += '\nФункционал появится позднее'
+                msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
                 await callback_query.message.answer(msg_text, parse_mode='HTML')
             else:
                 await send_full_copy_of_message(callback_query)
         case enums.FormatType.individual_messages:
             if not documents:
-                msg_text += '\nФункционал появится позднее'
+                msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
 
             await callback_query.message.answer(msg_text, parse_mode='HTML')
 

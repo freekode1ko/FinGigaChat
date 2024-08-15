@@ -365,7 +365,7 @@ async def get_client_industry_analytics(
     files = await get_industry_analytic_files(industry_id=client_info['industry_id'])
     files = [p for f in files if (p := Path(f.file_path)).exists()]
     if not await send_pdf(callback_query, files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
-        msg_text += '\nФункционал появится позднее'
+        msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
         await callback_query.message.answer(msg_text, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
     else:
         await utils.base.send_full_copy_of_message(callback_query)
@@ -675,9 +675,7 @@ async def not_implemented(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    msg_text = 'Функционал появится позднее'
-
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    await callback_query.message.answer(texts_manager.COMMON_FEATURE_WILL_APPEAR, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 

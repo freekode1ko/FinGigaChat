@@ -312,8 +312,11 @@ async def metal_info_command(
 
 async def not_realized_function(callback_query: types.CallbackQuery) -> None:
     """Выводит сообщение, что функция будет реализована позднее"""
-    msg_text = 'Функционал появится позднее'
-    await callback_query.message.answer(msg_text, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
+    await callback_query.message.answer(
+        texts_manager.COMMON_FEATURE_WILL_APPEAR.strip(),
+        protect_content=texts_manager.PROTECT_CONTENT,
+        parse_mode='HTML'
+    )
 
 
 @router.callback_query(callbacks.GetFIItemData.filter())
