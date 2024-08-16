@@ -582,9 +582,9 @@ async def get_client_inavigator_source(
     navi_link = client_db_api.get_client_navi_link_by_name(research_info.name)
 
     if navi_link:
-        msg_text = texts_manager.ANAL_NAVI_LINK.format(link=navi_link, research=research_info.name)
+        msg_text = texts_manager.ANAL_NAVI_LINK.format(link=navi_link, name=research_info.name)
     else:
-        msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(research=research_info.name)
+        msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=research_info.name)
 
     await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')

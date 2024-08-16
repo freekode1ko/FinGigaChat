@@ -41,7 +41,7 @@ async def is_client_in_message(
                 research_type_id=await get_research_type_id_by_name(client_name),
                 with_back_button=False,
             )
-            msg_text = texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize())
+            msg_text = texts_manager.CLIENT_CHOOSE_SECTION.format(name=client_name.capitalize())
             await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
         return True
     return False

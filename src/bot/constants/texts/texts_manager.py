@@ -5,6 +5,7 @@ from db.redis.client import redis_client_sync as redis_client
 
 class TextsManager:
     """Класс для хранения конфига в редисе"""
+
     PATTERN = 'settings_'
 
     def __init__(self):

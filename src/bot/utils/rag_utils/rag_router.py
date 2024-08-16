@@ -6,8 +6,8 @@ import urllib.parse
 from aiohttp import ClientError, ClientSession
 
 from configs import config, prompts
-from constants.texts import texts_manager
 from constants.enums import HTTPMethod, RetrieverType
+from constants.texts import texts_manager
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.sessions import RagQaBankerClient, RagStateSupportClient

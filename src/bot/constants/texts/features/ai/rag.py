@@ -1,9 +1,11 @@
+"""Модуль с текстовками РАГ-сервиса."""
 from pydantic_settings import BaseSettings
 
 from constants.constants import END_BUTTON_TXT
 
 
 class RAGTexts(BaseSettings):
+    """Класс для РАГ текстовок."""
 
     RAG_CLEAR_HISTORY: str = 'История диалога очищена!'
 

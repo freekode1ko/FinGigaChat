@@ -29,9 +29,9 @@ class AnalyticsTexts(BaseSettings):
 
     ANAL_WHAT_DATA: str = 'Какие данные вас интересуют по клиенту <b>{research}</b>?'
 
-    ANAL_NAVI_LINK: str = '<a href="{link}">Цифровая справка клиента: "{research}"</a>'
+    ANAL_NAVI_LINK: str = '<a href="{link}">Цифровая справка клиента: "{name}"</a>'
 
-    ANAL_NOT_NAVI_LINK: str = 'Цифровая справка по клиенту "{research}" отсутствует'
+    ANAL_NOT_NAVI_LINK: str = 'Цифровая справка по клиенту "{name}" отсутствует'
 
     ANAL_FULL_VERSION_REPORT: str = 'Полная версия отчета: <b>{header}</b>'
 

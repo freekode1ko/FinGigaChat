@@ -535,7 +535,7 @@ async def choose_stakeholder_client(
     )
     await send_or_edit(
         callback_query,
-        texts_manager.CHOOSE_CLIENT_SECTION.format(name=client_name.capitalize()),
+        texts_manager.CLIENT_CHOOSE_SECTION.format(name=client_name.capitalize()),
         keyboard
     )
     user_logger.info(f'*{chat_id}* {full_name} - {callback_data}')
