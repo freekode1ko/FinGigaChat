@@ -27,9 +27,9 @@ class ClientTexts(BaseSettings):
 
     CLIENT_PRODUCT: str = 'Продуктовые предложения по клиенту <b>{name}</b>'
 
-    CLIENT_MEETING_DATA: str = 'Материалы для встречи по клиенту <b>{name}</b>\n' + CommonTexts.COMMON_FEATURE_WILL_APPEAR
+    CLIENT_MEETING_DATA: str = 'Материалы для встречи по клиенту <b>{name}</b>\n' + CommonTexts().COMMON_FEATURE_WILL_APPEAR
 
-    CLIENT_TOP_ARTICLES: str = 'Топ новости по клиенту <b>{}</ b>\n' + CommonTexts.COMMON_FEATURE_WILL_APPEAR
+    CLIENT_TOP_ARTICLES: str = 'Топ новости по клиенту <b>{}</ b>\n' + CommonTexts().COMMON_FEATURE_WILL_APPEAR
 
     CLIENT_CHOOSE_PERIOD: str = 'Выберите период для получения новостей по клиенту <b>{name}</b>'
 

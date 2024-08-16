@@ -1,6 +1,7 @@
 """Клас для получения файла из конфига редиса"""
 from constants.texts.features import CONFIG_CLASSES
 from db.redis.client import redis_client_sync as redis_client
+from log.bot_logger import logger
 
 
 class TextsManager:
@@ -20,7 +21,7 @@ class TextsManager:
                 if not redis_value or redis_value == str(value):
                     redis_client.set(f'{self.PATTERN}{key}', value)
                 else:
-                    raise ValueError(
+                    logger.critical(
                         f'Значение "{value}" для ключа "{key}" не совпадает со значением "{redis_value}" в Redis.'
                     )
 
