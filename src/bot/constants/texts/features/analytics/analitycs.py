@@ -1,9 +1,9 @@
-"""Модуль для текстовок аналитики sell slide."""
+"""Модуль для текстовок аналитики."""
 from pydantic_settings import BaseSettings
 
 
-class AnalyticsSellSide(BaseSettings):
-    """Класс для текстовок аналитики sell slide."""
+class AnalyticsTexts(BaseSettings):
+    """Класс для текстовок аналитики."""
 
     ANAL_CHOOSE_PUBLIC_MARKET: str = (
         'Аналитика публичных рынков\n'
@@ -32,3 +32,12 @@ class AnalyticsSellSide(BaseSettings):
     ANAL_NAVI_LINK: str = '<a href="{link}">Цифровая справка клиента: "{research}"</a>'
 
     ANAL_NOT_NAVI_LINK: str = 'Цифровая справка по клиенту "{research}" отсутствует'
+
+    ANAL_FULL_VERSION_REPORT: str = 'Полная версия отчета: <b>{header}</b>'
+
+    ANAL_END: str = 'Просмотр аналитики завершен'
+
+    ANAL_START: str = (
+        'В этом разделе вы можете получить, всесторонний анализ российского финансового рынка '
+        'от SberCIB Investment Research'
+    )

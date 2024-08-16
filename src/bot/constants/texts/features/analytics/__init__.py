@@ -1,2 +1,2 @@
 """Пакет для текстовок по аналитике"""
-from constants.texts.features.analytics.analitycs import AnalyticsSellSide
+from constants.texts.features.analytics.analitycs import AnalyticsTexts
