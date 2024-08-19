@@ -20,7 +20,10 @@ class NewsTexts(BaseSettings):
 
     NEWS_ABOUT_INDUSTRY_FOR_PERIOD: str = 'Новости по отрасли <b>{name}</b> за {days} дней'
 
-    NEWS_CHOOSE_SUBJECT_FROM_SUBS: str = 'Выберите {subject} из списка ваших подписок\n<b>{page_info}</b>'
+    NEWS_CHOOSE_SUBJECT_FROM_SUBS: str = (
+        'Выберите {subject} из списка ваших подписок\n'
+        '<b>{page_info}</b>'
+    )
 
     NEWS_CHOOSE_SUBJECT_FROM_LIST: str = 'Выберите {subject} из списка'
 
