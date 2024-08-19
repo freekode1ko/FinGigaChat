@@ -54,10 +54,18 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     group_df = await research_group_db.get_all()
-    section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
-    group_df = group_df[group_df['name'] != 'Разделы']
+    msg_text = (
+        'Аналитика публичных рынков\n'
+        'Выберите раздел'
+    )
 
-    section_df = await research_section_db.get_research_sections_df_by_group_id(section_group_id, from_user.id)
+    expand_group_df = group_df[group_df['expand']]
+    section_df = pd.DataFrame(columns=group_df.columns)
+    for _, row in expand_group_df.iterrows():
+        group_section_df = await research_section_db.get_research_sections_df_by_group_id(row['id'], from_user.id)
+        section_df = pd.concat([section_df, group_section_df])
+
+    group_df = group_df[~group_df['expand']]
 
     section_df['callback_data'] = section_df['id'].apply(lambda x: callbacks.GetCIBSectionResearches(section_id=x).pack())
     group_df['callback_data'] = group_df['id'].apply(lambda x: callbacks.GetCIBGroupSections(group_id=x).pack())
@@ -113,14 +121,14 @@ async def get_section_research_types_menu(
     section_id = callback_data.section_id
 
     group_df = await research_group_db.get_all()
-    section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
+    expand_group_ids = group_df[group_df['expand']]['id'].values.tolist()
 
     section_info = await research_section_db.get(section_id)
     research_type_df = await user_research_subscription_db.get_subject_df_by_section_id(user_id, section_id)
 
     back_callback_data = (
         callbacks.GetCIBGroupSections(group_id=section_info.research_group_id).pack()
-        if section_info.research_group_id != section_group_id else callbacks.Menu().pack()
+        if section_info.research_group_id not in expand_group_ids else callbacks.Menu().pack()
     )
     keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)
 

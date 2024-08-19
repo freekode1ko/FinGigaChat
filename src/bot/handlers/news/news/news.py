@@ -570,8 +570,6 @@ async def send_stakeholder_articles(
         tg_obj: types.CallbackQuery | types.Message,
         ap_obj: ArticleProcess,
         client_id: int,
-        client_name: str = '',
-        extra_text: str = ''
 ) -> None:
     """
     Отправка новостей о клиенте стейкхолдера.
@@ -579,8 +577,6 @@ async def send_stakeholder_articles(
     :param tg_obj:          Telegram-объект для отправки сообщения и получения данных о пользователе.
     :param ap_obj:          Экземпляр ArticleProcess.
     :param client_id:       ID клиента.
-    :param client_name:     Имя клиента.
-    :param extra_text:      Дополнительный текст к сообщению.
     """
     _, articles = await ap_obj.process_user_alias(
         subject=enums.SubjectType.client,
@@ -590,28 +586,10 @@ async def send_stakeholder_articles(
     await send_news_with_next_button(
         tg_obj.bot,
         tg_obj.from_user.id,
-        extra_text + articles,
+        articles,
         client_id,
         enums.SubjectType.client,
         config.OTHER_NEWS_COUNT_SH,
         config.NEWS_LIMIT_SH
     )
-    if not client_name:
-        client_dict = await client_db.get(client_id)
-        client_name = client_dict['name']
-
-    kb = get_client_menu_kb(
-        client_id,
-        current_page=0,
-        research_type_id=await get_research_type_id_by_name(client_name),
-        with_back_button=False,
-    )
-
-    msg_obj = tg_obj if isinstance(tg_obj, types.Message) else tg_obj.message
-    await msg_obj.answer(
-        texts_manager.CLIENT_MENU_START.format(client=client_name),
-        parse_mode='HTML',
-        reply_markup=kb
-    )
-
-    user_logger.info(f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - получил новости по {client_name}')
+    user_logger.info(f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - получил новости по клиенту с id {client_id}')

@@ -21,8 +21,8 @@ class ResearchGroupCRUD(BaseCRUD[models.ResearchGroup]):
         :returns: DataFrame[id, name]
         """
         async with self._async_session_maker() as session:
-            data = await session.execute(sa.select(self._table.id, self._table.name))
-            return pd.DataFrame(data.all(), columns=['id', 'name'])
+            data = await session.execute(sa.select(*self.fields).order_by(self._order))
+            return pd.DataFrame(data.all(), columns=self.columns)
 
 
-research_group_db = ResearchGroupCRUD(models.ResearchGroup, models.ResearchGroup.id, logger)
+research_group_db = ResearchGroupCRUD(models.ResearchGroup, models.ResearchGroup.display_order, logger)
