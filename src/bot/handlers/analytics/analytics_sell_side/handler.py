@@ -54,10 +54,6 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     group_df = await research_group_db.get_all()
-    msg_text = (
-        'Аналитика публичных рынков\n'
-        'Выберите раздел'
-    )
 
     expand_group_df = group_df[group_df['expand']]
     section_df = pd.DataFrame(columns=group_df.columns)
