@@ -86,7 +86,7 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
     section_info = await telegram_section_db.get(section_id)
 
     msg_text = texts_manager.TELEGRAM_NEWS_CHOOSE_PERIOD.format(
-        sectoin=section_info.name,
+        section=section_info.name,
         my_industry_callback=industry.MY_TG_CHANNELS_CALLBACK_TEXT,
         all_industry_callback=industry.ALL_TG_CHANNELS_CALLBACK_TEXT
     )

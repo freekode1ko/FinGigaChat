@@ -329,7 +329,7 @@ async def subjects_list(
     if subscribed:
         msg_text = texts_manager.NEWS_CHOOSE_SUBJECT_FROM_SUBS.format(subject=subject.subject_name, page_info=page_info)
     else:
-        msg_text = texts_manager.NEWS_WRITE_SUBJECT_NAME(subject=subject.subject_name_genitive)
+        msg_text = texts_manager.NEWS_WRITE_SUBJECT_NAME.format(subject=subject.subject_name_genitive)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
