@@ -7,11 +7,11 @@ from constants.texts.features import CommonTexts
 class ClientTexts(BaseSettings):
     """Класс с текстовками по данным о клиентах."""
 
-    CLIENT_CHOOSE_SECTION: str = 'Выберите раздел для получения данных по клиенту <b>{name}</b>'
+    CLIENT_START: str = 'Клиенты'
 
     CLIENT_END: str = 'Просмотр клиентов завершен'
 
-    CLIENT_START: str = 'Клиенты'
+    CLIENT_CHOOSE_SECTION: str = 'Выберите раздел для получения данных по клиенту <b>{name}</b>'
 
     CLIENT_CHOOSE_FROM_LIST: str = 'Выберите клиента из списка'
 
