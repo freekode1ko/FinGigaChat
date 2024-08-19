@@ -192,7 +192,7 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
         return
 
     weekly_pulse_date_str = parser_source.get_source_last_update_datetime(source_name='Weekly Pulse').strftime(config.BASE_DATE_FORMAT)
-    weekly_pulse_date_str = f'Данные на {weekly_pulse_date_str}'
+    weekly_pulse_date_str = texts_manager.COMMON_DATE_OF_DATA.format(date=weekly_pulse_date_str)
 
     media = MediaGroupBuilder(caption=weekly_pulse_date_str)
     for path in img_path_list:
@@ -208,22 +208,22 @@ async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
     fuzzy_searcher = FuzzyAlternativeNames()
     nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
 
-    cancel_command = 'отмена'
     buttons = [
-        [types.KeyboardButton(text=cancel_command)],
-        [types.KeyboardButton(text='Спросить у Базы Знаний')],
+        [types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)],
+        [types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)],
     ]
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
 
-    cancel_msg = f'Напишите «{cancel_command}» для очистки'
-    response = 'Уточните, пожалуйста, ваш запрос..\n\nВозможно, вы имели в виду один из следующих вариантов:'
     keyboard = types.ReplyKeyboardMarkup(
-        keyboard=buttons, resize_keyboard=True, input_field_placeholder=cancel_msg, one_time_keyboard=True
+        keyboard=buttons,
+        resize_keyboard=True,
+        input_field_placeholder=texts_manager.COMMON_CANCEL_MSG,
+        one_time_keyboard=True
     )
 
     await message.answer(
-        response,
+        texts_manager.COMMON_CLARIFYING_REQUEST,
         parse_mode='HTML',
         protect_content=texts_manager.PROTECT_CONTENT,
         disable_web_page_preview=True,
@@ -246,7 +246,7 @@ async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: 
         name, navi_link = ap_obj.get_client_name_and_navi_link(client_id)
         if navi_link is not None:
             await message.answer(
-                f'<a href="{str(navi_link)}">Цифровая справка клиента: "{str(name)}"</a>',
+                texts_manager.ANAL_NAVI_LINK.format(link=navi_link, name=name),
                 parse_mode='HTML',
             )
     except Exception as e:
@@ -380,7 +380,7 @@ async def is_eco_in_message(
     :return:              Есть ли ЕТС в тексте сообщения
     """
     if flag := bool(process.extractOne(user_msg.lower(), aliases.ECO_NAMES, score_cutoff=score_cutoff)):
-        msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
+        msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}">Актуальные ETC</a>'  # TODO: add to quotes redis texts?
         await message.answer(msg_text, parse_mode='HTML', protect_content=False)
     return flag
 
@@ -461,7 +461,7 @@ async def is_stakeholder_in_message(
 
     sh_obj = await stakeholder.get_stakeholder_by_id(session, sh_ids[0])
     if not sh_obj.clients:  # такого случая по факту не должно быть
-        await message.answer('Пока нет новостей на эту тему', reply_markeup=types.ReplyKeyboardRemove())
+        await message.answer(texts_manager.NEWS_NOT_FOUND, reply_markeup=types.ReplyKeyboardRemove())
         return True
 
     stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
@@ -497,13 +497,13 @@ async def is_commodity_in_message(
     )
     commodities = await commodity_db.get_by_ids(commodity_ids[:1])
 
-    if len(commodities) >= 1:  # больше одного клиента найтись скорее всего не может, если большой процент совпадения стоит
+    if len(commodities) >= 1:
         if send_message_if_commodity_in_message:
             commodity_id = commodity_ids[0]
             commodity_name = commodities['name'].iloc[0]
             await send_or_get_commodity_quotes_message(message, commodity_id)
             keyboard = get_commodity_menu_kb(commodity_id)
-            msg_text = f'Выберите раздел для получения данных по <b>{commodity_name.capitalize()}</b>'
+            msg_text = texts_manager.COMMODITY_CHOOSE_SECTION.format(name=commodity_name.capitalize())
             await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
         return True
     return False

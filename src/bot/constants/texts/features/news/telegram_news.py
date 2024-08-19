@@ -15,3 +15,8 @@ class TelegramNewsTexts(BaseSettings):
         'Для получения новостей из всех telegram каналов, связанных с разделом, выберите '
         '<b>"{all_industry_callback}"</b>'
     )
+
+    TELEGRAM_NEWS_CHOOSE_CHANNEL: str = (
+        '{channel}\n\n'
+        'Выберите телеграм каналы, по которым хотите получить новости'
+    )

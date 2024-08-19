@@ -7,6 +7,8 @@ from constants.constants import END_BUTTON_TXT
 class RAGTexts(BaseSettings):
     """Класс для РАГ текстовок."""
 
+    RAG_ASK_KNOWLEDGE: str = 'Спросить у Базы Знаний'
+
     RAG_CLEAR_HISTORY: str = 'История диалога очищена!'
 
     RAG_FINISH_STATE: str = f'Напишите «{END_BUTTON_TXT}» для завершения общения с Базой Знаний'
