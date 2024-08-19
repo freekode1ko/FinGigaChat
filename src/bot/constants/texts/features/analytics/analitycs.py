@@ -5,6 +5,13 @@ from pydantic_settings import BaseSettings
 class AnalyticsTexts(BaseSettings):
     """Класс для текстовок аналитики."""
 
+    ANAL_START: str = (
+        'В этом разделе вы можете получить всесторонний анализ российского финансового рынка '
+        'от SberCIB Investment Research'
+    )
+
+    ANAL_END: str = 'Просмотр аналитики завершен'
+
     ANAL_CHOOSE_PUBLIC_MARKET: str = (
         'Аналитика публичных рынков\n'
         'Выберите раздел'
@@ -34,10 +41,3 @@ class AnalyticsTexts(BaseSettings):
     ANAL_NOT_NAVI_LINK: str = 'Цифровая справка по клиенту "{name}" отсутствует'
 
     ANAL_FULL_VERSION_REPORT: str = 'Полная версия отчета: <b>{header}</b>'
-
-    ANAL_END: str = 'Просмотр аналитики завершен'
-
-    ANAL_START: str = (
-        'В этом разделе вы можете получить, всесторонний анализ российского финансового рынка '
-        'от SberCIB Investment Research'
-    )

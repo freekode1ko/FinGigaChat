@@ -18,12 +18,11 @@ class TextsManager:
         for config_class in self.__configs:
             for key, value in config_class.dict().items():
                 redis_value = redis_client.get(f'{self.PATTERN}{key}')
-                if not redis_value or redis_value == str(value):
-                    redis_client.set(f'{self.PATTERN}{key}', value)
-                else:
+                if redis_value and redis_value != str(value):
                     logger.critical(
                         f'Значение "{value}" для ключа "{key}" не совпадает со значением "{redis_value}" в Redis.'
                     )
+                redis_client.set(f'{self.PATTERN}{key}', value)
 
     def __getattr__(self, item):
         """Получение атрибута из редиса"""
