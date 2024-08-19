@@ -88,7 +88,7 @@ class RAGRouter:
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
         session = RagQaBankerClient().session
-        return await self._request_to_rag_api(session, **req_kwargs)
+        return await self._request_to_rag_api(session, HTTPMethod.GET, **req_kwargs)
 
     async def rag_state_support(self) -> str:
         """Формирование параметров к запросу API по господдержке и получение ответа."""
@@ -102,7 +102,7 @@ class RAGRouter:
 
     async def _request_to_rag_api(self,
                                   session: ClientSession,
-                                  request_method: str = HTTPMethod,
+                                  request_method: HTTPMethod,
                                   **kwargs) -> str:
         """
         Отправляет запрос к RAG API И формирует ответ.

@@ -333,7 +333,7 @@ async def get_client_analytic_indicators(
     )
 
     await callback_query.message.edit_text(
-        texts_manager.ANAL_WHAT_DATA.fromar(research=research_info.name),
+        texts_manager.ANAL_WHAT_DATA.format(research=research_info.name),
         reply_markup=keyboard,
         parse_mode='HTML'
     )
@@ -506,7 +506,7 @@ async def get_client_top_news(
     client_info = await client_db.get(callback_data.client_id)
 
     await callback_query.message.answer(
-        texts_manager.CLIENT_TOP_ARTICLES.dormat(name=client_info['name'].capitalize()),
+        texts_manager.CLIENT_TOP_ARTICLES.format(name=client_info['name'].capitalize()),
         parse_mode='HTML'
     )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
