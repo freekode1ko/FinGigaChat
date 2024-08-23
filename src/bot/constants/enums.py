@@ -26,6 +26,16 @@ class Environment(str, Enum):
             return cls.UNKNOWN
 
 
+class HTTPMethod(str, Enum):
+    """Http методы."""
+
+    GET = 'GET'
+    POST = 'POST'
+    PUT = 'PUT'
+    DELETE = 'DELETE'
+    PATCH = 'PATCH'
+
+
 class RetrieverType(Enum):
     """Типы ретриверов в боте"""
 
@@ -157,3 +167,11 @@ class FormatType(IntEnum):
     # document.description просто текст
     # [document.file] если есть файл
     individual_messages = 2
+
+
+class StakeholderType(str, Enum):
+    """Тип того, кем является стейкхолдер для клиента."""
+
+    lpr = 'лпр'
+    beneficiary = 'бенефициар'
+    undefined = 'не определено'

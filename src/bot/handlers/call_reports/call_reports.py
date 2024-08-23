@@ -16,7 +16,7 @@ from db.models import CallReports
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
 from handlers.call_reports.callbackdata import CRCreateNew, CRMainMenu, CRMenusEnum
 from log.bot_logger import logger
-from utils.base import user_in_whitelist
+from utils.base import is_user_has_access
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())
@@ -34,7 +34,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text='Создать новый протокол встречи',
+            text='Создать новую заметку',
             callback_data=CRCreateNew(menu=CRMenusEnum.create_new).pack()
         )
     )
@@ -63,7 +63,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
         )
 
 
-@router.message(Command('call_reports'))
+@router.message(Command('notes'))
 async def call_reports_enter_command(message: Message, state: FSMContext, ) -> None:
     """
     Входная точка для создания или просмотра call report'ов
@@ -72,7 +72,7 @@ async def call_reports_enter_command(message: Message, state: FSMContext, ) -> N
     :param state: Объект, который хранит состояние FSM для пользователя
     """
     await state.clear()
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         await main_menu(message)
 
 

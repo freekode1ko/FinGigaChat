@@ -8,12 +8,13 @@ from aiogram import F, types
 from aiogram.filters import Command
 
 from constants import industry
+from constants.texts import texts_manager
 from db.api.telegram_section import telegram_section_db
 from handlers.telegram_sections.handler import router
 from keyboards.telegram_news import callbacks
 from keyboards.telegram_news import constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import bot_send_msg, user_in_whitelist
+from utils.base import bot_send_msg, is_user_has_access
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
@@ -23,7 +24,7 @@ async def list_sections(message: types.CallbackQuery | types.Message) -> None:
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    msg_text = 'Выберите раздел для получения краткой сводки новостей из telegram каналов'
+    msg_text = texts_manager.TELEGRAM_NEWS_START
     sections = await telegram_section_db.get_all()
     keyboard = keyboards.get_section_kb(sections)
 
@@ -46,7 +47,7 @@ async def select_section_to_get_tg_articles(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         await list_sections(message)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
@@ -84,13 +85,10 @@ async def select_news_period(callback_query: types.CallbackQuery, callback_data:
     my_subs = callback_data.my_subscriptions
     section_info = await telegram_section_db.get(section_id)
 
-    msg_text = (
-        f'Выберите период, за который хотите получить сводку новостей из telegram каналов по разделу '
-        f'<b>{section_info.name}</b>\n\n'
-        f'Для получения новостей из telegram каналов, на которые вы подписались в боте, выберите '
-        f'<b>"{industry.MY_TG_CHANNELS_CALLBACK_TEXT}"</b>\n'
-        f'Для получения новостей из всех telegram каналов, связанных с разделом, выберите '
-        f'<b>"{industry.ALL_TG_CHANNELS_CALLBACK_TEXT}"</b>'
+    msg_text = texts_manager.TELEGRAM_NEWS_CHOOSE_PERIOD.format(
+        section=section_info.name,
+        my_industry_callback=industry.MY_TG_CHANNELS_CALLBACK_TEXT,
+        all_industry_callback=industry.ALL_TG_CHANNELS_CALLBACK_TEXT
     )
     keyboard = keyboards.get_select_period_kb(section_id, my_subs)
 

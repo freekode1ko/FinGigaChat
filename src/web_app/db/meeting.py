@@ -8,7 +8,7 @@ from sqlalchemy import (
     CursorResult,
 )
 
-from db.models import UserMeeting, Whitelist
+from db.models import UserMeeting, RegisteredUser
 from db.database import async_session
 from config import REMEMBER_TIME
 
@@ -29,7 +29,7 @@ async def get_user_email(user_id: int | str) -> str:
         user_id = int(user_id)
 
     async with async_session() as session:
-        query = select(Whitelist.user_email).where(Whitelist.user_id == user_id)
+        query = select(RegisteredUser.user_email).where(RegisteredUser.user_id == user_id)
         email = await session.execute(query)
         return email.scalar()
 

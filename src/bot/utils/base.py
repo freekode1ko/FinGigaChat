@@ -21,12 +21,18 @@ import module.data_transformer as dt
 from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants
 from constants.constants import research_footer
+from constants.texts import texts_manager
 from db import models
 from db.database import async_session, engine
 from log.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = '\n\n', prefix: str = '') -> list[types.Message]:
+async def bot_send_msg(bot: Bot,
+                       user_id: int | str,
+                       msg: str,
+                       delimiter: str = '\n\n',
+                       prefix: str = '',
+                       protect_content: bool = texts_manager.PROTECT_CONTENT) -> list[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -35,6 +41,7 @@ async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = 
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
+    :param protect_content: Защищать ли сообщения от скринов и перессылки
     return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
@@ -53,7 +60,13 @@ async def bot_send_msg(bot: Bot, user_id: int | str, msg: str, delimiter: str = 
         batches.append(current_batch.strip())
 
     for batch in batches:
-        msg = await bot.send_message(user_id, text=batch, parse_mode='HTML', disable_web_page_preview=True)
+        msg = await bot.send_message(
+            user_id,
+            text=batch,
+            parse_mode='HTML',
+            disable_web_page_preview=True,
+            protect_content=protect_content,
+        )
         messages.append(msg)
     return messages
 
@@ -72,7 +85,13 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     if file_name:
         if file_type == 'photo':
             file = types.FSInputFile('sources/{}.jpg'.format(file_name))
-            msg = await bot.send_photo(photo=file, chat_id=user_id, caption=message_text, parse_mode='HTML', protect_content=True)
+            msg = await bot.send_photo(
+                photo=file,
+                chat_id=user_id,
+                caption=message_text,
+                parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
+            )
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
             msg = await bot.send_document(
@@ -80,15 +99,15 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
                 chat_id=user_id,
                 caption=message_text,
                 parse_mode='HTML',
-                protect_content=True
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
     else:
-        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=True)
+        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
     return msg
 
 
-async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
+async def is_user_has_access(user: str, check_email: bool = False) -> bool:
     """
     Проверка, пользователя на наличие в списках на доступ
 
@@ -98,7 +117,7 @@ async def user_in_whitelist(user: str, check_email: bool = False) -> bool:
     """
     user_id = json.loads(user)['id']
     async with async_session() as session:
-        result = await session.execute(select(models.Whitelist.user_email).where(models.Whitelist.user_id == user_id))
+        result = await session.execute(select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id))
         try:
             user_email = result.scalar_one()
             if not check_email:
@@ -115,11 +134,10 @@ async def is_admin_user(user: dict) -> bool:
     :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
     """
     user_id = user['id']
-    user_series = pd.read_sql_query(f"SELECT user_type FROM whitelist WHERE user_id='{user_id}'", con=engine)
-    user_type = user_series.values.tolist()[0][0]
-    if user_type == 'admin' or user_type == 'owner':
-        return True
-    return False
+    query = select(models.RegisteredUser.user_type).where(models.RegisteredUser.user_id == user_id)
+    async with async_session() as session:
+        user_type = await session.scalar(query)
+    return user_type == 'admin' or user_type == 'owner'
 
 
 def read_curdatetime() -> datetime:
@@ -172,22 +190,26 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
             text_group.append(text[batch: batch + batch_size])
         for summ_part in text_group:
             await message.answer(
-                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer), parse_mode='HTML', protect_content=True
+                '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer),
+                parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
     else:
         await message.answer(
-            '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date), parse_mode='HTML', protect_content=True
+            '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date),
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
         )
 
 
 async def __sent_photo_and_msg(
     message: types.Message,
-    photo: types.InputFile | str,
+    photo: types.InputFile | str | None = None,
     day: list[list] = None,
     month: list[list] = None,
-    title: str = '',
+    title: str | None = '',
     source: str = '',
-    protect_content: bool = True,
+    protect_content: bool = texts_manager.PROTECT_CONTENT,
 ) -> None:
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
@@ -212,7 +234,8 @@ async def __sent_photo_and_msg(
             day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
-    await message.answer_photo(photo, caption=title, parse_mode='HTML', protect_content=protect_content)
+    if photo:
+        await message.answer_photo(photo, caption=title, parse_mode='HTML', protect_content=protect_content)
 
 
 def __replacer(data: str) -> str:
@@ -372,9 +395,9 @@ async def __create_fin_table(message: types.Message | types.CallbackQuery, clien
     )
     photo = types.FSInputFile(png_path)
     if isinstance(message, types.Message):
-        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
     elif isinstance(message, types.CallbackQuery):
-        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=True)
+        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
 
 async def process_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
@@ -541,7 +564,7 @@ async def send_pdf(
         callback_query: types.CallbackQuery,
         pdf_files: list[Path],
         caption: str,
-        protect_content: bool = False,
+        protect_content: bool = texts_manager.PROTECT_CONTENT,
 ) -> bool:
     """
     Отправка сообщения перед файлами

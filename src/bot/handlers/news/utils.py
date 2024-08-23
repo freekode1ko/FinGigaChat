@@ -5,7 +5,13 @@
 Обновляет список выбранных субъектов.
 Оборачивает в строку список выбранных субъектов.
 """
+from typing import Callable, Iterable
+
+from pymorphy2 import MorphAnalyzer
+
 from handlers.news import callback_data_factories
+
+morph = MorphAnalyzer()
 
 
 def get_selected_ids_from_callback_data(callback_data: callback_data_factories.NewsMenuData) -> list[int]:
@@ -42,3 +48,17 @@ def wrap_selected_ids(selected_ids: list[int]) -> str:
     :returns:               строку с выбранными субъектами
     """
     return ','.join(map(str, selected_ids)) or '0'
+
+
+def decline_words(words: str, case: Iterable[str] = ('gent', ), str_func: Callable = str.title) -> str:
+    """
+    Склоняет слова в заданный падеж.
+
+    :param words:       Слова ("Олег Дерипаска").
+    :param case:        Падеж ('datv' - дательный, 'gent' - родительный и тд).
+    :param str_func:    Str функция для форматирования слов.
+    :return:            Слова в нужном падеже.
+    """
+    name_parts = words.strip().split()
+    words = ' '.join(morph.parse(name_part)[0].inflect(set(case)).word for name_part in name_parts)
+    return str_func(words)

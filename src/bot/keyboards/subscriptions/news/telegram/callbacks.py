@@ -4,6 +4,7 @@ from typing import Optional
 
 from aiogram.filters.callback_data import CallbackData
 
+from keyboards.subscriptions import callbacks
 
 MENU = 'tg_subs'
 
@@ -48,3 +49,4 @@ class TelegramSubsMenuData(CallbackData, prefix=MENU):
     is_subscribed: bool = False
     need_add: Optional[bool] = None
     back_menu: TelegramSubsMenusEnum = TelegramSubsMenusEnum.main_menu
+    action: callbacks.SubsMenusEnum = callbacks.SubsMenusEnum.main_menu

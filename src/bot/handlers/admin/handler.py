@@ -14,6 +14,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import keyboards.admin.constructors as keyboards
 from configs import config
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+from constants.texts import texts_manager
 from db.database import engine
 from db.message import add_all, delete_messages, get_messages_by_type
 from db.message_type import message_types
@@ -21,7 +22,7 @@ from keyboards.admin.callbacks import ApproveDeleteMessageByType, DeleteMessageB
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
-from utils.base import file_cleaner, is_admin_user, send_msg_to, user_in_whitelist
+from utils.base import file_cleaner, is_admin_user, is_user_has_access, send_msg_to
 from utils.newsletter import subscriptions_newsletter
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
@@ -51,7 +52,7 @@ async def message_to_all(message: types.Message, state: FSMContext) -> None:
     user = json.loads(message.from_user.model_dump_json())
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(user_str):
+    if await is_user_has_access(user_str):
         if await is_admin_user(user):
             await state.set_state(AdminStates.send_to_users)
             await message.answer(
@@ -99,7 +100,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
         return None
 
     await state.clear()
-    users = pd.read_sql_query('SELECT * FROM whitelist', con=engine)
+    users = pd.read_sql_query('SELECT * FROM registered_user', con=engine)
     users_ids = users['user_id'].tolist()
     saved_messages: list[dict] = []
     newsletter_type = 'default'
@@ -143,10 +144,13 @@ async def admin_help(message: types.Message) -> None:
             '<b>/delete_article</b> - удалить новость из базы данных\n'
             '<b>/sendtoall</b> - отправить сообщение на всех пользователей'
         )
-        await message.answer(help_msg, protect_content=False, parse_mode='HTML')
+        await message.answer(help_msg, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        await message.answer(
+            'У Вас недостаточно прав для использования данной команды.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
@@ -166,11 +170,18 @@ async def show_article(message: types.Message, state: FSMContext) -> None:
         ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
         await state.set_state(AdminStates.link)
         await message.bot.send_message(
-            chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
+            chat_id=message.chat.id,
+            text=ask_link,
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
+            disable_web_page_preview=True,
         )
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        await message.answer(
+            'У Вас недостаточно прав для использования данной команды.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
@@ -188,14 +199,20 @@ async def continue_show_article(message: types.Message, state: FSMContext) -> No
     apd_obj = ArticleProcessAdmin()
     article_id = apd_obj.get_article_id_by_link(data['link'])
     if not article_id:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+        await message.answer(
+            'Извините, не могу найти новость. Попробуйте в другой раз.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         await state.clear()
         user_logger.warning(f"/show_article : не получилось найти новость по ссылке '{data['link']}'")
         return
 
     data_article_dict = apd_obj.get_article_by_link(data['link'])
     if not isinstance(data_article_dict, dict):
-        await message.answer(f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.', protect_content=False)
+        await message.answer(
+            f'Извините, произошла ошибка: {data_article_dict}.\nПопробуйте в другой раз.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         user_logger.critical(f'/show_article : {data_article_dict}')
         return
 
@@ -203,7 +220,7 @@ async def continue_show_article(message: types.Message, state: FSMContext) -> No
     for key, val in data_article_dict.items():
         format_msg += f'<b>{key}</b>: {val}\n'
 
-    await message.answer(format_msg, parse_mode='HTML', protect_content=False, disable_web_page_preview=True)
+    await message.answer(format_msg, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT, disable_web_page_preview=True)
     await state.clear()
 
 
@@ -218,7 +235,7 @@ async def change_summary(message: types.Message, state: FSMContext) -> None:
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
     if not config.api_key_gpt:
-        await message.answer('Данная команда пока недоступна.', protect_content=False)
+        await message.answer('Данная команда пока недоступна.', protect_content=texts_manager.PROTECT_CONTENT)
         user_logger.critical('Нет токена доступа к chatGPT')
         return
 
@@ -229,11 +246,18 @@ async def change_summary(message: types.Message, state: FSMContext) -> None:
         ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
         await state.set_state(AdminStates.link_change_summary)
         await message.bot.send_message(
-            chat_id=message.chat.id, text=ask_link, parse_mode='HTML', protect_content=False, disable_web_page_preview=True
+            chat_id=message.chat.id,
+            text=ask_link,
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
+            disable_web_page_preview=True,
         )
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
     else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.', protect_content=False)
+        await message.answer(
+            'У Вас недостаточно прав для использования данной команды.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
 
 
@@ -252,17 +276,27 @@ async def continue_change_summary(message: types.Message, state: FSMContext) -> 
     full_text, old_text_sum = apd_obj.get_article_text_by_link(data['link_change_summary'])
 
     if not full_text:
-        await message.answer('Извините, не могу найти новость. Попробуйте в другой раз.', protect_content=False)
+        await message.answer(
+            'Извините, не могу найти новость. Попробуйте в другой раз.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         await state.clear()
         user_logger.warning(f"/change_summary : не получилось найти новость по ссылке - {data['link_change_summary']}")
         return
 
-    await message.answer('Создание саммари может занять некоторое время. Ожидайте.', protect_content=False)
+    await message.answer(
+        'Создание саммари может занять некоторое время. Ожидайте.',
+        protect_content=texts_manager.PROTECT_CONTENT,
+    )
 
     try:
         new_text_sum = summarization_by_chatgpt(full_text)
         apd_obj.insert_new_gpt_summary(new_text_sum, data['link_change_summary'])
-        await message.answer(f'<b>Старое саммари:</b> {old_text_sum}', parse_mode='HTML', protect_content=False)
+        await message.answer(
+            f'<b>Старое саммари:</b> {old_text_sum}',
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
 
     # except MessageIsTooLong:
     #     await message.answer('<b>Старое саммари не помещается в одно сообщение.</b>', parse_mode='HTML')
@@ -272,10 +306,17 @@ async def continue_change_summary(message: types.Message, state: FSMContext) -> 
 
     except Exception:
         user_logger.critical('/change_summary : ошибка при создании саммари с помощью chatGPT')
-        await message.answer('Произошла ошибка при создании саммари. Разработчики уже решают проблему.', protect_content=False)
+        await message.answer(
+            'Произошла ошибка при создании саммари. Разработчики уже решают проблему.',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
 
     else:
-        await message.answer(f'<b>Новое саммари:</b> {new_text_sum}', parse_mode='HTML', protect_content=False)
+        await message.answer(
+            f'<b>Новое саммари:</b> {new_text_sum}',
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
         await state.clear()
 
 

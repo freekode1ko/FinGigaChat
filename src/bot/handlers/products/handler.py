@@ -11,12 +11,13 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 import configs.config
 from constants import enums
+from constants.texts import texts_manager
 from db import models
 from db.api.product import product_db
 from handlers.products import callbacks
 from handlers.products import keyboards
 from log.bot_logger import user_logger
-from utils.base import send_full_copy_of_message, send_or_edit, send_pdf, user_in_whitelist
+from utils.base import is_user_has_access, send_full_copy_of_message, send_or_edit, send_pdf
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -85,7 +86,7 @@ async def main_menu_command(message: types.Message) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await main_menu(message)
     else:
@@ -174,13 +175,13 @@ async def get_product_documents(callback_query: types.CallbackQuery, product: mo
         case enums.FormatType.group_files:
             pdf_files = [Path(i.file_path) for i in documents]
             if not await send_pdf(callback_query, pdf_files, msg_text):
-                msg_text += '\nФункционал появится позднее'
+                msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
                 await callback_query.message.answer(msg_text, parse_mode='HTML')
             else:
                 await send_full_copy_of_message(callback_query)
         case enums.FormatType.individual_messages:
             if not documents:
-                msg_text += '\nФункционал появится позднее'
+                msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
 
             await callback_query.message.answer(msg_text, parse_mode='HTML')
 

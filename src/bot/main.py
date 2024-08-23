@@ -15,7 +15,19 @@ from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import async_session as async_session_maker, engine
 from handlers import (
-    admin, ai, analytics, call_reports, clients, common, news, products, quotes, referencebook, subscriptions, telegram_sections
+    admin,
+    ai,
+    analytics,
+    call_reports,
+    clients,
+    commodity,
+    common,
+    news,
+    products,
+    quotes,
+    referencebook,
+    subscriptions,
+    telegram_sections
 )
 from log.bot_logger import logger, user_logger
 from log.sentry import init_sentry
@@ -62,7 +74,7 @@ async def passive_newsletter(
 
         start_tm = time.time()
         # получим справочник пользователей (в цикле, потому что справочник может пополняться)
-        user_df = pd.read_sql_query('SELECT user_id, username FROM whitelist', con=engine)
+        user_df = pd.read_sql_query('SELECT user_id, username FROM registered_user', con=engine)
 
         kwargs['newsletter_start_datetime'] = next_newsletter_datetime
         await newsletter_executor(bot, user_df, **kwargs)
@@ -105,6 +117,7 @@ async def start_bot():
         analytics.router,
         products.router,
         clients.router,
+        commodity.router,
         news.router,
     )
     # Добавляем мидлварю для работы с БД

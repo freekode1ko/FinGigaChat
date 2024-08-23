@@ -1,27 +1,82 @@
 """Неточный поиск по клиентам, сырью, отраслям."""
-from typing import Optional
+from typing import Optional, Type
 
 import sqlalchemy as sa
 from fuzzywuzzy import process
 from sqlalchemy.orm import InstrumentedAttribute
 
+from constants.texts import texts_manager
 from db import models
 from db.database import async_session
-from log.logger_base import Logger
 
 
 class FuzzyAlternativeNames:
     """Неточный поиск по клиентам, сырью, отраслям"""
 
-    def __init__(self, logger: Logger.logger):
+    def __init__(self):
         """Инициализация экземпляра модуля неточного поиска"""
-        self._logger = logger
-
-        self.tables_with_alternative_names_and_pk_colum = [
-            (models.IndustryAlternative, models.IndustryAlternative.industry_id),
-            (models.CommodityAlternative, models.CommodityAlternative.commodity_id),
-            (models.ClientAlternative, models.ClientAlternative.client_id),
+        self.tables_with_attr_tuples = [
+            (
+                models.ClientAlternative,
+                models.ClientAlternative.client_id,
+                models.Client,
+                texts_manager.CLIENT_ADDITIONAL_INFO,
+            ),
+            (
+                models.CommodityAlternative,
+                models.CommodityAlternative.commodity_id,
+                models.Commodity,
+                texts_manager.COMMODITY_ADDITIONAL_INFO,
+            ),
+            (
+                models.IndustryAlternative,
+                models.IndustryAlternative.industry_id,
+                models.Industry,
+                texts_manager.INDUSTRY_ADDITIONAL_INFO,
+            ),
+            (
+                models.StakeholderAlternative,
+                models.StakeholderAlternative.stakeholder_id,
+                models.Stakeholder,
+                texts_manager.STAKEHOLDER_ADDITIONAL_INFO,
+            ),
         ]
+
+    async def get_main_names(self, alt_names: list[str], is_format_name: bool = False) -> list[str]:
+        """
+        Получить главные имена объектов по альтернативным именам в том же порядке.
+
+        :param alt_names:       Список из альтернативных имен объектов.
+        :param is_format_name:  нужно ли форматировать имя субъекта
+        :return:                Список из главных имен объектов.
+        """
+        alt_names = list(dict.fromkeys(alt_names))
+        main_names_dict = {}
+        async with async_session() as session:
+            for table_with_attr_tuple in self.tables_with_attr_tuples:
+                table_alt, table_alt_pk, table_main, additional_info = table_with_attr_tuple
+                stmt = (
+                    sa.select(table_alt.other_name, table_main.name)
+                    .join(table_alt, table_alt_pk == table_main.id)
+                    .filter(table_alt.other_name.in_(alt_names))
+                )
+                result = await session.execute(stmt)
+
+                if is_format_name:
+                    data = {
+                        other_name: texts_manager.FORMAT_BUTTON_NEAREST_TO_SUBJECT.format(
+                            subject_name=main_name,
+                            additional_info=additional_info,
+                        )
+                        for other_name, main_name in result.all()
+                    }
+                else:
+                    data = {other_name: main_name for other_name, main_name in result.all()}
+
+                main_names_dict.update(data)
+                if len(main_names_dict) == len(alt_names):
+                    break
+        return list(dict.fromkeys(main_names_dict[name] for name in alt_names))
 
     @staticmethod
     async def get_subjects_names(
@@ -64,8 +119,8 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список имен, похожих на наименование субъекта
         """
-        subject_types = self.tables_with_alternative_names_and_pk_colum \
-            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
+        subject_types = self.tables_with_attr_tuples \
+            if subject_types is None else [x for x in self.tables_with_attr_tuples if x[0] in subject_types]
 
         subject_name = subject_name.lower().strip().replace('"', '')
         subjects_names = await self.get_subjects_names(subject_types)
@@ -77,7 +132,7 @@ class FuzzyAlternativeNames:
         nearest = near[0][1]
         names = [i[0] for i in near if i[1] >= (nearest - criteria)]
 
-        return names
+        return await self.get_main_names(names, is_format_name=True)
 
     async def find_nearest_to_subjects_list(
             self,
@@ -92,9 +147,9 @@ class FuzzyAlternativeNames:
                               (среди данных таблиц идет поиск ближайших названий)
         :returns: Список ближайших похожих имен субъектов
         """
-        subject_types = self.tables_with_alternative_names_and_pk_colum \
-            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
-        subject_types = [x for x in subject_types if x in self.tables_with_alternative_names_and_pk_colum]
+        subject_types = self.tables_with_attr_tuples \
+            if subject_types is None else [x for x in self.tables_with_attr_tuples if x[0] in subject_types]
+        subject_types = [x for x in subject_types if x in self.tables_with_attr_tuples]
         db_subjects_names = await self.get_subjects_names(subject_types)
 
         if not subjects_names:
@@ -112,7 +167,7 @@ class FuzzyAlternativeNames:
             self,
             name: str,
             score: int = 80,
-            subject_types: Optional[list[models.Base]] = None,
+            subject_types: Optional[list[Type[models.Base]]] = None,
     ) -> list[int]:
         """
         Поиск ближайших похожих имен из таблиц subject_types по имени
@@ -122,8 +177,8 @@ class FuzzyAlternativeNames:
         :param subject_types:   Список таблиц, среди которых идет поиск ближайших названий
         :return:                Список наиболее подходящих айдишников клиентов/сырья/отраслей
         """
-        models_to_search = self.tables_with_alternative_names_and_pk_colum \
-            if subject_types is None else [x for x in self.tables_with_alternative_names_and_pk_colum if x[0] in subject_types]
+        models_to_search = self.tables_with_attr_tuples \
+            if subject_types is None else [x for x in self.tables_with_attr_tuples if x[0] in subject_types]
         if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
             return []
 

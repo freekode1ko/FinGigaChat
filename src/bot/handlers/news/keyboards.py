@@ -6,6 +6,7 @@
 Меню выбора тг разделов.
 Меню выбора клиентов и сырья.
 Меню выбора периода получения новостей.
+Меню выбора клиента стейкхолдера.
 """
 from typing import Any
 
@@ -29,6 +30,7 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
     [ телеграм группа N ]
     [ Клиентские новости ]
     [ Сырьевые новости ]
+    [ Web-app ] /news/show
     [ Завершить ]
 
     :param telegram_groups: Список тг групп
@@ -54,6 +56,10 @@ def get_menu_kb(telegram_groups: list[models.TelegramGroup]) -> InlineKeyboardMa
                 subject=news_subject_group,
             ).pack()
         ))
+    # keyboard.row(types.InlineKeyboardButton(
+    #     text='🔥New! Мини-приложение',
+    #     web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news/show')
+    # ))
 
     keyboard.row(types.InlineKeyboardButton(
         text=constants.END_BUTTON_TXT,

@@ -5,11 +5,12 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from handlers.call_reports.call_report_create.utils import audio_to_text, validate_and_parse_date
+from handlers.call_reports.call_report_create.utils import validate_and_parse_date
 from handlers.call_reports.call_report_view.utils import call_report_view_answer
 from handlers.call_reports.call_reports import CallReport
 from handlers.call_reports.callbackdata import CRCreateNew, CRMenusEnum
 from log.bot_logger import logger
+from utils.handler_utils import audio_to_text
 
 router = Router()
 
@@ -34,15 +35,15 @@ async def call_reports_handler_create_new(callback_query: CallbackQuery, state: 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
-    logger.info(f'Call Report: Нажали на конпу создания нового call report для {callback_query.message.chat.id}')
+    logger.info(f'Call Report: Нажали на кнопку создания нового call report для {callback_query.message.chat.id}')
     await callback_query.message.answer(
-        'Вы перешли в режим записи протокола встречи с клиентом следуйте инструкциям, чтобы завершить процесс.',
+        'Вы перешли в режим записи заметки, следуйте инструкциям, чтобы завершить процесс.',
     )
+    # await callback_query.message.answer(
+    #     'Пожалуйста, не включайте в заметку конфиденциальную информацию',
+    # )
     await callback_query.message.answer(
-        'Пожалуйста, не включайте в отчет конфиденциальную информацию',
-    )
-    await callback_query.message.answer(
-        'Введите, пожалуйста, Клиента, с кем проходила встреча:',
+        'Введите, пожалуйста, заголовок заметки:',
     )
     await state.set_state(CallReportsStates.enter_clint_name)
 
@@ -58,7 +59,7 @@ async def enter_clint_name(message: Message, state: FSMContext) -> None:
     logger.info(f'Call Report: Сохранение клиента в call report для {message.chat.id}')
     if True:  # FIXME В дальнейшем будет браться из таблицы в БД
         await message.answer(
-            'Укажите дату встречи в формате ДД.ММ.ГГГГ:',
+            'Укажите дату заметки в формате ДД.ММ.ГГГГ:',
         )
         await state.set_state(CallReportsStates.enter_date)
         await state.update_data(
@@ -77,7 +78,7 @@ async def enter_date(message: Message, state: FSMContext) -> None:
     logger.info(f'Call Report: Сохранение даты в call report для {message.chat.id}')
     if date := validate_and_parse_date(message.text):
         await message.answer(
-            'Запишите основные моменты встречи(Голосом или текстом)',
+            'Напишите заметку (голосом или текстом)',
         )
         await state.set_state(CallReportsStates.enter_description)
         await state.update_data(
@@ -100,13 +101,11 @@ async def enter_description(
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session:  Асинхронная сессия базы данных
     """
     logger.info(f'Call Report: Сохранения текста/аудио в call report для {message.chat.id}')
 
-    if message.voice:
-        result = await audio_to_text(message)
-    else:
-        result = message.text
+    result = await audio_to_text(message) if message.voice else message.text
 
     await state.update_data(
         text=result,

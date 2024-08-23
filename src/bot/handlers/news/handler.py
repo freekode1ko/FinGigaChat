@@ -16,6 +16,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
 from constants import constants
+from constants.texts import texts_manager
 from db import models
 from db.api import industry
 from db.api.subject_interface import SubjectInterface
@@ -26,7 +27,7 @@ from handlers.news import callback_data_factories, keyboards, utils
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, get_page_data_and_info, send_full_copy_of_message, send_or_edit, user_in_whitelist
+from utils.base import bot_send_msg, get_page_data_and_info, is_user_has_access, send_full_copy_of_message, send_or_edit
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -55,7 +56,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр новостей завершен')
+    await callback_query.message.edit_text(text=texts_manager.NEWS_END)
 
 
 async def main_menu(message: types.CallbackQuery | types.Message, state: FSMContext) -> None:
@@ -67,9 +68,8 @@ async def main_menu(message: types.CallbackQuery | types.Message, state: FSMCont
     """
     tg_groups = await telegram_group_db.get_all()
     keyboard = keyboards.get_menu_kb(tg_groups)
-    msg_text = 'Новости'
     await state.set_data({})
-    await send_or_edit(message, msg_text, keyboard)
+    await send_or_edit(message, texts_manager.NEWS_HEADER, keyboard)
 
 
 @router.callback_query(callback_data_factories.NewsMenuData.filter(
@@ -114,7 +114,7 @@ async def main_menu_command(message: types.Message, state: FSMContext) -> None:
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
-    if await user_in_whitelist(message.from_user.model_dump_json()):
+    if await is_user_has_access(message.from_user.model_dump_json()):
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
         await main_menu(message, state)
     else:
@@ -172,12 +172,12 @@ async def __show_telegram_channels_by_group(
     )
     telegram_channels['is_subscribed'] = telegram_channels['id'].apply(lambda x: x in selected_ids)
 
-    msg_text = (
-        f'{telegram_group_info.name}\n\n'
-        f'Выберите телеграм каналы, по которым хотите получить новости'
-    )
     keyboard = keyboards.get_select_telegram_channels_kb(telegram_channels, callback_data)
-    await send_or_edit(callback_query, msg_text, keyboard)
+    await send_or_edit(
+        callback_query,
+        texts_manager.TELEGRAM_NEWS_CHOOSE_CHANNEL.format(channel=telegram_group_info.name),
+        keyboard
+    )
 
 
 async def __show_telegram_sections_by_group(
@@ -193,9 +193,8 @@ async def __show_telegram_sections_by_group(
     :param telegram_group_info: Объект телеграмм группы
     """
     telegram_sections = await telegram_section_db.get_by_group_id(group_id=telegram_group_info.id, only_with_channels=False)
-    msg_text = 'Выберите отрасль для получения новостей'
     keyboard = keyboards.get_sections_menu_kb(telegram_sections, callback_data.telegram_group_id)
-    await send_or_edit(callback_query, msg_text, keyboard)
+    await send_or_edit(callback_query, texts_manager.NEWS_CHOOSE_INDUSTRY, keyboard)
 
 
 @router.callback_query(callback_data_factories.TelegramGroupData.filter(
@@ -219,8 +218,11 @@ async def choose_source_group(
     section = await telegram_section_db.get(callback_data.telegram_section_id)
 
     keyboard = keyboards.get_choose_source_kb(callback_data)
-    msg_text = f'Выберите откуда вы хотите получить новости по отрасли <b>{section.name}</b>'
-    await send_or_edit(callback_query, msg_text, keyboard)
+    await send_or_edit(
+        callback_query,
+        texts_manager.NEWS_CHOOSE_INDUSTRY_SOURCE.format(name=section.name),
+        keyboard
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -256,10 +258,7 @@ async def telegram_channels_by_section(
 
     callback_data.back_menu = callback_data_factories.NewsMenusEnum.choose_source_group
     keyboard = keyboards.get_select_telegram_channels_kb(telegram_channels, callback_data)
-    msg_text = (
-        f'Телеграм-каналы по отрасли "{telegram_section_info.name}"\n\n'
-        f'Выберите телеграм каналы, по которым хотите получить новости'
-    )
+    msg_text = texts_manager.NEWS_CHOOSE_TELEGRAM_INDUSTRY_CHANNEL.format(section=telegram_section_info.name)
     await send_or_edit(callback_query, msg_text, keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -328,9 +327,9 @@ async def subjects_list(
     keyboard = keyboards.get_subjects_list_kb(page_data, page, max_pages, subscribed, subject)
 
     if subscribed:
-        msg_text = f'Выберите {subject.subject_name} из списка ваших подписок\n<b>{page_info}</b>'
+        msg_text = texts_manager.NEWS_CHOOSE_SUBJECT_FROM_SUBS.format(subject=subject.subject_name, page_info=page_info)
     else:
-        msg_text = f'Для поиска введите сообщение с именем {subject.subject_name_genitive}.'
+        msg_text = texts_manager.NEWS_WRITE_SUBJECT_NAME.format(subject=subject.subject_name_genitive)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -353,14 +352,13 @@ async def find_subject_by_name(
     subject: callback_data_factories.NewsItems = data.get('subject', None)
 
     if subject is None:
-        msg_text = 'Пожалуйста, перезапустите меню новостей'
-        await message.answer(msg_text)
+        await message.answer(texts_manager.NEWS_RETRY)
         return
 
     subject_db = subject.subject_db
     user_subject_subscription = subject.subject_subscription_db
 
-    fuzzy_searcher = FuzzyAlternativeNames(logger=logger)
+    fuzzy_searcher = FuzzyAlternativeNames()
     subject_ids = await fuzzy_searcher.find_subjects_id_by_name(message.text, subject_types=[subject_db.table_alternative])
     subjects = await subject_db.get_by_ids(subject_ids)
     subject_subscriptions = await user_subject_subscription.get_subscription_df(message.chat.id)
@@ -373,7 +371,7 @@ async def find_subject_by_name(
     if len(subjects) > 1:
         page_data, page_info, max_pages = get_page_data_and_info(subjects)
         keyboard = keyboards.get_subjects_list_kb(page_data, 0, max_pages, subscribed, subject)
-        msg_text = f'Выберите {subject.subject_name} из списка'
+        msg_text = texts_manager.NEWS_CHOOSE_SUBJECT_FROM_LIST.format(subject=subject.subject_name)
     elif len(subjects) == 1:
         subject_id = subjects['id'].iloc[0]
         interface = None
@@ -391,7 +389,7 @@ async def find_subject_by_name(
         await answer_choose_period(message, back_callback_data, interface, [subject_id])
         return
     else:
-        msg_text = 'Не нашелся, введите имя по-другому'
+        msg_text = texts_manager.NEWS_SUBJECT_NOT_FOUND
         keyboard = None
 
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -502,7 +500,7 @@ async def answer_choose_period(
         back_menu=back_menu,
         get_news_handler=get_news_handler,
     )
-    msg_text = f'Выберите период для получения новостей по <b>{", ".join(selected.values())}</b>'
+    msg_text = texts_manager.NEWS_CHOOSE_PERIOD.format(values=', '.join(selected.values()))
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -541,13 +539,13 @@ async def get_subject_news_by_period(
         order_by=models.Article.date.desc(),
     )
     if not articles:
-        msg_text = f'Новости по <b>{", ".join(selected.values())}</b> за {days} дней отсутствуют'
+        msg_text = texts_manager.NEWS_ABOUT_SUBJECT_FOR_PERIOD_NOT_FOUND.format(values=', '.join(selected.values()), days=days)
         await callback_query.message.answer(msg_text, parse_mode='HTML')
     else:
         for subject_id, articles_by_subject_id in groupby(articles, lambda x: x[1]):
             subject_name = selected[subject_id]
             frmt_msg = f'<b>{subject_name.capitalize()}</b>'
-            msg_text = f'Новости по {frmt_msg} за {days} дней\n'
+            msg_text = texts_manager.NEWS_ABOUT_SUBJECT_FOR_PERIOD.format(subject=frmt_msg, days=days)
 
             all_articles = '\n\n'.join(
                 FormatText(
@@ -598,7 +596,7 @@ async def get_industry_news_by_period(
     industry_article_df.insert(0, 'industry', industry_info['name'])
     industry_article_df['date'] = ''
 
-    msg_text = f'Новости по отрасли <b>{industry_info["name"]}</b> за {callback_data.days_count} дней'
+    msg_text = texts_manager.NEWS_ABOUT_INDUSTRY_FOR_PERIOD.format(name=industry_info['name'], days=callback_data.days_count)
     if not industry_article_df.empty:
         await callback_query.message.answer(msg_text, parse_mode='HTML')
         msg = ArticleProcess.make_format_industry_msg(industry_article_df.values.tolist())

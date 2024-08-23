@@ -3,6 +3,7 @@ import datetime
 from pathlib import Path
 from typing import Iterable
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -253,6 +254,132 @@ class Transformer:
 
         # save png and return it to user
         png_path = config.PATH_TO_SOURCES / 'img' / f'{name}_table.png'
+        plt.savefig(png_path, transparent=False)
+        return png_path
+
+    @staticmethod
+    def make_subtable(
+            ax: mpl.axes.Axes,
+            cell_text: Iterable[Iterable[str]],
+            cell_colours: Iterable[Iterable[str]],
+            font_size: float,
+            edge_color: str,
+            text_color: str,
+            bbox: tuple[float, float, float, float],
+            cell_text_props: dict[str, str] = None,
+    ) -> mpl.table.Table:
+        """
+        Создать подтаблицу.
+
+        :param ax:              Объект Axes инкапсулирует все элементы отдельного (sub-)plot на рисунке
+        :param cell_text:       Данные для ячеек таблицы
+        :param cell_colours:    Цвета ячеек
+        :param font_size:       Размер шрифта
+        :param edge_color:      Цвет границ ячеек
+        :param text_color:      Цвет текста
+        :param bbox:            Относительные границы отрисвки таблицы
+        :param cell_text_props: Параметры текста
+        :return:                Созданная таблица
+        """
+        table = ax.table(
+            cellText=cell_text,
+            cellLoc='center',
+            bbox=bbox,
+            cellColours=cell_colours,
+        )
+
+        table.auto_set_font_size(False)
+        table.set_fontsize(font_size)
+
+        for _, cell in six.iteritems(table._cells):
+            if cell_text_props:
+                cell.set_text_props(**cell_text_props)
+            cell.set_edgecolor(edge_color)
+            cell.get_text().set_color(text_color)
+            cell.visible_edges = 'RTL'
+        return table
+
+    @staticmethod
+    def draw_table(
+            data: pd.DataFrame,
+            png_name: str,
+            col_width: float = 1.0,
+            row_height: float = 0.625,
+            font_size: float = 14,
+            header_color: str = '#000000',
+            row_colors: list[str] = None,
+            edge_color: str = 'grey',
+            bbox: tuple[float, float, float, float] = None,
+            text_color: str = 'white',
+            text_props: list[tuple[int, int, dict[str, str]]] = None,
+    ) -> Path:
+        """
+        Нарисовать таблицу.
+
+        :param data:        Данные для таблицы
+        :param png_name:    Наименование создаваемого файла
+        :param col_width:   Ширина колонки
+        :param row_height:  Высота строки
+        :param font_size:   Размер шрифта
+        :param header_color:Цвет фона заголовка
+        :param row_colors:  Цвета строк (default_row_colors = ['#030303', '#0E0E0E'])
+        :param edge_color:  Цвет границ ячеек
+        :param bbox:        Относительные границы отрисвки таблицы (default_bbox = [0, 0, 1, 1])
+        :param text_color:  Цвет текста
+        :param text_props:  Параметры текста по ячейкам
+        :return:            Путь до отрисованной таблицы
+        """
+        data = data.fillna('-')
+
+        default_row_colors = ['#030303', '#0E0E0E']
+        row_colors = row_colors or default_row_colors
+
+        default_bbox = [0, 0, 1, 1]
+        bbox = bbox or default_bbox
+
+        # Определяем размеры рисунка
+        size = (np.array(data.shape[::-1]) + np.array([0, 1])) * np.array([col_width, row_height])
+        # Создаем множество subplots, каждый будет отрисовывать строку в таблице
+        fig, axs = plt.subplots(len(data) + 1, figsize=size)
+        fig.facecolor = 'black'
+        # Чтоб максимально близко друг к другу отображать подтаблицы
+        fig.tight_layout()
+        for ax in axs:
+            ax.axis('off')
+
+        header = Transformer.make_subtable(
+            ax=axs[0],
+            cell_text=[data.columns],
+            cell_colours=[tuple(header_color for _ in data.columns)],
+            font_size=font_size,
+            edge_color=edge_color,
+            text_color=text_color,
+            bbox=bbox,
+            cell_text_props=dict(weight='bold', color='w'),
+        )
+
+        tables = [header]
+        data = data.reset_index(drop=True)
+        len_row_colors = len(row_colors)
+        for i, ax in enumerate(axs[1:]):
+            row_data = [j for j in data.loc[i] if j]
+            tables.append(Transformer.make_subtable(
+                ax=ax,
+                cell_text=[row_data],
+                cell_colours=[tuple(row_colors[i % len_row_colors] for _ in row_data)],
+                font_size=font_size,
+                edge_color=edge_color,
+                text_color=text_color,
+                bbox=bbox,
+            ))
+
+        if text_props:
+            for x, y, props in text_props:
+                tables[x][0, y].set_text_props(**props)
+
+        plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+
+        png_path = config.PATH_TO_SOURCES / 'img' / f'{png_name}_table.png'
         plt.savefig(png_path, transparent=False)
         return png_path
 

@@ -15,4 +15,11 @@ class TelegramChannelCRUD(BaseCRUD[models.TelegramChannel]):
 
 
 telegram_channel_db = TelegramChannelCRUD(models.TelegramChannel, models.TelegramChannel.id, logger)
-telegram_channel_article_db = SubjectInterface(models.TelegramChannel, None, None, models.RelationTelegramArticle.article)
+telegram_channel_article_db = SubjectInterface(
+    models.TelegramChannel,
+    None,
+    None,
+    models.RelationTelegramArticle.article,
+    models.RelationTelegramArticle,
+    -1,
+)

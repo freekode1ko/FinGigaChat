@@ -14,7 +14,7 @@ import pandas as pd
 from sqlalchemy import case, ColumnElement, func, select
 from sqlalchemy.orm import InstrumentedAttribute
 
-from configs.config import OTHER_NEWS_COUNT, TOP_NEWS_COUNT
+from configs.config import TOP_NEWS_COUNT
 from db import database
 from db.models import Article, Base
 
@@ -29,6 +29,7 @@ class SubjectInterface:
             relation_alternative: InstrumentedAttribute,
             relation_article: Optional[InstrumentedAttribute] = None,
             table_relation_article: Optional[Type[Base]] = None,
+            score_lower_limit: int = 0,
     ) -> None:
         """
         Инициализация объекта, предоставляющего интерфейс для взаимодействия с таблицей table.
@@ -38,12 +39,14 @@ class SubjectInterface:
         :param relation_alternative:    sqlalchemy.orm.relationship связь с таблицей альтернаивных имен.
         :param table_relation_article:  Таблица sqlalchemy.orm со связью с новостями и скорами.
         :param relation_article:        sqlalchemy.orm.relationship связь с таблицей новостей (необязательна).
+        :param score_lower_limit:       Нижняя граница отсечения новостей (score_col > lower_limit).
         """
         self.table = table
         self.table_alternative = table_alternative
         self.relation_alternative = relation_alternative
         self.relation_article = relation_article
         self.table_relation_article = table_relation_article
+        self.score_lower_limit = score_lower_limit
 
         self.columns = [i.name for i in self.table.__table__.columns]
         self.fields = [getattr(self.table, c) for c in self.columns]
@@ -126,7 +129,7 @@ class SubjectInterface:
         async with database.async_session() as session:
             stmt = select(self.table).where(func.lower(self.table.name) == name.lower())
             result = await session.execute(stmt)
-            data = result.scalar()
+            data = result.scalar_one()
             return {c: getattr(data, c) for c in self.columns}
 
     async def get_articles_by_subject_ids(
@@ -148,12 +151,14 @@ class SubjectInterface:
         if not isinstance(subject_ids, list):
             subject_ids = [subject_ids]
 
+        _, _, score_col = self.table_relation_article.__table__.columns
         async with database.async_session() as session:
             stmt = (
                 select(Article, self.table.id)
                 .join(self.relation_article)
                 .join(self.table)
                 .where(self.table.id.in_(subject_ids))
+                .where(score_col > self.score_lower_limit)
                 .order_by(self.table.id)
             )
 
@@ -186,7 +191,7 @@ class SubjectInterface:
     async def get_sort_articles_by_id(
             self,
             subject_id: int,
-            limit_val: Optional[int] = None,
+            limit_val: int,
             offset_val: int = 0
     ) -> list[tuple[str, datetime.datetime, str, str]]:
         """
@@ -217,7 +222,7 @@ class SubjectInterface:
                 top_articles = []  # Для очистки в send_next_news топ новостей
 
             # Получение оставшихся новостей
-            limit_val = limit_val if limit_val else OTHER_NEWS_COUNT
+            limit_val = limit_val - TOP_NEWS_COUNT if top_articles else limit_val
             stmt_other = (
                 base_stmt
                 .where(Article.link.notin_(links_of_top))
