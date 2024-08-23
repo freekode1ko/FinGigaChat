@@ -26,6 +26,16 @@ class Environment(str, Enum):
             return cls.UNKNOWN
 
 
+class HTTPMethod(str, Enum):
+    """Http методы."""
+
+    GET = 'GET'
+    POST = 'POST'
+    PUT = 'PUT'
+    DELETE = 'DELETE'
+    PATCH = 'PATCH'
+
+
 class RetrieverType(Enum):
     """Типы ретриверов в боте"""
 

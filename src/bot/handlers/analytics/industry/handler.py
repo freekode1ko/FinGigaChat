@@ -87,7 +87,7 @@ async def get_industry_analytics(callback_query: types.CallbackQuery, callback_d
     files = await get_industry_analytic_files(callback_data.industry_id, callback_data.industry_type)
     files = [p for f in files if (p := Path(f.file_path)).exists()]
     if not await send_pdf(callback_query, files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
-        msg_text += '\nФункционал появится позднее'
+        msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
         await callback_query.message.answer(msg_text, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
     else:
         await send_full_copy_of_message(callback_query)

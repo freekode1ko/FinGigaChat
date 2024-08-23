@@ -7,8 +7,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.constants import DISLIKE_FEEDBACK, END_BUTTON_TXT, LIKE_FEEDBACK
+from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
 from constants.enums import RetrieverType
+from constants.texts import texts_manager
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
 from db.redis import del_dialog_and_history_query, get_history_query, get_last_user_msg, update_dialog, update_history_query
 from handlers.ai.handler import router
@@ -41,7 +42,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
     if state_name == RagState.rag_mode:
         await update_keyboard_of_penultimate_bot_msg(message, state)
         await del_dialog_and_history_query(message.from_user.id)
-        await message.answer('История диалога очищена!')
+        await message.answer(texts_manager.RAG_CLEAR_HISTORY)
 
 
 @router.message(Command('knowledgebase'))
@@ -63,9 +64,6 @@ async def set_rag_mode(
         await state.set_state(RagState.rag_mode)
         user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-        cancel_msg = f'Напишите «{END_BUTTON_TXT}» для завершения общения с Базой Знаний'
-        msg_text = 'Начато общение с Базой Знаний\n\n' + cancel_msg
-
         buttons = [
             [
                 types.KeyboardButton(text='Очистить историю диалога'),
@@ -75,7 +73,7 @@ async def set_rag_mode(
         keyboard = types.ReplyKeyboardMarkup(
             keyboard=buttons,
             resize_keyboard=True,
-            input_field_placeholder=cancel_msg,
+            input_field_placeholder=texts_manager.RAG_FINISH_STATE,
             one_time_keyboard=True
         )
 
@@ -83,11 +81,10 @@ async def set_rag_mode(
         first_user_query = data.get('rag_query', None)
 
         if first_user_query:
-            await message.answer(f'Подождите...\nФормирую ответ на запрос: "{first_user_query}"\n{cancel_msg}',
-                                 reply_markup=keyboard)
+            await message.answer(texts_manager.RAG_FIRST_USER_QUERY.format(query=first_user_query), reply_markup=keyboard)
             await ask_with_dialog(message, state, session, first_user_query)
         else:
-            await message.answer(msg_text, reply_markup=keyboard)
+            await message.answer(texts_manager.RAG_START_STATE, reply_markup=keyboard)
 
     else:
         user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
@@ -129,7 +126,9 @@ async def _get_response(
     """
     rag_obj = RAGRouter(chat_id, full_name, user_query, rephrase_query, use_rephrase)
     await rag_obj.get_rag_type()
-    clear_response, format_response = await rag_obj.get_response()
+    clear_response = format_response = await rag_obj.get_response()
+    if clear_response != DEFAULT_RAG_ANSWER:
+        format_response = texts_manager.RAG_FORMAT_ANSWER.format(answer=clear_response)
     return rag_obj.retriever_type, clear_response, format_response
 
 
@@ -250,7 +249,7 @@ async def ask_without_dialog(
         user_query = await get_last_user_msg(chat_id)
         if not user_query:
             await update_keyboard_of_penultimate_bot_msg(call.message, state)
-            await call.bot.send_message(chat_id, 'Напишите, пожалуйста, свой запрос еще раз')
+            await call.bot.send_message(chat_id, texts_manager.RAG_TRY_AGAIN)
 
         if callback_data.rephrase_query:
             history_query = await get_history_query(chat_id)
@@ -288,9 +287,9 @@ async def ask_without_dialog(
 async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncSession) -> None:
     """Обработка обратной связи от пользователя."""
     if callback_query.data == 'like':
-        txt, reaction = LIKE_FEEDBACK, True
+        txt, reaction = texts_manager.RAG_LIKE_FEEDBACK, True
     else:
-        txt, reaction = DISLIKE_FEEDBACK, False
+        txt, reaction = texts_manager.RAG_DISLIKE_FEEDBACK, False
 
     # обновление кнопки на одну не работающую
     button = [types.InlineKeyboardButton(text=txt, callback_data='none')]

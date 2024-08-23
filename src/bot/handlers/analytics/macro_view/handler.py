@@ -30,7 +30,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
     msg_text = macro_view.MESSAGE_TEXT_FORMAT.format(monday_date.strftime(config.BASE_DATE_FORMAT))
     files = [f for f in macro_view.FILES_PATH.iterdir() if f.exists()] if macro_view.FILES_PATH.exists() else []
     if not await send_pdf(callback_query, files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
-        msg_text += '\nФункционал появится позднее'
+        msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
         await callback_query.message.answer(msg_text, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
     else:
         await send_full_copy_of_message(callback_query)
