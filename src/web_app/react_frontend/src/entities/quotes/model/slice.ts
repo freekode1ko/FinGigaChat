@@ -1,15 +1,16 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import type { PopularQuotes } from './types'
+import { INITIAL_TRADINGVIEW_QUOTES } from './constants'
+import type { TradingViewSymbol } from './types'
 
 type FavoriteQuotesSlice = {
   isShown: boolean
-  list: Array<PopularQuotes>
+  list: Array<TradingViewSymbol>
 }
 
 const initialState: FavoriteQuotesSlice = {
   isShown: true,
-  list: ['FX_IDC:CNYRUB', 'FX_IDC:USDCNY', 'BLACKBULL:BRENT', 'TVC:GOLD'],
+  list: INITIAL_TRADINGVIEW_QUOTES,
 }
 
 export const favoriteQuotesSlice = createSlice({
@@ -21,7 +22,7 @@ export const favoriteQuotesSlice = createSlice({
     },
     updateFavoriteQuotesList: (
       state,
-      action: PayloadAction<Array<PopularQuotes>>
+      action: PayloadAction<Array<TradingViewSymbol>>
     ) => {
       state.list = action.payload
     },

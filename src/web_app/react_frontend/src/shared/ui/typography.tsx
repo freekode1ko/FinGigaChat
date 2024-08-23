@@ -31,12 +31,7 @@ const TypographyH2 = ({ className, ...props }: TypographyHeadProps) => {
 }
 
 const Paragraph = ({ className, ...props }: TypographyParagraphProps) => {
-  return (
-    <p
-      className={cn(className, 'leading-7 [&:not(:first-child)]:mt-6')}
-      {...props}
-    />
-  )
+  return <p className={cn(className)} {...props} />
 }
 
 export { Paragraph, TypographyH1, TypographyH2 }

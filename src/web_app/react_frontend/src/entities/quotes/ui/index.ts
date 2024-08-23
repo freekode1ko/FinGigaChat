@@ -1,1 +1,1 @@
-export { QuotesTable } from './table'
+export { QuotesTable, QuotesTableRow } from './table'

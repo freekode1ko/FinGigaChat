@@ -1,7 +1,7 @@
 export {
-  useGetNewsForMainQuery,
+  useGetInfiniteNewsQuery,
+  useGetNewsForQuotationQuery,
   useGetNewsQuery,
-  useLazyGetNewsForQuotationQuery,
   useSendCibReportMutation,
 } from './api'
 export type { News } from './model'

@@ -1,3 +1,6 @@
+export { AnalyticsPage } from './analytics'
 export { DashboardPage } from './dashboard'
+export { MeetingsPage } from './meetings'
 export { NewsPage } from './news'
+export { QuoteDetailsPage } from './quote-details'
 export { QuotesPage } from './quotes'

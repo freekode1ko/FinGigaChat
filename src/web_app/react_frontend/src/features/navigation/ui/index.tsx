@@ -18,12 +18,7 @@ export const Navigation = () => {
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <Button
-        variant="outline"
-        size="icon"
-        className="border-none"
-        onClick={() => setIsOpen(true)}
-      >
+      <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
         <LayoutGrid className="h-6 w-6" />
       </Button>
       <SheetContent side="left">

@@ -11,20 +11,18 @@ const ThemeSwitcher = () => {
   if (appTheme === 'light')
     return (
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         onClick={() => dispatch(setTheme('dark'))}
-        className="border-none"
       >
         <Sun />
       </Button>
     )
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="icon"
       onClick={() => dispatch(setTheme('light'))}
-      className="border-none"
     >
       <Moon />
     </Button>

@@ -2,9 +2,9 @@ import { Settings } from 'lucide-react'
 import { useState } from 'react'
 
 import {
-  POPULAR_QUOTES,
-  type PopularQuotes,
   selectFavoriteQuotesList,
+  TRADINGVIEW_QUOTES,
+  type TradingViewSymbol,
   updateFavoriteQuotesList,
 } from '@/entities/quotes'
 import { useAppDispatch, useAppSelector } from '@/shared/lib'
@@ -22,25 +22,45 @@ import {
   Label,
 } from '@/shared/ui'
 
+import { MAX_QUOTES_QTY, MIN_QUOTES_QTY } from '../model'
+
 // Нужна декомпозиция
 
 const FavoriteQuotesSettings = () => {
+  const dispatch = useAppDispatch()
   const favoriteQuotes = useAppSelector(selectFavoriteQuotesList)
   const [selectedQuotes, setSelectedQuotes] =
-    useState<Array<PopularQuotes>>(favoriteQuotes)
-  const dispatch = useAppDispatch()
-  const handleCheckboxChange = (symbol: PopularQuotes) => {
-    setSelectedQuotes((prev) =>
-      prev.includes(symbol)
-        ? prev.filter((s) => s !== symbol)
-        : [...prev, symbol]
+    useState<Array<TradingViewSymbol>>(favoriteQuotes)
+  const handleCheckboxChange = (symbol: TradingViewSymbol) => {
+    setSelectedQuotes((prevSelectedQuotes) => {
+      if (
+        prevSelectedQuotes.some(
+          (selectedQuote) => selectedQuote.id === symbol.id
+        )
+      ) {
+        return prevSelectedQuotes.filter(
+          (selectedQuote) => selectedQuote.id !== symbol.id
+        )
+      } else {
+        return [...prevSelectedQuotes, symbol]
+      }
+    })
+  }
+  const isCheckboxDisabled = (symbol: TradingViewSymbol) => {
+    return (
+      (!selectedQuotes.some(
+        (selectedQuote) => selectedQuote.id === symbol.id
+      ) &&
+        selectedQuotes.length >= MAX_QUOTES_QTY) ||
+      (selectedQuotes.some((selectedQuote) => selectedQuote.id === symbol.id) &&
+        selectedQuotes.length <= MIN_QUOTES_QTY)
     )
   }
 
   return (
     <Drawer>
       <DrawerTrigger asChild>
-        <Button variant="outline" size="icon" className="border-none">
+        <Button variant="ghost" size="icon">
           <Settings />
         </Button>
       </DrawerTrigger>
@@ -49,23 +69,23 @@ const FavoriteQuotesSettings = () => {
           <DrawerHeader>
             <DrawerTitle>Избранные котировки</DrawerTitle>
             <DrawerDescription>
-              Вы можете выбрать до 4 котировок
+              Вы можете выбрать от {MIN_QUOTES_QTY} до {MAX_QUOTES_QTY}{' '}
+              котировок
             </DrawerDescription>
           </DrawerHeader>
           <div className="p-4 pb-0">
             <div className="flex flex-col gap-4 max-h-80 overflow-y-auto">
-              {POPULAR_QUOTES.map((symbol) => (
-                <div className="flex items-center gap-2" key={symbol}>
+              {TRADINGVIEW_QUOTES.map((symbol) => (
+                <div className="flex items-center gap-2" key={symbol.id}>
                   <Checkbox
-                    id={symbol}
-                    checked={selectedQuotes.includes(symbol)}
+                    id={symbol.id}
+                    checked={selectedQuotes.some(
+                      (selectedQuote) => selectedQuote.id === symbol.id
+                    )}
                     onCheckedChange={() => handleCheckboxChange(symbol)}
-                    disabled={
-                      !selectedQuotes.includes(symbol) &&
-                      selectedQuotes.length >= 4
-                    }
+                    disabled={isCheckboxDisabled(symbol)}
                   />
-                  <Label htmlFor={symbol}>{symbol}</Label>
+                  <Label htmlFor={symbol.id}>{symbol.name}</Label>
                 </div>
               ))}
             </div>
@@ -82,7 +102,11 @@ const FavoriteQuotesSettings = () => {
               </Button>
             </DrawerClose>
             <DrawerClose asChild>
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setSelectedQuotes(favoriteQuotes)}
+              >
                 Отменить
               </Button>
             </DrawerClose>

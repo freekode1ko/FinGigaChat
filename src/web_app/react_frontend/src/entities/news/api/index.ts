@@ -10,7 +10,7 @@ import type { News } from '../model'
 interface GetNewsQuery extends PaginationProps {}
 
 interface GetNewsForQuotationQuery {
-  quotationId: number
+  quotationId: string
 }
 
 interface NewsResponse {
@@ -19,7 +19,7 @@ interface NewsResponse {
 
 const newsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getNews: build.query<NewsResponse, GetNewsQuery>({
+    getInfiniteNews: build.query<NewsResponse, GetNewsQuery>({
       query: ({ page, size }) => ({
         url: `${API_ENDPOINTS.news}?page=${page}&size=${size}`,
         method: 'GET',
@@ -35,7 +35,7 @@ const newsApi = baseApi.injectEndpoints({
       },
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
-    getNewsForMain: build.query<NewsResponse, void>({
+    getNews: build.query<NewsResponse, void>({
       query: () => ({
         url: API_ENDPOINTS.news,
         method: 'GET',
@@ -60,7 +60,7 @@ const newsApi = baseApi.injectEndpoints({
 
 export const {
   useGetNewsQuery,
-  useLazyGetNewsForQuotationQuery,
+  useGetNewsForQuotationQuery,
   useSendCibReportMutation,
-  useGetNewsForMainQuery,
+  useGetInfiniteNewsQuery,
 } = newsApi

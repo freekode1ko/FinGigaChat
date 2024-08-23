@@ -1,12 +1,13 @@
 export { useGetDashboardQuotesQuery, useGetPopularQuotesQuery } from './api'
 export {
   favoriteQuotesSlice,
-  POPULAR_QUOTES,
-  type PopularQuotes,
   type Quotes,
+  type QuotesSection,
   selectFavoriteQuotesList,
   selectIsFavoriteQuotesShown,
   toggleFavoriteQuotes,
+  TRADINGVIEW_QUOTES,
+  type TradingViewSymbol,
   updateFavoriteQuotesList,
 } from './model'
-export { QuotesTable } from './ui'
+export { QuotesTable, QuotesTableRow } from './ui'

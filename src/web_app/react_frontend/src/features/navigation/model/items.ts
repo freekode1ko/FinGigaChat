@@ -1,6 +1,8 @@
 import {
   ActivityIcon,
+  FileBarChart,
   LayoutDashboardIcon,
+  ListChecks,
   type LucideIcon,
   NewspaperIcon,
 } from 'lucide-react'
@@ -26,5 +28,15 @@ export const menuItems: Array<MenuItem> = [
     name: 'Новости',
     path: '/news',
     icon: NewspaperIcon,
+  },
+  {
+    name: 'Аналитика',
+    path: '/analytics',
+    icon: FileBarChart,
+  },
+  {
+    name: 'Встречи',
+    path: '/meetings',
+    icon: ListChecks,
   },
 ]

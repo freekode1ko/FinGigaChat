@@ -1,13 +1,7 @@
 import { baseApi } from '@/shared/api'
 import { API_ENDPOINTS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
-import type { Quotes } from '../model'
-
-interface QuotesSection {
-  section_name: string
-  section_params: Array<string>
-  data: Array<Quotes>
-}
+import type { QuotesSection } from '../model'
 
 interface QuotesResponse {
   sections: Array<QuotesSection>

@@ -27,10 +27,10 @@ const FavoriteQuotes = () => {
       </div>
       {isFavoriteQuotesShown && (
         <div className="grid grid-cols-2 gap-4 pb-4">
-          {favoriteQuotes.map((symbol, symbolIdx) => (
-            <div key={symbolIdx} className="col-span-1">
+          {favoriteQuotes.map((symbol) => (
+            <div key={symbol.id} className="col-span-1">
               <TradingViewMiniChart
-                symbol={symbol}
+                symbol={symbol.id}
                 colorTheme={appTheme}
                 autosize
               />

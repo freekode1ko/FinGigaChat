@@ -1,4 +1,4 @@
-export { POPULAR_QUOTES } from './constants'
+export { TRADINGVIEW_QUOTES } from './constants'
 export {
   favoriteQuotesSlice,
   selectFavoriteQuotesList,
@@ -6,4 +6,4 @@ export {
   toggleFavoriteQuotes,
   updateFavoriteQuotesList,
 } from './slice'
-export type { PopularQuotes, Quotes } from './types'
+export type { Quotes, QuotesSection, TradingViewSymbol } from './types'

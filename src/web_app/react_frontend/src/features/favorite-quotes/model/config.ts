@@ -1,0 +1,4 @@
+const MIN_QUOTES_QTY = 1
+const MAX_QUOTES_QTY = 4
+
+export { MAX_QUOTES_QTY, MIN_QUOTES_QTY }

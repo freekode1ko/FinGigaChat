@@ -1,6 +1,13 @@
 import { createBrowserRouter } from 'react-router-dom'
 
-import { DashboardPage, NewsPage, QuotesPage } from '@/pages/ui'
+import {
+  AnalyticsPage,
+  DashboardPage,
+  MeetingsPage,
+  NewsPage,
+  QuoteDetailsPage,
+  QuotesPage,
+} from '@/pages/ui'
 
 import { baseLayout } from './layouts/base'
 
@@ -17,10 +24,24 @@ export const appRouter = () =>
         {
           path: '/quotes',
           element: <QuotesPage />,
+          children: [
+            {
+              path: '/quotes/:quotationId',
+              element: <QuoteDetailsPage />,
+            },
+          ],
         },
         {
           path: '/',
           element: <DashboardPage />,
+        },
+        {
+          path: '/analytics',
+          element: <AnalyticsPage />,
+        },
+        {
+          path: '/meetings',
+          element: <MeetingsPage />,
         },
       ],
     },

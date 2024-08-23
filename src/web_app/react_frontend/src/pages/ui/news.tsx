@@ -1,16 +1,14 @@
 import { NewsList } from '@/widgets/news-list'
-import { useGetNewsQuery } from '@/entities/news'
+import { useGetInfiniteNewsQuery } from '@/entities/news'
 import { useInfiniteScroll } from '@/shared/lib'
 import { PAGE_SIZE } from '@/shared/model'
 
 const NewsPage = () => {
   const { page, triggerRef } = useInfiniteScroll()
-  const { data, isError, isFetching } = useGetNewsQuery({
+  const { data, isFetching } = useGetInfiniteNewsQuery({
     page,
     size: PAGE_SIZE,
   })
-
-  if (isError) return <div>Error</div>
 
   return (
     <>

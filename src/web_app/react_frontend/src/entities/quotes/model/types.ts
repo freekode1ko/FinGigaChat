@@ -12,10 +12,13 @@ export interface Quotes {
   readonly image_path: string
 }
 
-export type PopularQuotes =
-  | 'TVC:GOLD'
-  | 'TVC:SILVER'
-  | 'TVC:PLATINUM'
-  | 'BLACKBULL:BRENT'
-  | 'FX_IDC:CNYRUB'
-  | 'FX_IDC:USDCNY'
+export interface QuotesSection {
+  section_name: string
+  section_params: Array<string>
+  data: Array<Quotes>
+}
+
+export interface TradingViewSymbol {
+  name: string
+  id: string
+}

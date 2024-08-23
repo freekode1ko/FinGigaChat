@@ -42,7 +42,7 @@ async def show_meetings(request: Request):
     return templates.TemplateResponse("meeting.html", {"request": request})
 
 
-@app.get("/meeting/show/{user_id}", response_class=JSONResponse)
+@app.get("/meeting/show/{user_id}", response_class=JSONResponse, deprecated=True)
 async def show_user_meetings(user_id: int | str):
     meetings = await get_user_meetings(user_id)
     meetings = utils.format_date(meetings)
@@ -55,7 +55,7 @@ async def create_meeting_form(request: Request):
     return templates.TemplateResponse("create.html", {"request": request})
 
 
-@app.get('/meeting/save')
+@app.get('/meeting/save', deprecated=True)
 async def create_meeting(
         user_id: int | str,
         theme: str,

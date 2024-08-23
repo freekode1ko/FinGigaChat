@@ -13,9 +13,8 @@ const FavoriteQuotesToggler = () => {
 
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="icon"
-      className="border-none"
       onClick={() => dispatch(toggleFavoriteQuotes())}
     >
       {isFavoriteQuotesShown ? <Eye /> : <EyeOff />}
