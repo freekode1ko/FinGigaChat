@@ -6,7 +6,6 @@ import warnings
 
 import pandas as pd
 import requests
-
 from configs import config
 from configs.config import BASE_GIGAPARSER_URL
 from log import sentry
@@ -93,7 +92,7 @@ def regular_func() -> tuple[str, list, list]:
     print(f'Получено всего {len(df_article)} новостей')
     # Берем первую тысячу новостей для обработки
     df_article = df_article[:MAX_NEWS_BATCH_SIZE]
-
+    df_article = df_article.tail(100)
     if not df_article.empty:
         try:
             logger.info(f'На обработку получено {len(df_article)} новостей')
@@ -160,7 +159,7 @@ def post_ids(ids: str) -> None:
             config.POST_TO_SERVICE_ATTEMPTS,
             url=BASE_GIGAPARSER_URL.format(f'success_request?stand={config.STAND}'),
             json=ids,
-            timeout=config.POST_TO_GIGAPARSER_TIMEOUT
+            timeout=config.POST_TO_GIGAPARSER_TIMEOUT,
         )
     except Exception as e:
         print(f'Ошибка при отправке id обработанных новостей на сервер: {e}')
@@ -177,14 +176,14 @@ def post_new_links(subject_links: list, tg_links: list) -> None:
     logger.debug('Отправка ссылок сохраненных новостей на сервер')
     links_dict = {
         'subject_links': subject_links,  # ссылки на новости по клиентам и коммодам
-        'tg_links': tg_links             # ссылки на новости из тг каналов
+        'tg_links': tg_links,  # ссылки на новости из тг каналов
     }
     try:
         response = try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
             url=config.BASE_QABANKER_URL.format('articles'),
             json=links_dict,
-            timeout=config.POST_TO_SERVICE_TIMEOUT
+            timeout=config.POST_TO_SERVICE_TIMEOUT,
         )
         logger.info(response.json()['message'])
     except Exception as e:
@@ -208,7 +207,7 @@ if __name__ == '__main__':
             print(start_msg)
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
-            post_ids(gotten_ids)  # отправка giga parsers полученных айди
+            # post_ids(gotten_ids)  # отправка giga parsers полученных айди
             if not config.DEBUG:
                 post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
 

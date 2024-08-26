@@ -2,9 +2,8 @@
 import json
 import pathlib
 
-from environs import Env
-
 from constants.enums import Environment
+from environs import Env
 
 env = Env()
 env.read_env()
@@ -55,3 +54,4 @@ giga_model = 'GigaChat-Pro'
 
 host_name = 'localhost' if ENV.is_local() else 'bert_client_relevance_container'
 ROBERTA_CLIENT_RELEVANCE_LINK = f'http://{host_name}:444/query'
+ROBERTA_COMMODITY_RELEVANCE_LINK = 'http://bert_commodity_relevance_container:446/query'

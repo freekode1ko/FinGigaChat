@@ -35,6 +35,7 @@ services:
             - database
             - bot
             - bert_client_relevance
+            - bert_commodity_relevance
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -53,9 +54,7 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
-            - database
-            - bot
-            - bert_client_relevance
+            - bert_commodity_relevance
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -128,6 +127,24 @@ services:
         ports:
             - "444:444"
         command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 444"
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
+    bert_commodity_relevance:
+        build:
+            context: ./src/bert_commodity_relevance
+            dockerfile: Dockerfile
+        container_name: bert_commodity_relevance_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - "446:446"
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 445"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data

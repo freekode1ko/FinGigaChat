@@ -1,9 +1,8 @@
 """Конфиг для сервиса article_online."""
 import pathlib
 
-from environs import Env
-
 from constants.enums import Environment
+from environs import Env
 
 env = Env()
 env.read_env()
@@ -13,7 +12,7 @@ ENV: Environment = Environment.from_str(_env_value)
 STAND = 'prod' if ENV == Environment.PROD else 'test'
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
-PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
+PROJECT_DIR = pathlib.Path(__file__).parent.parent.parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
@@ -38,6 +37,8 @@ giga_model = 'GigaChat-Pro'
 BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
 BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
 ROBERTA_CLIENT_RELEVANCE_LINK = 'http://bert_client_relevance_container:444/query'
+ROBERTA_COMMODITY_RELEVANCE_LINK = 'http://bert_commodity_relevance_container:446/query'
+# ROBERTA_COMMODITY_RELEVANCE_LINK = 'http://localhost:8000/query'
 
 POST_TO_GIGAPARSER_TIMEOUT = 1200
 POST_TO_SERVICE_TIMEOUT = 90
