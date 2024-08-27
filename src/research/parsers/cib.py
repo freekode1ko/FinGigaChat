@@ -434,10 +434,14 @@ class ResearchParser:
                 self.driver = get_driver(self._logger)
                 continue
 
-            page_html = self.driver.page_source
-            fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
-            fin_indicators_tables[company] = fin_indicators_table
-            self._logger.info(f'Таблица для {company} - получена')
+            try:
+                page_html = self.driver.page_source
+                fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
+                fin_indicators_tables[company] = fin_indicators_table
+                self._logger.info(f'Таблица для {company} - получена')
+            except Exception as e:
+                self._logger.info(f'Ошибка с получением фин индикаторов для {company}:  %s', e)
+                continue
 
         self._logger.info('Предварительная обработка таблиц')
         result = pd.concat(list(fin_indicators_tables.values()))
