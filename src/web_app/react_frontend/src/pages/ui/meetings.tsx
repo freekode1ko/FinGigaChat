@@ -1,30 +1,25 @@
+import { MeetingsList } from '@/widgets/meetings-list'
 import { AddMeetingButton } from '@/features/add-meeting'
 import { useGetMeetingsQuery } from '@/entities/meetings'
-import { useInitData } from '@/shared/lib'
-import { Paragraph, TypographyH2 } from '@/shared/ui'
+import { selectUserData } from '@/entities/user'
+import { useAppSelector } from '@/shared/lib'
+import { TypographyH2 } from '@/shared/ui'
 
+// можно убрать "!"
 const MeetingsPage = () => {
-  const [userData] = useInitData()
-  const { data, isLoading } = useGetMeetingsQuery({
-    userId: userData?.user?.id || 1,
-  })
+  const user = useAppSelector(selectUserData)
+  const { data, isFetching } = useGetMeetingsQuery({userId: user!.userId})
 
   return (
     <>
       <div className="flex justify-between py-2">
         <TypographyH2>Встречи</TypographyH2>
-        <AddMeetingButton />
+        <AddMeetingButton userId={user!.userId} />
       </div>
-      <div>
-        {(!data || isLoading) && <div>Загрузка...</div>}
-        {data?.length === 0 && <div>Нет будущих встреч</div>}
-        {data?.map((meeting, meetingIdx) => (
-          <div key={meetingIdx}>
-            <Paragraph>{meeting.theme}</Paragraph>
-            <Paragraph>{meeting.date_start}</Paragraph>
-          </div>
-        ))}
-      </div>
+      <MeetingsList
+        meetings={data}
+        showSkeleton={isFetching}
+      />
     </>
   )
 }

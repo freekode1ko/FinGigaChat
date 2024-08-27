@@ -1,5 +1,6 @@
 import { favoriteQuotesSlice } from '@/entities/quotes'
 import { themeSlice } from '@/entities/theme'
+import { userSlice } from '@/entities/user'
 import { baseApi } from '@/shared/api'
 import { loadFromLocalStorage, saveToLocalStorage } from '@/shared/lib/redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -12,6 +13,7 @@ export const store = configureStore({
   // devTools: import.meta.env.VITE_DEBUG === 'true',
   reducer: {
     [baseApi.reducerPath]: baseApi.reducer,
+    [userSlice.name]: userSlice.reducer,
     [themeSlice.name]: themeSlice.reducer,
     [favoriteQuotesSlice.name]: favoriteQuotesSlice.reducer,
   },

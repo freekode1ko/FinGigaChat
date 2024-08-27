@@ -6,7 +6,7 @@ export const meetingFormSchema = z.object({
   date_end: z.string().min(16, 'Укажите время окончания встречи'),
   description: z.string().min(1, 'Добавьте описание встречи'),
   timezone: z
-    .number()
-    .min(-12, 'Некорректная временная зона')
-    .max(14, 'Некорректная временная зона'),
+    .string()
+    .min(1, 'Некорректная временная зона')
+    .max(2, 'Некорректная временная зона'),
 })

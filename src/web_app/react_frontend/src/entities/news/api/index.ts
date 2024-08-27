@@ -49,7 +49,7 @@ const newsApi = baseApi.injectEndpoints({
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
-    sendCibReport: build.mutation<void, { tgUserId: string; newsId: string }>({
+    sendCibReport: build.mutation<void, { tgUserId: number; newsId: string }>({
       query: ({ tgUserId, newsId }) => ({
         url: `${API_ENDPOINTS.news}/send?user_id=${tgUserId}&news_id=${newsId}`,
         method: 'POST',

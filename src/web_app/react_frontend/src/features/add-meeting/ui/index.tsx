@@ -4,14 +4,13 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { useCreateMeetingMutation } from '@/entities/meetings'
-import { useInitData } from '@/shared/lib'
+import { type UserId } from '@/entities/user'
 import {
   Button,
   Drawer,
   DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -28,28 +27,35 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { getDefaultDates } from '../lib'
 import { meetingFormSchema } from '../model'
 
-const AddMeetingButton = () => {
+interface AddMeetingButtonProps {
+  userId: UserId
+}
+
+const AddMeetingButton = ({userId}: AddMeetingButtonProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
-  const [userData] = useInitData()
-  const [trigger, { isLoading }] = useCreateMeetingMutation()
-  const handleFormSubmit = () => {
+  const [trigger, { isLoading, isError }] = useCreateMeetingMutation()
+  const handleFormSubmit = async () => {
     const formValues = meetingForm.getValues()
-    trigger({
-      user_id: userData?.user?.id || 0,
+    await trigger({
+      user_id: userId,
       ...formValues,
+      timezone: parseInt(formValues.timezone),
       date_start: new Date(formValues.date_start).toISOString(),
       date_end: new Date(formValues.date_end).toISOString(),
     }).unwrap()
     setIsOpen(false)
   }
 
+  const [startDate, endDate] = getDefaultDates()
+
   const meetingForm = useForm<z.infer<typeof meetingFormSchema>>({
     resolver: zodResolver(meetingFormSchema),
     defaultValues: {
-      ...getDefaultDates(),
+      date_start: startDate,
+      date_end: endDate,
       theme: '',
       description: '',
-      timezone: 3,
+      timezone: '',
     },
   })
   return (
@@ -67,85 +73,98 @@ const AddMeetingButton = () => {
               Вы можете добавить встречу в свой календарь
             </DrawerDescription>
           </DrawerHeader>
-          <DrawerFooter>
-            <Form {...meetingForm}>
-              <form
-                onSubmit={meetingForm.handleSubmit(handleFormSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={meetingForm.control}
-                  name="theme"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Тема встречи</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Обсуждение текущих задач"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={meetingForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Краткое описание</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Встреча с Иваном Ивановым для обсуждения текущих задач"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex flex-nowrap gap-2 justify-between">
-                  <FormField
-                    control={meetingForm.control}
-                    name="date_start"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Начало</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={meetingForm.control}
-                    name="date_end"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Конец</FormLabel>
-                        <FormControl>
-                          <Input type="datetime-local" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="flex flex-nowrap gap-2">
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Сохраняем...' : 'Сохранить'}
+          <Form {...meetingForm}>
+            <form
+              onSubmit={meetingForm.handleSubmit(handleFormSubmit)}
+              className="space-y-4 w-full max-h-[400px] overflow-y-auto p-2"
+            >
+              <FormField
+                control={meetingForm.control}
+                name="theme"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Тема встречи</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Обсуждение текущих задач"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={meetingForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Краткое описание</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Встреча с Иваном Ивановым для обсуждения текущих задач"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={meetingForm.control}
+                name="date_start"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Начало</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={meetingForm.control}
+                name="date_end"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Конец</FormLabel>
+                    <FormControl>
+                      <Input type="datetime-local" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={meetingForm.control}
+                name="timezone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Временная зона</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        placeholder="3"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-2">
+                <Button variant={isError ? 'destructive' : 'default'} type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Сохраняем...' : isError ? 'Попробовать еще раз' : 'Сохранить'}
+                </Button>
+                <DrawerClose asChild>
+                  <Button variant="outline" className="w-full">
+                    Отменить
                   </Button>
-                  <DrawerClose asChild>
-                    <Button variant="outline" className="w-full">
-                      Отменить
-                    </Button>
-                  </DrawerClose>
-                </div>
-              </form>
-            </Form>
-          </DrawerFooter>
+                </DrawerClose>
+              </div>
+            </form>
+          </Form>
         </div>
       </DrawerContent>
     </Drawer>

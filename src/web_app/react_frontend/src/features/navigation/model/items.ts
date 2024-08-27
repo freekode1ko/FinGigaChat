@@ -1,6 +1,6 @@
 import {
   ActivityIcon,
-  FileBarChart,
+  // FileBarChart,
   LayoutDashboardIcon,
   ListChecks,
   type LucideIcon,
@@ -29,11 +29,11 @@ export const menuItems: Array<MenuItem> = [
     path: '/news',
     icon: NewspaperIcon,
   },
-  {
-    name: 'Аналитика',
-    path: '/analytics',
-    icon: FileBarChart,
-  },
+  // {
+  //   name: 'Аналитика',
+  //   path: '/analytics',
+  //   icon: FileBarChart,
+  // },
   {
     name: 'Встречи',
     path: '/meetings',

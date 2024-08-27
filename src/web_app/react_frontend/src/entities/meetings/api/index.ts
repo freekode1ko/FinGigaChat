@@ -1,10 +1,7 @@
 import { baseApi } from '@/shared/api'
 import { API_ENDPOINTS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
-interface Meeting {
-  theme: string
-  date_start: string
-}
+import type { Meeting } from '../model'
 
 interface MeetingRequest {
   user_id: number

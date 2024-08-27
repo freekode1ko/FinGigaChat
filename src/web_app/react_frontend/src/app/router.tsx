@@ -1,13 +1,13 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 import {
-  AnalyticsPage,
   DashboardPage,
   MeetingsPage,
   NewsPage,
   QuoteDetailsPage,
   QuotesPage,
 } from '@/pages/ui'
+import { ProtectedWrapper } from '@/features/auth-protected'
 
 import { baseLayout } from './layouts/base'
 
@@ -35,13 +35,13 @@ export const appRouter = () =>
           path: '/',
           element: <DashboardPage />,
         },
-        {
-          path: '/analytics',
-          element: <AnalyticsPage />,
-        },
+        // {
+        //   path: '/analytics',
+        //   element: <AnalyticsPage />,
+        // },
         {
           path: '/meetings',
-          element: <MeetingsPage />,
+          element: <ProtectedWrapper showHomeButton><MeetingsPage /></ProtectedWrapper>,
         },
       ],
     },

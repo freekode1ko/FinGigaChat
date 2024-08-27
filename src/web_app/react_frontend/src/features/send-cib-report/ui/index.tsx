@@ -28,7 +28,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
     <Button
       size="sm"
       onClick={() =>
-        trigger({ newsId: newsId, tgUserId: userData!.user!.id.toString() })
+        trigger({ newsId: newsId, tgUserId: userData!.user!.id })
       }
     >
       <Send className="h-4 w-4" /> Отправить отчет CIB

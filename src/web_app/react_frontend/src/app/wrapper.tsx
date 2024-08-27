@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from 'react'
 
 import { Logo } from '@/features/logo'
-import { useWebApp } from '@/shared/lib'
+import { setUser } from '@/entities/user'
+import { useAppDispatch, useInitData, useWebApp } from '@/shared/lib'
 import { Paragraph } from '@/shared/ui'
 
 const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
+  const dispatch = useAppDispatch()
   const tg = useWebApp()
+  const [userData] = useInitData()
   const [isReady, setIsReady] = useState<boolean>(false)
 
   useEffect(() => {
-    if (tg && tg.initData) {
+    if (tg && userData && userData.user) {
+      dispatch(setUser({userId: userData.user.id}))
       tg.expand()
       tg.ready()
     } else {
-      console.log(
+      console.warn(
         'Приложение запущено не в Telegram: некоторые функции недоступны'
       )
     }
     setIsReady(true)
-  }, [tg])
+  }, [tg, userData])
 
   if (!isReady)
     return (
