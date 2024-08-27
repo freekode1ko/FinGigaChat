@@ -113,7 +113,6 @@ t_eco_stake = Table(
 )
 
 
-
 class Industry(Base):
     __tablename__ = 'industry'
 
