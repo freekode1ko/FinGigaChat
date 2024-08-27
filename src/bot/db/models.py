@@ -113,24 +113,6 @@ t_eco_stake = Table(
 )
 
 
-t_financial_indicators = Table(
-    'financial_indicators', metadata,
-    Column('name', Text),
-    Column('2021', Text),
-    Column('2022', Text),
-    Column('2023E', Text),
-    Column('2024E', Text),
-    Column('2025E', Text),
-    Column('alias', Text),
-    Column('company', Text),
-    Column('2020', Float(53)),
-    Column('2022E', Float(53)),
-    Column('2019', Float(53)),
-    Column('2021E', Float(53)),
-    Column('id', BigInteger)
-)
-
-
 class Industry(Base):
     __tablename__ = 'industry'
 

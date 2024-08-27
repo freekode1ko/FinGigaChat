@@ -203,7 +203,7 @@ class ResearchesGetter:
             commodity_day = None
         return commodity_day
 
-    def collect_research(self) -> tuple[Optional[dict], Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+    def collect_research(self) -> tuple[Optional[dict], Optional[pd.DataFrame],]:
         """
         Collect all type of reviews from CIB Research
 
@@ -243,15 +243,11 @@ class ResearchesGetter:
             'Commodity day': commodity_day,
         }
 
-        clients_table = self.authed_user.get_companies_financial_indicators_table()
-        self.__driver = self.authed_user.driver
-        self.logger.info('Страница с клиентами собрана')
-
         self.authed_user.get_industry_reviews()
         self.__driver = self.authed_user.driver
         self.logger.info('Страница с отчетами по направлениям собрана')
 
-        return reviews, key_eco_table, clients_table
+        return reviews, key_eco_table
 
     def save_reviews(self, reviews_to_save: dict[str, list[tuple]]) -> None:
         """
@@ -281,14 +277,6 @@ class ResearchesGetter:
                 self.logger.warning(f'Таблица {table_name} не обновлена: {reviews_list}')
 
         self.logger.info('Все собранные отчеты с research записаны')
-
-    def save_clients_financial_indicators(self, clients_table: Optional[pd.DataFrame]) -> None:
-        """Сохранение таблицы с финансовыми показателями по клиентам"""
-        if clients_table is not None:
-            clients_table.to_sql('financial_indicators', if_exists='replace', index=False, con=engine)
-            self.logger.info('Таблица financial_indicators записана')
-        else:
-            self.logger.warning('Таблица financial_indicators не обновлена')
 
     def save_key_eco_table(self, key_eco_table: Optional[pd.DataFrame]) -> None:
         """Сохранение таблицы с ключевыми экономическими показателями"""
@@ -365,9 +353,8 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     if driver:
         try:
             logger.info('Начало сборки отчетов с research')
-            reviews_dict, key_eco_table, clients_table = runner.collect_research()
+            reviews_dict, key_eco_table = runner.collect_research()
             logger.info('Сохранение собранных данных')
-            runner.save_clients_financial_indicators(clients_table)
             runner.save_key_eco_table(key_eco_table)
             runner.save_reviews(reviews_dict)
         except Exception as e:
