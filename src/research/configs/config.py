@@ -183,7 +183,6 @@ help_text = (
     'обратную связь по контенту, функционалу и новым идеям команде проекта.'
 )
 
-dict_of_companies: dict = read_asset_from_json('companies_dict.json')
 industry_reviews: dict[str, str] = read_asset_from_json('industry_reviews.json')
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
