@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from configs import config
 from constants import enums
 from constants.analytics import analytics_sell_side
+from constants.texts import texts_manager
 from db import database
 from db.api import client as client_db_api
 from db.api.client import client_db
@@ -53,21 +54,20 @@ async def get_research_groups_menu(callback_query: types.CallbackQuery) -> None:
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     group_df = await research_group_db.get_all()
-    msg_text = (
-        'Аналитика публичных рынков\n'
-        'Выберите раздел'
-    )
 
-    section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
-    group_df = group_df[group_df['name'] != 'Разделы']
+    expand_group_df = group_df[group_df['expand']]
+    section_df = pd.DataFrame(columns=group_df.columns)
+    for _, row in expand_group_df.iterrows():
+        group_section_df = await research_section_db.get_research_sections_df_by_group_id(row['id'], from_user.id)
+        section_df = pd.concat([section_df, group_section_df])
 
-    section_df = await research_section_db.get_research_sections_df_by_group_id(section_group_id, from_user.id)
+    group_df = group_df[~group_df['expand']]
 
     section_df['callback_data'] = section_df['id'].apply(lambda x: callbacks.GetCIBSectionResearches(section_id=x).pack())
     group_df['callback_data'] = group_df['id'].apply(lambda x: callbacks.GetCIBGroupSections(group_id=x).pack())
 
     keyboard = keyboards.get_menu_kb(pd.concat([section_df, group_df]))
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
+    await callback_query.message.edit_text(texts_manager.ANAL_CHOOSE_PUBLIC_MARKET, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -91,11 +91,9 @@ async def get_group_sections_menu(
     group_id = callback_data.group_id
 
     section_df = await research_section_db.get_research_sections_df_by_group_id(group_id, user_id)
-
-    msg_text = 'Выберете отрасль клиента, по которому вы хотели бы получить данные из SberCIB Investment Research'
     keyboard = keyboards.get_sections_by_group_menu_kb(section_df)
 
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
+    await callback_query.message.edit_text(texts_manager.ANAL_CHOOSE_INDUSTRY, reply_markup=keyboard)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -119,23 +117,21 @@ async def get_section_research_types_menu(
     section_id = callback_data.section_id
 
     group_df = await research_group_db.get_all()
-    section_group_id = int(group_df[group_df['name'] == 'Разделы'].loc[0, 'id'])
+    expand_group_ids = group_df[group_df['expand']]['id'].values.tolist()
 
     section_info = await research_section_db.get(section_id)
     research_type_df = await user_research_subscription_db.get_subject_df_by_section_id(user_id, section_id)
 
     back_callback_data = (
         callbacks.GetCIBGroupSections(group_id=section_info.research_group_id).pack()
-        if section_info.research_group_id != section_group_id else callbacks.Menu().pack()
-    )
-
-    msg_text = (
-        f'Аналитика публичных рынков\n'
-        f'Раздел "{section_info.name}":'  # FIXME text
+        if section_info.research_group_id not in expand_group_ids else callbacks.Menu().pack()
     )
     keyboard = keyboards.get_research_types_by_section_menu_kb(section_info, research_type_df, back_callback_data)
 
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
+    await callback_query.message.edit_text(
+        texts_manager.ANAL_SHOW_PUBLIC_MARKET.format(section=section_info.name),
+        reply_markup=keyboard
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -197,13 +193,7 @@ async def select_period_to_get_researches(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     research_type_id = callback_data.research_type_id
-
     research_info = await research_type_db.get(research_type_id)
-
-    msg_text = (
-        f'Выберите период, за который хотите получить отчеты по '
-        f'<b>{research_info.name}</b>\n\n'
-    )
 
     back_callback = (
         back_callback or callbacks.GetCIBSectionResearches(section_id=research_info.research_section_id).pack()
@@ -215,7 +205,11 @@ async def select_period_to_get_researches(
         back_callback,
     )
 
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    await callback_query.message.edit_text(
+        texts_manager.ANAL_CHOOSE_PERIOD.format(research=research_info.name),
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -247,8 +241,7 @@ async def get_last_actual_research(
         await send_researches_to_user(callback_query.bot, user, last_research)
         await send_full_copy_of_message(callback_query)
     else:
-        msg_text = 'На текущий момент, отчеты временно отсутствуют'
-        await callback_query.message.answer(msg_text)
+        await callback_query.message.answer(texts_manager.ANAL_NOT_REPORT)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -285,10 +278,13 @@ async def cib_client_analytical_indicators(
         client_fin_tables = await ap_obj.get_client_fin_indicators(client['id'])
         client_id = 0 if client_fin_tables.empty else client['id']
 
-    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(research_info, client_id)
 
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    await callback_query.message.edit_text(
+        texts_manager.ANAL_WHAT_DATA.format(research=research_info.name),
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -343,7 +339,7 @@ async def data_mart_body(message: types.Message) -> None:
 
     spld_keys_eco = np.split(key_eco_table, split_numbers['id'])
     title = '<b>Динамика и прогноз основных макроэкономических показателей</b>'
-    await message.answer(text=title, parse_mode='HTML', protect_content=True)
+    await message.answer(text=title, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
     for table in spld_keys_eco:
         table.reset_index(drop=True, inplace=True)
@@ -488,8 +484,7 @@ async def economy_monthly_callback(
         await send_researches_to_user(callback_query.bot, user, last_research)
         await send_full_copy_of_message(callback_query)
     else:
-        msg_text = 'На текущий момент, отчеты временно отсутствуют'
-        await callback_query.message.answer(msg_text)
+        await callback_query.message.answer(texts_manager.ANAL_NOT_REPORT)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -543,8 +538,7 @@ async def get_researches_over_period(
         await send_researches_to_user(callback_query.bot, user, researches_df)
         await send_full_copy_of_message(callback_query)
     else:
-        msg_text = 'На текущий момент, отчеты временно отсутствуют'
-        await callback_query.message.answer(msg_text)
+        await callback_query.message.answer(texts_manager.ANAL_NOT_REPORT)
 
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : получил отчеты с {research_type_id=:} за {days} дней')
 
@@ -592,9 +586,9 @@ async def get_client_inavigator_source(
     navi_link = client_db_api.get_client_navi_link_by_name(research_info.name)
 
     if navi_link:
-        msg_text = f'<a href="{str(navi_link)}">Цифровая справка клиента: "{research_info.name}"</a>'
+        msg_text = texts_manager.ANAL_NAVI_LINK.format(link=navi_link, name=research_info.name)
     else:
-        msg_text = f'Цифровая справка по клиенту "{research_info.name}" отсутствует'
+        msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=research_info.name)
 
     await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
@@ -651,7 +645,5 @@ async def not_implemented_functionality(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    msg_text = 'Функционал появится позднее'
-
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    await callback_query.message.answer(texts_manager.COMMON_FEATURE_WILL_APPEAR.strip(), parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')

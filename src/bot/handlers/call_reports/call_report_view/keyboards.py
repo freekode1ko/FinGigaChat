@@ -26,7 +26,7 @@ def get_keyboard_for_view_call_report(
     """
     keyboard = InlineKeyboardBuilder()
     if custom_send_mail_button:
-        send_mail_text = 'Протокол на почту отправлен'
+        send_mail_text = 'Заметка отправлена на почту'
     else:
         send_mail_text = 'Отправить на почту'
 
@@ -99,7 +99,7 @@ def get_keyboard_for_edit_call_report(report_id: int, return_menu: CRMenusEnum, 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text='Изменить клиента',
+            text='Изменить заголовок',
             callback_data=CRViewAndEdit(
                 menu=CRMenusEnum.edit_report_name,
                 report_id=report_id,

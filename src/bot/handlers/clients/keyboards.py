@@ -8,6 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import constants
 from constants.enums import FinancialIndicatorsType
+from db import models
 from handlers.clients import callback_data_factories
 from keyboards.base import get_pagination_kb
 
@@ -93,6 +94,49 @@ def get_clients_list_kb(
             menu=callback_data_factories.ClientsMenusEnum.end_menu,
         ).pack(),
     )
+
+
+def get_stakeholder_menu_kb(
+        sh_clients: list[models.Client],
+) -> InlineKeyboardMarkup:
+    """
+    Формирует Inline клавиатуру вида.
+
+    [Имя клиента 1]
+    [...]
+    [Имя клиента N]
+    [Получить новости]
+    [Завершить]
+
+    :param sh_clients:          Клиенты стейкхолдера.
+    :return:                    Клавиатуру с клиентами стейкхолдера.
+    """
+    keyboard = InlineKeyboardBuilder()
+
+    for sh_client in sh_clients:
+        keyboard.row(
+            types.InlineKeyboardButton(
+                text=sh_client.name,
+                callback_data=callback_data_factories.ClientsMenuData(
+                    menu=callback_data_factories.ClientsMenusEnum.choose_stakeholder_clients,
+                    client_id=sh_client.id,
+                ).pack()
+            )
+        )
+
+    keyboard.row(types.InlineKeyboardButton(
+        text='Получить новости по всем упоминаниям',
+        callback_data=callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.show_news_from_sh,
+        ).pack()
+    ))
+    keyboard.row(types.InlineKeyboardButton(
+        text=constants.END_BUTTON_TXT,
+        callback_data=callback_data_factories.ClientsMenuData(
+            menu=callback_data_factories.ClientsMenusEnum.end_menu
+        ).pack()
+    ))
+    return keyboard.as_markup()
 
 
 def get_client_menu_kb(

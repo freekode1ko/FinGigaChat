@@ -113,24 +113,6 @@ t_eco_stake = Table(
 )
 
 
-t_financial_indicators = Table(
-    'financial_indicators', metadata,
-    Column('name', Text),
-    Column('2021', Text),
-    Column('2022', Text),
-    Column('2023E', Text),
-    Column('2024E', Text),
-    Column('2025E', Text),
-    Column('alias', Text),
-    Column('company', Text),
-    Column('2020', Float(53)),
-    Column('2022E', Float(53)),
-    Column('2019', Float(53)),
-    Column('2021E', Float(53)),
-    Column('id', BigInteger)
-)
-
-
 class Industry(Base):
     __tablename__ = 'industry'
 
@@ -317,15 +299,48 @@ class Client(Base):
 class Commodity(Base):
     __tablename__ = 'commodity'
 
-    id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    name = Column(Text, nullable=False)
-    industry_id = Column(ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.Text, nullable=False)
+    industry_id = sa.Column(sa.ForeignKey('industry.id', onupdate='CASCADE'), nullable=True)
 
     industry = relationship('Industry', back_populates='commodity')
     commodity_alternative = relationship('CommodityAlternative', back_populates='commodity')
     commodity_pricing = relationship('CommodityPricing', back_populates='commodity')
     relation_commodity_article = relationship('RelationCommodityArticle', back_populates='commodity')
+
+    commodity_research = relationship(
+        'CommodityResearch',
+        secondary='relation_commodity_commodity_research',
+        back_populates='commodities'
+    )
+
+
+class CommodityResearch(Base):
+    __tablename__ = 'commodity_research'
+    __table_args__ = {'comment': 'Таблица с отчетами аналитики по commodity'}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    title = sa.Column(sa.Text, nullable=True, comment='Заголовок отчета')
+    text = sa.Column(sa.Text, nullable=False, comment='Текст отчета')
+    file_name = sa.Column(sa.Text, nullable=True, comment='Файл отчета')
+
+    commodities = relationship(
+        'Commodity',
+        secondary='relation_commodity_commodity_research',
+        back_populates='commodity_research'
+    )
+
+
+class RelationCommodityCommodityResearch(Base):
+    __tablename__ = 'relation_commodity_commodity_research'
+    __table_args__ = {'comment': 'Таблица со связью отчетов аналитики по commodity'}
+
+    commodity_id = sa.Column(sa.Integer, ForeignKey('commodity.id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    commodity_research_id = sa.Column(
+        sa.Integer,
+        ForeignKey('commodity_research.id', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True
+    )
 
 
 class IndustryAlternative(Base):
@@ -504,6 +519,9 @@ class ResearchGroup(Base):
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String(64), nullable=False)
+    display_order = Column(Integer, nullable=True, server_default=sa.text('0'), comment='Порядок отображения групп')
+    expand = Column(Boolean, server_default=sa.text('false'),
+                    comment='Флаг, указывающий, что вместо отображения группы, надо отобразить ее разделы')
 
 
 class ResearchSection(Base):

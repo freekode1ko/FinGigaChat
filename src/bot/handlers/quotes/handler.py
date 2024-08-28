@@ -15,6 +15,7 @@ from configs import config
 from configs.config import PATH_TO_SOURCES
 from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
+from constants.texts import texts_manager
 from db.api.exc import exc_db
 from db.database import engine
 from keyboards.quotes import callbacks, constructors as keyboards
@@ -177,7 +178,7 @@ async def exchange_info_command(message: types.Message) -> None:
         photo,
         day,
         month,
-        protect_content=False,
+        protect_content=texts_manager.PROTECT_CONTENT,
         title=sample_of_img_title.format(title, data_source, curdatetime),
     )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
@@ -265,12 +266,21 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def metal_info_command(message: types.Message) -> None:
+async def metal_info_command(
+        message: types.Message,
+        with_table: bool = True,
+) -> None:
     """
     Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param with_table: Отправлять ли таблицу с котировками
     """
+    day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
+    if not with_table:
+        await utils.base.__sent_photo_and_msg(message, None, day)
+        return
+
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
         'JOIN relation_commodity_metals rcm ON rcm.name_from_source=metals."Metals" '
@@ -289,19 +299,24 @@ async def metal_info_command(message: types.Message) -> None:
     transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
 
     png_path = PATH_TO_SOURCES / 'img' / 'metal_table.png'
-    day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
     photo = types.FSInputFile(png_path)
     title = 'Сырьевые товары'
     data_source = 'LME, Bloomberg, investing.com'
     await utils.base.__sent_photo_and_msg(
-        message, photo, day, title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime())
+        message,
+        photo,
+        day,
+        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
     )
 
 
 async def not_realized_function(callback_query: types.CallbackQuery) -> None:
     """Выводит сообщение, что функция будет реализована позднее"""
-    msg_text = 'Функционал появится позднее'
-    await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+    await callback_query.message.answer(
+        texts_manager.COMMON_FEATURE_WILL_APPEAR.strip(),
+        protect_content=texts_manager.PROTECT_CONTENT,
+        parse_mode='HTML'
+    )
 
 
 @router.callback_query(callbacks.GetFIItemData.filter())
@@ -368,7 +383,7 @@ async def bonds_info_command(message: types.Message) -> None:
         photo,
         day,
         month,
-        protect_content=False,
+        protect_content=texts_manager.PROTECT_CONTENT,
         title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
     )
 
@@ -438,7 +453,7 @@ async def economy_info_command(message: types.Message) -> None:
     data_source = 'ЦБ стран мира'
     curdatetime = utils.base.read_curdatetime()
     await utils.base.__sent_photo_and_msg(
-        message, photo, day, month, protect_content=False,
+        message, photo, day, month, protect_content=texts_manager.PROTECT_CONTENT,
         title=sample_of_img_title.format(title, data_source, curdatetime)
     )
 
@@ -468,7 +483,7 @@ async def economy_info_command(message: types.Message) -> None:
         photo,
         caption=sample_of_img_title.format(title, data_source, curdatetime),
         parse_mode='HTML',
-        protect_content=False,
+        protect_content=texts_manager.PROTECT_CONTENT,
     )
     # сообщение с текущими ставками
     stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
@@ -484,7 +499,7 @@ async def economy_info_command(message: types.Message) -> None:
 
     rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
     rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
-    await message.answer(rates_message, parse_mode='HTML', protect_content=False)
+    await message.answer(rates_message, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
     await weekly_pulse.key_rate_dynamics_table(message.bot, message.chat.id)
     msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
-    await message.answer(msg_text, parse_mode='HTML', protect_content=False)
+    await message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)

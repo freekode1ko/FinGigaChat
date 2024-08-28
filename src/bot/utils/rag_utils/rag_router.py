@@ -6,8 +6,8 @@ import urllib.parse
 from aiohttp import ClientError, ClientSession
 
 from configs import config, prompts
-from constants.constants import DEFAULT_RAG_ANSWER, ERROR_RAG_ANSWER, GIGA_FOOTER, GIGA_RAG_FOOTER
-from constants.enums import RetrieverType
+from constants.enums import HTTPMethod, RetrieverType
+from constants.texts import texts_manager
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.sessions import RagQaBankerClient, RagStateSupportClient
@@ -17,9 +17,6 @@ giga = GigaChat(logger)
 
 class RAGRouter:
     """Класс с классификацией запроса относительно RAG-сервисов(+GigaChat) и с получением ответа на запрос."""
-
-    GET_METHOD = 'GET'
-    POST_METHOD = 'POST'
 
     def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
         """
@@ -73,7 +70,7 @@ class RAGRouter:
         query = query.strip()
         return query if query[-1] == '?' else query + '?'
 
-    async def get_response(self) -> tuple[str, str]:
+    async def get_response(self) -> str:
         """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
             return await self.rag_state_support()
@@ -81,7 +78,7 @@ class RAGRouter:
             return await self.rag_qa_banker()
         return await self._request_to_giga()
 
-    async def rag_qa_banker(self) -> tuple[str, str]:
+    async def rag_qa_banker(self) -> str:
         """Формирование параметров к запросу API по новостям и получение ответа."""
         query = self.add_question_mark(self.query)
         query = urllib.parse.quote(query)
@@ -91,9 +88,9 @@ class RAGRouter:
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
         session = RagQaBankerClient().session
-        return await self._request_to_rag_api(session, **req_kwargs)
+        return await self._request_to_rag_api(session, HTTPMethod.GET, **req_kwargs)
 
-    async def rag_state_support(self) -> tuple[str, str]:
+    async def rag_state_support(self) -> str:
         """Формирование параметров к запросу API по господдержке и получение ответа."""
         req_kwargs = dict(
             url='/api/v1/question',
@@ -101,57 +98,51 @@ class RAGRouter:
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
         session = RagStateSupportClient().session
-        return await self._request_to_rag_api(session, self.POST_METHOD, **req_kwargs)
+        return await self._request_to_rag_api(session, HTTPMethod.POST, **req_kwargs)
 
     async def _request_to_rag_api(self,
                                   session: ClientSession,
-                                  request_method: str = GET_METHOD,
-                                  **kwargs) -> tuple[str, str]:
+                                  request_method: HTTPMethod,
+                                  **kwargs) -> str:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
         :param  session:            Сессия для подключения.
         :param  request_method:     HTTP метод.
         :param kwargs:              Параметры http запроса.
-        :return:                    Оригинальный ответ RAG и отформатированный ответ.
+        :return:                    Оригинальный ответ RAG.
         """
-        rag_answer = DEFAULT_RAG_ANSWER
-        format_rag_answer = ERROR_RAG_ANSWER
-
         try:
             async with session.request(method=request_method, **kwargs) as rag_response:
-                if request_method == self.GET_METHOD:
+                if request_method == HTTPMethod.GET:
                     rag_answer = await rag_response.text()
                 else:
                     rag_answer = await rag_response.json()
                     rag_answer = rag_answer['body']
 
-            format_rag_answer = f'{rag_answer}\n\n{GIGA_RAG_FOOTER}' if rag_answer != DEFAULT_RAG_ANSWER else rag_answer
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
                              (self.chat_id, self.full_name, self.query, rag_answer))
-
         except ClientError as e:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
                                  (self.chat_id, self.full_name, self.query, e))
+        else:
+            return rag_answer
+        return texts_manager.RAG_ERROR_ANSWER
 
-        return rag_answer, format_rag_answer
-
-    async def _request_to_giga(self) -> tuple[str, str]:
+    async def _request_to_giga(self) -> str:
         """
         Получение и форматирование ответа от GigaChat.
 
         :return:   Оригинальный ответ GigaChat и отформатированный ответ.
         """
-        giga_answer = format_giga_answer = 'Извините, я пока не могу ответить на ваш запрос'
         try:
             giga_answer = await giga.aget_giga_answer(text=self.query)
-            format_giga_answer = f'{giga_answer}\n\n{GIGA_FOOTER}'
             user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
                              f'На запрос GigaChat ответил: "{giga_answer}"')
         except Exception as e:
+            giga_answer = texts_manager.RAG_ERROR_ANSWER
             logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
             user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
                                  f'GigaChat не сформировал ответ по причине: {e}"')
-
-        return giga_answer, format_giga_answer
+        return giga_answer

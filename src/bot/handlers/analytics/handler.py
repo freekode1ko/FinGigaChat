@@ -12,6 +12,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
+from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
@@ -34,7 +35,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр аналитики завершен')
+    await callback_query.message.edit_text(text=texts_manager.ANAL_END)
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
@@ -44,11 +45,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
-    msg_text = (
-        'В этом разделе вы можете получить, всесторонний анализ российского финансового рынка '
-        'от SberCIB Investment Research'
-    )
-    await send_or_edit(message, msg_text, keyboard)
+    await send_or_edit(message, texts_manager.ANAL_START, keyboard)
 
 
 @router.callback_query(callbacks.AnalyticsMenu.filter())
@@ -122,12 +119,11 @@ async def get_full_version_of_research(
             logger.error(f'*{user.user_id}* При рассылке отчета {research["id"]} произошла ошибка: {e}.')
         else:
             file = types.FSInputFile(user_anal_filepath)
-            msg_txt = f'Полная версия отчета: <b>{research.header}</b>'
             await callback_query.message.answer_document(
                 document=file,
-                caption=msg_txt,
+                caption=texts_manager.ANAL_FULL_VERSION_REPORT.format(header=research.header),
                 parse_mode='HTML',
-                protect_content=True,
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
 
     try:

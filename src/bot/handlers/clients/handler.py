@@ -22,7 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from constants import constants
+from constants.texts import texts_manager
 from db import models
+from db.api import stakeholder
 from db.api.client import client_db, get_research_type_id_by_name
 from db.api.industry import get_industry_analytic_files
 from db.api.product import product_db
@@ -31,8 +33,8 @@ from db.api.user_client_subscription import user_client_subscription_db
 from db.models import Article
 from handlers import products
 from handlers.analytics.analytics_sell_side.handler import get_researches_over_period
-from handlers.clients import callback_data_factories
-from handlers.clients import keyboards
+from handlers.clients import callback_data_factories, keyboards
+from handlers.clients.utils import get_menu_msg_by_sh_type
 from handlers.products import callbacks as products_callbacks
 from keyboards.analytics.analytics_sell_side import callbacks as analytics_callbacks
 from log.bot_logger import user_logger
@@ -64,7 +66,7 @@ async def menu_end(callback_query: types.CallbackQuery, state: FSMContext) -> No
     """
     await state.clear()
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.edit_text(text='Просмотр клиентов завершен')
+    await callback_query.message.edit_text(text=texts_manager.CLIENT_END)
 
 
 async def main_menu(message: types.CallbackQuery | types.Message) -> None:
@@ -74,7 +76,21 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
-    msg_text = 'Клиенты'
+    await send_or_edit(message, texts_manager.CLIENT_START, keyboard)
+
+
+async def main_sh_menu(message: types.CallbackQuery | types.Message, session: AsyncSession, stakeholder_id: int) -> None:
+    """
+    Формирует меню стейкхолдера.
+
+    :param message:         types.CallbackQuery | types.Message
+    :param session:         Сессия бд.
+    :param stakeholder_id:  ID стейкхолдера.
+    """
+    sh_obj = await stakeholder.get_stakeholder_by_id(session, stakeholder_id)
+    stakeholder_types = await stakeholder.get_stakeholder_types(session, sh_obj.id)
+    msg_text = get_menu_msg_by_sh_type(stakeholder_types, sh_obj)
+    keyboard = keyboards.get_stakeholder_menu_kb(sh_obj.clients)
     await send_or_edit(message, msg_text, keyboard)
 
 
@@ -123,6 +139,7 @@ async def clients_list(
         callback_query: types.CallbackQuery,
         callback_data: callback_data_factories.ClientsMenuData,
         state: FSMContext,
+        session: AsyncSession,
 ) -> None:
     """
     Получение списка клиентов
@@ -130,8 +147,9 @@ async def clients_list(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: subscribed означает, что выгружает из списка подписок пользователя или остальных
     :param state: Объект, который хранит состояние FSM для пользователя
+    :param session: Сессия бд
     """
-    msg_text = ''
+    msg_text = texts_manager.CLIENT_WRITE_NAME
 
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.model_dump_json()
@@ -139,12 +157,16 @@ async def clients_list(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
     user_id = from_user.id
 
+    data = await state.get_data()
+    if sh_id := data.get('stakeholder_id'):
+        await main_sh_menu(callback_query, session, sh_id)
+        return
+
     subscribed = callback_data.subscribed
     page = callback_data.page
     clients = await client_db.get_all()
     client_subscriptions = await user_client_subscription_db.get_subscription_df(user_id)
     if subscribed:
-
         clients = clients[clients['id'].isin(client_subscriptions['id'])]
         await state.set_state(ChooseClient.choosing_from_subscribed_clients)
     else:
@@ -155,8 +177,7 @@ async def clients_list(
     keyboard = keyboards.get_clients_list_kb(page_data, page, max_pages, subscribed)
 
     if subscribed:
-        msg_text = f'Выберите клиента из списка ваших подписок\n<b>{page_info}</b>\n\n'
-    msg_text += 'Для поиска введите сообщение с именем клиента.'
+        msg_text = texts_manager.CLIENT_CHOOSE_SUBS_CLIENT.format(page_info=page_info)
 
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -173,7 +194,6 @@ async def clients_subscriptions_list(
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state:   Объект, который хранит состояние FSM для пользователя
-    :param logger:  логгер
     """
     subscribed = await state.get_state() == ChooseClient.choosing_from_subscribed_clients.state
 
@@ -190,7 +210,7 @@ async def clients_subscriptions_list(
     if len(clients) > 1:
         page_data, page_info, max_pages = get_page_data_and_info(clients)
         keyboard = keyboards.get_clients_list_kb(page_data, 0, max_pages, subscribed)
-        msg_text = 'Выберите клиента из списка'
+        msg_text = texts_manager.CLIENT_CHOOSE_FROM_LIST
     elif len(clients) == 1:
         client_name = clients['name'].iloc[0]
         keyboard = keyboards.get_client_menu_kb(
@@ -199,9 +219,9 @@ async def clients_subscriptions_list(
             subscribed=subscribed,
             research_type_id=await get_research_type_id_by_name(client_name),
         )
-        msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_name}</b>'
+        msg_text = texts_manager.CLIENT_CHOOSE_SECTION.format(name=client_name.capitalize())
     else:
-        msg_text = 'Не нашелся, введите имя клиента по-другому'
+        msg_text = texts_manager.CLIENT_NOT_FOUND
         keyboard = None
 
     await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
@@ -235,7 +255,7 @@ async def get_client_menu(
         subscribed=callback_data.subscribed,
         research_type_id=research_type_id,
     )
-    msg_text = f'Выберите раздел для получения данных по клиенту <b>{client_info["name"].capitalize()}</b>'
+    msg_text = texts_manager.CLIENT_CHOOSE_SECTION.format(name=client_info['name'].capitalize())
     await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
@@ -265,9 +285,12 @@ async def get_client_news_menu(
         current_page=callback_data.page,
         subscribed=callback_data.subscribed,
     )
-    msg_text = f'Какие новости вы хотите получить по клиенту <b>{client_info["name"].capitalize()}</b>'
 
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    await callback_query.message.edit_text(
+        texts_manager.CLIENT_WHAT_NEWS.format(name=client_info['name'].capitalize()),
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -301,7 +324,6 @@ async def get_client_analytic_indicators(
     ap_obj = ArticleProcess(logger)
     client_fin_tables = await ap_obj.get_client_fin_indicators(callback_data.client_id)
 
-    msg_text = f'Какие данные вас интересуют по клиенту <b>{research_info.name}</b>?'
     keyboard = keyboards.client_analytical_indicators_kb(
         client_id=callback_data.client_id,
         current_page=callback_data.page,
@@ -310,7 +332,11 @@ async def get_client_analytic_indicators(
         with_financial_indicators=not client_fin_tables.empty,
     )
 
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    await callback_query.message.edit_text(
+        texts_manager.ANAL_WHAT_DATA.format(research=research_info.name),
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -335,16 +361,13 @@ async def get_client_industry_analytics(
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
     client_info = await client_db.get(callback_data.client_id)
-
-    msg_text = (
-        f'Отраслевая аналитика по клиенту <b>{client_info["name"].capitalize()}</b>\n'
-    )
+    msg_text = texts_manager.CLIENT_INDUSTRY_ANAL.format(name=client_info['name'].capitalize())
 
     files = await get_industry_analytic_files(industry_id=client_info['industry_id'])
     files = [p for f in files if (p := Path(f.file_path)).exists()]
-    if not await send_pdf(callback_query, files, msg_text, protect_content=True):
-        msg_text += '\nФункционал появится позднее'
-        await callback_query.message.answer(msg_text, protect_content=True, parse_mode='HTML')
+    if not await send_pdf(callback_query, files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
+        msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
+        await callback_query.message.answer(msg_text, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
     else:
         await utils.base.send_full_copy_of_message(callback_query)
 
@@ -377,8 +400,11 @@ async def get_client_products_menu(
         subscribed=callback_data.subscribed,
     )
 
-    msg_text = f'Продуктовые предложения по клиенту <b>{client_info["name"].capitalize()}</b>'
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+    await callback_query.message.edit_text(
+        texts_manager.CLIENT_PRODUCT.format(name=client_info['name'].capitalize()),
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -402,9 +428,12 @@ async def get_client_inavigator(
 
     client_info = await client_db.get(callback_data.client_id)
     if client_info['navi_link']:
-        msg_text = f'<a href="{str(client_info["navi_link"])}">Цифровая справка клиента: "{client_info["name"].capitalize()}"</a>'
+        msg_text = texts_manager.ANAL_NAVI_LINK.format(
+            link=client_info['navi_link'],
+            name=client_info['name'].capitalize()
+        )
     else:
-        msg_text = f'Цифровая справка по клиенту "{client_info["name"].capitalize()}" отсутствует'
+        msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=client_info['name'].capitalize())
 
     await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -430,11 +459,10 @@ async def get_client_meetings_data(
 
     client_info = await client_db.get(callback_data.client_id)
 
-    msg_text = (
-        f'Материалы для встречи по клиенту <b>{client_info["name"].capitalize()}</b>\n'
-        f'Функциональность будет реализована позднее'
+    await callback_query.message.answer(
+        texts_manager.CLIENT_MEETING_DATA.format(name=client_info['name'].capitalize()),
+        parse_mode='HTML'
     )
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -477,11 +505,10 @@ async def get_client_top_news(
 
     client_info = await client_db.get(callback_data.client_id)
 
-    msg_text = (
-        f'Топ новости по клиенту <b>{client_info["name"].capitalize()}</b>\n'
-        f'Функциональность будет реализована позднее'
+    await callback_query.message.answer(
+        texts_manager.CLIENT_TOP_ARTICLES.format(name=client_info['name'].capitalize()),
+        parse_mode='HTML'
     )
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -520,8 +547,12 @@ async def get_client_select_period_menu(
         select_period_menu=select_period_menu,
         back_menu=back_menu,
     )
-    msg_text = f'Выберите период для получения новостей по клиенту <b>{client_info["name"].capitalize()}</b>'
-    await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+
+    await callback_query.message.edit_text(
+        texts_manager.CLIENT_CHOOSE_PERIOD.format(name=client_info['name'].capitalize()),
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -576,7 +607,7 @@ async def get_client_news_by_period(
     to_date = datetime.datetime.now()
     from_date = to_date - datetime.timedelta(days=days)
 
-    msg_text = f'Новости по клиенту <b>{client_info["name"].capitalize()}</b> за {days} дней\n'
+    msg_text = texts_manager.CLIENT_PERIOD_ARTICLES.format(name=client_info['name'].capitalize(), days=days)
     articles = await client_db.get_articles_by_subject_ids(client_id, from_date, to_date, order_by=Article.date.desc())
     if not articles:
         msg_text += 'отсутствуют'
@@ -653,9 +684,7 @@ async def not_implemented(
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    msg_text = 'Функционал появится позднее'
-
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    await callback_query.message.answer(texts_manager.COMMON_FEATURE_WILL_APPEAR, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 

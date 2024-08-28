@@ -21,6 +21,7 @@ from aiogram.utils.media_group import MediaGroupBuilder
 
 import module.data_transformer as dt
 from configs import config
+from constants.texts import texts_manager
 from db import message, models, parser_source
 from db.api.research import research_db
 from db.api.research_section import research_section_db
@@ -81,16 +82,26 @@ async def tg_newsletter(
                 continue
 
             start_msg = f'Ваша новостная подборка по подпискам на telegram каналы по разделу <b>{section.name}</b>:'
-            msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
-            saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
+            try:
+                msg_title = await bot.send_message(user_id, text=start_msg, parse_mode='HTML')
+            except Exception as e:
+                user_logger.error(f'ERROR *{user_id}* {user_name} - {e}')
+                break
+            else:
+                saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
 
             tg_news = group_news_by_tg_channels(tg_news)
 
             for tg_chan_name, articles in tg_news.items():
                 msg_text = get_tg_channel_news_msg(tg_chan_name, articles)
-                messages = await bot_send_msg(bot, user_id, msg_text)
-                for m in messages:
-                    saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
+                try:
+                    messages = await bot_send_msg(bot, user_id, msg_text)
+                except Exception as e:
+                    user_logger.error(f'ERROR *{user_id}* {user_name} - {e}')
+                    break
+                else:
+                    for m in messages:
+                        saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
 
             user_logger.debug(
                 f'*{user_id}* Пользователю {user_name} пришла рассылка сводки новостей из telegram каналов по отрасли '
@@ -245,8 +256,17 @@ async def weekly_pulse_newsletter(
         for path in img_path_list:
             media.add_photo(types.FSInputFile(path))
         try:
-            msg_title: types.Message = await bot.send_message(user_id, text=newsletter, parse_mode='HTML', protect_content=True)
-            msg_photos: List[types.Message] = await bot.send_media_group(user_id, media=media.build(), protect_content=True)
+            msg_title: types.Message = await bot.send_message(
+                user_id,
+                text=newsletter,
+                parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
+            )
+            msg_photos: List[types.Message] = await bot.send_media_group(
+                user_id,
+                media=media.build(),
+                protect_content=texts_manager.PROTECT_CONTENT,
+            )
 
             saved_messages.append(dict(user_id=user_id, message_id=msg_title.message_id, message_type=newsletter_type))
             for msg in msg_photos:
@@ -281,7 +301,11 @@ async def send_researches_to_user(bot: Bot, user: models.RegisteredUser, researc
             formatted_msg_txt = formatter.ResearchFormatter.format_min(research)
             keyboard = anal_keyboards.get_full_research_kb(research['id'])
             msg = await bot.send_message(
-                user.user_id, formatted_msg_txt, reply_markup=keyboard, protect_content=False, parse_mode='HTML'
+                user.user_id,
+                formatted_msg_txt,
+                reply_markup=keyboard,
+                protect_content=texts_manager.PROTECT_CONTENT,
+                parse_mode='HTML',
             )
         # Если есть файл, но нет текста - тайтл с файлом
         elif research['filepath'] and os.path.exists(research['filepath']):
@@ -305,7 +329,7 @@ async def send_researches_to_user(bot: Bot, user: models.RegisteredUser, researc
                     chat_id=user.user_id,
                     caption=msg_txt,
                     parse_mode='HTML',
-                    protect_content=True,
+                    protect_content=texts_manager.PROTECT_CONTENT,
                 )
         else:
             continue
@@ -359,7 +383,7 @@ async def send_new_researches_to_users(bot: Bot) -> None:
             # отправка отчета пользователю
             start_msg = f'Ваша новостная рассылка по подпискам на отчеты по разделу <b>{research_section_name}</b>:'
             try:
-                msg = await bot.send_message(user_id, start_msg, protect_content=True, parse_mode='HTML')
+                msg = await bot.send_message(user_id, start_msg, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
                 sent_msg_list = await send_researches_to_user(bot, user, section_researches_df)
             except exceptions.TelegramForbiddenError as e:
                 logger.error(f'При рассылке по подпискам на отчеты пользователю {user_id} произошла ошибка: %s', e)
@@ -414,7 +438,7 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
         # отправка отчета пользователю
         try:
             msg = await bot.send_document(user_id, document=weekly_check_up_document, caption=msg_text,
-                                          protect_content=True, parse_mode='HTML')
+                                          protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
         except exceptions.TelegramAPIError as e:
             logger.error(f'При рассылке weekly check up пользователю {user_id} произошла ошибка: %s', e)
         else:

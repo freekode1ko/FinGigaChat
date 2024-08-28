@@ -8,6 +8,7 @@ from typing import Protocol, Type
 
 import pandas as pd
 from aiogram import Router, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
@@ -19,10 +20,12 @@ from constants.subscriptions import const
 from db import models
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
-from db.api.subscriptions_interface import SubscriptionInterface
+from db.api.subscriptions_interface import IndustryChildrenSubscriptionInterface, SubscriptionInterface
 from db.api.user_research_subscription import user_research_subscription_db
+from handlers.news.utils import decline_words
+from handlers.subscriptions.news import utils
 from keyboards.subscriptions.news.news_keyboards import BaseKeyboard
-from log.bot_logger import user_logger
+from log.bot_logger import logger, user_logger
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, get_page_data_and_info, send_or_edit
 
@@ -111,15 +114,18 @@ class NewsHandler:
         self.subject_inf = subject_name_nominative  # 'клиенты'   # сырьевые товары | отрасли
         self.subject_par = subject_name_genitive    # 'клиентов'  # сырьевых товаров | отраслей
         self.subject_vin = subject_name_accusative  # 'клиентов'  # сырьевые товары | отрасли
+        self.subject_datv = decline_words(subject_name_nominative, ('datv', 'plur'), str.lower)
 
-    def setup(self):
-        """Сетап"""
+    def _setup_change_user_subs(self) -> None:
+        """Setup change user subs menu"""
         @self.router.callback_query(self.callbacks.ChangeUserSubs.filter())
         async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext) -> None:
             keyboard = self.keyboards.change_subs_menu()
             await state.clear()
-            await callback_query.message.edit_text('Как вы хотите заполнить подписки?', reply_markup=keyboard)
+            await callback_query.message.edit_text(f'Как вы хотите заполнить подписки по {self.subject_datv}?', reply_markup=keyboard)
 
+    def _setup_write_new_subscriptions_callback(self) -> None:
+        """Setup write_new_subscriptions_callback menu"""
         @self.router.callback_query(self.callbacks.WriteSubs.filter())
         async def write_new_subscriptions_callback(
                 callback_query: types.CallbackQuery,
@@ -153,8 +159,13 @@ class NewsHandler:
                 reply_markup=keyboard,
             )
 
+    def _setup_add_all_subs_by_domain(self) -> None:
+        """Setup add_all_subs_by_domain menu"""
         @self.router.callback_query(self.callbacks.AddAllSubsByDomain.filter())
-        async def add_all_subs(callback_query: types.CallbackQuery, callback_data: CallbacksModule.AddAllSubsByDomain) -> None:
+        async def add_all_subs_by_domain(
+                callback_query: types.CallbackQuery,
+                callback_data: CallbacksModule.AddAllSubsByDomain,
+        ) -> None:
             """
             Подписывает пользователя на все подписки из области
 
@@ -188,6 +199,8 @@ class NewsHandler:
 
             await callback_query.message.answer(msg_text)
 
+    def _setup_scroller(self) -> None:
+        """Setup scroller menu"""
         @self.router.callback_query(self.callbacks.SelectSubs.filter())
         async def scroller(callback_query: types.CallbackQuery, callback_data: CallbacksModule.SelectSubs) -> None:
             """
@@ -228,6 +241,8 @@ class NewsHandler:
             await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+    def _setup_showmeindustry(self) -> None:
+        """Setup showmeindustry menu"""
         @self.router.callback_query(self.callbacks.ShowIndustry.filter())
         async def showmeindustry(
                 callback_query: types.CallbackQuery,
@@ -258,6 +273,8 @@ class NewsHandler:
                 f'По какой отрасли вы бы хотели получить список {self.subject_par}?', reply_markup=keyboard.as_markup()
             )
 
+    def _setup_whatinthisindustry(self) -> None:
+        """Setup whatinthisindustry menu"""
         @self.router.callback_query(self.write_subscriptions_state, self.callbacks.WhatInThisIndustry.filter())
         async def whatinthisindustry(
                 callback_query: types.CallbackQuery,
@@ -297,6 +314,8 @@ class NewsHandler:
                     text=f'На данный момент в отрасли "{ref_book.upper()}" отсутствуют {self.subject_inf}'
                 )
 
+    def _setup_set_user_subscriptions(self) -> None:
+        """Setup set_user_subscriptions menu"""
         @self.router.message(self.write_subscriptions_state)
         async def set_user_subscriptions(message: types.Message, state: FSMContext) -> None:
             """
@@ -366,6 +385,8 @@ class NewsHandler:
 
                 await message.reply(msg_txt, reply_markup=keyboard)
 
+    def _setup_get_user_subscriptions_callback(self) -> None:
+        """Setup get_user_subscriptions_callback menu"""
         @self.router.callback_query(self.callbacks.GetUserSubs.filter())
         async def get_user_subscriptions_callback(
                 callback_query: types.CallbackQuery,
@@ -387,6 +408,10 @@ class NewsHandler:
 
             user_id = callback_query.from_user.id
             page = callback_data.page
+            subject_id = callback_data.subject_id
+
+            if subject_id:
+                await self.subscription_db.delete_subscription(user_id, subject_id)
 
             user_subscription_df = await self.subscription_db.get_subscription_df(user_id)
 
@@ -395,10 +420,13 @@ class NewsHandler:
             msg_txt = (
                 f'{title}\n<b>{page_info}</b>\n\n'
                 'Выберите подписку для получения новостей\n\n'
+                f'Для удаления подписки - нажмите на "{constants.DELETE_CROSS}"'
             )
 
             await callback_query.message.edit_text(msg_txt, reply_markup=keyboard, parse_mode='HTML')
 
+    def _setup_delete_subscriptions(self) -> None:
+        """Setup delete_subscriptions menu"""
         @self.router.callback_query(self.callbacks.DeleteUserSub.filter())
         async def delete_subscriptions(
                 callback_query: types.CallbackQuery,
@@ -436,6 +464,8 @@ class NewsHandler:
 
             await callback_query.message.edit_text(msg_txt, reply_markup=keyboard, parse_mode='HTML')
 
+    def _setup_delete_all_subscriptions(self) -> None:
+        """Setup delete_all_subscriptions"""
         @self.router.callback_query(self.callbacks.DeleteAllSubs.filter())
         async def delete_all_subscriptions(
                 callback_query: types.CallbackQuery,
@@ -459,6 +489,8 @@ class NewsHandler:
             keyboard = self.keyboards.get_back_to_subscriptions_menu_kb()
             await callback_query.message.edit_text(text=msg_txt, reply_markup=keyboard)
 
+    def _setup_prepare_delete_all_subscriptions(self) -> None:
+        """Setup prepare_delete_all_subscriptions"""
         @self.router.callback_query(self.callbacks.PrepareDeleteAllSubs.filter())
         async def prepare_delete_all_subscriptions(
                 callback_query: types.CallbackQuery,
@@ -479,15 +511,17 @@ class NewsHandler:
             user_subs_df = await self.subscription_db.get_subscription_df(user_id=user_id)
 
             if user_subs_df.empty:
-                msg_text = 'У вас отсутствуют подписки'
+                msg_text = f'У вас отсутствуют подписки на {self.subject_vin}'
                 keyboard = self.keyboards.get_back_to_subscriptions_menu_kb()
             else:
-                msg_text = 'Вы уверены, что хотите удалить все подписки?'
+                msg_text = f'Вы уверены, что хотите удалить все подписки на {self.subject_vin}?'
                 keyboard = self.keyboards.get_prepare_subs_delete_all_kb()
 
             await callback_query.message.edit_text(msg_text, reply_markup=keyboard)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
+    def _setup_subject_subscriptions_menu_callback(self) -> None:
+        """Setup subject_subscriptions_menu_callback"""
         @self.router.callback_query(self.callbacks.Menu.filter())
         async def subject_subscriptions_menu_callback(
                 callback_query: types.CallbackQuery,
@@ -507,4 +541,199 @@ class NewsHandler:
             keyboard = self.keyboards.get_subscriptions_menu_kb()
             msg_text = f'Меню управления подписками на {self.subject_vin}\n'
             await send_or_edit(callback_query, msg_text, keyboard)
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+    def setup(self):
+        """Сетап"""
+        self._setup_change_user_subs()
+        self._setup_write_new_subscriptions_callback()
+        self._setup_add_all_subs_by_domain()
+        self._setup_scroller()
+        self._setup_whatinthisindustry()
+        self._setup_set_user_subscriptions()
+        self._setup_get_user_subscriptions_callback()
+        self._setup_delete_subscriptions()
+        self._setup_delete_all_subscriptions()
+        self._setup_prepare_delete_all_subscriptions()
+        self._setup_subject_subscriptions_menu_callback()
+
+
+class ClientAndCommoditySubscriptionsHandler(NewsHandler):
+    """Обработчик меню подписок на клиентов"""
+
+    def __init__(
+            self,
+            router: Router,
+            subject_db: SubjectInterface,
+            subscription_db: IndustryChildrenSubscriptionInterface,
+            callbacks: Type[CallbacksModule],
+            keyboards: BaseKeyboard,
+            write_subscriptions_state: State,
+            subject_names_to_find_nearest: list[models.Base],
+            subject_name_nominative: str,
+            subject_name_genitive: str,
+            subject_name_accusative: str,
+    ) -> None:
+        """
+        Инициализация обработчика подписок на новости
+
+        :param router: aiogram.Router роутер
+        :param subject_db: Интерфейс взаимодействия с клиентамы/сырьем/отраслями
+        :param subscription_db: Интерфейс взаимодействия с подписками
+        :param callbacks: Модуль фабрик колбэков
+        :param keyboards: Модуль создания клавиатур
+        :param subject_names_to_find_nearest: Список строк с названиями таблиц, в которых мы ищем максимально
+                                              похожие слова (неточный поиск) ['client', 'commodity', 'industry']
+        :param subject_name_nominative: название области подписок в именительном падеже (клиенты, сырьевые товары)
+        :param subject_name_genitive: название области подписок в родительном падеже (клиентов, сырьевых товаров)
+        :param subject_name_accusative: название области подписок в винительном падеже (клиентов, сырьевые товары)
+        """
+        super().__init__(
+            router,
+            subject_db,
+            subscription_db,
+            callbacks,
+            keyboards,
+            write_subscriptions_state,
+            subject_names_to_find_nearest,
+            subject_name_nominative,
+            subject_name_genitive,
+            subject_name_accusative,
+        )
+        self.subject_gent_sing = decline_words(subject_name_nominative, ('sing', 'gent'), str.lower)
+
+    def _setup_change_user_subs(self) -> None:
+        """Меню выбора отрасли, к которой принадлежат клиенты/сырье"""
+        @self.router.callback_query(self.callbacks.ChangeUserSubs.filter())
+        async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext) -> None:
+            industry_df = await industry_db.get_industries_from_table(self.subject_db.table)
+            keyboard = self.keyboards.change_subs_menu(industry_df.sort_values('display_order'))
+            await state.clear()
+            await callback_query.message.edit_text(f'Как вы хотите заполнить подписки по {self.subject_datv}?', reply_markup=keyboard)
+
+    def _setup_scroller(self) -> None:
+        """Выгрузка элементов по industry_id"""
+        @self.router.callback_query(self.callbacks.SelectSubs.filter())
+        async def scroller(
+                callback_query: types.CallbackQuery,
+                callback_data: CallbacksModule.SelectSubs,
+                state: FSMContext,
+        ) -> None:
+            """
+            Меню с пагинацией для добавления подписок
+
+            :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+            :param callback_data: номер страницы, id субъекта, на которого пользователь подписывается или отписывается
+            :param state: Состояние FSM
+            """
+            chat_id = callback_query.message.chat.id
+            user_msg = callback_data.pack()
+            from_user = callback_query.from_user
+            full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+            user_id = callback_query.from_user.id
+
+            title = f'Подборка {self.subject_par}'
+
+            page = callback_data.page
+            subject_id = callback_data.subject_id
+            need_add = callback_data.need_add
+            industry_id = callback_data.industry_id
+
+            await state.set_state(self.write_subscriptions_state)
+            await state.set_data({
+                'callback_data': callback_data.model_dump(),
+                'message_id': callback_query.message.message_id,
+            })
+
+            if subject_id:
+                if need_add:
+                    await self.subscription_db.add_subscription(user_id, subject_id)
+                    await user_research_subscription_db.subscribe_on_news_source_with_same_name(
+                        user_id, self.subscription_db.subject_table, subject_id
+                    )
+                else:
+                    await self.subscription_db.delete_subscription(user_id, subject_id)
+
+            subject_df = await self.subscription_db.get_subject_df_by_industry_id(user_id, industry_id=industry_id)
+            page_data, page_info, max_pages = get_page_data_and_info(subject_df, page)
+            msg_text = (
+                f'{title}\n<b>{page_info}</b>\n\n'
+                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно\n\n'
+                f'Для поиска введите сообщение с названием {self.subject_gent_sing}'
+            )
+            keyboard = self.keyboards.get_subjects_kb_by_industry_id(page_data, page, max_pages, industry_id=industry_id)
+
+            await callback_query.message.edit_text(msg_text, reply_markup=keyboard, parse_mode='HTML')
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+
+    def _setup_set_user_subscriptions(self) -> None:
+        """Setup set_user_subscriptions menu"""
+        @self.router.message(self.write_subscriptions_state)
+        async def set_user_subscriptions(message: types.Message, state: FSMContext) -> None:
+            """
+            Обработка сообщения от пользователя и запись известных объектов новостей в подписки
+
+            :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+            :param state: конечный автомат о состоянии
+            """
+            chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}: поиск {self.subject_par}')
+            user_id = message.from_user.id
+
+            # clear user message
+            user_request = utils.clear_user_request(user_msg)
+
+            # get state data
+            data = await state.get_data()
+            message_id = data['message_id']
+            callback_data = data['callback_data']
+
+            industry_id = callback_data['industry_id']
+
+            # get subjects by industry_id
+            subject_df = await self.subscription_db.get_subject_df_by_industry_id(user_id, industry_id=industry_id)
+            # full match search
+            page = utils.find_page_by_subject_name(subject_df, user_request)
+
+            # fuzzy search
+            if page == -1:
+                fuzzy_searcher = FuzzyAlternativeNames()
+                nearest_subjects_id = await fuzzy_searcher.find_subjects_id_by_name(
+                    user_request,
+                    subject_types=[self.subject_db.table_alternative],
+                )
+                subject_ids = subject_df['id'].values.tolist()
+                nearest_subjects_id = tuple(i for i in nearest_subjects_id if i in subject_ids)
+
+                if not nearest_subjects_id:
+                    await message.answer(f'Не удалось найти {self.subject_vin} по запросу "{user_msg}"', parse_mode='HTML')
+                    return
+
+                page = utils.find_page_by_subject_id(subject_df, nearest_subjects_id[0])
+
+            title = f'Подборка {self.subject_par}'
+            page_data, page_info, max_pages = get_page_data_and_info(subject_df, page)
+            msg_text = (
+                f'{title}\n<b>{page_info}</b>\n\n'
+                f'Для добавления/удаления подписки нажмите на {constants.UNSELECTED}/{constants.SELECTED} соответственно\n\n'
+                f'Для поиска введите сообщение с названием {self.subject_gent_sing}'
+            )
+            keyboard = self.keyboards.get_subjects_kb_by_industry_id(page_data, page, max_pages, industry_id=industry_id)
+
+            # Новое сбщ с меню подписок на нужной странице
+            msg = await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+            # Обновление данных о сбщ с меню подписок (если повторится поиск)
+            await state.set_data({
+                'callback_data': {
+                    'industry_id': industry_id,
+                    'page': page,
+                },
+                'message_id': msg.message_id,
+            })
+            # удаляем старое меню подписок
+            try:
+                await message.bot.delete_message(message.chat.id, message_id, config.DELETE_TG_MESSAGES_TIMEOUT)
+            except TelegramBadRequest as e:
+                info_msg = f'Не удалось удалить сообщение с меню подписок у пользователя {user_id}, {message_id}: %s'
+                logger.error(info_msg, e)
             user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')

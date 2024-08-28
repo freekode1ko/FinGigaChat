@@ -51,6 +51,10 @@ class ClientsMenusEnum(IntEnum):
     # Выгрузка отчетов за период
     get_anal_reports = auto()
 
+    # меню для стейкхолдеров
+    choose_stakeholder_clients = auto()  # выбор клиентов стейкхолдера
+    show_news_from_sh = auto()  # выдача новостей по всем клиентам стейкхолдера
+
 
 class ClientsMenuData(CallbackData, prefix=MENU):
     """Меню клиенты"""
