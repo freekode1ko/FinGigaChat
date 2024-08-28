@@ -3,17 +3,17 @@ from fastapi import APIRouter, Request
 from api.v1.quotation.service import *
 from api.v1.quotation.schemas import ExchangeSectionData
 
-router = APIRouter()
+router = APIRouter(tags=['quotation'])
 
 
-@router.get('/popular', tags=["quotation"])
+@router.get('/popular')
 async def popular_quotation(request: Request) -> ExchangeSectionData:
     return ExchangeSectionData(
         sections=(await get_quotation_from_fx()),
     )
 
 
-@router.get('/dashboard', tags=["quotation"])
+@router.get('/dashboard')
 async def dashboard_quotation(request: Request) -> ExchangeSectionData:
     return ExchangeSectionData(
         sections=[

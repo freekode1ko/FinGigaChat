@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class AnalyticsElement(BaseModel):
-    """"""  # FIXME
+    """Схема для отображения элементов в разделе аналитика"""
 
     analytic_id: int
     section: str
@@ -14,7 +14,7 @@ class AnalyticsElement(BaseModel):
 
 
 class AnalyticsMenu(BaseModel):
-    """"""  # FIXME
+    """Схема для отображения меню в разделе аналитика"""
 
     name: str
     analytics_menu_id: Optional[int] = None

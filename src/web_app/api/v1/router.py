@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
-from api.v1.news.news import router as news_router
-from api.v1.quotation.quotation import router as quotation_router
-from api.v1.analytics.analytics import router as analytics_router
-from api.v1.subscriptions.subscriptions import router as subscriptions_router
-from api.v1.meetings.meetings import router as meetings_router
+from api.v1.news.router import router as news_router
+from api.v1.quotation.router import router as quotation_router
+from api.v1.analytics.router import router as analytics_router
+from api.v1.subscriptions.router import router as subscriptions_router
+from api.v1.meetings.router import router as meetings_router
 
 router = APIRouter()
 
