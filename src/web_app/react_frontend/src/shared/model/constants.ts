@@ -5,6 +5,8 @@ export const API_ENDPOINTS = {
   meetings: 'meetings',
 }
 
+export const MEETINGS_API_TAG = 'meetings'
+
 export const PAGE_SIZE = 10
 export const KEEP_UNUSED_DATA_TEMP = 120
 export const KEEP_UNUSED_DATA_INF = Infinity

@@ -1,5 +1,9 @@
 import { baseApi } from '@/shared/api'
-import { API_ENDPOINTS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
+import {
+  API_ENDPOINTS,
+  KEEP_UNUSED_DATA_TEMP,
+  MEETINGS_API_TAG,
+} from '@/shared/model'
 
 import type { Meeting } from '../model'
 
@@ -20,7 +24,7 @@ const meetingsApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
-      providesTags: ['meetings'],
+      providesTags: [MEETINGS_API_TAG],
     }),
     createMeeting: build.mutation<string, MeetingRequest>({
       query: (meeting) => ({
@@ -28,7 +32,7 @@ const meetingsApi = baseApi.injectEndpoints({
         method: 'POST',
         body: meeting,
       }),
-      invalidatesTags: ['meetings'],
+      invalidatesTags: [MEETINGS_API_TAG],
     }),
   }),
 })

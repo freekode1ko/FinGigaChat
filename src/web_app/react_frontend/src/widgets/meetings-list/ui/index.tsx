@@ -1,4 +1,8 @@
-import { type Meeting, MeetingCard, SkeletonMeetingCard } from '@/entities/meetings'
+import {
+  type Meeting,
+  MeetingCard,
+  SkeletonMeetingCard,
+} from '@/entities/meetings'
 import { PAGE_SIZE } from '@/shared/model'
 import { Paragraph } from '@/shared/ui'
 
@@ -7,10 +11,7 @@ interface MeetingsListProps {
   showSkeleton?: boolean
 }
 
-const MeetingsList = ({
-  meetings,
-  showSkeleton
-}: MeetingsListProps) => {
+const MeetingsList = ({ meetings, showSkeleton }: MeetingsListProps) => {
   return (
     <>
       {meetings?.length === 0 && <Paragraph>Нет встреч</Paragraph>}
@@ -18,8 +19,7 @@ const MeetingsList = ({
         {showSkeleton &&
           Array.from({ length: PAGE_SIZE }).map((_, idx) => (
             <SkeletonMeetingCard key={idx} />
-          ))
-        }
+          ))}
         {meetings?.map((meeting, meetingIdx) => (
           <MeetingCard
             theme={meeting.theme}

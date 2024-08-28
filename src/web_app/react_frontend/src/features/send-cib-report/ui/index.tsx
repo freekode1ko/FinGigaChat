@@ -1,14 +1,19 @@
 import { CheckCheck, LoaderCircle, Send } from 'lucide-react'
 
 import { useSendCibReportMutation } from '@/entities/news'
-import { useInitData } from '@/shared/lib'
+import { selectUserData } from '@/entities/user'
+import { useAppSelector } from '@/shared/lib'
 import { Button } from '@/shared/ui'
 
+/*
+ * Кнопка для отправки отчета CIB в Telegram.
+ * Не отображается в случае отсутствия Telegram ID.
+ */
 const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
+  const user = useAppSelector(selectUserData)
   const [trigger, { isSuccess, isLoading }] = useSendCibReportMutation()
-  const [userData] = useInitData()
 
-  // if (!userData?.user) return
+  if (!user) return
 
   if (isSuccess)
     return (
@@ -27,9 +32,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   return (
     <Button
       size="sm"
-      onClick={() =>
-        trigger({ newsId: newsId, tgUserId: userData!.user!.id })
-      }
+      onClick={() => trigger({ newsId: newsId, tgUserId: user.userId })}
     >
       <Send className="h-4 w-4" /> Отправить отчет CIB
     </Button>

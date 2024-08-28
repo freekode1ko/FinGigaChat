@@ -1,1 +1,0 @@
-export { ProtectedWrapper } from './ui'
