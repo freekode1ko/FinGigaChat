@@ -18,7 +18,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from configs import config
 from constants import constants
 from db import models
-from handlers.news import callback_data_factories, utils
+from handlers.news import callback_data_factories
 from keyboards.base import get_pagination_kb
 
 
