@@ -412,7 +412,7 @@ def rate_commodity(df: pd.DataFrame, rating_dict: list[dict], logger: Logger.log
     logger.info('Старт обработки новостей по коммодам на релевантность')
     probs = df.apply(
         lambda row: get_prediction_bert_commodity_relevance(row['text'], row['cleaned_data'], logger)
-        if len(row['client']) > 0
+        if len(row['commodity']) > 0
         else [1, 0],
         axis=1,
     )

@@ -6,7 +6,6 @@ from os import PathLike
 from pathlib import Path
 
 import pandas as pd
-
 from configs import config
 from configs.config import mail_imap_server, mail_password, mail_username
 from constants.enums import Environment
@@ -91,6 +90,7 @@ class ParsePolyanalist:
                 client_flag, client_filepath = self.model_func('client', CLIENT_FOLDER_DIR)
 
             if not commodity_flag:
+                print('Старт обработки новостей по комодам')
                 commodity_flag, commodity_filepath = self.model_func('commodity', COMMODITY_FOLDER_DIR)
 
             if client_flag and commodity_flag:
@@ -103,8 +103,7 @@ class ParsePolyanalist:
             pd.read_csv(client_filepath, index_col=False)
             if client_flag
             else pd.DataFrame(
-                [],
-                columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact', 'client_score', 'cleaned_data']
+                [], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact', 'client_score', 'cleaned_data']
             )
         )
 
