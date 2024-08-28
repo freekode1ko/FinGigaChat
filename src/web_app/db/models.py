@@ -1,3 +1,5 @@
+import datetime
+
 import sqlalchemy as sa
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -93,7 +95,7 @@ class Article(Base):
     __tablename__ = 'article'
 
     id = sa.Column(sa.Integer, sa.Identity(always=True, start=1, increment=1, minvalue=1,
-                maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
+                                           maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
     link = sa.Column(sa.Text, nullable=False, comment='Ссылка на новость')
     date = sa.Column(sa.DateTime, nullable=False, comment='Дата и время публикации новости')
     text_ = sa.Column('text', sa.Text, nullable=False, comment='Исходный текст новости')
@@ -107,9 +109,69 @@ class RelationClientArticle(Base):
     __tablename__ = 'relation_client_article'
 
     client_id = sa.Column(sa.ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'),
-                       primary_key=True, nullable=False)
+                          primary_key=True, nullable=False)
     article_id = sa.Column(sa.ForeignKey('article.id', ondelete='CASCADE', onupdate='CASCADE'),
-                        primary_key=True, nullable=False)
+                           primary_key=True, nullable=False)
     client_score = sa.Column(sa.Integer)
 
     article = relationship('Article', back_populates='relation_client_article')
+
+
+class ResearchGroup(Base):
+    __tablename__ = 'research_group'
+    __table_args__ = {'comment': 'Справочник групп, выделенных среди разделов CIB Research'}
+
+    id = sa.Column(sa.BigInteger, primary_key=True)
+    name = sa.Column(sa.String(64), nullable=False)
+
+
+class ResearchSection(Base):
+    __tablename__ = 'research_section'
+    __table_args__ = {'comment': 'Справочник разделов CIB Research'}
+
+    id = sa.Column(sa.BigInteger, primary_key=True)
+    name = sa.Column(sa.String(64), nullable=False)
+    display_order = sa.Column(sa.Integer, nullable=True, server_default='0')
+    dropdown_flag = sa.Column(sa.Boolean, server_default='true')
+    section_type = sa.Column(sa.Integer)
+    research_group_id = sa.Column(sa.ForeignKey('research_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+
+class ResearchType(Base):
+    __tablename__ = 'research_type'
+    __table_args__ = {'comment': 'Справочник типов отчетов CIB Research, на которые пользователь может подписаться'}
+
+    id = sa.Column(sa.BigInteger, primary_key=True)
+    name = sa.Column(sa.String(64), nullable=False)
+    description = sa.Column(sa.Text, nullable=True, server_default='')
+    summary_type = sa.Column(sa.Integer, )
+    research_section_id = sa.Column(sa.ForeignKey('research_section.id', ondelete='CASCADE', onupdate='CASCADE'),
+                                    nullable=False)
+    source_id = sa.Column(sa.ForeignKey('parser_source.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+    researches = relationship('Research', secondary='research_research_type', back_populates='research_type')
+
+
+class Research(Base):
+    __tablename__ = 'research'
+    __table_args__ = {'comment': 'Справочник спаршенных отчетов CIB Research'}
+
+    id = sa.Column(sa.BigInteger, primary_key=True)
+    filepath = sa.Column(sa.Text, nullable=True, server_default='')
+    header = sa.Column(sa.Text, nullable=False)
+    text = sa.Column(sa.Text, nullable=False)
+    parse_datetime = sa.Column(sa.DateTime, default=datetime.datetime.now, nullable=False)
+    publication_date = sa.Column(sa.Date, default=datetime.date.today, nullable=False)
+    report_id = sa.Column(sa.String(64), nullable=False)
+    is_new = sa.Column(sa.Boolean, server_default=sa.text('true'),
+                       comment='Указывает, что отчет еще не рассылался пользователям')
+
+    research_type = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
+
+
+class ResearchResearchType(Base):
+    __tablename__ = 'research_research_type'
+    __table_args__ = {'comment': 'Cвязь мени ту мени типы ответов и сами отчеты'}
+
+    research_id = sa.Column(sa.ForeignKey('research.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    research_type_id = sa.Column(sa.ForeignKey('research_type.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)

@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(api_router)
+app.include_router(api_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 app.add_middleware(
@@ -42,7 +42,7 @@ async def show_meetings(request: Request):
     return templates.TemplateResponse("meeting.html", {"request": request})
 
 
-@app.get("/meeting/show/{user_id}", response_class=JSONResponse)
+@app.get("/meeting/show/{user_id}", response_class=JSONResponse, deprecated=True)
 async def show_user_meetings(user_id: int | str):
     meetings = await get_user_meetings(user_id)
     meetings = utils.format_date(meetings)
@@ -55,7 +55,7 @@ async def create_meeting_form(request: Request):
     return templates.TemplateResponse("create.html", {"request": request})
 
 
-@app.get('/meeting/save')
+@app.get('/meeting/save', deprecated=True)
 async def create_meeting(
         user_id: int | str,
         theme: str,
@@ -86,3 +86,9 @@ async def create_meeting(
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
+
+@app.get("/", response_class=HTMLResponse)
+@app.get("/news", response_class=HTMLResponse)
+@app.get("/quotes", response_class=HTMLResponse)
+async def show_quotes(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("index.html", {"request": request})

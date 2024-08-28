@@ -1,3 +1,10 @@
+import pathlib
+
+from pydantic import BaseModel
+
+PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
+PATH_TO_REPORTS = PROJECT_DIR / 'sources' / 'reports'
+
 CLIENT_SCORE_ARTICLE = 3
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
@@ -57,4 +64,20 @@ metals_pricing_names = [
         'name': 'Уголь, $/т',
         'name_db': 'Coal USD/T'
     },
+]
+
+
+class InfoForQuotation(BaseModel):
+    """Параметры, которые могут быть у элементов"""
+    names: list[str]
+    research_type_id: int | None = None
+    tv_type: str | None = None
+    image_path: str | None = None
+
+
+ids_to_type: list[InfoForQuotation] = [
+    InfoForQuotation(
+        names=['EUR/RUB', ],
+        research_type_id=20,
+    ),
 ]

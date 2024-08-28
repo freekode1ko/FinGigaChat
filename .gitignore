@@ -177,3 +177,12 @@ cython_debug/
 .idea/
 
 /data/certs
+
+# JS stuff
+!src/web_app/react_frontend/**/lib/
+node_modules
+dist*
+*.local
+npm-debug.log*
+main.js
+main.css
