@@ -6,6 +6,7 @@ from os import PathLike
 from pathlib import Path
 
 import pandas as pd
+
 from configs import config
 from configs.config import mail_imap_server, mail_password, mail_username
 from constants.enums import Environment

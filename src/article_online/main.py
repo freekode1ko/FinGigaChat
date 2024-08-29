@@ -6,6 +6,7 @@ import warnings
 
 import pandas as pd
 import requests
+
 from configs import config
 from configs.config import BASE_GIGAPARSER_URL
 from log import sentry

@@ -9,6 +9,9 @@ from typing import Any, Optional
 import pandas as pd
 import pymorphy2
 import requests
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sqlalchemy import text
+
 from configs import prompts
 from configs.config import (
     PROJECT_DIR,
@@ -17,11 +20,8 @@ from configs.config import (
 )
 from db.database import engine
 from log.logger_base import Logger
-from module.gigachat import GigaChat
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sqlalchemy import text
-
 from module import utils
+from module.gigachat import GigaChat
 
 CLIENT_BINARY_CLASSIFICATION_MODEL_PATH = PROJECT_DIR / 'data/model/client_relevance_model_0.5_threshold_upd.pkl'
 COM_BINARY_CLASSIFICATION_MODEL_PATH = PROJECT_DIR / 'data/model/commodity_binary_best.pkl'
@@ -603,11 +603,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
             for commodity in actual_commodity:
                 # если товар есть в старой новости, то говорим, что новости имеют одинаковые товары
                 if (
-                    commodity in previous_commodity
-                    and len(actual_commodity) >= 1
-                    and len(previous_commodity) >= 1
-                    and len(str(commodity)) > 0
-                ):
+                    commodity in previous_commodity and len(actual_commodity) >= 1 and len(previous_commodity) >= 1 and
+                        len(str(commodity)) > 0):
                     flag_found_same = True
 
             # меняем границу, если новости имеют одинаковых клиентов

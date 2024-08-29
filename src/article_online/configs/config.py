@@ -1,8 +1,9 @@
 """Конфиг для сервиса article_online."""
 import pathlib
 
-from constants.enums import Environment
 from environs import Env
+
+from constants.enums import Environment
 
 env = Env()
 env.read_env()
