@@ -16,6 +16,6 @@ class AnalyticsElement(BaseModel):
 class AnalyticsMenu(BaseModel):
     """Схема для отображения меню в разделе аналитика"""
 
-    name: str
+    title: str
     analytics_menu_id: Optional[int] = None
     nearest_menu: list['AnalyticsMenu'] = []

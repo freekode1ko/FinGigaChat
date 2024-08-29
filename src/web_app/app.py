@@ -14,18 +14,19 @@ import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
+from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
 
 logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await utils.add_notify_job(logger)
-    utils.scheduler.start()
-    yield
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     await utils.add_notify_job(logger)
+#     utils.scheduler.start()
+#     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()#lifespan=lifespan)
 app.include_router(api_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
@@ -90,5 +91,6 @@ async def create_meeting(
 @app.get("/", response_class=HTMLResponse)
 @app.get("/news", response_class=HTMLResponse)
 @app.get("/quotes", response_class=HTMLResponse)
+@handle_jinja_template_exceptions
 async def show_quotes(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("index.html", {"request": request})

@@ -186,3 +186,6 @@ dist*
 npm-debug.log*
 main.js
 main.css
+
+# test dir
+test/
