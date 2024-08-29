@@ -54,6 +54,9 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
+            - database
+            - bot
+            - bert_client_relevance
             - bert_commodity_relevance
         volumes:
             - ./logs:/code/logs

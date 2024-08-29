@@ -90,7 +90,6 @@ class ParsePolyanalist:
                 client_flag, client_filepath = self.model_func('client', CLIENT_FOLDER_DIR)
 
             if not commodity_flag:
-                print('Старт обработки новостей по комодам')
                 commodity_flag, commodity_filepath = self.model_func('commodity', COMMODITY_FOLDER_DIR)
 
             if client_flag and commodity_flag:

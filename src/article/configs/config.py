@@ -11,7 +11,7 @@ env.read_env()
 _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
 
-PROJECT_DIR = pathlib.Path(__file__).parent.parent.parent.parent  # noqa
+PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
