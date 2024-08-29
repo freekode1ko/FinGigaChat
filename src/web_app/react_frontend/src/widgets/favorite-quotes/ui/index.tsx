@@ -17,8 +17,8 @@ const FavoriteQuotes = () => {
   const appTheme = useAppSelector(selectAppTheme)
 
   return (
-    <div className="flex flex-col gap-2 mb-4">
-      <div className="flex items-center justify-between">
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
         <TypographyH2>Избранные виджеты</TypographyH2>
         <div>
           <FavoriteQuotesToggler />
