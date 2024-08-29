@@ -13,6 +13,7 @@ from configs import config
 from constants import constants, quotes
 from constants.texts import texts_manager
 
+
 def get_sub_menu_kb(item_df: pd.DataFrame, callback_factory: Type[CallbackData]) -> InlineKeyboardMarkup:
     """
     Формирует Inline клавиатуру вида:
