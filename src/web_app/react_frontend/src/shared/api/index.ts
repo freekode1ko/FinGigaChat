@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
-import { DEV_API_URL } from '../model'
+import { DEV_API_URL, MEETINGS_API_TAG } from '../model'
 
 export const baseApi = createApi({
   reducerPath: 'baseApi',
@@ -10,6 +10,6 @@ export const baseApi = createApi({
         ? DEV_API_URL
         : `${window.location.origin}/api/v1`,
   }),
-  tagTypes: ['meetings'],
+  tagTypes: [MEETINGS_API_TAG],
   endpoints: () => ({}),
 })

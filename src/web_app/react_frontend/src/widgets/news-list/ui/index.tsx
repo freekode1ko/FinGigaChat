@@ -1,4 +1,3 @@
-import { ProtectedWrapper } from '@/features/auth-protected'
 import { SendCIBReportButton } from '@/features/send-cib-report'
 import { type News, NewsCard, SkeletonNewsCard } from '@/entities/news'
 import { PAGE_SIZE } from '@/shared/model'
@@ -25,9 +24,7 @@ const NewsList = ({
           section={news.section}
           sendReportButton={
             showSendReportButton && (
-              <ProtectedWrapper hideElement>
-                <SendCIBReportButton newsId={news.news_id} />
-              </ProtectedWrapper>
+              <SendCIBReportButton newsId={news.news_id} />
             )
           }
           key={newsIdx}

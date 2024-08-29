@@ -1,15 +1,10 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui'
 
 import type { Meeting } from '../model'
 
 interface MeetingCardProps extends Meeting {}
 
-export const MeetingCard = ({theme, date_start}: MeetingCardProps) => {
+export const MeetingCard = ({ theme, date_start }: MeetingCardProps) => {
   return (
     <Card>
       <CardHeader>

@@ -5,21 +5,17 @@ import { selectUserData } from '@/entities/user'
 import { useAppSelector } from '@/shared/lib'
 import { TypographyH2 } from '@/shared/ui'
 
-// можно убрать "!"
 const MeetingsPage = () => {
   const user = useAppSelector(selectUserData)
-  const { data, isFetching } = useGetMeetingsQuery({userId: user!.userId})
+  const { data, isFetching } = useGetMeetingsQuery({ userId: user!.userId })
 
   return (
     <>
       <div className="flex justify-between py-2">
         <TypographyH2>Встречи</TypographyH2>
-        <AddMeetingButton userId={user!.userId} />
+        <AddMeetingButton />
       </div>
-      <MeetingsList
-        meetings={data}
-        showSkeleton={isFetching}
-      />
+      <MeetingsList meetings={data} showSkeleton={isFetching} />
     </>
   )
 }

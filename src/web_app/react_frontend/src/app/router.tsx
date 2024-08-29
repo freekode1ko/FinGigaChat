@@ -7,9 +7,9 @@ import {
   QuoteDetailsPage,
   QuotesPage,
 } from '@/pages/ui'
-import { ProtectedWrapper } from '@/features/auth-protected'
 
 import { baseLayout } from './layouts/base'
+import { ProtectedWrapper } from './router-guard'
 
 export const appRouter = () =>
   createBrowserRouter([
@@ -41,7 +41,11 @@ export const appRouter = () =>
         // },
         {
           path: '/meetings',
-          element: <ProtectedWrapper showHomeButton><MeetingsPage /></ProtectedWrapper>,
+          element: (
+            <ProtectedWrapper showHomeButton>
+              <MeetingsPage />
+            </ProtectedWrapper>
+          ),
         },
       ],
     },

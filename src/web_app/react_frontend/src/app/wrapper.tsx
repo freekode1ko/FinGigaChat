@@ -13,7 +13,7 @@ const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
 
   useEffect(() => {
     if (tg && userData && userData.user) {
-      dispatch(setUser({userId: userData.user.id}))
+      dispatch(setUser({ userId: userData.user.id }))
       tg.expand()
       tg.ready()
     } else {
