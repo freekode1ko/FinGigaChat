@@ -1,0 +1,48 @@
+name: CI_flake8_pylint
+
+on:
+  push:
+    branches: [add_api_for_analytics]
+    paths-ignore:
+      - "data/**"
+      - "sources/**"
+  pull_request:
+    branches: [add_api_for_analytics]
+    paths-ignore:
+      - "data/**"
+      - "sources/**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - path: 'src/article'
+            with_flake: true
+          - path: 'src/article_online'
+            with_flake: true
+          - path: 'src/bot'
+            with_flake: true
+          - path: 'src/parser_monitoring'
+            with_flake: true
+          - path: 'src/quotes'
+            with_flake: true
+          - path: 'src/research'
+            with_flake: true
+          - path: 'src/users_statistics'
+            with_flake: true
+          - path: 'src/web_app'
+            with_flake: true
+            with_tests: true
+
+    runs-on: self-hosted
+    steps:
+      - name: Run flake, pylint and pytest
+        uses: ./.github/workflows/ci_service.yml
+        with:
+          service_dir: ${{ matrix.service.path }}
+          with_flake: ${{ matrix.service.with_flake }}
+          with_pylint: ${{ matrix.service.with_pylint }}
+          with_tests: ${{ matrix.service.with_tests }}
+
