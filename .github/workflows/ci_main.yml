@@ -18,23 +18,22 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - path: 'src/article'
+          - service_path: 'src/article'
             with_flake: true
-          - path: 'src/article_online'
+          - service_path: 'src/article_online'
             with_flake: true
-          - path: 'src/bot'
+          - service_path: 'src/bot'
             with_flake: true
-          - path: 'src/parser_monitoring'
+          - service_path: 'src/parser_monitoring'
             with_flake: true
-          - path: 'src/quotes'
+          - service_path: 'src/quotes'
             with_flake: true
-          - path: 'src/research'
+          - service_path: 'src/research'
             with_flake: true
-          - path: 'src/users_statistics'
+          - service_path: 'src/users_statistics'
             with_flake: true
-          - path: 'src/web_app'
+          - service_path: 'src/web_app'
             with_flake: true
-            with_tests: true
 
     runs-on: self-hosted
     steps:
@@ -48,7 +47,7 @@ jobs:
       - name: Run flake, pylint and pytest
         uses: ./.github/workflows/ci_testing
         with:
-          service_path: ${{ matrix.service.path }}
+          service_path: ${{ matrix.service.service_path }}
           with_flake: ${{ matrix.service.with_flake }}
 #          with_pylint: ${{ matrix.service.with_pylint }}
 #          with_tests: ${{ matrix.service.with_tests }}
