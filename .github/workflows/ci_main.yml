@@ -41,6 +41,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: TEST
+        run: |
+          echo ${{ matrix.service.path }}
+
       - name: Run flake, pylint and pytest
         uses: ./.github/workflows/ci_testing
         with:
