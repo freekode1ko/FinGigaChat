@@ -3,6 +3,7 @@ export const API_ENDPOINTS = {
   dashboardQuotes: 'quotation/dashboard',
   news: 'news',
   meetings: 'meetings',
+  analytics: 'analytics',
 }
 
 export const MEETINGS_API_TAG = 'meetings'

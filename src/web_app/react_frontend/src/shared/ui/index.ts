@@ -39,6 +39,7 @@ export {
 export { Input } from './input'
 export { Label } from './label'
 export { Layout } from './layout'
+export { ShowMoreButton } from './pagination'
 export {
   Sheet,
   SheetClose,

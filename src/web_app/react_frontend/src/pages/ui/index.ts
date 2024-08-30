@@ -1,3 +1,4 @@
+export { AnalyticDetailsPage } from './analytic-details'
 export { AnalyticsPage } from './analytics'
 export { DashboardPage } from './dashboard'
 export { MeetingsPage } from './meetings'

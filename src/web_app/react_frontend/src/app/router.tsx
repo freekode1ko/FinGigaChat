@@ -1,6 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 import {
+  AnalyticDetailsPage,
+  AnalyticsPage,
   DashboardPage,
   MeetingsPage,
   NewsPage,
@@ -22,11 +24,21 @@ export const appRouter = () =>
           element: <NewsPage />,
         },
         {
+          path: '/analytics',
+          element: <AnalyticsPage />,
+          children: [
+            {
+              path: ':analyticId',
+              element: <AnalyticDetailsPage />,
+            },
+          ],
+        },
+        {
           path: '/quotes',
           element: <QuotesPage />,
           children: [
             {
-              path: '/quotes/:quotationId',
+              path: ':quotationId',
               element: <QuoteDetailsPage />,
             },
           ],
@@ -35,10 +47,6 @@ export const appRouter = () =>
           path: '/',
           element: <DashboardPage />,
         },
-        // {
-        //   path: '/analytics',
-        //   element: <AnalyticsPage />,
-        // },
         {
           path: '/meetings',
           element: (

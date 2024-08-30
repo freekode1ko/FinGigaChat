@@ -5,7 +5,7 @@ from faker import Faker
 from fastapi import APIRouter
 from starlette import status
 
-from api.v1.analytics.schemas import AnalyticsMenu, AnalyticsElement
+from api.v1.analytics.schemas import AnalyticsMenu, AnalyticsElement, DetailAnalyticsResponse
 from constants.constants import BASE_DATE_FORMAT
 
 router = APIRouter(tags=["analytics"])
@@ -33,17 +33,23 @@ async def get_menu() -> AnalyticsMenu:
 
 
 @router.get("/section/{section_id}")
-async def get_sections(section_id: int, page: Optional[int] = 1, size: Optional[int] = 10) -> list[AnalyticsElement]:
+async def get_sections(section_id: int, page: Optional[int] = 1, size: Optional[int] = 10) -> DetailAnalyticsResponse:
     """Получить секции аналитики для отображения во фронтенде"""
 
     fake = Faker()
-    return [AnalyticsElement(
+    return DetailAnalyticsResponse(
         analytic_id=fake.unique.random_int(min=1, max=999999),
-        section=fake.sentence(nb_words=2),
         title=fake.sentence(nb_words=10),
-        text=fake.text(max_nb_chars=500),
-        date=fake.date_between(start_date='-2y', end_date='today').strftime(BASE_DATE_FORMAT)
-    ) for _ in range(10)]
+        analytics=[
+            AnalyticsElement(
+                analytic_id=fake.unique.random_int(min=1, max=999999),
+                section=fake.sentence(nb_words=2),
+                title=fake.sentence(nb_words=10),
+                text=fake.text(max_nb_chars=500),
+                date=fake.date_between(start_date='-2y', end_date='today').strftime(BASE_DATE_FORMAT)
+            ) for _ in range(10)
+        ]
+    )
 
 
 @router.post('/send', status_code=status.HTTP_202_ACCEPTED)
