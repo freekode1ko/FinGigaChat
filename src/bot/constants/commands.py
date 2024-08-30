@@ -101,4 +101,8 @@ SECRET_COMMANDS: list[dict] = [
         'command': 'delete_newsletter_messages',
         'description': 'Удаление сообщений, отправленных с помощью пассивной рассылки',
     },
+    {
+        'command': 'web_app',
+        'description': 'Отправить кнопку с веб апом',
+    },
 ]

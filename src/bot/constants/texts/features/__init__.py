@@ -11,6 +11,7 @@ from constants.texts.features.news import (
 )
 from constants.texts.features.subjects import ClientTexts, CommodityTexts
 from constants.texts.features.utils import TelegramMessageParams, WatermarkConfig
+from constants.texts.features.web_app import TelegramWebAppParams
 
 CONFIG_CLASSES = [
     AnalyticsTexts,
@@ -28,6 +29,7 @@ CONFIG_CLASSES = [
     TelegramMessageParams,
     TelegramNewsTexts,
     WatermarkConfig,
+    TelegramWebAppParams,
 ]
 
 __all__ = [
