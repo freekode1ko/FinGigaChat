@@ -42,18 +42,17 @@ jobs:
           pip install poetry
           poetry install
 
-      - name: TEST # FIXME
-        run: |
-          echo ${{ inputs }}
-
       - name: Run flake8
+        if: ${{ github.event.inputs.with_flake }}
         run: |
-          poetry run python -m flake8 ${{ inputs.service_path }}
+          poetry run python -m flake8 ${{ github.event.inputs.service_path }}
 
       - name: Run pylint
+        if: ${{ github.event.inputs.with_pylint }}
         run: |
-          poetry run python -m pylint ${{ inputs.service_path }}
+          poetry run python -m pylint ${{ github.event.inputs.service_path }}
 
       - name: Run pytest
+        if: ${{ github.event.inputs.with_tests }}
         run: |
-          poetry run python -m pytest ${{ inputs.service_path }}
+          poetry run python -m pytest ${{ github.event.inputs.service_path }}
