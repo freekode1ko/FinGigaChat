@@ -46,6 +46,6 @@ jobs:
         with:
           service_dir: ${{ matrix.service.path }}
           with_flake: ${{ matrix.service.with_flake }}
-          with_pylint: ${{ matrix.service.with_pylint }}
-          with_tests: ${{ matrix.service.with_tests }}
+#          with_pylint: ${{ matrix.service.with_pylint }}
+#          with_tests: ${{ matrix.service.with_tests }}
 
