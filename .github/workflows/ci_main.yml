@@ -46,7 +46,7 @@ jobs:
           ls ./.github/
           ls ./.github/workflows
       - name: Run flake, pylint and pytest
-        uses: ./.github/workflows/ci_service.yml
+        uses: ./.github/workflows/ci_testing
         with:
           service_dir: ${{ matrix.service.path }}
           with_flake: ${{ matrix.service.with_flake }}
