@@ -13,7 +13,7 @@ on:
       - "sources/**"
 
 jobs:
-  build:
+  run_test_tasks:
     strategy:
       fail-fast: false
       matrix:
@@ -40,11 +40,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: FIX
-        run: |
-          ls -la /root/actions-runner/code/FinGigaChat/FinGigaChat/
-          ls ./.github/
-          ls ./.github/workflows
+
       - name: Run flake, pylint and pytest
         uses: ./.github/workflows/ci_testing
         with:

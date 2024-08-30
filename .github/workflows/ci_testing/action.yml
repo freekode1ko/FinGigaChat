@@ -42,6 +42,10 @@ jobs:
           pip install poetry
           poetry install
 
+      - name: TEST # FIXME
+        run: |
+          echo ${{ inputs }}
+
       - name: Run flake8
         run: |
           poetry run python -m flake8 ${{ inputs.service_path }}
