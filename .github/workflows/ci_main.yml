@@ -1,4 +1,4 @@
-name: CI_flake8_pylint
+name: CI_main
 
 on:
   push:
