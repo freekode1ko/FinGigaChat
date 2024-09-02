@@ -21,38 +21,38 @@ jobs:
         service:
           - service_path: 'src/article'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/article_online'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/bot'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/parser_monitoring'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/quotes'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/research'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/users_statistics'
             with_flake: true
-            with_pylint: false
-            with_tests: false
+            with_pylint: true
+            with_tests: true
 
           - service_path: 'src/web_app'
             with_flake: true
@@ -75,12 +75,11 @@ jobs:
           poetry install
 
       - name: Run flake8
-        if: matrix.with_flake
         run: |
           poetry run python -m flake8 ${{ matrix.service_path }}
 
       - name: Run pylint
-        if: ${{ matrix.with_pylint }}
+        if: matrix.with_pylint
         run: |
           poetry run python -m pylint ${{ matrix.service_path }}
 
