@@ -75,7 +75,7 @@ jobs:
           poetry install
 
       - name: Run flake8
-        if: ${{ matrix.with_flake == true }}
+        if: matrix.with_flake
         run: |
           poetry run python -m flake8 ${{ matrix.service_path }}
 
