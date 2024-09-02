@@ -76,10 +76,13 @@ jobs:
 
       - name: Run flake8
         run: |
-          echo ${{ matrix }}
-          if [ '123' -eq '123' ]; then echo "1233"; fi
-          poetry run python -m flake8 ${{ matrix.service_path }}
-
+          echo ${{ matrix.service_path }}
+          echo ${{ matrix.with_flake }}
+          echo ${{ matrix.with_pylint }}
+          if [ '${{ matrix.with_flake }}' -eq 'true' ]; then echo "flake8"; fi
+          if [ '${{ matrix.with_pylint }}' -eq 'true' ]; then echo "pylint"; fi
+#          poetry run python -m flake8 ${{ matrix.service_path }}
+#
 #      - name: Run pylint
 #        if: matrix.with_pylint
 #        run: |
