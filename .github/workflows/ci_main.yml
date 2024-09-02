@@ -44,7 +44,7 @@ jobs:
       - name: Run flake, pylint and pytest
         uses: ./.github/workflows/ci_testing
         with:
-          service_path: src/article
-          with_flake: true
+          service_path: ${{ matrix.service.service_path }}
+          with_flake: ${{ matrix.service.with_flake }}
 #          with_pylint: ${{ matrix.service.with_pylint }}
 #          with_tests: ${{ matrix.service.with_tests }}

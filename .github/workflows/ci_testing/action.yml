@@ -6,13 +6,14 @@ on:
     inputs:
       service_path:
         description: Service directory
-        required: true
+#        required: true
         type: string
       with_flake:
         description: Run flake8
         type: boolean
-        required: true
-        default: false
+#        required: true
+#        default: false
+
 #      with_pylint:
 #        description: Run pylint
 #        type: boolean
