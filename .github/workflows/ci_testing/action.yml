@@ -13,16 +13,16 @@ on:
         type: boolean
         required: true
         default: false
-      with_pylint:
-        description: Run pylint
-        type: boolean
-        required: false
-        default: false
-      with_tests:
-        description: Run tests
-        type: boolean
-        required: false
-        default: false
+#      with_pylint:
+#        description: Run pylint
+#        type: boolean
+#        required: false
+#        default: false
+#      with_tests:
+#        description: Run tests
+#        type: boolean
+#        required: false
+#        default: false
 
 jobs:
   build:

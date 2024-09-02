@@ -2,12 +2,12 @@ name: CI_flake8_pylint
 
 on:
   push:
-    branches: [Develop]
+    branches: [main] # FIXME
     paths-ignore:
       - "data/**"
       - "sources/**"
   pull_request:
-    branches: [Develop]
+    branches: [main] # FIXME
     paths-ignore:
       - "data/**"
       - "sources/**"
