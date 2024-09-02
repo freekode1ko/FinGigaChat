@@ -79,11 +79,11 @@ jobs:
           poetry run python -m flake8 ${{ matrix.service_path }}
 
       - name: Run pylint
-        if: matrix.with_pylint
+        if: matrix.with_pylint == true
         run: |
           poetry run python -m pylint ${{ matrix.service_path }}
 
       - name: Run pytest
-        if: ${{ matrix.with_tests }}
+        if: ${{ matrix.with_tests == 'true' }}
         run: |
           poetry run python -m pytest ${{ matrix.service_path }}
