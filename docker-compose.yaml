@@ -120,11 +120,12 @@ services:
 
     bert_client_relevance:
         build:
-            context: ./src/bert_client_relevance
+            context: ./src/bert_relevance
             dockerfile: Dockerfile
         container_name: bert_client_relevance_container
         environment:
             - TZ=Europe/Moscow
+            - MODEL_TYPE=client
         env_file:
             - .env
         ports:
@@ -138,16 +139,17 @@ services:
 
     bert_commodity_relevance:
         build:
-            context: ./src/bert_commodity_relevance
+            context: ./src/bert_relevance
             dockerfile: Dockerfile
         container_name: bert_commodity_relevance_container
         environment:
             - TZ=Europe/Moscow
+            - MODEL_TYPE=commodity
         env_file:
             - .env
         ports:
             - "446:446"
-        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 445"
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 446"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data

@@ -510,12 +510,7 @@ def model_func(logger: Logger.logger, df: pd.DataFrame, type_of_article: str) ->
     df[f'{type_of_article}_score'] = df[f'{type_of_article}_labels'].map(lambda x: sum(list(map(int, list(x.split(';'))))))
 
     # удаление ненужных колонок
-    df.drop(
-        columns=[
-            f'{type_of_article}_labels',
-        ],
-        inplace=True,
-    )
+    df.drop(columns=[f'{type_of_article}_labels'], inplace=True)
 
     return df
 
@@ -529,7 +524,10 @@ def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame
     return df
 
 
-def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(logger: Logger.logger,
+                df: pd.DataFrame,
+                df_previous: pd.DataFrame,
+                threshold: float = 0.35) -> pd.DataFrame:
     """
     Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
 
@@ -541,7 +539,10 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df.query('not client_score.isnull() and client_score != -1 or ' 'not commodity_score.isnull() and commodity_score != -1')
+    df = df.query(
+        'not client_score.isnull() and client_score != -1 or '
+        'not commodity_score.isnull() and commodity_score != -1'
+    )
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
@@ -668,7 +669,8 @@ def get_gigachat_filtering_list(names: str | float, text_sum: str, giga_chat: Gi
                 else:
                     giga_label = '-1'
             except Exception:
-                logger.error('Не удалось получить ответ от Gigachat. Наименование:{}; ' 'Суммаризация: {}'.format(name, text_sum))
+                logger.error(
+                    'Не удалось получить ответ от Gigachat. Наименование:{}; Суммаризация: {}'.format(name, text_sum))
                 giga_label = '1'
             if giga_label == '1':
                 result.append(name)
@@ -696,7 +698,10 @@ def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
 
     # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
     logger.debug('Фильтрация клиентов')
-    df['client'] = df.apply(lambda x: get_gigachat_filtering_list(x['client'], x['text_sum'], giga_chat, 'client', logger), axis=1)
+    df['client'] = df.apply(
+        lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'], giga_chat, 'client', logger),
+        axis=1,
+    )
 
     # обрабатываем комоды. Для каждого найденного коммода проверяем, что он действительно подходит к новости
     logger.debug('Фильтрация комодов')

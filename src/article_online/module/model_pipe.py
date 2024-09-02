@@ -449,7 +449,6 @@ def rate_commodity(df: pd.DataFrame, rating_dict: list[dict], logger: Logger.log
         commodity_names = df['commodity'].iloc[index].split(';')
         local_threshold = down_threshold('commodity', commodity_names, threshold)
         res.append(1 if (pair[1]) > local_threshold else 0)
-        logger.info(f"{pair}, {local_threshold}, {df['text'].iloc[index]}")
     df['relevance'] = res
 
     df['commodity_labels'] = df.apply(
@@ -565,7 +564,10 @@ def add_text_sum_column(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame
     return df
 
 
-def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFrame, threshold: float = 0.35) -> pd.DataFrame:
+def deduplicate(logger: Logger.logger,
+                df: pd.DataFrame,
+                df_previous: pd.DataFrame,
+                threshold: float = 0.35) -> pd.DataFrame:
     """
     Удаление похожих новостей. Чем выше граница, тем сложнее посчитать новость уникальной
 
@@ -577,7 +579,10 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     """
     # отчищаем датафрейма от нерелевантных новостей
     old_len = len(df)
-    df = df.query('not client_score.isnull() and client_score != -1 or ' 'not commodity_score.isnull() and commodity_score != -1')
+    df = df.query(
+        'not client_score.isnull() and client_score != -1 or '
+        'not commodity_score.isnull() and commodity_score != -1'
+    )
     now_len = len(df)
     logger.info(f'Количество нерелевантных новостей - {old_len - now_len}')
     logger.info(f'Количество новостей перед удалением дублей - {now_len}')
@@ -586,8 +591,8 @@ def deduplicate(logger: Logger.logger, df: pd.DataFrame, df_previous: pd.DataFra
     df['count_client'] = df['client'].map(lambda x: len(x.split(sep=';')) if (isinstance(x, str) and x) else 0)
     df['count_commodity'] = df['commodity'].map(lambda x: len(x.split(sep=';')) if (isinstance(x, str) and x) else 0)
     df = df.sort_values(
-        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'], ascending=[False, False, False, False]
-    ).reset_index(drop=True)
+        by=['count_client', 'count_commodity', 'client_score', 'commodity_score'],
+        ascending=[False, False, False, False]).reset_index(drop=True)
     df.drop(columns=['count_client', 'count_commodity'], inplace=True)
 
     # объединяем столбцы старого и нового датафрейма
@@ -700,7 +705,8 @@ def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat,
                 else:
                     giga_label = '-1'
             except Exception:
-                logger.error('Не удалось получить ответ от Gigachat. Наименование:{}; ' 'Суммаризация: {}'.format(name, text_sum))
+                logger.error(
+                    'Не удалось получить ответ от Gigachat. Наименование:{}; Суммаризация: {}'.format(name, text_sum))
                 giga_label = '1'
             if giga_label == '1':
                 result.append(name)
@@ -729,13 +735,15 @@ def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     # обрабатываем клиентов. Для каждого найденного клиента проверяем, что он действительно подходит к новости
     logger.debug('Фильтрация клиентов')
     df['client'] = df.apply(
-        lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'], giga_chat, 'client', logger), axis=1
+        lambda x: get_gigachat_filtering_list(x['client'].split(';'), x['text_sum'], giga_chat, 'client', logger),
+        axis=1,
     )
 
     # обрабатываем комоды. Для каждого найденного коммода проверяем, что он действительно подходит к новости
     logger.debug('Фильтрация комодов')
     df['commodity'] = df.apply(
-        lambda x: get_gigachat_filtering_list(x['commodity'].split(';'), x['text_sum'], giga_chat, 'commodity', logger), axis=1
+        lambda x: get_gigachat_filtering_list(x['commodity'].split(';'), x['text_sum'], giga_chat, 'commodity', logger),
+        axis=1,
     )
     logger.debug('Окончена фильтрация новостей с GigaChat')
     return df

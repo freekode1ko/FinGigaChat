@@ -1,3 +1,5 @@
+"""Инференс модели"""
+
 import torch
 from transformers import AutoTokenizer
 from optimum.onnxruntime import ORTModelForSequenceClassification
@@ -19,6 +21,7 @@ def load_model() -> tuple[ORTModelForSequenceClassification, AutoTokenizer]:
     """
 
     logger.info('Старт загрузки модели с Huggingface')
+    logger.info(f'Модель: {MODEL_PATH}')
     for _ in range(N_ATTEMPTS):
         try:
             model = ORTModelForSequenceClassification.from_pretrained(MODEL_PATH)
