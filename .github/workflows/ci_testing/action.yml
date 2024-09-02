@@ -46,7 +46,7 @@ jobs:
           poetry install
       - name: TEST
         run: |
-          echo ${{ github.event.inputs }}
+          env
 
 #      - name: Run flake8
 #        if: ${{ inputs.with_flake }}
