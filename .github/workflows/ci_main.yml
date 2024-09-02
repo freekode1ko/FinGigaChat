@@ -79,8 +79,8 @@ jobs:
           echo ${{ matrix.service.service_path }}
           echo ${{ matrix.service.with_flake }}
           echo ${{ matrix.service.with_pylint }}
-          if [ '${{ matrix.with_flake }}' -eq 'true' ]; then echo "flake8"; fi
-          if [ '${{ matrix.with_pylint }}' -eq 'true' ]; then echo "pylint"; fi
+          if [ '${{ matrix.service.with_flake }}' -eq 'true' ]; then echo "flake8"; fi
+          if [ '${{ matrix.service.with_pylint }}' -eq 'true' ]; then echo "pylint"; fi
 #          poetry run python -m flake8 ${{ matrix.service_path }}
 #
 #      - name: Run pylint
