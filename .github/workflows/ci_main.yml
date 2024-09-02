@@ -19,45 +19,45 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - service_path: 'src/article'
-            with_flake: true
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/article'
+            matrix.with_flake: true
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/article_online'
-            with_flake: 'true'
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/article_online'
+            matrix.with_flake: 'true'
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/bot'
-            with_flake: true
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/bot'
+            matrix.with_flake: true
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/parser_monitoring'
-            with_flake: 'true'
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/parser_monitoring'
+            matrix.with_flake: 'true'
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/quotes'
-            with_flake: true
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/quotes'
+            matrix.with_flake: true
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/research'
-            with_flake: 'true'
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/research'
+            matrix.with_flake: 'true'
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/users_statistics'
-            with_flake: 'true'
-            with_pylint: true
-            with_tests: true
+          - matrix.service_path: 'src/users_statistics'
+            matrix.with_flake: 'true'
+            matrix.with_pylint: true
+            matrix.with_tests: true
 
-          - service_path: 'src/web_app'
-            with_flake: true
-            with_pylint: 'true'
-            with_tests: true
+          - matrix.service_path: 'src/web_app'
+            matrix.with_flake: true
+            matrix.with_pylint: 'true'
+            matrix.with_tests: true
 
     steps:
       - name: Checkout
