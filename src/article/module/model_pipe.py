@@ -422,7 +422,6 @@ def rate_commodity(df: pd.DataFrame, rating_dict: list[dict], logger: Logger.log
         commodity_names = df['commodity'].iloc[index].split(';')
         local_threshold = down_threshold('commodity', commodity_names, threshold)
         res.append(1 if (pair[1]) > local_threshold else 0)
-        logger.info(f"{pair}, {local_threshold}, {df['text'].iloc[index]}")
     df['relevance'] = res
 
     df['commodity_labels'] = df.apply(
