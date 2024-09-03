@@ -18,6 +18,7 @@ from handlers.products import callbacks
 from handlers.products import keyboards
 from log.bot_logger import user_logger
 from utils.base import is_user_has_access, send_full_copy_of_message, send_or_edit, send_pdf
+from utils.decorators import check_rights
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -78,6 +79,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.ProductsMenuData.__prefix__))
+@check_rights('products_menu')
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню продукты

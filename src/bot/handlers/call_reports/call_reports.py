@@ -17,6 +17,7 @@ from handlers.call_reports.call_report_create.utils import validate_and_parse_da
 from handlers.call_reports.callbackdata import CRCreateNew, CRMainMenu, CRMenusEnum
 from log.bot_logger import logger
 from utils.base import is_user_has_access
+from utils.decorators import check_rights
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())
@@ -64,6 +65,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
 
 
 @router.message(Command('notes'))
+@check_rights('notes')
 async def call_reports_enter_command(message: Message, state: FSMContext, ) -> None:
     """
     Входная точка для создания или просмотра call report'ов
