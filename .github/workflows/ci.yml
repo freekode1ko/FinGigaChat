@@ -72,7 +72,7 @@ jobs:
           - service_path: 'src/web_app'
             with_flake: false
             with_pylint: false
-            with_tests: false
+            with_tests: true
 
     steps:
       - name: Checkout
