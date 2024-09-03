@@ -17,6 +17,7 @@ from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
 from utils.base import clear_text_from_url, is_user_has_access
+from utils.decorators import check_rights
 from utils.handler_utils import audio_to_text
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 from utils.rag_utils.rag_router import RAGRouter
@@ -31,6 +32,7 @@ class RagState(StatesGroup):
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
+@check_rights('knowledgebase')
 async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -> None:
     """
     Очистка пользовательской истории диалога, если завершается состояние RagState.
@@ -46,6 +48,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
 
 
 @router.message(Command('knowledgebase'))
+@check_rights('knowledgebase')
 async def set_rag_mode(
         message: types.Message,
         state: FSMContext,
@@ -229,6 +232,7 @@ async def ask_with_dialog(
 
 
 @router.callback_query(RegenerateResponse.filter())
+@check_rights('knowledgebase')
 async def ask_without_dialog(
         call: types.CallbackQuery,
         callback_data: RegenerateResponse,
@@ -284,6 +288,7 @@ async def ask_without_dialog(
 
 
 @router.callback_query(F.data.endswith('like'))
+@check_rights('knowledgebase')
 async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncSession) -> None:
     """Обработка обратной связи от пользователя."""
     if callback_query.data == 'like':
