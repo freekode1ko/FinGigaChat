@@ -15,6 +15,7 @@ from keyboards.telegram_news import callbacks
 from keyboards.telegram_news import constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import bot_send_msg, is_user_has_access
+from utils.decorators import check_rights
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
@@ -39,6 +40,7 @@ async def list_sections(message: types.CallbackQuery | types.Message) -> None:
 
 
 @router.message(Command('get_tg_news'))
+@check_rights('admin')
 async def select_section_to_get_tg_articles(message: types.Message) -> None:
     """
     Получение списка разделов для получения по ним сводки новостей из тг-каналов
