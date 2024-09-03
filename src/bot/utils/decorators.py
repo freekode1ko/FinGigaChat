@@ -5,7 +5,7 @@ from typing import Callable
 from aiogram.types import Message, CallbackQuery
 
 from db.user import is_allow_feature
-from log.bot_logger import logger
+from log.bot_logger import logger, user_logger
 
 
 def singleton(cls):
@@ -31,15 +31,18 @@ def check_rights(feature: str):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
 
-            if isinstance(args[0], (Message, CallbackQuery)):
-                tg_obj = args[0]
-                session = kwargs.get('session') if kwargs else None
-                is_allow = await is_allow_feature(session, tg_obj.from_user.id, feature)
-
-                if not is_allow:
-                    return await tg_obj.answer('Данная функциональность недоступна.')
+            if not args or not isinstance(args[0], (Message, CallbackQuery)):
+                logger.critical(f'Нет базового tg-объекта в функции {func.__name__}. args: {args}, kwargs: {kwargs}')
                 return await func(*args, **kwargs)
-            logger.critical(f'Нет базового тг объекта в функции {func.__name__}. args: {args}, kwargs: {kwargs}')
+
+            tg_obj = args[0]
+            session = kwargs.get('session') if kwargs else None
+            is_allow = await is_allow_feature(session, tg_obj.from_user.id, feature)
+
+            if is_allow:
+                return await func(*args, **kwargs)
+            user_logger.warning(f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - {tg_obj.text} : недостаточно прав')
+            return await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
 
         return wrapper
     return func_wrapper

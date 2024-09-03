@@ -127,19 +127,6 @@ async def is_user_has_access(user: str, check_email: bool = False) -> bool:
             return False
 
 
-async def is_admin_user(user: dict) -> bool:
-    """
-    Проверка прав пользователя, что он является admin или owner
-
-    :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
-    """
-    user_id = user['id']
-    query = select(models.RegisteredUser.user_type).where(models.RegisteredUser.user_id == user_id)
-    async with async_session() as session:
-        user_type = await session.scalar(query)
-    return user_type == 'admin' or user_type == 'owner'
-
-
 def read_curdatetime() -> datetime:
     """
     Чтение даты последней сборки из базы данных
