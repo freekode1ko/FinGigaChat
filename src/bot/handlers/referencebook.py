@@ -10,8 +10,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants.constants import handbook_prefix
 from log.bot_logger import logger, user_logger
 from utils.base import bot_send_msg, is_user_has_access, show_ref_book_by_request
+from utils.decorators import check_rights
 
-# logger = logging.getLogger(__name__)
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
 
@@ -23,6 +23,7 @@ class RefBookStates(StatesGroup):
 
 
 @router.message(Command('referencebook'))
+@check_rights('admin')
 async def reference_book(message: types.Message) -> None:
     """Команда справочник"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
@@ -114,8 +115,8 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext) -> N
 @router.message(RefBookStates.please_add_this)
 async def continue_isthisall(message: types.Message, state: FSMContext) -> None:
     """Продолжение вопрос про все ли в справочнике"""
-    await state.update_data(please_add_this=message.text)  # FIXME зачем оно такое?
-    data = await state.get_data()
-    user_logger.info(f"Пользовать {message.from_user.full_name} просит добавить в справочник: {data.get('please_add_this')}")
+    user_logger.info(
+        f'Пользовать *{message.from_user.id}* {message.from_user.full_name} просит добавить в справочник:{message.text}'
+    )
     await state.clear()
     await message.answer('Спасибо за обратную связь, мы добавим их как можно скорее')
