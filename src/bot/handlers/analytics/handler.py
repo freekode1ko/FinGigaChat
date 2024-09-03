@@ -19,6 +19,7 @@ from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
 from utils.base import bot_send_msg, is_user_has_access, send_or_edit
+from utils.decorators import check_rights
 from utils.watermark import add_watermark_cli
 
 router = Router()
@@ -66,6 +67,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.AnalyticsMenu.__prefix__))
+@check_rights('analytics_menu')
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню для просмотра аналитики

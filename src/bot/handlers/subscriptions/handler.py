@@ -15,6 +15,7 @@ from db.api.user_telegram_subscription import user_telegram_subscription_db
 from keyboards.subscriptions import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from utils.base import is_user_has_access, send_or_edit
+from utils.decorators import check_rights
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -85,6 +86,7 @@ async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> No
 
 
 @router.message(Command(callback_prefixes.SUBS_MENU))
+@check_rights('subscriptions_menu')
 async def subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками

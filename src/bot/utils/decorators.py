@@ -41,8 +41,12 @@ def check_rights(feature: str):
 
             if is_allow:
                 return await func(*args, **kwargs)
+
             user_msg = tg_obj.text if isinstance(tg_obj, Message) else tg_obj.data
-            user_logger.warning(f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - {user_msg}: недостаточно прав')
+            user_logger.warning(
+                f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - {user_msg}:'
+                f' недостаточно прав. Функция - {func.__name__}()'
+            )
             return await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
 
         return wrapper
