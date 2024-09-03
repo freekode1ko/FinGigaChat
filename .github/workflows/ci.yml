@@ -103,5 +103,6 @@ jobs:
         if: matrix.service.with_tests
         env:
           PSQL_ENGINE: postgresql://test_user:test_password@localhost:5005/test_db
+          BOT_API_TOKEN: 7157864383:AAEfeSr7cGaY61I1NsaWMKLi322WwiaHbY5
         run: |
           poetry run python -m pytest ${{ matrix.service.service_path }}
