@@ -3,6 +3,7 @@ import pandas as pd
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from db import database, models
 from db.database import engine
@@ -108,3 +109,42 @@ async def get_user(session: AsyncSession, user_id: int) -> models.RegisteredUser
     :return:        ORM объект пользователя
     """
     return await session.get(models.RegisteredUser, user_id)
+
+
+async def get_user_role(session: AsyncSession, user_id: int) -> models.UserRole:
+    """
+    Получение роли пользователя.
+
+    :param session:    Сессия бд.
+    :param user_id:    ID пользователя.
+    :return:           Объект UserRole, соответсвующий id.
+    """
+    user = await get_user(session, user_id)
+    stmt = (
+        select(models.UserRole)
+        .options(joinedload(models.UserRole.features))
+        .where(models.UserRole.id == user.role_id)
+    )
+    result = await session.execute(stmt)
+    role = result.unique().scalar()
+    return role
+
+
+async def is_allow_feature(session: AsyncSession | None, user_id: int, feature: str) -> bool:
+    """
+    Проверка доступности пользователю определенной фичи в боте.
+
+    :param session: Сессия бд.
+    :param user_id: ID пользователя.
+    :param feature: Проверяемая на доступность функциональность.
+    :return:        Флаг доступности. True - пользователь может работать с фичей, False - фича недоступна.
+    """
+    if not session:
+        async with database.async_session() as session:
+            role = await get_user_role(session, user_id)
+    else:
+        role = await get_user_role(session, user_id)
+
+    if not role:
+        return False
+    return feature in {f.name for f in role.features}
