@@ -33,6 +33,7 @@ from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
 from utils.base import is_user_has_access
+from utils.decorators import check_rights
 
 
 class Form(StatesGroup):
@@ -79,6 +80,7 @@ async def finish_state(message: types.Message, state: FSMContext, msg_text: str)
 
 @router.message(Command('exit', 'завершить'))
 @router.message(F.text.lower().in_({'exit', 'завершить'}))
+@check_rights('common')
 async def exit_handler(message: types.Message, state: FSMContext) -> None:
     """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Завершено')
@@ -86,12 +88,14 @@ async def exit_handler(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Command('cancel', 'отмена'))
 @router.message(F.text.lower().in_({'cancel', 'отмена'}))
+@check_rights('common')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Отменено')
 
 
 @router.callback_query(F.data.startswith(CANCEL_CALLBACK))
+@check_rights('common')
 async def cancel_callback(callback_query: types.CallbackQuery) -> None:
     """Удаляет сообщение, у которого нажали на отмену."""
     try:
@@ -207,6 +211,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 
 
 @router.message(Command('meeting'))
+@check_rights('meeting')
 async def open_meeting_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     user_id = message.from_user.id
@@ -224,6 +229,7 @@ async def open_meeting_app(message: types.Message) -> None:
 
 
 @router.message(Command('web_app'))
+@check_rights('meeting')  # TODO: сделать для dashboard, если нужно
 async def open_web_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     user_id = message.from_user.id

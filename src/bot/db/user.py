@@ -84,6 +84,7 @@ async def insert_user_email_after_register(
             user_type='user',
             user_status='active',
             user_email=user_email,
+            role_id=await get_base_user_role_id(session),
         )
         ins = ins.on_conflict_do_update(
             constraint='whitelist_pkey',
@@ -94,6 +95,7 @@ async def insert_user_email_after_register(
                 'user_type': 'user',
                 'user_status': 'active',
                 'user_email': ins.excluded.user_email,
+                'role_id': ins.excluded.role_id,
             }
         )
         await session.execute(ins)
@@ -111,15 +113,17 @@ async def get_user(session: AsyncSession, user_id: int) -> models.RegisteredUser
     return await session.get(models.RegisteredUser, user_id)
 
 
-async def get_user_role(session: AsyncSession, user_id: int) -> models.UserRole:
+async def get_user_role(session: AsyncSession, user_id: int) -> models.UserRole | None:
     """
     Получение роли пользователя.
 
     :param session:    Сессия бд.
     :param user_id:    ID пользователя.
-    :return:           Объект UserRole, соответсвующий id.
+    :return:           Объект UserRole, соответсвующий id, или None, если пользователя нет в бд.
     """
     user = await get_user(session, user_id)
+    if not user:
+        return None
     stmt = (
         select(models.UserRole)
         .options(joinedload(models.UserRole.features))
@@ -148,3 +152,16 @@ async def is_allow_feature(session: AsyncSession | None, user_id: int, feature: 
     if not role:
         return False
     return feature in {f.name for f in role.features}
+
+
+async def get_base_user_role_id(session: AsyncSession) -> int:
+    """
+    Получение id бозовой роли: user.
+
+    :param session: Сессия бд.
+    :return:        Id роли user.
+    """
+    return await session.scalar(
+        select(models.UserRole.id)
+        .where(models.UserRole.name == 'user')
+    )
