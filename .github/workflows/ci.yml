@@ -102,6 +102,6 @@ jobs:
       - name: Run pytest
         if: matrix.service.with_tests
         env:
-          psql_engine: postgres://test_user:test_password@localhost:5005/test_db
+          PSQL_ENGINE: postgres://test_user:test_password@localhost:5005/test_db
         run: |
           poetry run python -m pytest ${{ matrix.service.service_path }}
