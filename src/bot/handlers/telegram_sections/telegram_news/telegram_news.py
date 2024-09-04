@@ -14,8 +14,8 @@ from handlers.telegram_sections.handler import router
 from keyboards.telegram_news import callbacks
 from keyboards.telegram_news import constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import bot_send_msg, is_user_has_access
-from utils.decorators import check_rights
+from utils.base import bot_send_msg
+from utils.decorators import has_access_to_feature
 from utils.telegram_news import get_msg_text_for_tg_newsletter
 
 
@@ -40,7 +40,7 @@ async def list_sections(message: types.CallbackQuery | types.Message) -> None:
 
 
 @router.message(Command('get_tg_news'))
-@check_rights('admin')
+@has_access_to_feature('admin')
 async def select_section_to_get_tg_articles(message: types.Message) -> None:
     """
     Получение списка разделов для получения по ним сводки новостей из тг-каналов
@@ -48,12 +48,8 @@ async def select_section_to_get_tg_articles(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        await list_sections(message)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    await list_sections(message)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(F.data.startswith(industry.BACK_TO_MENU))

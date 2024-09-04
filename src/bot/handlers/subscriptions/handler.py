@@ -14,8 +14,8 @@ from db.api.user_research_subscription import user_research_subscription_db
 from db.api.user_telegram_subscription import user_telegram_subscription_db
 from keyboards.subscriptions import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
-from utils.base import is_user_has_access, send_or_edit
-from utils.decorators import check_rights
+from utils.base import send_or_edit
+from utils.decorators import has_access_to_feature
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -86,7 +86,7 @@ async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> No
 
 
 @router.message(Command(callback_prefixes.SUBS_MENU))
-@check_rights('subscriptions_menu')
+@has_access_to_feature('subscriptions_menu')
 async def subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками
@@ -94,12 +94,8 @@ async def subscriptions_menu(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        await subs_menu(message)
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await subs_menu(message)
 
 
 @router.callback_query(F.data.startswith(callback_prefixes.SHOW_ALL_SUBS))
@@ -133,7 +129,7 @@ async def show_all_subs(callback_query: types.CallbackQuery) -> None:
             await callback_query.message.answer(text=sub_title, parse_mode='Markdown')
 
     if subs_not_exist:
-        callback_query.message.answer(text='У вас нет активных подписок')
+        await callback_query.message.answer(text='У вас нет активных подписок')
 
 
 @router.callback_query(callbacks.SubsMenuData.filter(

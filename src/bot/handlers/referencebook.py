@@ -9,8 +9,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.constants import handbook_prefix
 from log.bot_logger import logger, user_logger
-from utils.base import bot_send_msg, is_user_has_access, show_ref_book_by_request
-from utils.decorators import check_rights
+from utils.base import bot_send_msg, show_ref_book_by_request
+from utils.decorators import has_access_to_feature
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -23,21 +23,18 @@ class RefBookStates(StatesGroup):
 
 
 @router.message(Command('referencebook'))
-@check_rights('admin')
+@has_access_to_feature('admin')
 async def reference_book(message: types.Message) -> None:
     """Команда справочник"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
+    user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
 
-        keyboard = InlineKeyboardBuilder()
-        keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='ref_books:client'))
-        keyboard.row(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data='ref_books:beneficiaries'))
-        keyboard.row(types.InlineKeyboardButton(text='Commodities', callback_data='ref_books:commodity'))
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='ref_books:client'))
+    keyboard.row(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data='ref_books:beneficiaries'))
+    keyboard.row(types.InlineKeyboardButton(text='Commodities', callback_data='ref_books:commodity'))
 
-        await message.answer('Выберите какой справочник вам интересен:', reply_markup=keyboard.as_markup())
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    await message.answer('Выберите какой справочник вам интересен:', reply_markup=keyboard.as_markup())
 
 
 @router.callback_query(F.data.startswith('ref_books'))

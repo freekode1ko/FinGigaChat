@@ -17,8 +17,8 @@ from db.api.product import product_db
 from handlers.products import callbacks
 from handlers.products import keyboards
 from log.bot_logger import user_logger
-from utils.base import is_user_has_access, send_full_copy_of_message, send_or_edit, send_pdf
-from utils.decorators import check_rights
+from utils.base import send_full_copy_of_message, send_or_edit, send_pdf
+from utils.decorators import has_access_to_feature
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -79,7 +79,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.ProductsMenuData.__prefix__))
-@check_rights('products_menu')
+@has_access_to_feature('products_menu')
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню продукты
@@ -87,12 +87,8 @@ async def main_menu_command(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        await main_menu(message)
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await main_menu(message)
 
 
 @router.callback_query(callbacks.ProductsMenuData.filter(
