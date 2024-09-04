@@ -9,8 +9,10 @@ from db import models
 from db.api.client import client_db, get_research_type_id_by_name
 from handlers.clients import keyboards
 from module.fuzzy_search import FuzzyAlternativeNames
+from utils.decorators import has_access_to_feature
 
 
+@has_access_to_feature(feature='clients_menu', is_need_answer=False)
 async def is_client_in_message(
         message: types.Message,
         user_msg: str,

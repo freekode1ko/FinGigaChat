@@ -27,7 +27,8 @@ from handlers.news import callback_data_factories, keyboards, utils
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcess, FormatText
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, get_page_data_and_info, is_user_has_access, send_full_copy_of_message, send_or_edit
+from utils.base import bot_send_msg, get_page_data_and_info, send_full_copy_of_message, send_or_edit
+from utils.decorators import has_access_to_feature
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message use chat action 'typing'
@@ -105,6 +106,7 @@ async def main_menu_callback(
 
 
 @router.message(Command(callback_data_factories.NewsMenuData.__prefix__))
+@has_access_to_feature('news')
 async def main_menu_command(message: types.Message, state: FSMContext) -> None:
     """
     Получение меню новости
@@ -113,12 +115,8 @@ async def main_menu_command(message: types.Message, state: FSMContext) -> None:
     :param state:   Объект, который хранит состояние FSM для пользователя
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        await main_menu(message, state)
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await main_menu(message, state)
 
 
 @router.callback_query(callback_data_factories.TelegramGroupData.filter(
