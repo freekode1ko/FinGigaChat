@@ -35,7 +35,7 @@ from keyboards.analytics.analytics_sell_side import callbacks, constructors as k
 from log.bot_logger import user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
-from utils import weekly_pulse, decorators
+from utils import decorators, weekly_pulse
 from utils.base import __sent_photo_and_msg, send_full_copy_of_message
 from utils.handler_utils import get_client_financial_indicators
 from utils.newsletter import send_researches_to_user

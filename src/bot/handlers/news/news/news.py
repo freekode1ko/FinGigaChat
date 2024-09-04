@@ -1,6 +1,5 @@
 """Хендлеры новостей новостей новостей"""
 from aiogram import Bot, F, types
-from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
@@ -34,7 +33,7 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, send_or_edit, is_user_id_has_access_to_feature
+from utils.base import bot_send_msg, is_user_id_has_access_to_feature, send_or_edit
 from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 

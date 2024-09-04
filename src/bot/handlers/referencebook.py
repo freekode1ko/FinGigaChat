@@ -27,7 +27,7 @@ class RefBookStates(StatesGroup):
 async def reference_book(message: types.Message) -> None:
     """Команда справочник"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user_logger.info(f'*{chat_id}* {full_name} - Запросил справочник')
+    user_logger.info(f'*{chat_id}* {full_name} {user_msg} - Запросил справочник')
 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='ref_books:client'))
