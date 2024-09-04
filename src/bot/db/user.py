@@ -113,17 +113,14 @@ async def get_user(session: AsyncSession, user_id: int) -> models.RegisteredUser
     return await session.get(models.RegisteredUser, user_id)
 
 
-async def get_user_role(session: AsyncSession, user_id: int) -> models.UserRole | None:
+async def get_user_role(session: AsyncSession, user: models.RegisteredUser) -> models.UserRole:
     """
     Получение роли пользователя.
 
     :param session:    Сессия бд.
-    :param user_id:    ID пользователя.
-    :return:           Объект UserRole, соответсвующий id, или None, если пользователя нет в бд.
+    :param user:       Сущность пользователя.
+    :return:           Объект UserRole, соответсвующий id.
     """
-    user = await get_user(session, user_id)
-    if not user:
-        return None
     stmt = (
         select(models.UserRole)
         .options(joinedload(models.UserRole.features))
@@ -132,26 +129,6 @@ async def get_user_role(session: AsyncSession, user_id: int) -> models.UserRole 
     result = await session.execute(stmt)
     role = result.unique().scalar()
     return role
-
-
-async def is_allow_feature(session: AsyncSession | None, user_id: int, feature: str) -> bool:
-    """
-    Проверка доступности пользователю определенной фичи в боте.
-
-    :param session: Сессия бд.
-    :param user_id: ID пользователя.
-    :param feature: Проверяемая на доступность функциональность.
-    :return:        Флаг доступности. True - пользователь может работать с фичей, False - фича недоступна.
-    """
-    if not session:
-        async with database.async_session() as session:
-            role = await get_user_role(session, user_id)
-    else:
-        role = await get_user_role(session, user_id)
-
-    if not role:
-        return False
-    return feature in {f.name for f in role.features}
 
 
 async def get_base_user_role_id(session: AsyncSession) -> int:

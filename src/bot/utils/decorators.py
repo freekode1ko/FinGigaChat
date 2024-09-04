@@ -3,9 +3,10 @@ import functools
 from typing import Callable
 
 from aiogram.types import Message, CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.user import is_allow_feature
-from log.bot_logger import logger, user_logger
+from utils.base import is_registered_user, is_user_has_access_to_feature
+from log.bot_logger import user_logger
 
 
 def singleton(cls):
@@ -20,34 +21,39 @@ def singleton(cls):
     return get_instance
 
 
-def check_rights(feature: str):
+def has_access_to_feature(feature: str, is_need_answer: bool = True):
     """
-    Проверка доступа пользователя к текущей функциональности.
+    Проверка доступа пользователя к полученной функциональности.
 
-    :param feature: Название функциональности, к которой относится декорируемая функция.
-    :return:        Обработчик, если пользователю доступна функциональность, либо сообщение о недоступности.
+    :param feature:         Название функциональности, к которой относится декорируемая функция.
+    :param is_need_answer:  Необходимо ли отправить ответ об "отсутствии прав на использование команды".
+    :return:                Обработчик, если пользователю доступна функциональность,
+                            либо сообщение о недоступности,
+                            либо False, если сообщение отправлять не нужно (задекорирована промежуточная функция).
     """
     def func_wrapper(func: Callable):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            # намеренно сделано без обработки исключений, чтобы сразу править обработчики при добавлении декоратора
+            tg_obj: Message | CallbackQuery = args[0]
+            session: AsyncSession = kwargs['session']
 
-            if not args or not isinstance(args[0], (Message, CallbackQuery)):
-                logger.critical(f'Нет базового tg-объекта в функции {func.__name__}. args: {args}, kwargs: {kwargs}')
-                return await func(*args, **kwargs)
-
-            tg_obj = args[0]
-            session = kwargs.get('session') if kwargs else None
-            is_allow = await is_allow_feature(session, tg_obj.from_user.id, feature)
-
-            if is_allow:
-                return await func(*args, **kwargs)
-
+            user_id = tg_obj.from_user.id
+            full_name = tg_obj.from_user.full_name
             user_msg = tg_obj.text if isinstance(tg_obj, Message) else tg_obj.data
-            user_logger.warning(
-                f'*{tg_obj.from_user.id}* {tg_obj.from_user.full_name} - {user_msg}:'
-                f' недостаточно прав. Функция - {func.__name__}()'
-            )
-            return await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
+
+            registered_user = await is_registered_user(session, tg_obj, user_id, full_name, user_msg, func.__name__)
+            if not registered_user:
+                return
+
+            access = await is_user_has_access_to_feature(session, registered_user, feature)
+            if access:
+                return await func(*args, **kwargs)
+
+            if not is_need_answer:  # без отправки сообщения, если это промежуточная функция (обработчик в обработчике)
+                return False
+            user_logger.warning(f'*{user_id}* {full_name} - {user_msg} : недостаточно прав. Функция: {func.__name__}()')
+            await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
 
         return wrapper
     return func_wrapper

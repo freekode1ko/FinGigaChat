@@ -16,6 +16,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.media_group import MediaGroupBuilder
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import module.data_transformer as dt
 from configs.config import PAGE_ELEMENTS_COUNT
@@ -24,6 +25,8 @@ from constants.constants import research_footer
 from constants.texts import texts_manager
 from db import models
 from db.database import async_session, engine
+from db.user import get_user, get_user_role
+from log.bot_logger import user_logger
 from log.logger_base import Logger
 
 
@@ -590,3 +593,47 @@ def clear_text_from_url(text: str) -> str:
     :return:        Текст без ссылок.
     """
     return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
+
+
+async def is_registered_user(
+        session: AsyncSession,
+        tg_obj: types.Message | types.CallbackQuery,
+        user_id: int,
+        full_name: str,
+        user_msg: str,
+        func_name: str,
+) -> models.RegisteredUser | None:
+    """
+    Является ли пользователь зарегистрированным.
+
+    :param session:     Сессия бд.
+    :param tg_obj:      Объект телеграмма.
+    :param user_id:     ID пользователя.
+    :param full_name:   Имя пользователя.
+    :param user_msg:    Сообщение от пользователя.
+    :param func_name:   Имя вызванной пользователем функции.
+    :return:            Сущность пользователя или None, если пользователь не найден в бд.
+    """
+    user = await get_user(session, user_id)
+    if user:
+        return user
+
+    await tg_obj.answer('Неавторизованный пользователь. Отказано в доступе.')
+    user_logger.info(f'*{user_id}* Неавторизованный пользователь {full_name} - {user_msg}. Функция: {func_name}()')
+    return
+
+
+async def is_user_has_access_to_feature(session: AsyncSession | None, user: models.RegisteredUser, feature: str) -> bool:
+    """
+    Проверка доступности пользователю определенной фичи в боте.
+
+    :param session: Сессия бд.
+    :param user:    Сущность пользователя.
+    :param feature: Проверяемая на доступность функциональность.
+    :return:        Флаг доступности. True - пользователь может работать с фичей, False - фича недоступна.
+    """
+    role = await get_user_role(session, user)
+    if not role:
+        return False
+    return feature in [f.name for f in role.features]
+
