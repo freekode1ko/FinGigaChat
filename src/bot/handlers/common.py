@@ -60,6 +60,7 @@ async def help_handler(message: types.Message, state: FSMContext, user_msg: str 
         await user_registration(message, user_msg, state)
 
 
+@has_access_to_feature('common')
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
     """
     Позволяет пользователю очищать клавиатуру и выходить из любого состояния.
@@ -78,7 +79,6 @@ async def finish_state(message: types.Message, state: FSMContext, msg_text: str)
 
 @router.message(Command('exit', 'завершить'))
 @router.message(F.text.lower().in_({'exit', 'завершить'}))
-@has_access_to_feature('common')
 async def exit_handler(message: types.Message, state: FSMContext) -> None:
     """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Завершено')
@@ -86,7 +86,6 @@ async def exit_handler(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Command('cancel', 'отмена'))
 @router.message(F.text.lower().in_({'cancel', 'отмена'}))
-@has_access_to_feature('common')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Отменено')

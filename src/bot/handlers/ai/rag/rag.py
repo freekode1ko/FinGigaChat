@@ -32,7 +32,7 @@ class RagState(StatesGroup):
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
-@has_access_to_feature('knowledgebase')
+@has_access_to_feature('knowledgebase', is_need_answer=False)
 async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -> None:
     """
     Очистка пользовательской истории диалога, если завершается состояние RagState.

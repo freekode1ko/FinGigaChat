@@ -176,7 +176,14 @@ async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
-    nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
+
+    if await is_user_id_has_access_to_feature(None, chat_id, 'clients_menu'):
+        nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
+    else:
+        nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(
+            user_msg,
+            subject_types=[models.CommodityAlternative, models.IndustryAlternative]
+        )
 
     buttons = [[types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)], ]
     if await is_user_id_has_access_to_feature(None, chat_id, 'knowledgebase'):
