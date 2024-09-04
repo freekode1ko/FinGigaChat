@@ -126,6 +126,8 @@ services:
         environment:
             - TZ=Europe/Moscow
             - MODEL_TYPE=client
+            - LOG_FILE=bert_client_relevance
+            - MODEL_PATH=hellcatAI/ruRoberta_client_relevance_classification_quant
         env_file:
             - .env
         ports:
@@ -145,6 +147,8 @@ services:
         environment:
             - TZ=Europe/Moscow
             - MODEL_TYPE=commodity
+            - LOG_FILE=bert_commodity_relevance
+            - MODEL_PATH=hellcatAI/ruRoberta_commodity_relevance_classification_quant
         env_file:
             - .env
         ports:
