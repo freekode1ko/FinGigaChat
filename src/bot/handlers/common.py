@@ -32,8 +32,7 @@ from db.whitelist import is_email_in_whitelist
 from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
-from utils.base import is_user_has_access
-from utils.decorators import check_rights
+from utils.decorators import has_access_to_feature
 
 
 class Form(StatesGroup):
@@ -50,8 +49,7 @@ router = Router()
 async def help_handler(message: types.Message, state: FSMContext, user_msg: str | None = None) -> None:
     """Вывод приветственного окна, с описанием бота и лицами для связи."""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
-    check_mail = user_msg == '/start'
-    if await is_user_has_access(message.from_user.model_dump_json(), check_mail):
+    if is_user_email_exist(chat_id):
         to_pin = await message.answer(texts_manager.HELP_TEXT, protect_content=texts_manager.PROTECT_CONTENT)
         msg_id = to_pin.message_id
         await message.bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
@@ -80,7 +78,7 @@ async def finish_state(message: types.Message, state: FSMContext, msg_text: str)
 
 @router.message(Command('exit', 'завершить'))
 @router.message(F.text.lower().in_({'exit', 'завершить'}))
-@check_rights('common')
+@has_access_to_feature('common')
 async def exit_handler(message: types.Message, state: FSMContext) -> None:
     """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Завершено')
@@ -88,14 +86,14 @@ async def exit_handler(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Command('cancel', 'отмена'))
 @router.message(F.text.lower().in_({'cancel', 'отмена'}))
-@check_rights('common')
+@has_access_to_feature('common')
 async def cancel_handler(message: types.Message, state: FSMContext) -> None:
     """Вызов метода по выходу из состояния."""
     await finish_state(message, state, 'Отменено')
 
 
 @router.callback_query(F.data.startswith(CANCEL_CALLBACK))
-@check_rights('common')
+@has_access_to_feature('common')
 async def cancel_callback(callback_query: types.CallbackQuery) -> None:
     """Удаляет сообщение, у которого нажали на отмену."""
     try:
@@ -211,14 +209,9 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 
 
 @router.message(Command('meeting'))
-@check_rights('meeting')
+@has_access_to_feature('meeting')
 async def open_meeting_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
-    user_id = message.from_user.id
-    if not is_user_email_exist(user_id):
-        await message.answer('Для работы со встречами необходимо пройти регистрацию: /start')
-        return
-
     markup = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/meeting/show'))],
@@ -229,14 +222,9 @@ async def open_meeting_app(message: types.Message) -> None:
 
 
 @router.message(Command('web_app'))
-@check_rights('meeting')  # TODO: сделать для dashboard, если нужно
+@has_access_to_feature('meeting')  # TODO: сделать для dashboard, если нужно
 async def open_web_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
-    user_id = message.from_user.id
-    if not is_user_email_exist(user_id):
-        await message.answer('Для работы со WebApp необходимо пройти регистрацию: /start')
-        return
-
     markup = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [types.InlineKeyboardButton(text='WebApp (beta)', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/'))],

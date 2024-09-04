@@ -16,11 +16,11 @@ def is_new_user_email(user_email: str) -> bool:
         return not conn.execute(query).scalar()
 
 
-def is_user_email_exist(user_id: int) -> bool:
+def is_user_email_exist(user_id: int) -> str | None:
     """Проверка наличия почты у пользователя"""
     query = select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id)
     with engine.connect() as conn:
-        return conn.execute(query).all()
+        return conn.execute(query).scalar()
 
 
 async def get_users_subscriptions() -> pd.DataFrame:

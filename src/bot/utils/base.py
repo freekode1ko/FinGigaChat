@@ -595,7 +595,24 @@ def clear_text_from_url(text: str) -> str:
     return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
 
 
-async def is_user_has_access_to_feature(session: AsyncSession | None, user: models.RegisteredUser, feature: str) -> bool:
+async def is_user_id_has_access_to_feature(session: AsyncSession | None, user_id: int, feature: str) -> bool:
+    """
+    Проверка доступности ID пользователя определенной фичи в боте.
+
+    :param session:     Сессия бд.
+    :param user_id:     ID пользователя.
+    :param feature:     Проверяемая на доступность функциональность.
+    :return:            Флаг доступности. True - пользователь может работать с фичей, False - фича недоступна.
+    """
+    if session:
+        user = await get_user(session, user_id)
+        return await is_user_has_access_to_feature(session, user, feature)
+    async with async_session() as ses:
+        user = await get_user(ses, user_id)
+        return await is_user_has_access_to_feature(ses, user, feature)
+
+
+async def is_user_has_access_to_feature(session: AsyncSession, user: models.RegisteredUser, feature: str) -> bool:
     """
     Проверка доступности пользователю определенной фичи в боте.
 
