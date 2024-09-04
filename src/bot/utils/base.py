@@ -595,7 +595,7 @@ def clear_text_from_url(text: str) -> str:
     return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
 
 
-async def is_user_id_has_access_to_feature(session: AsyncSession | None, user_id: int, feature: str) -> bool:
+async def is_user_id_has_access_to_feature(user_id: int, feature: str, session: AsyncSession | None = None) -> bool:
     """
     Проверка доступности ID пользователя определенной фичи в боте.
 
@@ -606,13 +606,13 @@ async def is_user_id_has_access_to_feature(session: AsyncSession | None, user_id
     """
     if session:
         user = await get_user(session, user_id)
-        return await is_user_has_access_to_feature(session, user, feature)
+        return await is_user_has_access_to_feature(user, feature, session)
     async with async_session() as ses:
         user = await get_user(ses, user_id)
-        return await is_user_has_access_to_feature(ses, user, feature)
+        return await is_user_has_access_to_feature(user, feature, ses)
 
 
-async def is_user_has_access_to_feature(session: AsyncSession, user: models.RegisteredUser, feature: str) -> bool:
+async def is_user_has_access_to_feature(user: models.RegisteredUser, feature: str, session: AsyncSession) -> bool:
     """
     Проверка доступности пользователю определенной фичи в боте.
 
@@ -646,7 +646,7 @@ async def has_access_to_feature_logic(
     :param session:         Сессия бд.
     :return:                Обработчик, если пользователю доступна функциональность,
                             либо None с сообщением о недоступности,
-                            либо False, если сообщение отправлять не нужно (задекорирована промежуточная функция).
+                            либо None без сообщения (задекорирована промежуточная функция).
     """
     tg_obj: types.Message | types.CallbackQuery = args[0]
     user_id = tg_obj.from_user.id
@@ -660,7 +660,7 @@ async def has_access_to_feature_logic(
         user_logger.info(f'*{user_id}* Неавторизованный пользователь {full_name} - {user_msg}. Функция: {func_name}()')
         return
 
-    access = await is_user_has_access_to_feature(session, user, feature)
+    access = await is_user_has_access_to_feature(user, feature, session)
     if access:
         return await func(*args, **kwargs)
 
@@ -668,4 +668,3 @@ async def has_access_to_feature_logic(
         user_logger.warning(f'*{user_id}* {full_name} - {user_msg} : недостаточно прав. Функция: {func_name}()')
         await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
     # без отправки сообщения, если это промежуточная функция (обработчик в обработчике)
-    # return False

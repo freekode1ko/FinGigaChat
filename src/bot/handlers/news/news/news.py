@@ -172,12 +172,12 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
 
 
 @has_access_to_feature('news')
-async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
+async def send_nearest_subjects(message: types.Message, user_msg: str, session: AsyncSession) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
 
-    if await is_user_id_has_access_to_feature(None, chat_id, 'clients_menu'):
+    if await is_user_id_has_access_to_feature(chat_id, 'clients_menu', session):
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
     else:
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(
@@ -186,7 +186,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
         )
 
     buttons = [[types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)], ]
-    if await is_user_id_has_access_to_feature(None, chat_id, 'knowledgebase'):
+    if await is_user_id_has_access_to_feature(chat_id, 'knowledgebase', session):
         buttons.append([types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)])
 
     for subject_name in nearest_subjects:
@@ -406,7 +406,7 @@ async def process_user_message(message: types.Message, state: FSMContext, sessio
         else:
             await state.set_state(rag.RagState.rag_query)
             await state.update_data(rag_query=user_msg)
-            await send_nearest_subjects(message, user_msg)
+            await send_nearest_subjects(message, user_msg, session)
 
 
 @has_access_to_feature(feature='clients_menu', is_need_answer=False)
