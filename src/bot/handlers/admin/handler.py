@@ -9,7 +9,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from sqlalchemy.ext.asyncio import AsyncSession
 
 import keyboards.admin.constructors as keyboards
 from configs import config
@@ -43,13 +42,12 @@ class AdminStates(StatesGroup):
 
 @router.message(Command('sendtoall'))
 @has_access_to_feature('admin')
-async def message_to_all(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def message_to_all(message: types.Message, state: FSMContext) -> None:
     """
     Входная точка для ручной рассылки новостей на всех пользователей
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
-    :param session: Сессия бд
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     await state.set_state(AdminStates.send_to_users)
@@ -119,12 +117,11 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
 
 @router.message(Command('admin_help'))
 @has_access_to_feature('admin')
-async def admin_help(message: types.Message, session: AsyncSession) -> None:
+async def admin_help(message: types.Message) -> None:
     """
     Вывод в чат подсказки по командам для администратора
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param session: Сессия бд
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     help_msg = (
@@ -140,13 +137,12 @@ async def admin_help(message: types.Message, session: AsyncSession) -> None:
 
 @router.message(Command('show_article'))
 @has_access_to_feature('admin')
-async def show_article(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def show_article(message: types.Message, state: FSMContext) -> None:
     """
     Вывод в чат новости по ссылке
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
-    :param session: Сессия бд
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
@@ -202,13 +198,12 @@ async def continue_show_article(message: types.Message, state: FSMContext) -> No
 
 @router.message(Command('change_summary'))
 @has_access_to_feature('admin')
-async def change_summary(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def change_summary(message: types.Message, state: FSMContext) -> None:
     """
     Получение ссылки на новость для изменения ее короткой версии
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
-    :param session: Сессия бд
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
 
@@ -290,13 +285,12 @@ async def continue_change_summary(message: types.Message, state: FSMContext) -> 
 
 @router.message(Command('delete_article'))
 @has_access_to_feature('admin')
-async def delete_article(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def delete_article(message: types.Message, state: FSMContext) -> None:
     """
     Получение ссылки на новость от пользователя для ее удаления (снижения значимости)
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
-    :param session: Сессия бд
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
@@ -379,7 +373,7 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 
 @router.message(Command('dailynews'))
 @has_access_to_feature('admin')
-async def dailynews(message: types.Message, session: AsyncSession) -> None:
+async def dailynews(message: types.Message) -> None:
     """Рассылка по команде dailynews"""
     await subscriptions_newsletter(message.bot, client_hours=20, commodity_hours=20)
     user_logger.warning(f'*{message.from_user.id}* : завершена рассылка от админа')
@@ -405,12 +399,11 @@ async def delete_newsletter_menu(message: Union[types.CallbackQuery, types.Messa
 
 @router.message(Command('delete_newsletter_messages'))
 @has_access_to_feature('admin')
-async def delete_newsletter_messages(message: types.Message, session: AsyncSession) -> None:
+async def delete_newsletter_messages(message: types.Message) -> None:
     """
     Формирует меню для выбора типа сообщения, по которому будут удалены все сообщения с этим типом младше 48 часов
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param session: Сессия бд
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     await delete_newsletter_menu(message)

@@ -8,7 +8,7 @@ import re
 from datetime import date, datetime, timedelta
 from math import ceil
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import pandas as pd
 from aiogram import Bot, types
@@ -595,34 +595,6 @@ def clear_text_from_url(text: str) -> str:
     return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
 
 
-async def is_registered_user(
-        session: AsyncSession,
-        tg_obj: types.Message | types.CallbackQuery,
-        user_id: int,
-        full_name: str,
-        user_msg: str,
-        func_name: str,
-) -> models.RegisteredUser | None:
-    """
-    Является ли пользователь зарегистрированным.
-
-    :param session:     Сессия бд.
-    :param tg_obj:      Объект телеграмма.
-    :param user_id:     ID пользователя.
-    :param full_name:   Имя пользователя.
-    :param user_msg:    Сообщение от пользователя.
-    :param func_name:   Имя вызванной пользователем функции.
-    :return:            Сущность пользователя или None, если пользователь не найден в бд.
-    """
-    user = await get_user(session, user_id)
-    if user:
-        return user
-
-    await tg_obj.answer('Неавторизованный пользователь. Отказано в доступе.')
-    user_logger.info(f'*{user_id}* Неавторизованный пользователь {full_name} - {user_msg}. Функция: {func_name}()')
-    return
-
-
 async def is_user_has_access_to_feature(session: AsyncSession | None, user: models.RegisteredUser, feature: str) -> bool:
     """
     Проверка доступности пользователю определенной фичи в боте.
@@ -637,3 +609,46 @@ async def is_user_has_access_to_feature(session: AsyncSession | None, user: mode
         return False
     return feature in [f.name for f in role.features]
 
+
+async def has_access_to_feature_logic(
+        feature: str,
+        is_need_answer: bool,
+        func: Callable,
+        args: tuple[Any],
+        kwargs: dict[str, Any],
+        session: AsyncSession,
+) -> Any:
+    """
+    Логика декоратора has_access_to_feature.
+
+    :param feature:         Название функциональности, которую нужно проверить на доступность.
+    :param is_need_answer:  Необходимо ли отправить ответ об "отсутствии прав на использование команды".
+    :param func:            Декорируемая функция.
+    :param args:            Позиционные аргументы.
+    :param kwargs:          Именованные аргументы.
+    :param session:         Сессия бд.
+    :return:                Обработчик, если пользователю доступна функциональность,
+                            либо None с сообщением о недоступности,
+                            либо False, если сообщение отправлять не нужно (задекорирована промежуточная функция).
+    """
+    tg_obj: types.Message | types.CallbackQuery = args[0]
+    user_id = tg_obj.from_user.id
+    full_name = tg_obj.from_user.full_name
+    user_msg = tg_obj.text if isinstance(tg_obj, types.Message) else tg_obj.data
+    func_name = func.__name__
+
+    user = await get_user(session, user_id)
+    if not user:
+        await tg_obj.answer('Неавторизованный пользователь. Отказано в доступе.')
+        user_logger.info(f'*{user_id}* Неавторизованный пользователь {full_name} - {user_msg}. Функция: {func_name}()')
+        return
+
+    access = await is_user_has_access_to_feature(session, user, feature)
+    if access:
+        return await func(*args, **kwargs)
+
+    if is_need_answer:
+        user_logger.warning(f'*{user_id}* {full_name} - {user_msg} : недостаточно прав. Функция: {func_name}()')
+        await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
+    # без отправки сообщения, если это промежуточная функция (обработчик в обработчике)
+    # return False
