@@ -5,8 +5,6 @@ from environs import Env
 env = Env()
 env.read_env()
 
-MODEL_TYPE = env.str('MODEL_TYPE')
-
 PROJECT_DIR = Path(__file__).parent
 
 LOG_FILE = env.str('LOG_FILE')
