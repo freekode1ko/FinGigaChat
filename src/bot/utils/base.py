@@ -1,7 +1,6 @@
 """Файл с дополнительными функциями"""
 import ast
 import asyncio
-import json
 import logging
 import os
 import re
@@ -14,8 +13,6 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.media_group import MediaGroupBuilder
-from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import module.data_transformer as dt
@@ -108,26 +105,6 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
         msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
     return msg
-
-
-async def is_user_has_access(user: str, check_email: bool = False) -> bool:
-    """
-    Проверка, пользователя на наличие в списках на доступ
-
-    :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
-    :param check_email: Флаг, нужно ли проверять наличие почты пользователя в бд
-    return Булево значение на наличие пользователя в списке
-    """
-    user_id = json.loads(user)['id']
-    async with async_session() as session:
-        result = await session.execute(select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id))
-        try:
-            user_email = result.scalar_one()
-            if not check_email:
-                return True
-            return bool(user_email)
-        except NoResultFound:
-            return False
 
 
 def read_curdatetime() -> datetime:

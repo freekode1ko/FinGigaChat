@@ -113,7 +113,7 @@ async def get_user(session: AsyncSession, user_id: int) -> models.RegisteredUser
     return await session.get(models.RegisteredUser, user_id)
 
 
-async def get_user_role(session: AsyncSession, user: models.RegisteredUser) -> models.UserRole:
+async def get_user_role(session: AsyncSession, user: models.RegisteredUser) -> models.UserRole | None:
     """
     Получение роли пользователя.
 
@@ -131,7 +131,7 @@ async def get_user_role(session: AsyncSession, user: models.RegisteredUser) -> m
     return role
 
 
-async def get_base_user_role_id(session: AsyncSession) -> int:
+async def get_base_user_role_id(session: AsyncSession) -> int | None:
     """
     Получение id бозовой роли: user.
 

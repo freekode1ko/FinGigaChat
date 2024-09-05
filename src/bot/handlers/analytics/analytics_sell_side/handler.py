@@ -427,6 +427,7 @@ async def data_mart_body(message: types.Message) -> None:
 
             photo = types.FSInputFile(png_path)
             await __sent_photo_and_msg(message, photo, title='')
+    user_logger.info(f'*{message.from_user.id}* {message.from_user.full_name} - {message.text}')
 
 
 async def data_mart_callback(
