@@ -711,14 +711,19 @@ class ResearchAPIParser:
         for i in range(self.REPEAT_TRIES):
             if params['before_link']:
                 # Тут нужно запрашивать отчеты по порядку
-                requests.get(url=params['before_link'], cookies=self.cookies, verify=False)
-                req = requests.request(
-                    method=params['request_method'],
-                    url=params['url'],
-                    params=params['params'],
-                    cookies=self.cookies,
-                    verify=False
-                )
+                try:
+                    requests.get(url=params['before_link'], cookies=self.cookies, verify=False, timeout=10)
+                    req = requests.request(
+                        method=params['request_method'],
+                        url=params['url'],
+                        params=params['params'],
+                        cookies=self.cookies,
+                        verify=False,
+                        timeout=10,
+                    )
+                except Exception as e:
+                    self._logger.error(f'Во время запроса отчетов со страницы {params["url"]} произошла ошибка: %s', e)
+                    continue
                 status_code = req.status_code
                 content = req.content
             else:
@@ -728,6 +733,7 @@ class ResearchAPIParser:
                         params=params['params'],
                         cookies=self.cookies,
                         ssl=False,
+                        timeout=10
                     )
                     content = await req.text()
                     status_code = req.status
@@ -746,7 +752,7 @@ class ResearchAPIParser:
         reports_ids = html_parser.find_all('div', class_='hidden publication-id')
         reports_titles = html_parser.find_all('tr', class_=self.report_title_tr_pattern)
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], len(reports_ids))
+        self._logger.info('CIB: получен успешный ответ со страницы c id: %s ;url: %s. И найдено %s отчетов', str(params['research_type_id']), params['url'], len(reports_ids))
 
         new_reports = []
         for report_id, report_name in zip(reports_ids, reports_titles):
