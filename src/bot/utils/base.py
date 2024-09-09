@@ -580,7 +580,7 @@ async def check_relevance_features():
         db_features = list(db_features)
 
     for code_feature in enums.FeatureType.list():
-        if not (code_feature in db_features):
+        if code_feature not in db_features:
             raise ValueError(f'Неизвестное название функциональности в коде: "{code_feature}"')
 
 
