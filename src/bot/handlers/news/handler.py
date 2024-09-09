@@ -15,7 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionMiddleware
 
-from constants import constants
+from constants import constants, enums
 from constants.texts import texts_manager
 from db import models
 from db.api import industry
@@ -106,7 +106,7 @@ async def main_menu_callback(
 
 
 @router.message(Command(callback_data_factories.NewsMenuData.__prefix__))
-@has_access_to_feature('news')
+@has_access_to_feature(enums.FeatureType.news)
 async def main_menu_command(message: types.Message, state: FSMContext) -> None:
     """
     Получение меню новости

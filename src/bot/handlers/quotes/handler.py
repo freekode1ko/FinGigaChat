@@ -76,7 +76,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.QuotesMenu.__prefix__))
-@decorators.has_access_to_feature('quotes_menu')
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню котировки
@@ -107,7 +107,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@decorators.has_access_to_feature('quotes_menu')
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def exchange_info_command(message: types.Message) -> None:
     """
     Вывод в чат информации по котировкам связанной с валютой и их курсом
@@ -262,7 +262,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@decorators.has_access_to_feature('quotes_menu')
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def metal_info_command(
         message: types.Message,
         with_table: bool = True,
@@ -351,7 +351,7 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@decorators.has_access_to_feature('quotes_menu')
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def bonds_info_command(message: types.Message) -> None:
     """
     Вывод в чат информации по котировкам связанной с облигациями
@@ -404,7 +404,7 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-@decorators.has_access_to_feature('quotes_menu')
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def economy_info_command(message: types.Message) -> None:
     """
     Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)

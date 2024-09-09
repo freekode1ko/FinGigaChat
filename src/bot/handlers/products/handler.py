@@ -79,7 +79,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.ProductsMenuData.__prefix__))
-@has_access_to_feature('products_menu')
+@has_access_to_feature(enums.FeatureType.products_menu)
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню продукты

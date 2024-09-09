@@ -26,6 +26,7 @@ from constants.constants import (
     REGISTRATION_CODE_MAX,
     REGISTRATION_CODE_MIN,
 )
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.user import insert_user_email_after_register, is_new_user_email, is_user_email_exist
 from db.whitelist import is_email_in_whitelist
@@ -60,7 +61,7 @@ async def help_handler(message: types.Message, state: FSMContext, user_msg: str 
         await user_registration(message, user_msg, state)
 
 
-@has_access_to_feature('common')
+@has_access_to_feature(FeatureType.common)
 async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
     """
     Позволяет пользователю очищать клавиатуру и выходить из любого состояния.
@@ -92,7 +93,7 @@ async def cancel_handler(message: types.Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith(CANCEL_CALLBACK))
-@has_access_to_feature('common')
+@has_access_to_feature(FeatureType.common)
 async def cancel_callback(callback_query: types.CallbackQuery) -> None:
     """Удаляет сообщение, у которого нажали на отмену."""
     try:
@@ -208,7 +209,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 
 
 @router.message(Command('meeting'))
-@has_access_to_feature('meeting')
+@has_access_to_feature(FeatureType.meeting)
 async def open_meeting_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     markup = types.InlineKeyboardMarkup(
@@ -221,7 +222,7 @@ async def open_meeting_app(message: types.Message) -> None:
 
 
 @router.message(Command('web_app'))
-@has_access_to_feature('meeting')  # TODO: сделать для dashboard, если нужно
+@has_access_to_feature(FeatureType.meeting)  # TODO: сделать для dashboard, если нужно
 async def open_web_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     markup = types.InlineKeyboardMarkup(

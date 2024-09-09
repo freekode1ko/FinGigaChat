@@ -12,6 +12,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
@@ -67,7 +68,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.AnalyticsMenu.__prefix__))
-@has_access_to_feature('analytics_menu')
+@has_access_to_feature(FeatureType.analytics_menu)
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню для просмотра аналитики

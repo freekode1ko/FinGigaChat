@@ -13,6 +13,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import keyboards.admin.constructors as keyboards
 from configs import config
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.database import engine
 from db.message import add_all, delete_messages, get_messages_by_type
@@ -41,7 +42,7 @@ class AdminStates(StatesGroup):
 
 
 @router.message(Command('sendtoall'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def message_to_all(message: types.Message, state: FSMContext) -> None:
     """
     Входная точка для ручной рассылки новостей на всех пользователей
@@ -116,7 +117,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(Command('admin_help'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def admin_help(message: types.Message) -> None:
     """
     Вывод в чат подсказки по командам для администратора
@@ -136,7 +137,7 @@ async def admin_help(message: types.Message) -> None:
 
 
 @router.message(Command('show_article'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def show_article(message: types.Message, state: FSMContext) -> None:
     """
     Вывод в чат новости по ссылке
@@ -197,7 +198,7 @@ async def continue_show_article(message: types.Message, state: FSMContext) -> No
 
 
 @router.message(Command('change_summary'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def change_summary(message: types.Message, state: FSMContext) -> None:
     """
     Получение ссылки на новость для изменения ее короткой версии
@@ -284,7 +285,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext) -> 
 
 
 @router.message(Command('delete_article'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def delete_article(message: types.Message, state: FSMContext) -> None:
     """
     Получение ссылки на новость от пользователя для ее удаления (снижения значимости)
@@ -372,7 +373,7 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 
 
 @router.message(Command('dailynews'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def dailynews(message: types.Message) -> None:
     """Рассылка по команде dailynews"""
     await subscriptions_newsletter(message.bot, client_hours=20, commodity_hours=20)
@@ -398,7 +399,7 @@ async def delete_newsletter_menu(message: Union[types.CallbackQuery, types.Messa
 
 
 @router.message(Command('delete_newsletter_messages'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def delete_newsletter_messages(message: types.Message) -> None:
     """
     Формирует меню для выбора типа сообщения, по которому будут удалены все сообщения с этим типом младше 48 часов

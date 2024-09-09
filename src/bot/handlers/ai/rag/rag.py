@@ -8,7 +8,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
-from constants.enums import RetrieverType
+from constants.enums import FeatureType, RetrieverType
 from constants.texts import texts_manager
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
 from db.redis import del_dialog_and_history_query, get_history_query, get_last_user_msg, update_dialog, update_history_query
@@ -32,7 +32,7 @@ class RagState(StatesGroup):
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
-@has_access_to_feature('knowledgebase', is_need_answer=False)
+@has_access_to_feature(FeatureType.knowledgebase, is_need_answer=False)
 async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -> None:
     """
     Очистка пользовательской истории диалога, если завершается состояние RagState.
@@ -48,7 +48,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
 
 
 @router.message(Command('knowledgebase'))
-@has_access_to_feature('knowledgebase')
+@has_access_to_feature(FeatureType.knowledgebase)
 async def set_rag_mode(
         message: types.Message,
         state: FSMContext,
@@ -227,7 +227,7 @@ async def ask_with_dialog(
 
 
 @router.callback_query(RegenerateResponse.filter())
-@has_access_to_feature('knowledgebase')
+@has_access_to_feature(FeatureType.knowledgebase)
 async def ask_without_dialog(
         call: types.CallbackQuery,
         callback_data: RegenerateResponse,
@@ -283,7 +283,7 @@ async def ask_without_dialog(
 
 
 @router.callback_query(F.data.endswith('like'))
-@has_access_to_feature('knowledgebase')
+@has_access_to_feature(FeatureType.knowledgebase)
 async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncSession) -> None:
     """Обработка обратной связи от пользователя."""
     if callback_query.data == 'like':

@@ -8,6 +8,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.constants import handbook_prefix
+from constants.enums import FeatureType
 from log.bot_logger import logger, user_logger
 from utils.base import bot_send_msg, show_ref_book_by_request
 from utils.decorators import has_access_to_feature
@@ -23,7 +24,7 @@ class RefBookStates(StatesGroup):
 
 
 @router.message(Command('referencebook'))
-@has_access_to_feature('admin')
+@has_access_to_feature(FeatureType.admin)
 async def reference_book(message: types.Message) -> None:
     """Команда справочник"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text

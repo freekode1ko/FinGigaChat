@@ -326,7 +326,7 @@ async def key_rate_weekly_pulse_table(
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
-@decorators.has_access_to_feature('analytics_menu')
+@decorators.has_access_to_feature(enums.FeatureType.analytics_menu)
 async def data_mart_body(message: types.Message) -> None:
     """
     Отправка витрины данных

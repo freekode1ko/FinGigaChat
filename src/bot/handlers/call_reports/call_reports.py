@@ -10,6 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import insert, select, update
 
 from configs import config
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.call_reports import get_all_dates_for_client_report, get_all_sorted_clients_for_user
 from db.models import CallReports
@@ -64,7 +65,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
 
 
 @router.message(Command('notes'))
-@has_access_to_feature('notes')
+@has_access_to_feature(FeatureType.notes)
 async def call_reports_enter_command(message: Message, state: FSMContext, ) -> None:
     """
     Входная точка для создания или просмотра call report'ов

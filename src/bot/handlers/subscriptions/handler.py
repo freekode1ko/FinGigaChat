@@ -6,6 +6,7 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 
 
 from constants import subscriptions as callback_prefixes
+from constants.enums import FeatureType
 from db.api.telegram_group import telegram_group_db
 from db.api.user_client_subscription import user_client_subscription_db
 from db.api.user_commodity_subscription import user_commodity_subscription_db
@@ -86,7 +87,7 @@ async def subscriptions_menu_callback(callback_query: types.CallbackQuery) -> No
 
 
 @router.message(Command(callback_prefixes.SUBS_MENU))
-@has_access_to_feature('subscriptions_menu')
+@has_access_to_feature(FeatureType.subscriptions_menu)
 async def subscriptions_menu(message: types.Message) -> None:
     """
     Получение меню для взаимодействия с подписками

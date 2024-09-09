@@ -129,7 +129,7 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
 
 
 @router.message(Command('newsletter'))
-@has_access_to_feature('analytics_menu')
+@has_access_to_feature(enums.FeatureType.analytics_menu)
 async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
@@ -171,13 +171,13 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
-@has_access_to_feature('news')
+@has_access_to_feature(enums.FeatureType.news)
 async def send_nearest_subjects(message: types.Message, user_msg: str, session: AsyncSession) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
 
-    if await is_user_id_has_access_to_feature(chat_id, 'clients_menu', session):
+    if await is_user_id_has_access_to_feature(chat_id, enums.FeatureType.clients_menu, session):
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
     else:
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(
@@ -186,7 +186,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str, session: 
         )
 
     buttons = [[types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)], ]
-    if await is_user_id_has_access_to_feature(chat_id, 'knowledgebase', session):
+    if await is_user_id_has_access_to_feature(chat_id, enums.FeatureType.knowledgebase, session):
         buttons.append([types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)])
 
     for subject_name in nearest_subjects:
@@ -211,7 +211,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str, session: 
     )
 
 
-@has_access_to_feature(feature='analytics_menu', is_need_answer=False)
+@has_access_to_feature(feature=enums.FeatureType.analytics_menu, is_need_answer=False)
 async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: ArticleProcess) -> None:
     """
     Отправляет сообщение с ссылкой на invaigator клиента
@@ -231,7 +231,7 @@ async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: 
         logger.error(f'ERROR *{message.chat.id}* {message.text} - {e}')
 
 
-@has_access_to_feature(feature='news', is_need_answer=False)
+@has_access_to_feature(feature=enums.FeatureType.news, is_need_answer=False)
 async def send_news(message: types.Message, user_msg: str, full_name: str) -> bool:
     """Отправка новостей по клиенту/сырьевому товару/отрасли"""
     chat_id = message.chat.id
@@ -342,7 +342,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
     await utils.base.send_full_copy_of_message(callback_query)
 
 
-@has_access_to_feature(feature='analytics_menu', is_need_answer=False)
+@has_access_to_feature(feature=enums.FeatureType.analytics_menu, is_need_answer=False)
 async def is_eco_in_message(
         message: types.Message,
         user_msg: str,
@@ -366,7 +366,7 @@ async def is_eco_in_message(
 
 
 @router.message(F.content_type.in_({'voice', 'text'}))
-@has_access_to_feature('common')
+@has_access_to_feature(enums.FeatureType.common)
 async def process_user_message(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
@@ -409,7 +409,7 @@ async def process_user_message(message: types.Message, state: FSMContext, sessio
             await send_nearest_subjects(message, user_msg, session)
 
 
-@has_access_to_feature(feature='clients_menu', is_need_answer=False)
+@has_access_to_feature(feature=enums.FeatureType.clients_menu, is_need_answer=False)
 async def is_stakeholder_in_message(
         message: types.Message,
         user_msg: str,
@@ -452,7 +452,7 @@ async def is_stakeholder_in_message(
     return True
 
 
-@has_access_to_feature(feature='news', is_need_answer=False)
+@has_access_to_feature(feature=enums.FeatureType.news, is_need_answer=False)
 async def is_commodity_in_message(
         message: types.Message,
         user_msg: str,

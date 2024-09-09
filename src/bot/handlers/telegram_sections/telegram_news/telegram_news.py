@@ -7,7 +7,7 @@ from datetime import timedelta
 from aiogram import F, types
 from aiogram.filters import Command
 
-from constants import industry
+from constants import enums, industry
 from constants.texts import texts_manager
 from db.api.telegram_section import telegram_section_db
 from handlers.telegram_sections.handler import router
@@ -40,7 +40,7 @@ async def list_sections(message: types.CallbackQuery | types.Message) -> None:
 
 
 @router.message(Command('get_tg_news'))
-@has_access_to_feature('admin')
+@has_access_to_feature(enums.FeatureType.admin)
 async def select_section_to_get_tg_articles(message: types.Message) -> None:
     """
     Получение списка разделов для получения по ним сводки новостей из тг-каналов
