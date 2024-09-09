@@ -13,11 +13,12 @@ import pandas as pd
 from aiogram import Bot, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.media_group import MediaGroupBuilder
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import module.data_transformer as dt
 from configs.config import PAGE_ELEMENTS_COUNT
-from constants import constants
+from constants import constants, enums
 from constants.constants import research_footer
 from constants.texts import texts_manager
 from db import models
@@ -570,6 +571,17 @@ def clear_text_from_url(text: str) -> str:
     :return:        Текст без ссылок.
     """
     return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
+
+
+async def check_relevance_features():
+    """Проверка соответствия между названиями фичей в коде и в базе данных."""
+    async with async_session() as session:
+        db_features = await session.scalars(select(models.Feature.name))
+        db_features = list(db_features)
+
+    for code_feature in enums.FeatureType.list():
+        if not (code_feature in db_features):
+            raise ValueError(f'Неизвестное название функциональности в коде: "{code_feature}"')
 
 
 async def is_user_id_has_access_to_feature(user_id: int, feature: str, session: AsyncSession | None = None) -> bool:

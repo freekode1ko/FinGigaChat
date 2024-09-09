@@ -180,6 +180,11 @@ class StakeholderType(str, Enum):
 class FeatureType(str, Enum):
     """Перечень функционала в боте."""
 
+    @staticmethod
+    def list() -> list:
+        """Преобразовать в отсортированный список все значения класса перечислений."""
+        return sorted(map(lambda f: f.value, FeatureType))
+
     news = 'news'
     analytics_menu = 'analytics_menu'
     quotes_menu = 'quotes_menu'
