@@ -722,7 +722,10 @@ class ResearchAPIParser:
                         timeout=10,
                     )
                 except Exception as e:
-                    self._logger.error(f'Во время запроса отчетов со страницы {params["url"]} произошла ошибка: %s', e)
+                    self._logger.error(
+                        f'Во время запроса отчетов со страницы {params["url"]} и id:{params["research_type_id"]} произошла ошибка: %s',
+                        e
+                    )
                     continue
                 status_code = req.status_code
                 content = req.content
@@ -738,7 +741,10 @@ class ResearchAPIParser:
                     content = await req.text()
                     status_code = req.status
                 except Exception as e:
-                    self._logger.error(f'Во время запроса отчетов со страницы {params["url"]} произошла ошибка: %s', e)
+                    self._logger.error(
+                        f'Во время запроса отчетов со страницы {params["url"]} и id:{params["research_type_id"]} произошла ошибка: %s',
+                        e
+                    )
                     continue
             if status_code == 200 and len(content) > self.content_len:
                 break
@@ -752,7 +758,12 @@ class ResearchAPIParser:
         reports_ids = html_parser.find_all('div', class_='hidden publication-id')
         reports_titles = html_parser.find_all('tr', class_=self.report_title_tr_pattern)
 
-        self._logger.info('CIB: получен успешный ответ со страницы c id: %s ;url: %s. И найдено %s отчетов', str(params['research_type_id']), params['url'], len(reports_ids))
+        self._logger.info(
+            'CIB: получен успешный ответ со страницы c id: %s ;url: %s. И найдено %s отчетов',
+            str(params['research_type_id']),
+            params['url'],
+            len(reports_ids)
+        )
 
         new_reports = []
         for report_id, report_name in zip(reports_ids, reports_titles):
