@@ -826,11 +826,11 @@ class UserRole(Base):
     name = Column(String(64), unique=True, nullable=False, comment='Имя роли')
     description = Column(Text, comment='Описание роли')
 
-    features = relationship('BotFeature', secondary='relation_role_to_feature', back_populates='user_roles')
+    features = relationship('Feature', secondary='relation_role_to_feature', back_populates='user_roles')
 
 
-class BotFeature(Base):
-    __tablename__ = 'bot_feature'
+class Feature(Base):
+    __tablename__ = 'feature'
     __table_args__ = {'comment': 'Таблица с перечнем функционала в боте, мб как разделом, так и функцией'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -845,4 +845,4 @@ class RelationRoleToFeature(Base):
     __table_args__ = {'comment': 'Таблица отношений между ролью пользователя и доступным ему функционалом'}
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
-    bot_feature_id = Column(ForeignKey('bot_feature.id'), primary_key=True)
+    feature_id = Column(ForeignKey('feature.id'), primary_key=True)
