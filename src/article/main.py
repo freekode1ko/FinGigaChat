@@ -103,8 +103,7 @@ class ParsePolyanalist:
             pd.read_csv(client_filepath, index_col=False)
             if client_flag
             else pd.DataFrame(
-                [],
-                columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact', 'client_score', 'cleaned_data']
+                [], columns=['link', 'title', 'date', 'text', 'text_sum', 'client', 'client_impact', 'client_score', 'cleaned_data']
             )
         )
 
