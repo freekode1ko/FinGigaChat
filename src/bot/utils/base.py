@@ -579,7 +579,7 @@ async def check_relevance_features():
         db_features = await session.scalars(select(models.Feature.name))
         db_features = list(db_features)
 
-    for code_feature in enums.FeatureType.list():
+    for code_feature in list(enums.FeatureType):
         if code_feature not in db_features:
             raise ValueError(f'Неизвестное название функциональности в коде: "{code_feature}"')
 

@@ -831,7 +831,7 @@ class UserRole(Base):
 
 class Feature(Base):
     __tablename__ = 'feature'
-    __table_args__ = {'comment': 'Таблица с перечнем функционала в боте, мб как разделом, так и функцией'}
+    __table_args__ = {'comment': 'Таблица с перечнем функционала, мб как разделом, так и функцией'}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), unique=True, nullable=False, comment='Имя функционала/раздела')

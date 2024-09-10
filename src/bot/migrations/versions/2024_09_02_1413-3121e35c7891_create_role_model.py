@@ -81,7 +81,7 @@ def upgrade() -> None:
     sa.Column('description', sa.Text(), nullable=True, comment='Описание функционала, его составляющих'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name'),
-    comment='Таблица с перечнем функционала в боте, мб как разделом, так и функцией'
+    comment='Таблица с перечнем функционала, мб как разделом, так и функцией'
     )
     op.create_table('user_role',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),

@@ -1,6 +1,6 @@
 """Вспомогательные декораторы"""
 import functools
-from typing import Callable
+from typing import Any, Callable
 
 from db.database import async_session
 from utils.base import has_access_to_feature_logic
@@ -18,7 +18,7 @@ def singleton(cls):
     return get_instance
 
 
-def has_access_to_feature(feature: str, is_need_answer: bool = True):
+def has_access_to_feature(feature: str, is_need_answer: bool = True) -> Any:
     """
     Проверка доступа пользователя к полученной функциональности.
 
