@@ -31,12 +31,13 @@ def has_access_to_feature(feature: str, is_need_answer: bool = True) -> Any:
     def func_wrapper(func: Callable):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            with_features = True if kwargs.get('features') is not None else False
 
             if session := kwargs.get('session') if kwargs else None:
-                return await has_access_to_feature_logic(feature, is_need_answer, func, args, kwargs, session)
+                return await has_access_to_feature_logic(feature, is_need_answer, with_features, func, args, kwargs, session)
             else:
                 async with async_session() as ses:
-                    return await has_access_to_feature_logic(feature, is_need_answer, func, args, kwargs, ses)
+                    return await has_access_to_feature_logic(feature, is_need_answer, with_features, func, args, kwargs, ses)
 
         return wrapper
     return func_wrapper

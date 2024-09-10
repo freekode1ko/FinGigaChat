@@ -584,41 +584,24 @@ async def check_relevance_features():
             raise ValueError(f'Неизвестное название функциональности в коде: "{code_feature}"')
 
 
-async def is_user_id_has_access_to_feature(user_id: int, feature: str, session: AsyncSession | None = None) -> bool:
+async def get_users_access_features(user: models.RegisteredUser, session: AsyncSession) -> list[str]:
     """
-    Проверка доступности ID пользователя определенной фичи в боте.
-
-    :param session:     Сессия бд.
-    :param user_id:     ID пользователя.
-    :param feature:     Проверяемая на доступность функциональность.
-    :return:            Флаг доступности. True - пользователь может работать с фичей, False - фича недоступна.
-    """
-    if session:
-        user = await get_user(session, user_id)
-        return await is_user_has_access_to_feature(user, feature, session)
-    async with async_session() as ses:
-        user = await get_user(ses, user_id)
-        return await is_user_has_access_to_feature(user, feature, ses)
-
-
-async def is_user_has_access_to_feature(user: models.RegisteredUser, feature: str, session: AsyncSession) -> bool:
-    """
-    Проверка доступности пользователю определенной фичи в боте.
+    Получение доступных пользователю фичей.
 
     :param session: Сессия бд.
     :param user:    Сущность пользователя.
-    :param feature: Проверяемая на доступность функциональность.
-    :return:        Флаг доступности. True - пользователь может работать с фичей, False - фича недоступна.
+    :return:        Список из имен доступных фичей.
     """
     role = await get_user_role(session, user)
     if not role:
-        return False
-    return feature in [f.name for f in role.features]
+        return []
+    return [f.name for f in role.features]
 
 
 async def has_access_to_feature_logic(
         feature: str,
         is_need_answer: bool,
+        with_features: bool,
         func: Callable,
         args: tuple[Any],
         kwargs: dict[str, Any],
@@ -629,6 +612,7 @@ async def has_access_to_feature_logic(
 
     :param feature:         Название функциональности, которую нужно проверить на доступность.
     :param is_need_answer:  Необходимо ли отправить ответ об "отсутствии прав на использование команды".
+    :param with_features:   Добавить ли все доступные пользователю фичи в kwargs функции.
     :param func:            Декорируемая функция.
     :param args:            Позиционные аргументы.
     :param kwargs:          Именованные аргументы.
@@ -638,7 +622,7 @@ async def has_access_to_feature_logic(
                             либо None без сообщения (задекорирована промежуточная функция).
     """
     tg_obj: types.Message | types.CallbackQuery = args[0]
-    user_id = tg_obj.from_user.id
+    user_id = tg_obj.chat.id
     full_name = tg_obj.from_user.full_name
     user_msg = tg_obj.text if isinstance(tg_obj, types.Message) else tg_obj.data
     func_name = func.__name__
@@ -649,8 +633,10 @@ async def has_access_to_feature_logic(
         user_logger.info(f'*{user_id}* Неавторизованный пользователь {full_name} - {user_msg}. Функция: {func_name}()')
         return
 
-    access = await is_user_has_access_to_feature(user, feature, session)
-    if access:
+    access_features = await get_users_access_features(user, session)
+    if feature in access_features:
+        if with_features:
+            kwargs['features'] = dict.fromkeys(access_features, True)
         return await func(*args, **kwargs)
 
     if is_need_answer:

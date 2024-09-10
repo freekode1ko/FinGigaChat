@@ -33,7 +33,7 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, is_user_id_has_access_to_feature, send_or_edit
+from utils.base import bot_send_msg, send_or_edit
 from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 
@@ -172,12 +172,12 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
 
 
 @has_access_to_feature(enums.FeatureType.news)
-async def send_nearest_subjects(message: types.Message, user_msg: str, session: AsyncSession) -> None:
+async def send_nearest_subjects(message: types.Message, user_msg: str, features: dict[str, bool]) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
 
-    if await is_user_id_has_access_to_feature(chat_id, enums.FeatureType.clients_menu, session):
+    if features.get(enums.FeatureType.clients_menu):
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
     else:
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(
@@ -186,7 +186,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str, session: 
         )
 
     buttons = [[types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)], ]
-    if await is_user_id_has_access_to_feature(chat_id, enums.FeatureType.knowledgebase, session):
+    if features.get(enums.FeatureType.knowledgebase):
         buttons.append([types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)])
 
     for subject_name in nearest_subjects:
@@ -367,7 +367,12 @@ async def is_eco_in_message(
 
 @router.message(F.content_type.in_({'voice', 'text'}))
 @has_access_to_feature(enums.FeatureType.common)
-async def process_user_message(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+async def process_user_message(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        features: dict[str, bool]
+) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
 
@@ -406,7 +411,7 @@ async def process_user_message(message: types.Message, state: FSMContext, sessio
         else:
             await state.set_state(rag.RagState.rag_query)
             await state.update_data(rag_query=user_msg)
-            await send_nearest_subjects(message, user_msg, session)
+            await send_nearest_subjects(message, user_msg, features)
 
 
 @has_access_to_feature(feature=enums.FeatureType.clients_menu, is_need_answer=False)
