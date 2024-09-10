@@ -20,4 +20,5 @@ class DatabaseMiddleware(BaseMiddleware):
         """Создания БД сессии"""
         async with self.session_maker() as session:
             data['session'] = session
+            data['features'] = {}  # словарь доступных фичей для роли
             return await handler(event, data)

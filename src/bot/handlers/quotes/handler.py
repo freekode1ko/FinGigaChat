@@ -21,7 +21,7 @@ from db.database import engine
 from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
-from utils import weekly_pulse
+from utils import decorators, weekly_pulse
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
@@ -76,6 +76,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.QuotesMenu.__prefix__))
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню котировки
@@ -83,15 +84,10 @@ async def main_menu_command(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await utils.base.is_user_has_access(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        await main_menu(message)
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await main_menu(message)
 
 
-# ['Курсы валют', 'курсы', 'валюты', 'рубль', 'доллар', 'юань', 'евро']
 @router.callback_query(callbacks.FX.filter())
 async def exchange_info(callback_query: types.CallbackQuery, callback_data: callbacks.FX) -> None:
     """
@@ -111,6 +107,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def exchange_info_command(message: types.Message) -> None:
     """
     Вывод в чат информации по котировкам связанной с валютой и их курсом
@@ -224,7 +221,7 @@ async def equity(callback_query: types.CallbackQuery, callback_data: callbacks.E
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
 
-    await not_realized_function(callback_query)
+    await not_realized_function(callback_query)  # TODO: когда будет реализовано, добавить ограничения по правам доступа
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
@@ -246,7 +243,6 @@ def format_cell_in_commodity_df(value: str | float | None) -> str | None:
     return frmt_value
 
 
-# ['Металлы', 'сырьевые товары', 'commodities']
 @router.callback_query(callbacks.Commodities.filter())
 async def metal_info(callback_query: types.CallbackQuery, callback_data: callbacks.Commodities) -> None:
     """
@@ -266,6 +262,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def metal_info_command(
         message: types.Message,
         with_table: bool = True,
@@ -336,7 +333,6 @@ async def get_fi_item_data(callback_query: types.CallbackQuery, callback_data: c
             await not_realized_function(callback_query)
 
 
-# ['облигации', 'бонды', 'офз']
 async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData) -> None:
     """
     Вывод в чат информации по котировкам связанной с облигациями
@@ -355,6 +351,7 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def bonds_info_command(message: types.Message) -> None:
     """
     Вывод в чат информации по котировкам связанной с облигациями
@@ -388,7 +385,6 @@ async def bonds_info_command(message: types.Message) -> None:
     )
 
 
-# ['экономика', 'ставки', 'ключевая ставка', 'кс', 'монетарная политика']
 @router.callback_query(callbacks.Eco.filter())
 async def economy_info(callback_query: types.CallbackQuery, callback_data: callbacks.Eco) -> None:
     """
@@ -408,6 +404,7 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
+@decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def economy_info_command(message: types.Message) -> None:
     """
     Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)

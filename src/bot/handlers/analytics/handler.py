@@ -12,13 +12,15 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import analytics as callback_prefixes
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
-from utils.base import bot_send_msg, is_user_has_access, send_or_edit
+from utils.base import bot_send_msg, send_or_edit
+from utils.decorators import has_access_to_feature
 from utils.watermark import add_watermark_cli
 
 router = Router()
@@ -66,6 +68,7 @@ async def main_menu_callback(callback_query: types.CallbackQuery, callback_data:
 
 
 @router.message(Command(callbacks.AnalyticsMenu.__prefix__))
+@has_access_to_feature(FeatureType.analytics_menu)
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню для просмотра аналитики
@@ -73,12 +76,8 @@ async def main_menu_command(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        await main_menu(message)
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    await main_menu(message)
 
 
 @router.callback_query(callbacks.GetFullResearch.filter())

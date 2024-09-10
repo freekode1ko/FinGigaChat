@@ -1,29 +1,30 @@
 """Файл с дополнительными функциями"""
 import ast
 import asyncio
-import json
 import logging
 import os
 import re
 from datetime import date, datetime, timedelta
 from math import ceil
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import pandas as pd
 from aiogram import Bot, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.utils.media_group import MediaGroupBuilder
 from sqlalchemy import select
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import module.data_transformer as dt
 from configs.config import PAGE_ELEMENTS_COUNT
-from constants import constants
+from constants import constants, enums
 from constants.constants import research_footer
 from constants.texts import texts_manager
 from db import models
 from db.database import async_session, engine
+from db.user import get_user, get_user_role
+from log.bot_logger import user_logger
 from log.logger_base import Logger
 
 
@@ -105,39 +106,6 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
         msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
     return msg
-
-
-async def is_user_has_access(user: str, check_email: bool = False) -> bool:
-    """
-    Проверка, пользователя на наличие в списках на доступ
-
-    :param user: Строковое значение по пользователю в формате json. message.from_user.as_json()
-    :param check_email: Флаг, нужно ли проверять наличие почты пользователя в бд
-    return Булево значение на наличие пользователя в списке
-    """
-    user_id = json.loads(user)['id']
-    async with async_session() as session:
-        result = await session.execute(select(models.RegisteredUser.user_email).where(models.RegisteredUser.user_id == user_id))
-        try:
-            user_email = result.scalar_one()
-            if not check_email:
-                return True
-            return bool(user_email)
-        except NoResultFound:
-            return False
-
-
-async def is_admin_user(user: dict) -> bool:
-    """
-    Проверка прав пользователя, что он является admin или owner
-
-    :param user: Словарь с информацией о пользователе (json.loads(aiogram.types.Message.from_user.model_dump_json()))
-    """
-    user_id = user['id']
-    query = select(models.RegisteredUser.user_type).where(models.RegisteredUser.user_id == user_id)
-    async with async_session() as session:
-        user_type = await session.scalar(query)
-    return user_type == 'admin' or user_type == 'owner'
 
 
 def read_curdatetime() -> datetime:
@@ -603,3 +571,75 @@ def clear_text_from_url(text: str) -> str:
     :return:        Текст без ссылок.
     """
     return re.sub(r'<a href="[^"]*">[^<]*</a>(, )?', '', text)
+
+
+async def check_relevance_features():
+    """Проверка соответствия между названиями фичей в коде и в базе данных."""
+    async with async_session() as session:
+        db_features = await session.scalars(select(models.Feature.name))
+        db_features = list(db_features)
+
+    for code_feature in list(enums.FeatureType):
+        if code_feature not in db_features:
+            raise ValueError(f'Неизвестное название функциональности в коде: "{code_feature}"')
+
+
+async def get_users_access_features(user: models.RegisteredUser, session: AsyncSession) -> list[str]:
+    """
+    Получение доступных пользователю фичей.
+
+    :param session: Сессия бд.
+    :param user:    Сущность пользователя.
+    :return:        Список из имен доступных фичей.
+    """
+    role = await get_user_role(session, user)
+    if not role:
+        return []
+    return [f.name for f in role.features]
+
+
+async def has_access_to_feature_logic(
+        feature: str,
+        is_need_answer: bool,
+        with_features: bool,
+        func: Callable,
+        args: tuple[Any],
+        kwargs: dict[str, Any],
+        session: AsyncSession,
+) -> Any:
+    """
+    Логика декоратора has_access_to_feature.
+
+    :param feature:         Название функциональности, которую нужно проверить на доступность.
+    :param is_need_answer:  Необходимо ли отправить ответ об "отсутствии прав на использование команды".
+    :param with_features:   Добавить ли все доступные пользователю фичи в kwargs функции.
+    :param func:            Декорируемая функция.
+    :param args:            Позиционные аргументы.
+    :param kwargs:          Именованные аргументы.
+    :param session:         Сессия бд.
+    :return:                Обработчик, если пользователю доступна функциональность,
+                            либо None с сообщением о недоступности,
+                            либо None без сообщения (задекорирована промежуточная функция).
+    """
+    tg_obj: types.Message | types.CallbackQuery = args[0]
+    user_id = tg_obj.chat.id
+    full_name = tg_obj.from_user.full_name
+    user_msg = tg_obj.text if isinstance(tg_obj, types.Message) else tg_obj.data
+    func_name = func.__name__
+
+    user = await get_user(session, user_id)
+    if not user:
+        await tg_obj.answer('Неавторизованный пользователь. Отказано в доступе.')
+        user_logger.info(f'*{user_id}* Неавторизованный пользователь {full_name} - {user_msg}. Функция: {func_name}()')
+        return
+
+    access_features = await get_users_access_features(user, session)
+    if feature in access_features:
+        if with_features:
+            kwargs['features'] = dict.fromkeys(access_features, True)
+        return await func(*args, **kwargs)
+
+    if is_need_answer:
+        user_logger.warning(f'*{user_id}* {full_name} - {user_msg} : недостаточно прав. Функция: {func_name}()')
+        await tg_obj.answer('У Вас недостаточно прав для использования данной команды.')
+    # без отправки сообщения, если это промежуточная функция (обработчик в обработчике)

@@ -8,7 +8,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
-from constants.enums import RetrieverType
+from constants.enums import FeatureType, RetrieverType
 from constants.texts import texts_manager
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
 from db.redis import del_dialog_and_history_query, get_history_query, get_last_user_msg, update_dialog, update_history_query
@@ -16,7 +16,8 @@ from handlers.ai.handler import router
 from keyboards.rag.callbacks import RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
-from utils.base import clear_text_from_url, is_user_has_access
+from utils.base import clear_text_from_url
+from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 from utils.rag_utils.rag_router import RAGRouter
@@ -31,6 +32,7 @@ class RagState(StatesGroup):
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
+@has_access_to_feature(FeatureType.knowledgebase, is_need_answer=False)
 async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -> None:
     """
     Очистка пользовательской истории диалога, если завершается состояние RagState.
@@ -46,6 +48,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
 
 
 @router.message(Command('knowledgebase'))
+@has_access_to_feature(FeatureType.knowledgebase)
 async def set_rag_mode(
         message: types.Message,
         state: FSMContext,
@@ -59,35 +62,30 @@ async def set_rag_mode(
     :param session:     Асинхронная сессия базы данных.
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    await state.set_state(RagState.rag_mode)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        await state.set_state(RagState.rag_mode)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-
-        buttons = [
-            [
-                types.KeyboardButton(text='Очистить историю диалога'),
-                types.KeyboardButton(text=END_BUTTON_TXT),
-            ]
+    buttons = [
+        [
+            types.KeyboardButton(text='Очистить историю диалога'),
+            types.KeyboardButton(text=END_BUTTON_TXT),
         ]
-        keyboard = types.ReplyKeyboardMarkup(
-            keyboard=buttons,
-            resize_keyboard=True,
-            input_field_placeholder=texts_manager.RAG_FINISH_STATE,
-            one_time_keyboard=True
-        )
+    ]
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=buttons,
+        resize_keyboard=True,
+        input_field_placeholder=texts_manager.RAG_FINISH_STATE,
+        one_time_keyboard=True
+    )
 
-        data = await state.get_data()
-        first_user_query = data.get('rag_query', None)
+    data = await state.get_data()
+    first_user_query = data.get('rag_query', None)
 
-        if first_user_query:
-            await message.answer(texts_manager.RAG_FIRST_USER_QUERY.format(query=first_user_query), reply_markup=keyboard)
-            await ask_with_dialog(message, state, session, first_user_query)
-        else:
-            await message.answer(texts_manager.RAG_START_STATE, reply_markup=keyboard)
-
+    if first_user_query:
+        await message.answer(texts_manager.RAG_FIRST_USER_QUERY.format(query=first_user_query), reply_markup=keyboard)
+        await ask_with_dialog(message, state, session, first_user_query)
     else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+        await message.answer(texts_manager.RAG_START_STATE, reply_markup=keyboard)
 
 
 @router.message(RagState.rag_mode)
@@ -229,6 +227,7 @@ async def ask_with_dialog(
 
 
 @router.callback_query(RegenerateResponse.filter())
+@has_access_to_feature(FeatureType.knowledgebase)
 async def ask_without_dialog(
         call: types.CallbackQuery,
         callback_data: RegenerateResponse,
@@ -284,6 +283,7 @@ async def ask_without_dialog(
 
 
 @router.callback_query(F.data.endswith('like'))
+@has_access_to_feature(FeatureType.knowledgebase)
 async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncSession) -> None:
     """Обработка обратной связи от пользователя."""
     if callback_query.data == 'like':

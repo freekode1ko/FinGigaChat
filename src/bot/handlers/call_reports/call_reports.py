@@ -10,13 +10,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import insert, select, update
 
 from configs import config
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.call_reports import get_all_dates_for_client_report, get_all_sorted_clients_for_user
 from db.models import CallReports
 from handlers.call_reports.call_report_create.utils import validate_and_parse_date
 from handlers.call_reports.callbackdata import CRCreateNew, CRMainMenu, CRMenusEnum
 from log.bot_logger import logger
-from utils.base import is_user_has_access
+from utils.decorators import has_access_to_feature
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())
@@ -64,6 +65,7 @@ async def main_menu(message: Message, edit: bool = False) -> None:
 
 
 @router.message(Command('notes'))
+@has_access_to_feature(FeatureType.notes)
 async def call_reports_enter_command(message: Message, state: FSMContext, ) -> None:
     """
     Входная точка для создания или просмотра call report'ов
@@ -72,8 +74,7 @@ async def call_reports_enter_command(message: Message, state: FSMContext, ) -> N
     :param state: Объект, который хранит состояние FSM для пользователя
     """
     await state.clear()
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        await main_menu(message)
+    await main_menu(message)
 
 
 @router.callback_query(CRMainMenu.filter(F.menu == CRMenusEnum.main))
