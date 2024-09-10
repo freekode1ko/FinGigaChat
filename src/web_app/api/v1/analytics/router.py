@@ -38,7 +38,7 @@ async def get_sections(section_id: int, page: Optional[int] = 1, size: Optional[
 
     fake = Faker()
     return DetailAnalyticsResponse(
-        analytic_id=fake.unique.random_int(min=1, max=999999),
+        analytic_id=section_id,
         title=fake.sentence(nb_words=10),
         analytics=[
             AnalyticsElement(
