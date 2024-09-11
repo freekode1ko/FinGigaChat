@@ -112,7 +112,7 @@ async def tg_newsletter(
     message.add_all(saved_messages)
 
 
-async def subscriptions_newsletter(bot: Bot, user_df: pd.DataFrame, **kwargs) -> None:
+async def subscriptions_newsletter(bot: Bot, user_df: pd.DataFrame | None, **kwargs) -> None:
     """
     Рассылка новостей по подпискам на клиентов, сырье, отрасли
 

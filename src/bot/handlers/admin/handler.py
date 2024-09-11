@@ -376,7 +376,7 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 @has_access_to_feature(FeatureType.admin)
 async def dailynews(message: types.Message) -> None:
     """Рассылка по команде dailynews"""
-    await subscriptions_newsletter(message.bot, client_hours=20, commodity_hours=20)
+    await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
     user_logger.warning(f'*{message.from_user.id}* : завершена рассылка от админа')
 
 
