@@ -112,11 +112,12 @@ async def tg_newsletter(
     message.add_all(saved_messages)
 
 
-async def subscriptions_newsletter(bot: Bot, **kwargs) -> None:
+async def subscriptions_newsletter(bot: Bot, user_df: pd.DataFrame, **kwargs) -> None:
     """
     Рассылка новостей по подпискам на клиентов, сырье, отрасли
 
     :param bot: тг бот, который будет отправлять сообщения пользователям
+    :param user_df: датафрейм с данными о пользователях, которым будет отправлена рассылка
 
     Kwargs:
         - newsletter_timedelta (datetime.timedelta): промежуток, за который выгружаются последние новости
