@@ -69,41 +69,29 @@ class UserStatistics:
         stat_df = pd.read_sql_query(query, con=self.engine)
         return stat_df
 
-    @staticmethod
-    def save_stat_excel(save_df: pd.DataFrame, file_name: Path, *args, **kwargs) -> None:
+    def collect_bot_usage_over_period(self, file_path: Path, from_date: date = date.min, to_date: date = date.max) -> None:
         """
-        Сохраняет передаваемый DataFrame в xlsx формате в папке config.STATISTICS_PATH
+        Формирует статистику использования бота
 
-        :param save_df: DataFrame, данные которого будут сохранены в формате xlsx
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH с сохраненными данными
-        """
-        stat_path = Path(config.STATISTICS_PATH)
+        Сохраняет его в file_path в формате xlsx
 
-        if not stat_path.exists():
-            stat_path.mkdir()
-
-        file_save_path = Path(stat_path, file_name)
-        save_df.to_excel(file_save_path, *args, **kwargs)
-
-    def collect_bot_usage_over_period(self, file_name: Path, from_date: date = date.min, to_date: date = date.max) -> None:
-        """
-        Формирует статистику использования бота и сохраняет ее в config.STATISTICS_PATH в файле file_name в формате xlsx
-
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH с данными собранной статистики
+        :param file_path: Путь до файла для сохранения статистики
         :param from_date: - указывает начало периода, с которого будет собираться статистика (включительно)
         :param to_date: - указывает конец периода, до которого будет собираться статистика (включительно)
         """
         stat_df = self.get_stat(from_date=from_date, to_date=to_date)
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Статистика использования')
+        stat_df.to_excel(file_path, sheet_name='Статистика использования')
 
-    def collect_users_data(self, file_name: Path) -> None:
+    def collect_users_data(self, file_path: Path) -> None:
         """
-        Формирует справочник пользователей и сохраняет его в config.STATISTICS_PATH в файле file_name в формате xlsx
+        Формирует справочник пользователей
 
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH со списков пользователей системы
+        Сохраняет его в file_path в формате xlsx
+
+        :param file_path: Путь до файла для сохранения статистики
         """
         stat_df = self.get_users()
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Справочник пользователей')
+        stat_df.to_excel(file_path, sheet_name='Справочник пользователей')
 
     def _collect_activity(self) -> pd.DataFrame:
         """
@@ -134,12 +122,12 @@ class UserStatistics:
         """
         Собирает статистику активности пользователей.
 
-        Сохраняет его в config.STATISTICS_PATH в файле file_name в формате xlsx
+        Сохраняет его в file_path в формате xlsx
 
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH со списков пользователей системы
+        :param file_path: Путь до файла для сохранения статистики
         """
         stat_df = self._collect_activity()
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Промты', index=False)
+        stat_df.to_excel(file_name, sheet_name='Промты', index=False)
 
     def _collect_users_subscriptions(self) -> pd.DataFrame:
         """
@@ -203,12 +191,12 @@ class UserStatistics:
         """
         Собирает статистику подписок пользователей.
 
-        Сохраняет его в config.STATISTICS_PATH в файле file_name в формате xlsx
+        Сохраняет его в file_path в формате xlsx
 
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH со списков пользователей системы
+        :param file_path: Путь до файла для сохранения статистики
         """
         stat_df = self._collect_users_subscriptions()
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Подписки', index=False)
+        stat_df.to_excel(file_name, sheet_name='Подписки', index=False)
 
     def _collect_handler_calls(self) -> pd.DataFrame:
         """
@@ -238,13 +226,13 @@ class UserStatistics:
         )
         return pd.read_sql_query(query, con=self.engine)
 
-    def collect_handler_calls(self, file_name: Path) -> None:
+    def collect_handler_calls(self, file_path: Path) -> None:
         """
         Собирает статистику вызовов обработчиков пользователями.
 
-        Сохраняет его в config.STATISTICS_PATH в файле file_name в формате xlsx
+        Сохраняет его в file_path в формате xlsx
 
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH со списков пользователей системы
+        :param file_path: Путь до файла для сохранения статистики
         """
         stat_df = self._collect_handler_calls()
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Функции', index=False)
+        stat_df.to_excel(file_path, sheet_name='Функции', index=False)
