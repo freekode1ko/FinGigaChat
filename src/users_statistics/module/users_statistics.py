@@ -11,6 +11,7 @@ from configs import config
 class UserStatistics:
     """Класс сборщика статистики использования бота пользователями"""
 
+    # FIXME можно унести в env
     ignore_tg_ids: list[int] = [
         342297636,
         1168775893,

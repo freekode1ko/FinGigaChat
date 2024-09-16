@@ -44,10 +44,10 @@ def collect_stat(collect: Callable[[Path], None], output_fname: str, logger: Log
     try:
         logger.info(f'Начало сборки полной статистики {collect.__name__}')
         collect(stat_save_path)
-        logger.info(f'Сборка полной статистики {collect.__name__} завершена')
     except Exception as e:
         logger.error(f'Ошибка при сборке полной статистики {collect.__name__}: %s', e)
     else:
+        logger.info(f'Сборка полной статистики {collect.__name__} завершена')
         return stat_save_path
 
 
@@ -82,11 +82,8 @@ def collect_stat_and_send(runner: UserStatistics, logger: Logger.logger) -> None
 
     files_to_send = []
     for collect, output in stats_funcs:
-        try:
-            fname = collect_stat(collect, output, logger)
-        except Exception as e:
-            logger.error(f'При сборке статистики {collect.__name__} произошла ошибка: {e}')
-        else:
+        fname = collect_stat(collect, output, logger)
+        if fname is not None:
             files_to_send.append(fname)
 
     try:
