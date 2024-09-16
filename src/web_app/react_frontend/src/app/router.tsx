@@ -6,8 +6,10 @@ import {
   DashboardPage,
   MeetingsPage,
   NewsPage,
+  NotesPage,
   QuoteDetailsPage,
   QuotesPage,
+  SubscriptionsPage,
 } from '@/pages/ui'
 
 import { baseLayout } from './layouts/base'
@@ -22,6 +24,14 @@ export const appRouter = () =>
         {
           path: '/news',
           element: <NewsPage />,
+        },
+        {
+          path: '/subscriptions',
+          element: (
+            <ProtectedWrapper showHomeButton>
+              <SubscriptionsPage />
+            </ProtectedWrapper>
+          ),
         },
         {
           path: '/analytics',
@@ -46,6 +56,10 @@ export const appRouter = () =>
         {
           path: '/',
           element: <DashboardPage />,
+        },
+        {
+          path: '/notes',
+          element: <NotesPage />,
         },
         {
           path: '/meetings',

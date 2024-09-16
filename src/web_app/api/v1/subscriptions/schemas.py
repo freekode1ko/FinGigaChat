@@ -20,6 +20,7 @@ class Subscription(BaseModel):
     name: str
     subscription_id: Optional[int] = None
     subscription_type: Optional[SubscriptionTypeEnum] = None
+    is_subscribed: Optional[bool] = None
     nearest_menu: list['Subscription'] = []
 
 

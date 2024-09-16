@@ -5,6 +5,8 @@ import {
   ListChecks,
   type LucideIcon,
   NewspaperIcon,
+  NotebookPen,
+  Podcast,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -30,6 +32,11 @@ export const menuItems: Array<MenuItem> = [
     icon: NewspaperIcon,
   },
   {
+    name: 'Подписки',
+    path: '/subscriptions',
+    icon: Podcast,
+  },
+  {
     name: 'Аналитика',
     path: '/analytics',
     icon: FileBarChart,
@@ -38,5 +45,10 @@ export const menuItems: Array<MenuItem> = [
     name: 'Встречи',
     path: '/meetings',
     icon: ListChecks,
+  },
+  {
+    name: 'Заметки',
+    path: '/notes',
+    icon: NotebookPen,
   },
 ]

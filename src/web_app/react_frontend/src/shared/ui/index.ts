@@ -63,4 +63,5 @@ export {
   TableHeader,
   TableRow,
 } from './table'
+export { Textarea } from './textarea'
 export { Paragraph, TypographyH1, TypographyH2 } from './typography'
