@@ -3,7 +3,7 @@ import React from 'react'
 const useInfiniteScroll = () => {
   const [page, setPage] = React.useState<number>(1)
   const observer = React.useRef<Optional<IntersectionObserver>>(null)
-  const triggerRef = React.useCallback((node: HTMLDivElement) => {
+  const triggerRef = React.useCallback((node: HTMLButtonElement) => {
     if (observer.current) observer.current.disconnect()
     observer.current = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {

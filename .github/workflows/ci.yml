@@ -1,4 +1,4 @@
-name: CI_flake8_pylint
+name: CI_main
 
 on:
   push:
@@ -13,26 +13,96 @@ on:
       - "sources/**"
 
 jobs:
-  build:
+  testing:
+    runs-on: self-hosted
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5005:5005
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd="pg_isready -U test_user" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
+
     strategy:
       fail-fast: false
       matrix:
-        dir: ['src/article', 'src/article_online', 'src/bot', 'src/parser_monitoring', 'src/quotes', 'src/research', 'src/users_statistics']
-    runs-on: self-hosted
+        service:
+          - service_path: 'src/article'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/article_online'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/bot'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/parser_monitoring'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/quotes'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/research'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/users_statistics'
+            with_flake: true
+            with_pylint: false
+            with_tests: false
+
+          - service_path: 'src/web_app'
+            with_flake: false
+            with_pylint: false
+            with_tests: true
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: '3.10'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install poetry
           poetry install
+
       - name: Run flake8
+        if: matrix.service.with_flake
         run: |
-          poetry run python -m flake8 ${{ matrix.dir }}
-      #- name: Run pylint
-      #  run: |
-      #    poetry run python -m pylint ${{ matrix.dir }}
+          poetry run python -m flake8 ${{ matrix.service.service_path }}
+
+      - name: Run pylint
+        if: matrix.service.with_pylint
+        run: |
+          poetry run python -m pylint ${{ matrix.service.service_path }}
+
+      - name: Run pytest
+        if: matrix.service.with_tests
+        env:
+          PSQL_ENGINE: postgresql://test_user:test_password@localhost:5005/test_db
+          BOT_API_TOKEN: 7157864383:AAEfeSr7cGaY61I1NsaWMKLi322WwiaHbY5
+        run: |
+          poetry run python -m pytest ${{ matrix.service.service_path }}

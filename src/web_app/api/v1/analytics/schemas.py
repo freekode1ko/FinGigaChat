@@ -13,9 +13,17 @@ class AnalyticsElement(BaseModel):
     date: str
 
 
+class DetailAnalyticsResponse(BaseModel):
+    """Схема для отображения детализированной аналитики"""
+
+    analytic_id: int
+    title: str
+    analytics: list[AnalyticsElement]
+
+
 class AnalyticsMenu(BaseModel):
     """Схема для отображения меню в разделе аналитика"""
 
-    name: str
+    title: str
     analytics_menu_id: Optional[int] = None
     nearest_menu: list['AnalyticsMenu'] = []

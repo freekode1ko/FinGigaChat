@@ -2,6 +2,7 @@ import { NewsList } from '@/widgets/news-list'
 import { useGetInfiniteNewsQuery } from '@/entities/news'
 import { useInfiniteScroll } from '@/shared/lib'
 import { PAGE_SIZE } from '@/shared/model'
+import { ShowMoreButton } from '@/shared/ui'
 
 const NewsPage = () => {
   const { page, triggerRef } = useInfiniteScroll()
@@ -17,7 +18,7 @@ const NewsPage = () => {
         showSkeleton={isFetching}
         showSendReportButton
       />
-      <div ref={triggerRef} />
+      <ShowMoreButton ref={triggerRef} />
     </>
   )
 }

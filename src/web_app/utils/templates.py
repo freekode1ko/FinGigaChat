@@ -1,3 +1,5 @@
 from fastapi.templating import Jinja2Templates
 
-templates = Jinja2Templates(directory="frontend/templates")
+from constants import constants
+
+templates = Jinja2Templates(directory=constants.PROJECT_DIR / 'frontend' / 'templates')
