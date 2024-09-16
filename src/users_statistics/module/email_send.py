@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Sequence
+
 from typing_extensions import Self
 
 
@@ -54,7 +55,7 @@ class SmtpSend:
         msg.attach(MIMEText(message, 'plain'))
 
         for f in files or []:
-            with open(f, "rb") as fil:
+            with open(f, 'rb') as fil:
                 part = MIMEApplication(
                     fil.read(),
                     Name=f.name,

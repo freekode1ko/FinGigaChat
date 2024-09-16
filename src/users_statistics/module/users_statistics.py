@@ -101,20 +101,22 @@ class UserStatistics:
         """
         func_names = "','".join(self.func_names)
         query = (
-            "SELECT registered_user.username AS telegram_user_name, "
-            "   user_log.user_id,"
-            "   registered_user.user_email,"
-            "   DATE(date) AS date,"
-            "   COUNT(CASE WHEN level='INFO' THEN 1 END) AS qty_of_prompts "
-            "FROM user_log "
-            "JOIN registered_user ON registered_user.user_id = user_log.user_id "
-            "WHERE (level = 'INFO' OR level = 'DEBUG') "
-            f"   AND func_name in ('{func_names}') "
-            f"   AND DATE(date) >= '{self.from_date}' -- замените на вашу начальную дату\n"
-            "   AND DATE(date) <= current_date -- замените на вашу конечную дату\n"
-            f"   AND  user_log.user_id not in({','.join(str(i) for i in self.ignore_tg_ids)}) "
-            "GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email "
-            "ORDER BY date DESC;"
+            f"""
+            SELECT registered_user.username AS telegram_user_name,
+               user_log.user_id,
+               registered_user.user_email,
+               DATE(date) AS date,
+               COUNT(CASE WHEN level='INFO' THEN 1 END) AS qty_of_prompts
+            FROM user_log
+            JOIN registered_user ON registered_user.user_id = user_log.user_id
+            WHERE (level = 'INFO' OR level = 'DEBUG')
+               AND func_name in ('{func_names}')
+               AND DATE(date) >= '{self.from_date}' -- замените на вашу начальную дату
+               AND DATE(date) <= current_date -- замените на вашу конечную дату
+               AND  user_log.user_id not in({','.join(str(i) for i in self.ignore_tg_ids)})
+            GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
+            ORDER BY date DESC;
+            """
         )
         return pd.read_sql_query(query, con=self.engine)
 
@@ -136,54 +138,56 @@ class UserStatistics:
         :return: pd.DataFrame со статистикой
         """
         query = (
-            "SELECT "
-            "    wh.username,"
-            "    wh.user_email,"
-            "    u.user_id,"
-            "    c.qty_client_subs,"
-            "    r.qty_research_subs,"
-            "    i.qty_industry_subs,"
-            "    com.qty_commodity_subs,"
-            "    t.qty_tg_subs,"
-            "    current_date "
-            "FROM "
-            "    (SELECT DISTINCT user_id FROM user_client_subscription"
-            "     UNION"
-            "     SELECT DISTINCT user_id FROM user_research_subscription"
-            "     UNION"
-            "     SELECT DISTINCT user_id FROM user_industry_subscription"
-            "     UNION"
-            "     SELECT DISTINCT user_id FROM user_commodity_subscription"
-            "     UNION"
-            "     SELECT DISTINCT user_id FROM user_telegram_subscription) AS u\n"
-            "LEFT JOIN "
-            "    (SELECT user_id, COUNT(*) AS qty_client_subs"
-            "     FROM user_client_subscription"
-            "     GROUP BY user_id) AS c ON u.user_id = c.user_id\n"
-            "LEFT JOIN"
-            "    (SELECT user_id, COUNT(*) AS qty_research_subs"
-            "     FROM user_research_subscription"
-            "     GROUP BY user_id) AS r ON u.user_id = r.user_id\n"
-            "LEFT JOIN"
-            "    (SELECT user_id, COUNT(*) AS qty_industry_subs"
-            "     FROM user_industry_subscription"
-            "     GROUP BY user_id) AS i ON u.user_id = i.user_id\n"
-            "LEFT JOIN"
-            "    (SELECT user_id, COUNT(*) AS qty_commodity_subs"
-            "     FROM user_commodity_subscription"
-            "     GROUP BY user_id) AS com ON u.user_id = com.user_id\n"
-            "LEFT JOIN"
-            "    (SELECT user_id, COUNT(*) AS qty_tg_subs"
-            "     FROM user_telegram_subscription"
-            "     GROUP BY user_id) AS t ON u.user_id = t.user_id\n"
-            "LEFT JOIN registered_user wh on u.user_id = wh.user_id\n"
-            "WHERE COALESCE("
-            "   c.qty_client_subs,"
-            "   r.qty_research_subs,"
-            "   i.qty_industry_subs,"
-            "   com.qty_commodity_subs,"
-            "   t.qty_tg_subs) IS NOT NULL "
-            f" AND u.user_id not in({','.join(str(i) for i in self.ignore_tg_ids)})"
+            f"""
+            SELECT
+                wh.username,
+                wh.user_email,
+                u.user_id,
+                c.qty_client_subs,
+                r.qty_research_subs,
+                i.qty_industry_subs,
+                com.qty_commodity_subs,
+                t.qty_tg_subs,
+                current_date
+            FROM
+                (SELECT DISTINCT user_id FROM user_client_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_research_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_industry_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_commodity_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_telegram_subscription) AS u
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_client_subs
+                 FROM user_client_subscription
+                 GROUP BY user_id) AS c ON u.user_id = c.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_research_subs
+                 FROM user_research_subscription
+                 GROUP BY user_id) AS r ON u.user_id = r.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_industry_subs
+                 FROM user_industry_subscription
+                 GROUP BY user_id) AS i ON u.user_id = i.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_commodity_subs
+                 FROM user_commodity_subscription
+                 GROUP BY user_id) AS com ON u.user_id = com.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_tg_subs
+                 FROM user_telegram_subscription
+                 GROUP BY user_id) AS t ON u.user_id = t.user_id
+            LEFT JOIN registered_user wh on u.user_id = wh.user_id
+            WHERE COALESCE(
+               c.qty_client_subs,
+               r.qty_research_subs,
+               i.qty_industry_subs,
+               com.qty_commodity_subs,
+               t.qty_tg_subs) IS NOT NULL
+            AND u.user_id not in({','.join(str(i) for i in self.ignore_tg_ids)})
+            """
         )
         return pd.read_sql_query(query, con=self.engine)
 
@@ -207,20 +211,20 @@ class UserStatistics:
         func_names = "','".join(self.func_names)
         query = (
             f"""SELECT * FROM (
-                  SELECT registered_user.username AS telegram_user_name,
-                         user_log.user_id,
-                         registered_user.user_email,
-                         DATE(date) AS date,
-                         COUNT(CASE WHEN level = 'INFO' THEN 1 END) AS Qty_func_call
-                  FROM user_log
-                           JOIN registered_user ON registered_user.user_id = user_log.user_id
-                  WHERE (level = 'INFO' OR level = 'DEBUG')
-                    And func_name not in ('{func_names}')
-                    AND DATE(date) >= '{self.from_date}' -- замените на вашу начальную дату
-                    AND DATE(date) <= current_date -- замените на вашу конечную дату
-					AND  user_log.user_id not in ({','.join(str(i) for i in self.ignore_tg_ids)})
-                  GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
-                  ORDER BY date DESC
+                    SELECT registered_user.username AS telegram_user_name,
+                        user_log.user_id,
+                        registered_user.user_email,
+                        DATE(date) AS date,
+                        COUNT(CASE WHEN level = 'INFO' THEN 1 END) AS Qty_func_call
+                    FROM user_log
+                        JOIN registered_user ON registered_user.user_id = user_log.user_id
+                    WHERE (level = 'INFO' OR level = 'DEBUG')
+                        AND func_name not in ('{func_names}')
+                        AND DATE(date) >= '{self.from_date}' -- замените на вашу начальную дату
+                        AND DATE(date) <= current_date -- замените на вашу конечную дату
+                        AND user_log.user_id not in ({','.join(str(i) for i in self.ignore_tg_ids)})
+                    GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
+                    ORDER BY date DESC
                 ) as q
                 WHERE Qty_func_call > 0"""
         )
