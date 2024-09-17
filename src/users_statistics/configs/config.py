@@ -34,5 +34,15 @@ MAIL_PASS: str = env.str('MAIL_RU_PASSWORD', default='')
 MAIL_STMP_HOST = 'smtp.mail.ru'
 MAIL_STMP_PORT = 465
 
-STATISTICS_RECIPIENTS = env.list('STATISTICS_RECIPIENTS', delimiter=',', default=[])
+STATISTICS_RECIPIENTS = env.list('STATISTICS_RECIPIENTS', delimiter=',', default=[])  # Почты взять у Никиты
+STATISTICS_IGNORE_TG_IDS = env.list('STATISTICS_IGNORE_TG_IDS', delimiter=',', default=[])  # это tg_id разрабов
+# Взаимодействие пользователя с гигой
+STATISTICS_PROMPT_FUNCTIONS = env.list('STATISTICS_PROMPT_FUNCTIONS', delimiter=',', default=[
+    'giga_ask',
+    'ask_giga_chat',
+    '_request_to_rag_api',
+    '_request_to_giga',
+    '_request_to_api',
+])
+STATISTICS_FROM_DATE = env.date('STATISTICS_FROM_DATE', default='2023-01-01')  # С какой даты собирается статистика
 STATISTICS_SUBJECT = 'Статистика по ai-помощнику банкира'
