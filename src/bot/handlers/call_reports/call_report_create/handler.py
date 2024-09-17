@@ -1,4 +1,6 @@
 """Handlers для создания call report'ов"""
+import datetime
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -22,7 +24,7 @@ class CallReportsStates(StatesGroup):
     enter_clint_name -> enter_date -> enter_text_message
     """
 
-    enter_clint_name = State()
+    enter_client_name = State()
     enter_date = State()
     enter_description = State()
 
@@ -45,10 +47,10 @@ async def call_reports_handler_create_new(callback_query: CallbackQuery, state: 
     await callback_query.message.answer(
         'Введите, пожалуйста, заголовок заметки:',
     )
-    await state.set_state(CallReportsStates.enter_clint_name)
+    await state.set_state(CallReportsStates.enter_client_name)
 
 
-@router.message(CallReportsStates.enter_clint_name)
+@router.message(CallReportsStates.enter_client_name)
 async def enter_clint_name(message: Message, state: FSMContext) -> None:
     """
     Обработка клиента, который ввел пользователь для создания кол репорта
@@ -58,12 +60,19 @@ async def enter_clint_name(message: Message, state: FSMContext) -> None:
     """
     logger.info(f'Call Report: Сохранение клиента в call report для {message.chat.id}')
     if True:  # FIXME В дальнейшем будет браться из таблицы в БД
+        # keyboard = [  # как вариант - кнопка сегодня
+        #     'Сегодня'
+        # ]
         await message.answer(
-            'Укажите дату заметки в формате ДД.ММ.ГГГГ:',
+            'Напишите заметку (голосом или текстом)',
+            # 'Укажите дату заметки в формате ДД.ММ.ГГГГ:',
+            # reply=keyboard,
         )
-        await state.set_state(CallReportsStates.enter_date)
+        # await state.set_state(CallReportsStates.enter_date)
+        await state.set_state(CallReportsStates.enter_description)
         await state.update_data(
             client=message.text,
+            date=datetime.date.today(),
         )
 
 
