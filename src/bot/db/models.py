@@ -1,5 +1,6 @@
 """Модели таблиц всех сервисов"""
 import datetime
+from enum import auto, IntEnum
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -260,6 +261,7 @@ class RegisteredUser(Base):
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
 
 class Whitelist(Base):
@@ -815,3 +817,60 @@ class RelationClientStakeholder(Base):
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     stakeholder_type = Column(Enum(enums.StakeholderType), nullable=False, comment='Тип стейкхолдера')
+
+
+class Quotes(Base):
+    __tablename__ = 'quotes'
+    __table_args__ = {'comment': 'Таблица cо списком котировок, получаемых через сторонние API'}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String, nullable=False, comment='Название')
+    params = sa.Column(sa.JSON, nullable=True, comment='Параметры для запросов')
+    source = sa.Column(sa.String, nullable=True, comment='Url для запросов')
+    # active = sa.Column(sa.Boolean, nullable=False, server_default='1')
+
+    values = relationship('QuotesValues', back_populates='quote')
+    user_quotes_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='quote')
+
+
+class QuotesValues(Base):
+    __tablename__ = 'quotes_values'
+    __table_args__ = {'comment': 'Таблица cо списком значений для графиков'}
+
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
+    open = sa.Column(sa.Float, nullable=False, comment='Цента открытия')
+    close = sa.Column(sa.Float, nullable=False, comment='Цена закрытия')
+    high = sa.Column(sa.Float, nullable=False, comment='Максимальная стоимость')
+    low = sa.Column(sa.Float, nullable=False, comment='Минимальная стоимость')
+
+    volume = sa.Column(sa.Float, nullable=True, comment='Объем торгов')
+
+    quote = relationship('Quotes', back_populates='values')
+
+
+class SizeEnum(enum.IntEnum):
+    """Размеры для отображения котировок"""
+
+    GRAPH_LARGE = enum.auto()
+    GRAPH_MEDIUM = enum.auto()
+    TEXT = enum.auto()
+
+
+class UsersQuotesSubscriptions(Base):
+    __tablename__ = 'users_quotes_subscriptions'
+    __table_args__ = {'comment': 'Таблица подписок пользователей на котировки'}
+
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    user_id = sa.Column(sa.Integer, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    view_size = sa.Column(
+        sa.Enum(SizeEnum),
+        nullable=False,
+        default=SizeEnum.TEXT,
+        comment="Размер отображения данных: график или текст"
+    )
+
+    user = relationship('RegisteredUser', back_populates='quote_subscriptions')
+    quote = relationship('Quotes', back_populates='user_quotes_subscriptions')

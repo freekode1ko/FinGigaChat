@@ -20,7 +20,7 @@ class NewsItem(BaseModel):
     section: str
     title: str
     text: str
-    date: str  # так и задумано, потому что подгоняю по формат
+    date: str  # так и задумано, потому что подгоняю под формат
     news_type: NewsTypeEnum = NewsTypeEnum.article
     news_id: str | None = None
 
