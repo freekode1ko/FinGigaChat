@@ -1,3 +1,5 @@
+import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
@@ -11,13 +13,13 @@ class Param(BaseModel):
     name: str
     value: Optional[float]
 
-
 class DataItem(BaseModel):
     """"Элементы для дашбордов"""
 
     name: str
     value: Optional[float]
     params: list[Param]
+    quote_id: int
 
     research_item_id: Optional[int] = None
     tv_type: Optional[str] = None
@@ -35,10 +37,14 @@ class DataItem(BaseModel):
         return (None,) * 3
 
 
-class SectionData(BaseModel):
+class BaseSection(BaseModel):
+    """"Секции котировок"""
+    section_name: str
+
+
+class SectionData(BaseSection):
     """"Секции для дашбордов"""
 
-    section_name: str
     section_params: Optional[list[str]]
     data: list[DataItem]
 
@@ -47,3 +53,45 @@ class ExchangeSectionData(BaseModel):
     """"Список секций для дашбордов"""
 
     sections: list[SectionData]
+
+
+class SizeEnum(Enum):
+    """Размеры для отображения котировок"""
+    GRAPH_LARGE = "graph_large"
+    GRAPH_MEDIUM = "graph_medium"
+    TEXT = "text"
+
+
+class SubscriptionItems(BaseModel):
+    """"""
+
+    id: int
+    name: str
+    active: bool
+    type: SizeEnum = SizeEnum.TEXT
+
+
+class SubscriptionSection(BaseSection):
+    subscription_items: list[SubscriptionItems]
+
+
+class DashboardSubscriptions(BaseModel):
+    subscription_sections: list[SubscriptionSection]
+
+
+class GraphData(BaseModel):
+    """"""
+
+    date: datetime.date
+    open: float | None = None
+    close: float | None = None
+    high: float | None = None
+    low: float | None = None
+    volume: float | None = None
+
+
+class DashboardGraphData(BaseModel):
+    """"""
+
+    id: int
+    data: list[GraphData]
