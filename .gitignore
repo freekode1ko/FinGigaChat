@@ -189,3 +189,6 @@ main.css
 
 # test dir
 test/
+
+**/data/
+**/sources/
