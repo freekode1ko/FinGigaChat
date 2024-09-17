@@ -1,5 +1,6 @@
 """Модели таблиц всех сервисов"""
 import datetime
+import enum
 from enum import auto, IntEnum
 
 import sqlalchemy as sa
@@ -875,7 +876,9 @@ class UsersQuotesSubscriptions(Base):
 
     user = relationship('RegisteredUser', back_populates='quote_subscriptions')
     quote = relationship('Quotes', back_populates='user_quotes_subscriptions')
-=======
+
+
+
 class UserRole(Base):
     __tablename__ = 'user_role'
     __table_args__ = {'comment': 'Таблица описания пользовательских ролей'}
