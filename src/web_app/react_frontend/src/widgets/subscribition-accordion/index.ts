@@ -1,0 +1,1 @@
+export { SubscriptionsWidget } from './ui'

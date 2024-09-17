@@ -36,7 +36,9 @@ from middlewares.logger import LoggingMiddleware
 from middlewares.state import StateMiddleware
 from utils import newsletter, sessions
 from utils.base import (
-    next_weekday_time, wait_until,
+    check_relevance_features,
+    next_weekday_time,
+    wait_until
 )
 
 storage = MemoryStorage()
@@ -136,6 +138,9 @@ async def main():
     """Точка входа для приложения"""
     init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
+
+    # проверка соответствия между названиями фичей в коде и в базе данных (ролевая модель)
+    await check_relevance_features()
 
     # запускам рассылки
     print('Инициализация бота')

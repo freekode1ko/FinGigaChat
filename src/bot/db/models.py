@@ -258,6 +258,7 @@ class RegisteredUser(Base):
     user_type = Column(Text)
     user_status = Column(Text)
     user_email = Column(Text, server_default=sa.text("''::text"))
+    role_id = Column(ForeignKey('user_role.id', ondelete='RESTRICT', onupdate='CASCADE'))
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
@@ -874,3 +875,32 @@ class UsersQuotesSubscriptions(Base):
 
     user = relationship('RegisteredUser', back_populates='quote_subscriptions')
     quote = relationship('Quotes', back_populates='user_quotes_subscriptions')
+=======
+class UserRole(Base):
+    __tablename__ = 'user_role'
+    __table_args__ = {'comment': 'Таблица описания пользовательских ролей'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(64), unique=True, nullable=False, comment='Имя роли')
+    description = Column(Text, comment='Описание роли')
+
+    features = relationship('Feature', secondary='relation_role_to_feature', back_populates='user_roles')
+
+
+class Feature(Base):
+    __tablename__ = 'feature'
+    __table_args__ = {'comment': 'Таблица с перечнем функционала, мб как разделом, так и функцией'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False, comment='Имя функционала/раздела')
+    description = Column(Text, comment='Описание функционала, его составляющих')
+
+    user_roles = relationship('UserRole', secondary='relation_role_to_feature', back_populates='features')
+
+
+class RelationRoleToFeature(Base):
+    __tablename__ = 'relation_role_to_feature'
+    __table_args__ = {'comment': 'Таблица отношений между ролью пользователя и доступным ему функционалом'}
+
+    user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
+    feature_id = Column(ForeignKey('feature.id'), primary_key=True)

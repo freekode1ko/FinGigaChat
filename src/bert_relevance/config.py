@@ -7,9 +7,9 @@ env.read_env()
 
 PROJECT_DIR = Path(__file__).parent
 
-LOG_FILE = 'bert_client_relevance'
+LOG_FILE = env.str('LOG_FILE')
 LOG_LEVEL = 20  # INFO
 
 DEBUG: bool = env.bool('DEBUG', default=False)
 
-MODEL_PATH = 'hellcatAI/ruRoberta_client_relevance_classification_quant'
+MODEL_PATH = env.str('MODEL_PATH')

@@ -35,7 +35,7 @@ from keyboards.analytics.analytics_sell_side import callbacks, constructors as k
 from log.bot_logger import user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
-from utils import weekly_pulse
+from utils import decorators, weekly_pulse
 from utils.base import __sent_photo_and_msg, send_full_copy_of_message
 from utils.handler_utils import get_client_financial_indicators
 from utils.newsletter import send_researches_to_user
@@ -326,6 +326,7 @@ async def key_rate_weekly_pulse_table(
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
+@decorators.has_access_to_feature(enums.FeatureType.analytics_menu)
 async def data_mart_body(message: types.Message) -> None:
     """
     Отправка витрины данных
@@ -426,6 +427,7 @@ async def data_mart_body(message: types.Message) -> None:
 
             photo = types.FSInputFile(png_path)
             await __sent_photo_and_msg(message, photo, title='')
+    user_logger.info(f'*{message.from_user.id}* {message.from_user.full_name} - {message.text}')
 
 
 async def data_mart_callback(

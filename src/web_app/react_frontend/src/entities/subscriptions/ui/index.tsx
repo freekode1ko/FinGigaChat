@@ -1,0 +1,1 @@
+export { SubscriptionsAccordion } from './accordion'
