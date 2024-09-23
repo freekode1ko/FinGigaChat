@@ -81,7 +81,10 @@ class UserStatistics:
 
         :return: pd.DataFrame со статистикой
         """
-        func_names = "','".join(config.STATISTICS_PROMPT_FUNCTIONS)
+        func_clause = (f"AND func_name in ('{func_names}')"
+                       if (func_names := "','".join(config.STATISTICS_PROMPT_FUNCTIONS)) else '')
+        ignore_tg_ids_clause = (f'AND user_log.user_id not in({ignore_ids})'
+                                if (ignore_ids := ','.join(config.STATISTICS_IGNORE_TG_IDS)) else '')
         query = (
             f"""
             SELECT registered_user.username AS telegram_user_name,
@@ -92,10 +95,10 @@ class UserStatistics:
             FROM user_log
             JOIN registered_user ON registered_user.user_id = user_log.user_id
             WHERE (level = 'INFO' OR level = 'DEBUG')
-               AND func_name in ('{func_names}')
+               {func_clause}
                AND DATE(date) >= '{config.STATISTICS_FROM_DATE}' -- замените на вашу начальную дату
                AND DATE(date) <= current_date -- замените на вашу конечную дату
-               AND  user_log.user_id not in({','.join(config.STATISTICS_IGNORE_TG_IDS)})
+               {ignore_tg_ids_clause}
             GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
             ORDER BY date DESC;
             """
@@ -119,6 +122,8 @@ class UserStatistics:
 
         :return: pd.DataFrame со статистикой
         """
+        ignore_tg_ids_clause = (f'AND u.user_id not in({ignore_ids})'
+                                if (ignore_ids := ','.join(config.STATISTICS_IGNORE_TG_IDS)) else '')
         query = (
             f"""
             SELECT
@@ -168,7 +173,7 @@ class UserStatistics:
                i.qty_industry_subs,
                com.qty_commodity_subs,
                t.qty_tg_subs) IS NOT NULL
-            AND u.user_id not in({','.join(config.STATISTICS_IGNORE_TG_IDS)})
+            {ignore_tg_ids_clause}
             """
         )
         return pd.read_sql_query(query, con=self.engine)
@@ -190,7 +195,10 @@ class UserStatistics:
 
         :return: pd.DataFrame со статистикой
         """
-        func_names = "','".join(config.STATISTICS_PROMPT_FUNCTIONS)
+        func_clause = (f"AND func_name not in ('{func_names}')"
+                       if (func_names := "','".join(config.STATISTICS_PROMPT_FUNCTIONS)) else '')
+        ignore_tg_ids_clause = (f'AND user_log.user_id not in({ignore_ids})'
+                                if (ignore_ids := ','.join(config.STATISTICS_IGNORE_TG_IDS)) else '')
         query = (
             f"""SELECT * FROM (
                     SELECT registered_user.username AS telegram_user_name,
@@ -201,10 +209,10 @@ class UserStatistics:
                     FROM user_log
                         JOIN registered_user ON registered_user.user_id = user_log.user_id
                     WHERE (level = 'INFO' OR level = 'DEBUG')
-                        AND func_name not in ('{func_names}')
+                        {func_clause}
                         AND DATE(date) >= '{config.STATISTICS_FROM_DATE}' -- замените на вашу начальную дату
                         AND DATE(date) <= current_date -- замените на вашу конечную дату
-                        AND user_log.user_id not in ({','.join(config.STATISTICS_IGNORE_TG_IDS)})
+                        {ignore_tg_ids_clause}
                     GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
                     ORDER BY date DESC
                 ) as q

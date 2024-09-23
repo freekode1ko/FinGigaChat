@@ -57,6 +57,9 @@ def send(files: list[Path]) -> None:
 
     :param files: Список файлов для отправки
     """
+    if not config.STATISTICS_RECIPIENTS:
+        return
+
     with SmtpSend(config.MAIL_USER, config.MAIL_PASS, config.MAIL_STMP_HOST, config.MAIL_STMP_PORT) as sender:
         sender.send_msg(
             config.MAIL_USER,
