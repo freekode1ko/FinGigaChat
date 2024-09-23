@@ -17,6 +17,9 @@ from module.email_send import SmtpSend
 from module.users_statistics import UserStatistics
 
 
+DEBUG_MODE_SLEEP_TIME = 60 * 60 * 24 * 7  # 7 days
+
+
 def get_file_name_with_date(base_file_name: str, dop_info: str = '') -> Path:
     """
     Возвращает путь до файла со статистикой по использованию бота с текущей датой в имени файла
@@ -112,7 +115,7 @@ def main():
     if config.DEBUG:
         while True:
             collect_stat_and_send(runner, logger)
-            time.sleep(5 * 50)
+            time.sleep(DEBUG_MODE_SLEEP_TIME)
 
     # сборка происходит каждый понедельник в 09:00
     schedule.every().monday.at('09:00').do(collect_stat_and_send, collect=runner, logger=logger)
