@@ -51,38 +51,182 @@ class UserStatistics:
         stat_df = pd.read_sql_query(query, con=self.engine)
         return stat_df
 
-    @staticmethod
-    def save_stat_excel(save_df: pd.DataFrame, file_name: Path, *args, **kwargs) -> None:
+    def collect_bot_usage_over_period(self, file_path: Path, from_date: date = date.min, to_date: date = date.max) -> None:
         """
-        Сохраняет передаваемый DataFrame в xlsx формате в папке config.STATISTICS_PATH
+        Формирует статистику использования бота
 
-        :param save_df: DataFrame, данные которого будут сохранены в формате xlsx
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH с сохраненными данными
-        """
-        stat_path = Path(config.STATISTICS_PATH)
+        Сохраняет его в file_path в формате xlsx
 
-        if not stat_path.exists():
-            stat_path.mkdir()
-
-        file_save_path = Path(stat_path, file_name)
-        save_df.to_excel(file_save_path, *args, **kwargs)
-
-    def collect_bot_usage_over_period(self, file_name: Path, from_date: date = date.min, to_date: date = date.max) -> None:
-        """
-        Формирует статистику использования бота и сохраняет ее в config.STATISTICS_PATH в файле file_name в формате xlsx
-
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH с данными собранной статистики
+        :param file_path: Путь до файла для сохранения статистики
         :param from_date: - указывает начало периода, с которого будет собираться статистика (включительно)
         :param to_date: - указывает конец периода, до которого будет собираться статистика (включительно)
         """
         stat_df = self.get_stat(from_date=from_date, to_date=to_date)
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Статистика использования')
+        stat_df.to_excel(file_path, sheet_name='Статистика использования')
 
-    def collect_users_data(self, file_name: Path) -> None:
+    def collect_users_data(self, file_path: Path) -> None:
         """
-        Формирует справочник пользователей и сохраняет его в config.STATISTICS_PATH в файле file_name в формате xlsx
+        Формирует справочник пользователей
 
-        :param file_name: Имя файла, который будет создан в config.STATISTICS_PATH со списков пользователей системы
+        Сохраняет его в file_path в формате xlsx
+
+        :param file_path: Путь до файла для сохранения статистики
         """
         stat_df = self.get_users()
-        self.save_stat_excel(stat_df, file_name=file_name, sheet_name='Справочник пользователей')
+        stat_df.to_excel(file_path, sheet_name='Справочник пользователей')
+
+    def _collect_activity(self) -> pd.DataFrame:
+        """
+        Собирает статистику активности пользователей
+
+        :return: pd.DataFrame со статистикой
+        """
+        func_clause = (f"AND func_name in ('{func_names}')"
+                       if (func_names := "','".join(config.STATISTICS_PROMPT_FUNCTIONS)) else '')
+        ignore_tg_ids_clause = (f'AND user_log.user_id not in({ignore_ids})'
+                                if (ignore_ids := ','.join(config.STATISTICS_IGNORE_TG_IDS)) else '')
+        query = (
+            f"""
+            SELECT registered_user.username AS telegram_user_name,
+               user_log.user_id,
+               registered_user.user_email,
+               DATE(date) AS date,
+               COUNT(CASE WHEN level='INFO' THEN 1 END) AS qty_of_prompts
+            FROM user_log
+            JOIN registered_user ON registered_user.user_id = user_log.user_id
+            WHERE (level = 'INFO' OR level = 'DEBUG')
+               {func_clause}
+               AND DATE(date) >= '{config.STATISTICS_FROM_DATE}' -- замените на вашу начальную дату
+               AND DATE(date) <= current_date -- замените на вашу конечную дату
+               {ignore_tg_ids_clause}
+            GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
+            ORDER BY date DESC;
+            """
+        )
+        return pd.read_sql_query(query, con=self.engine)
+
+    def collect_activity(self, file_name: Path) -> None:
+        """
+        Собирает статистику активности пользователей.
+
+        Сохраняет его в file_path в формате xlsx
+
+        :param file_path: Путь до файла для сохранения статистики
+        """
+        stat_df = self._collect_activity()
+        stat_df.to_excel(file_name, sheet_name='Промты', index=False)
+
+    def _collect_users_subscriptions(self) -> pd.DataFrame:
+        """
+        Собирает статистику подписок пользователей.
+
+        :return: pd.DataFrame со статистикой
+        """
+        ignore_tg_ids_clause = (f'AND u.user_id not in({ignore_ids})'
+                                if (ignore_ids := ','.join(config.STATISTICS_IGNORE_TG_IDS)) else '')
+        query = (
+            f"""
+            SELECT
+                wh.username,
+                wh.user_email,
+                u.user_id,
+                c.qty_client_subs,
+                r.qty_research_subs,
+                i.qty_industry_subs,
+                com.qty_commodity_subs,
+                t.qty_tg_subs,
+                current_date
+            FROM
+                (SELECT DISTINCT user_id FROM user_client_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_research_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_industry_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_commodity_subscription
+                 UNION
+                 SELECT DISTINCT user_id FROM user_telegram_subscription) AS u
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_client_subs
+                 FROM user_client_subscription
+                 GROUP BY user_id) AS c ON u.user_id = c.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_research_subs
+                 FROM user_research_subscription
+                 GROUP BY user_id) AS r ON u.user_id = r.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_industry_subs
+                 FROM user_industry_subscription
+                 GROUP BY user_id) AS i ON u.user_id = i.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_commodity_subs
+                 FROM user_commodity_subscription
+                 GROUP BY user_id) AS com ON u.user_id = com.user_id
+            LEFT JOIN
+                (SELECT user_id, COUNT(*) AS qty_tg_subs
+                 FROM user_telegram_subscription
+                 GROUP BY user_id) AS t ON u.user_id = t.user_id
+            LEFT JOIN registered_user wh on u.user_id = wh.user_id
+            WHERE COALESCE(
+               c.qty_client_subs,
+               r.qty_research_subs,
+               i.qty_industry_subs,
+               com.qty_commodity_subs,
+               t.qty_tg_subs) IS NOT NULL
+            {ignore_tg_ids_clause}
+            """
+        )
+        return pd.read_sql_query(query, con=self.engine)
+
+    def collect_users_subscriptions(self, file_name: Path) -> None:
+        """
+        Собирает статистику подписок пользователей.
+
+        Сохраняет его в file_path в формате xlsx
+
+        :param file_path: Путь до файла для сохранения статистики
+        """
+        stat_df = self._collect_users_subscriptions()
+        stat_df.to_excel(file_name, sheet_name='Подписки', index=False)
+
+    def _collect_handler_calls(self) -> pd.DataFrame:
+        """
+        Собирает статистику вызовов обработчиков пользователей.
+
+        :return: pd.DataFrame со статистикой
+        """
+        func_clause = (f"AND func_name not in ('{func_names}')"
+                       if (func_names := "','".join(config.STATISTICS_PROMPT_FUNCTIONS)) else '')
+        ignore_tg_ids_clause = (f'AND user_log.user_id not in({ignore_ids})'
+                                if (ignore_ids := ','.join(config.STATISTICS_IGNORE_TG_IDS)) else '')
+        query = (
+            f"""SELECT * FROM (
+                    SELECT registered_user.username AS telegram_user_name,
+                        user_log.user_id,
+                        registered_user.user_email,
+                        DATE(date) AS date,
+                        COUNT(CASE WHEN level = 'INFO' THEN 1 END) AS Qty_func_call
+                    FROM user_log
+                        JOIN registered_user ON registered_user.user_id = user_log.user_id
+                    WHERE (level = 'INFO' OR level = 'DEBUG')
+                        {func_clause}
+                        AND DATE(date) >= '{config.STATISTICS_FROM_DATE}' -- замените на вашу начальную дату
+                        AND DATE(date) <= current_date -- замените на вашу конечную дату
+                        {ignore_tg_ids_clause}
+                    GROUP BY registered_user.username, user_log.user_id, DATE(date), user_email
+                    ORDER BY date DESC
+                ) as q
+                WHERE Qty_func_call > 0"""
+        )
+        return pd.read_sql_query(query, con=self.engine)
+
+    def collect_handler_calls(self, file_path: Path) -> None:
+        """
+        Собирает статистику вызовов обработчиков пользователями.
+
+        Сохраняет его в file_path в формате xlsx
+
+        :param file_path: Путь до файла для сохранения статистики
+        """
+        stat_df = self._collect_handler_calls()
+        stat_df.to_excel(file_path, sheet_name='Функции', index=False)

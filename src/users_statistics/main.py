@@ -5,13 +5,15 @@
 """
 import time
 import warnings
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
+from typing import Callable
 
 import schedule
 
 from configs import config
 from log.logger_base import Logger, selector_logger
+from module.email_send import SmtpSend
 from module.users_statistics import UserStatistics
 
 
@@ -24,62 +26,76 @@ def get_file_name_with_date(base_file_name: str, dop_info: str = '') -> Path:
     """
     today = date.today().strftime('%d_%m_%Y')
     stat_fname = Path(base_file_name)
-    stat_fname = f'{stat_fname.stem}_{dop_info}_{today}.{stat_fname.suffix}'
-    return Path(stat_fname)
+    stat_fname = f'{stat_fname.stem}{("_" + dop_info) if dop_info else ""}_{today}.xlsx'
+    return config.STATISTICS_PATH / stat_fname
 
 
-def collect_all_stat(runner: UserStatistics, logger: Logger.logger) -> None:
+def collect_stat(collect: Callable[[Path], None], output_fname: str, logger: Logger.logger) -> Path | None:
     """
-    Сборка полной статистики по использованию бота
+    Сборка полной статистики
 
-    :param runner: UserStatistics собирает статистику и сохраняет ее в xlsx формате
+    :param collect: собирает статистику и сохраняет ее в xlsx формате
+    :param output_fname: Имя файла, в который будет сохранена статистика
     :param logger: логгер
+    :return: Имя файла со статистикой или None
     """
-    bot_usage_stat_save_path = get_file_name_with_date(config.BOT_USAGE_STAT_FILE_NAME, 'all')
+    stat_save_path = get_file_name_with_date(output_fname)
 
     try:
-        logger.info('Начало сборки полной статистики использования бота')
-        runner.collect_bot_usage_over_period(bot_usage_stat_save_path)
-        logger.info('Сборка полной статистики использования бота завершена')
+        logger.info(f'Начало сборки полной статистики {collect.__name__}')
+        collect(stat_save_path)
     except Exception as e:
-        logger.error('Ошибка при сборке полной статистики использования бота: %s', e)
+        logger.error(f'Ошибка при сборке полной статистики {collect.__name__}: %s', e)
+    else:
+        logger.info(f'Сборка полной статистики {collect.__name__} завершена')
+        return stat_save_path
 
 
-def collect_last_days_stat(runner: UserStatistics, logger: Logger.logger, days: int = config.NUM_DAYS_FOR_WHICH_STATS_COLLECT) -> None:
+def send(files: list[Path]) -> None:
     """
-    Сборка статистики по использованию бота за последнюю неделю
+    Отправить файлы на заданные почтовые адреса
 
-    :param runner: UserStatistics собирает статистику и сохраняет ее в xlsx формате
+    :param files: Список файлов для отправки
+    """
+    if not config.STATISTICS_RECIPIENTS:
+        return
+
+    with SmtpSend(config.MAIL_USER, config.MAIL_PASS, config.MAIL_STMP_HOST, config.MAIL_STMP_PORT) as sender:
+        sender.send_msg(
+            config.MAIL_USER,
+            config.STATISTICS_RECIPIENTS,
+            config.STATISTICS_SUBJECT,
+            f'Статистика по помощнику за {date.today().strftime("%d.%m.%Y")}',
+            files,
+        )
+
+
+def collect_stat_and_send(runner: UserStatistics, logger: Logger.logger) -> None:
+    """
+    Собирает статистику и отправляет ее на заданные почты
+
+    :param runner: Сборщик статистик
     :param logger: логгер
-    :param days: количество дней, за которые собирается статистика вплоть до текущего дня
     """
-    to_date = date.today()
-    from_date = to_date - timedelta(days=days)
-    bot_usage_stat_save_path = get_file_name_with_date(config.BOT_USAGE_STAT_FILE_NAME, 'last_week_upto')
+    stats_funcs = [
+        (runner.collect_activity, 'Промты'),
+        (runner.collect_users_subscriptions, 'Подписки'),
+        (runner.collect_handler_calls, 'Функции'),
+    ]
+
+    files_to_send = []
+    for collect, output in stats_funcs:
+        fname = collect_stat(collect, output, logger)
+        if fname is not None:
+            files_to_send.append(fname)
 
     try:
-        logger.info(f'Начало сборки статистики использования бота за последние {days} дней')
-        runner.collect_bot_usage_over_period(bot_usage_stat_save_path, from_date=from_date, to_date=to_date)
-        logger.info(f'Сборка статистики по использованию бота за последние {days} дней завершена')
+        logger.info('Отправка файлов по почте')
+        send(files_to_send)
     except Exception as e:
-        logger.error('Ошибка при сборке статистики по использованию бота за последние %s дней: %s', days, e)
-
-
-def collect_users_data(runner: UserStatistics, logger: Logger.logger) -> None:
-    """
-    Сборка каталога пользователей AI-помощника
-
-    :param runner: UserStatistics собирает статистику и сохраняет ее в xlsx формате
-    :param logger: логгер
-    """
-    users_data_save_path = get_file_name_with_date(config.USERS_DATA_FILE_NAME, 'all')
-
-    try:
-        logger.info('Начало сборки каталога пользователей AI-помощника')
-        runner.collect_users_data(users_data_save_path)
-        logger.info('Сборка каталога пользователей завершена')
-    except Exception as e:
-        logger.error('Ошибка при сборке каталога пользователей: %s', e)
+        logger.error(f'При отправке файлов произошла ошибка: {e}')
+    else:
+        logger.info('Отправка файлов по почте завершена')
 
 
 def main():
@@ -91,17 +107,15 @@ def main():
 
     logger.info('Инициализация сборщика статистики использования бота')
 
+    config.STATISTICS_PATH.mkdir(exist_ok=True)
+
     if config.DEBUG:
         while True:
-            collect_all_stat(runner, logger)
-            collect_last_days_stat(runner, logger)
-            collect_users_data(runner, logger)
+            collect_stat_and_send(runner, logger)
             time.sleep(5 * 50)
 
     # сборка происходит каждый понедельник в 09:00
-    schedule.every().monday.at('09:00').do(collect_all_stat, runner=runner, logger=logger)
-    schedule.every().monday.at('09:00').do(collect_last_days_stat, runner=runner, logger=logger)
-    schedule.every().monday.at('09:00').do(collect_users_data, runner=runner, logger=logger)
+    schedule.every().monday.at('09:00').do(collect_stat_and_send, collect=runner, logger=logger)
 
     while True:
         schedule.run_pending()
