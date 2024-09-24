@@ -1,10 +1,11 @@
 import datetime
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Optional
 
 from pydantic import BaseModel
 
 from constants.constants import ids_to_type
+from db.models import SizeEnum
 
 
 class Param(BaseModel):
@@ -55,14 +56,7 @@ class ExchangeSectionData(BaseModel):
     sections: list[SectionData]
 
 
-class SizeEnum(Enum):
-    """Размеры для отображения котировок"""
-    GRAPH_LARGE = "graph_large"
-    GRAPH_MEDIUM = "graph_medium"
-    TEXT = "text"
-
-
-class SubscriptionItems(BaseModel):
+class SubscriptionItem(BaseModel):
     """"""
 
     id: int
@@ -72,7 +66,7 @@ class SubscriptionItems(BaseModel):
 
 
 class SubscriptionSection(BaseSection):
-    subscription_items: list[SubscriptionItems]
+    subscription_items: list[SubscriptionItem]
 
 
 class DashboardSubscriptions(BaseModel):
