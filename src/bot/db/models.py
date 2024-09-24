@@ -821,6 +821,16 @@ class RelationClientStakeholder(Base):
     stakeholder_type = Column(Enum(enums.StakeholderType), nullable=False, comment='Тип стейкхолдера')
 
 
+class QuotesSections(Base):
+    __tablename__ = 'quotes_section'
+    __table_args__ = {'comment': 'Таблица cо секциями котировок'}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String, nullable=False, comment='Название')
+
+    quotes = relationship('Quotes', back_populates='quotes_section')
+
+
 class Quotes(Base):
     __tablename__ = 'quotes'
     __table_args__ = {'comment': 'Таблица cо списком котировок, получаемых через сторонние API'}
@@ -829,8 +839,14 @@ class Quotes(Base):
     name = sa.Column(sa.String, nullable=False, comment='Название')
     params = sa.Column(sa.JSON, nullable=True, comment='Параметры для запросов')
     source = sa.Column(sa.String, nullable=True, comment='Url для запросов')
-    # active = sa.Column(sa.Boolean, nullable=False, server_default='1')
+    quotes_section_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('quotes_section.id'),
+        nullable=False,
+        comment='Секция котировок'
+    )
 
+    quotes_section = relationship('QuotesSections', back_populates='quotes')
     values = relationship('QuotesValues', back_populates='quote')
     user_quotes_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='quote')
 
