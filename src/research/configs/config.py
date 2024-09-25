@@ -158,7 +158,7 @@ SELENIUM_RUN_KWARGS = {
 }
 
 # SELENIUM DRIVER PARAMS
-SELENIUM_COMMAND_EXECUTOR = 'http://localhost:4444/wd/hub'
+SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'
 
 # CIB API CONSTANTS
 ARTICLE_URL = 'https://research.sberbank-cib.com/group/guest/publication'
