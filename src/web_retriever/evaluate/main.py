@@ -8,10 +8,10 @@ from evaluation_utils import get_answers
 from log.logger_base import selector_logger
 
 sys.path.append('../')
-from retriever import Chain
+from retriever import WebRetriever
 
 logger = selector_logger(LOG_FILE, LOG_LEVEL)
-engine = Chain(logger)
+engine = WebRetriever(logger)
 
 
 def main():
