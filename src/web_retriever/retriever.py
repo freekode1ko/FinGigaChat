@@ -3,7 +3,7 @@
 import asyncio
 import re
 
-from langchain.chat_models import GigaChat
+from langchain_community.chat_models import GigaChat
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
 
 from configs.config import GIGA_MODEL, \
