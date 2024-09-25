@@ -1,3 +1,4 @@
+"""Модуль с пайплайном по нахождению похожих отчетов."""
 import datetime as dt
 import re
 from collections import namedtuple
@@ -34,6 +35,7 @@ def clean_text(original_text: str):
 
 
 class Pipeline:
+    """Класс с пайплайном по обработке отчетов для нахождения похожих."""
 
     MAX_DIFF_DATE: ClassVar[int] = 3
     MAX_LENGTH: ClassVar[int] = 2_100

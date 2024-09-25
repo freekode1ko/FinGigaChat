@@ -1,3 +1,4 @@
+"""Методы по взаимодействию с таблицей research."""
 import datetime as dt
 from typing import Optional
 
@@ -38,9 +39,9 @@ async def get_old_reports_for_period(
     """
     async with async_session() as conn:
         res = await conn.scalars(
-             sa.select(Research)
-             .where(Research.publication_date >= min_date_of_report)
-             .where(Research.publication_date <= max_date_of_report)
-             .where(Research.report_id.notin_(new_reports_ids))
-         )
+            sa.select(Research)
+            .where(Research.publication_date >= min_date_of_report)
+            .where(Research.publication_date <= max_date_of_report)
+            .where(Research.report_id.notin_(new_reports_ids))
+        )
         return res.all()

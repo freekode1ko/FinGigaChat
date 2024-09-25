@@ -13,7 +13,7 @@ class Deduplication:
     BIG_REPORT_LEN: ClassVar[int] = 3_000  # порог определения большого отчета: длина больше BIG_REPORT_LEN символов
     THRESHOLD: ClassVar[float] = 0.85  # чем выше граница, тем сложнее посчитать отчет уникальным
     ADD_TO_OLD_THRESHOLD: ClassVar[float] = 0.1  # на сколько увеличить threshold, если между отчетами разница > MAX_TIME_LIM
-    REDUCE_TO_OLD_THRESHOLD: ClassVar[float] = 0.05  # на сколько уменьшить threshold, если длина отчета больше > REDUCE_TO_OLD_THRESHOLD
+    REDUCE_TO_OLD_THRESHOLD: ClassVar[float] = 0.05  # на сколько уменьшить threshold, если длина отчета больше
 
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
