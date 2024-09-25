@@ -14,7 +14,8 @@ ENV: Environment = Environment.from_str(_env_value)
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
-STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
+STATIC_DATA_PATH = PROJECT_DIR / 'data'
+STATIC_ASSETS_PATH = STATIC_DATA_PATH / 'assets'
 PATH_TO_SOURCES = PROJECT_DIR / 'sources'
 PATH_TO_REPORTS = PROJECT_DIR / 'sources' / 'reports'
 DEBUG: bool = env.bool('DEBUG', default=False)
@@ -129,26 +130,6 @@ BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 
 INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 
-mail_username = 'ai-helper@mail.ru'
-mail_password = 'ExamKejCpmcpr8kM5emw'
-mail_imap_server = 'imap.mail.ru'
-summarization_prompt = (
-    'Ты - суммаризатор новостной ленты.'
-    'На вход тебе будут подаваться новости.'
-    'Твоя задача - суммаризировать новость.'
-    ''
-    'Формат ответа:'
-    '- суммаризация не должна быть слишком длинной;'
-    '- тезисы должны быть лаконичными;'
-    '- основная мысль не должна искажаться;'
-    '- любые факты, которых не было в оригинальной статье, недопустимы;'
-    '- нельзя использовать вводные слова, только текст суммаризации.'
-    ''
-    'ВАЖНО! Игнорировать формат ответа нельзя! Все условия должны соответствовать формату ответа!'
-    ''
-    '________________'
-    'Твой ответ:'
-)
 
 industry_reviews: dict[str, str] = read_asset_from_json('industry_reviews.json')
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
@@ -177,7 +158,7 @@ SELENIUM_RUN_KWARGS = {
 }
 
 # SELENIUM DRIVER PARAMS
-SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'
+SELENIUM_COMMAND_EXECUTOR = 'http://localhost:4444/wd/hub'
 
 # CIB API CONSTANTS
 ARTICLE_URL = 'https://research.sberbank-cib.com/group/guest/publication'
