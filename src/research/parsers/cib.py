@@ -13,6 +13,7 @@ import random
 import re
 import time
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import requests
@@ -866,19 +867,20 @@ class ResearchAPIParser:
         self._logger.info('Weekly review готов')
         print('Weekly review готов')
 
-    async def parse_pages(self) -> None:
+    async def parse_pages(self) -> list[dict[str, Any]]:
         """Стартовая точка, метод который запускает весь парсинг отчетов"""
         self._logger.info('CIB: Начало парсинга CIB')
 
         pages_list = await self.get_pages_to_parse_from_db()
-
+        new_reports = []
         loop = asyncio.get_event_loop()
         async with ClientSession() as session:
             for page in pages_list:
                 try:
-                    await loop.create_task(
+                    page_new_reports = await loop.create_task(
                         self.get_report_ids_from_page(page, session),
                     )
+                    new_reports.extend(page_new_reports)
                 except HTTPNoContent as e:
                     self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                 except Exception as e:
@@ -888,6 +890,7 @@ class ResearchAPIParser:
             await loop.create_task(self.parse_weekly_pulse(session))
 
         self._logger.info('CIB: Конец парсинга CIB')
+        return new_reports
 
     @staticmethod
     async def save_fin_summary(df: pd.DataFrame) -> None:

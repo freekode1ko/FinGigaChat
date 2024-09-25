@@ -13,7 +13,7 @@ from configs import config
 from db.database import engine
 from log import sentry
 from log.logger_base import Logger, selector_logger
-from module import crawler
+from module import crawler, report_similarity
 from parsers.cib import ResearchAPIParser, ResearchParser
 from parsers.exceptions import ResearchError
 from utils.selenium_utils import get_driver
@@ -323,9 +323,11 @@ async def run_parse_cib(logger: Logger.logger) -> None:
 
     logger.info('Старт парсинга отчетов с CIB')
     try:
-        await ResearchAPIParser(logger).parse_pages()
+        new_reports = await ResearchAPIParser(logger).parse_pages()
     except Exception as e:
         logger.error('Во время парсинга отчетов c CIB произошла ошибка: %s', e)
+    else:
+        await report_similarity.Pipeline().find_similarity_reports(new_reports)
 
 
 def run_researches_getter(next_research_getting_time: str, logger: Logger.logger) -> None:
