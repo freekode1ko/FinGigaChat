@@ -573,9 +573,9 @@ class Research(Base):
     text = Column(Text, nullable=False)
     parse_datetime = Column(DateTime, default=datetime.datetime.now, nullable=False)
     publication_date = Column(Date, default=datetime.date.today, nullable=False)
-    report_id = Column(String(64), nullable=False)
-    is_new = Column(Boolean, server_default=sa.text('true'),
-                    comment='Указывает, что отчет еще не рассылался пользователям')
+    report_id = Column(String(64), nullable=False, unique=True)
+    is_new = Column(Boolean, server_default=sa.text('true'), comment='Указывает, что отчет еще не рассылался пользователям')
+    parent_report_id = Column(ForeignKey('research.report_id', ondelete='RESTRICT', onupdate='CASCADE'))
 
     research_type = relationship('ResearchType', secondary='research_research_type', back_populates='researches')
 
