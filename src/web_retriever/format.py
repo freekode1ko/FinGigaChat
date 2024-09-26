@@ -1,7 +1,11 @@
+"""Форматирование сырого ответа от GigaChat"""
+
 import re
 from urllib.parse import urlparse
 
 from configs.prompts import DEFAULT_ANSWER, USELESS_FRASES, SOURCES_PATTERN
+
+pattern = re.compile(r'(</a>)(?!\n\n)(\s*[^,])')
 
 
 def is_contain_link(answer: str) -> bool:
@@ -10,11 +14,8 @@ def is_contain_link(answer: str) -> bool:
 
     :param answer:        Отформатированный ответ GigaChat.
     :return:              Флаг наличия ссылки в ответе.
-
     """
-    if '<a href=' in answer:
-        return True
-    return False
+    return '<a href=' in answer
 
 
 def make_short_link(link: str) -> str:
@@ -76,8 +77,7 @@ def make_format_msg_with_sources_in_end(answer: str, sources: list[str]) -> str:
             if (short_link := make_short_link(source))
         ]
     )
-    answer += format_sources
-    return answer
+    return answer + format_sources
 
 
 def clear_answer(answer: str) -> str:
@@ -99,7 +99,6 @@ def add_paragraphs(answer: str) -> str:
     :param answer: Отформатированный ответ от GigaChat.
     :return:       Отформатированный с абзацами ответ от GigaChat.
     """
-    pattern = re.compile(r'(</a>)(?!\n\n)(\s*[^,])')
     result = pattern.sub(r'\1\n\n\2', answer)
     return result.replace('\n\n ', '\n\n')
 

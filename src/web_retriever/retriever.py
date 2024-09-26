@@ -6,17 +6,8 @@ import re
 from langchain_community.chat_models import GigaChat
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
 
-from configs.config import GIGA_MODEL, \
-    GIGA_SCOPE, \
-    GIGA_CREDENTIALS, \
-    N_NARROW_ANSWER, \
-    N_NORMAL_ANSWER, \
-    N_WIDE_ANSWER
-from configs.prompts import QNA_WITH_REFS_SYSTEM, \
-    QNA_WITH_REFS_USER, \
-    DEFAULT_ANSWER, \
-    BAD_ANSWER, \
-    GIGA_WATERMARK
+from configs.config import *
+from configs.prompts import *
 from format import format_answer
 
 
@@ -74,7 +65,7 @@ class WebRetriever:
         for i, result in enumerate(result_search):
             link_dict[f'<{i}>'] = result['link']
             context = ' '.join(f'{tag}: {result[tag]}' for tag in
-                               list(filter(lambda x: x not in ['date', 'source', 'link'], result.keys())))
+                               filter(lambda x: x not in ('date', 'source', 'link'), result.keys()))
             context += f" link: <{i}> \n"
             parsed_answer += context
         return parsed_answer, link_dict
@@ -95,14 +86,12 @@ class WebRetriever:
         return post_processed_answer + '\n\n' + GIGA_WATERMARK
 
     @staticmethod
-    def _change_answer_to_default(answer: str, default_answer: str = DEFAULT_ANSWER):
+    def _change_answer_to_default(answer: str, default_answer: str = DEFAULT_ANSWER) -> str:
         """
         Ловит плохой ответ гигачата и заменяет его на дефолтную заглушку
 
         """
-        if re.search(BAD_ANSWER, answer):
-            return default_answer
-        return answer
+        return default_answer if re.search(BAD_ANSWER, answer) else answer
 
     async def _aanswer_chain(self,
                              question: str,
