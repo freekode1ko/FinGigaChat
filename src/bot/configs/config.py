@@ -80,6 +80,7 @@ giga_model = 'GigaChat-Pro'
 
 # url к rag-сервисам
 BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'
+BASE_QA_RESEARCH_URL = 'http://localhost:8100'  # FIXME: change url/port
 BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
 POST_TO_SERVICE_TIMEOUT = 90
 

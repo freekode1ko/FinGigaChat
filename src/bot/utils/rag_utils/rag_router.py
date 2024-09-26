@@ -1,4 +1,5 @@
 """Описание класса RAGRouter."""
+import asyncio
 import json
 import re
 import urllib.parse
@@ -6,11 +7,12 @@ import urllib.parse
 from aiohttp import ClientError, ClientSession
 
 from configs import config, prompts
+from constants.constants import DEFAULT_RAG_ANSWER
 from constants.enums import HTTPMethod, RetrieverType
 from constants.texts import texts_manager
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
-from utils.sessions import RagQaBankerClient, RagStateSupportClient
+from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient
 
 giga = GigaChat(logger)
 
@@ -34,6 +36,11 @@ class RAGRouter:
         self.rephrase_query = rephrase_query
         self.query = self.rephrase_query if use_rephrase else self.user_query
         self.retriever_type = None
+        self.req_kwargs = dict(
+            url='/api/v1/question',
+            json={'body': self.query},
+            timeout=config.POST_TO_SERVICE_TIMEOUT
+        )
 
     async def get_rag_type(self) -> None:
         """По пользовательскому запросу определяет класс рага, который нужно вызвать."""
@@ -75,7 +82,7 @@ class RAGRouter:
         if self.retriever_type == RetrieverType.state_support:
             return await self.rag_state_support()
         elif self.retriever_type == RetrieverType.qa_banker:
-            return await self.rag_qa_banker()
+            return await self.get_combination_response()
         return await self._request_to_giga()
 
     async def rag_qa_banker(self) -> str:
@@ -91,14 +98,14 @@ class RAGRouter:
         return await self._request_to_rag_api(session, HTTPMethod.GET, **req_kwargs)
 
     async def rag_state_support(self) -> str:
-        """Формирование параметров к запросу API по господдержке и получение ответа."""
-        req_kwargs = dict(
-            url='/api/v1/question',
-            json={'body': self.query},
-            timeout=config.POST_TO_SERVICE_TIMEOUT
-        )
+        """Создание сессии для API по господдержке и получение ответа."""
         session = RagStateSupportClient().session
-        return await self._request_to_rag_api(session, HTTPMethod.POST, **req_kwargs)
+        return await self._request_to_rag_api(session, HTTPMethod.POST, **self.req_kwargs)
+
+    async def rag_qa_research(self) -> str:
+        """Создание сессии для API по ВОС CIB Research и получение ответа."""
+        session = RagQaResearchClient().session
+        return await self._request_to_rag_api(session, HTTPMethod.POST, **self.req_kwargs)
 
     async def _request_to_rag_api(self,
                                   session: ClientSession,
@@ -146,3 +153,17 @@ class RAGRouter:
             user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
                                  f'GigaChat не сформировал ответ по причине: {e}"')
         return giga_answer
+
+    async def get_combination_response(self) -> str:
+        """Комбинация ответов от разных рагов."""
+        banker, research = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
+        if banker == texts_manager.RAG_ERROR_ANSWER and research == texts_manager.RAG_ERROR_ANSWER:
+            return texts_manager.RAG_ERROR_ANSWER
+
+        banker = banker if banker != texts_manager.RAG_ERROR_ANSWER else DEFAULT_RAG_ANSWER
+        research = research if research != texts_manager.RAG_ERROR_ANSWER else DEFAULT_RAG_ANSWER
+
+        response = banker if banker != DEFAULT_RAG_ANSWER else ''
+        if research != DEFAULT_RAG_ANSWER:
+            response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
+        return response.strip() or DEFAULT_RAG_ANSWER
