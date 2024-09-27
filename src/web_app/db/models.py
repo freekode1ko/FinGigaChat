@@ -838,12 +838,17 @@ class QuotesSections(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
 
+    params = sa.Column(sa.JSON, nullable=True, comment='Параметры для отображения секции')
+
     quotes = relationship('Quotes', back_populates='quotes_section')
 
 
 class Quotes(Base):
     __tablename__ = 'quotes'
-    __table_args__ = {'comment': 'Таблица cо списком котировок, получаемых через сторонние API'}
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'quotes_section_id', name='uq_quote_name_and_section'),
+        {'comment': 'Таблица cо списком котировок, получаемых через сторонние API', }
+    )
 
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
@@ -855,7 +860,8 @@ class Quotes(Base):
         nullable=False,
         comment='Секция котировок'
     )
-    # active = sa.Column(sa.Boolean, nullable=False, server_default='1')
+    last_update = sa.Column(sa.DateTime, nullable=True, comment='Время последнего обновления')
+    update_func = sa.Column(sa.String, nullable=True, comment='Функция для апдейта')
 
     quotes_section = relationship('QuotesSections', back_populates='quotes')
     values = relationship('QuotesValues', back_populates='quote')
@@ -864,15 +870,22 @@ class Quotes(Base):
 
 class QuotesValues(Base):
     __tablename__ = 'quotes_values'
-    __table_args__ = {'comment': 'Таблица cо списком значений для графиков'}
+    __table_args__ = (
+        sa.UniqueConstraint('quote_id', 'date', name='uq_quote_and_date'),
+        {'comment': 'Таблица cо списком значений для графиков'}
+    )
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+
     date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
-    open = sa.Column(sa.Float, nullable=False, comment='Цента открытия')
-    close = sa.Column(sa.Float, nullable=False, comment='Цена закрытия')
-    high = sa.Column(sa.Float, nullable=False, comment='Максимальная стоимость')
-    low = sa.Column(sa.Float, nullable=False, comment='Минимальная стоимость')
+
+    open = sa.Column(sa.Float, nullable=True, comment='Цента открытия')
+    close = sa.Column(sa.Float, nullable=True, comment='Цена закрытия')
+    high = sa.Column(sa.Float, nullable=True, comment='Максимальная стоимость')
+    low = sa.Column(sa.Float, nullable=True, comment='Минимальная стоимость')
+
+    value = sa.Column(sa.Float, nullable=True, comment='Цента в данный момент')
 
     volume = sa.Column(sa.Float, nullable=True, comment='Объем торгов')
 

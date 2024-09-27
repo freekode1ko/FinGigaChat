@@ -1,6 +1,101 @@
+import asyncio
+from typing import AsyncGenerator, Generator
+
+import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncConnection, async_sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app import app
+from db.database import get_async_session
+from db.models import Base
 
-client = TestClient(app)
+# client = TestClient(app)
 
+# SQLite database URL for testing
+DATABASE_TEST_URL = "postgresql://postgres:password@127.0.0.1:5555/test_db"
+
+
+@pytest.fixture(autouse=True)
+def env_setup(monkeypatch):
+    monkeypatch.setenv("PSQL_ENGINE", DATABASE_TEST_URL)
+
+@pytest.fixture(scope="function")
+def event_loop(request) -> Generator:
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def _db_connection():
+    async_engine = create_async_engine(
+        str(DATABASE_TEST_URL).replace('postgresql://', 'postgresql+asyncpg://'),
+        echo=False,
+        future=True,
+    )
+
+    async with async_engine.connect() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+        await conn.commit()
+        yield conn
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.commit()
+
+    await async_engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def _async_session(
+        _db_connection: AsyncConnection,
+) -> AsyncGenerator[AsyncSession, None]:
+    session = sessionmaker(
+        bind=_db_connection,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    async with session() as s:
+        s.commit = s.flush
+        yield s
+        await s.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def _async_client(_async_session: AsyncSession):
+    app.dependency_overrides[get_async_session] = lambda: _async_session
+    async with AsyncClient(
+            app=app,
+            base_url=f"http://localhost:8000",
+    ) as client:
+        yield client
+
+# @pytest_asyncio.fixture(scope="function")
+# async def _async_client(_async_session: AsyncSession):
+#     # TODO: нашел этот код, возможно для чего-то использовалось
+#     # app.dependency_overrides[get_async_session] = lambda: _async_session
+#
+#     async with AsyncClient(
+#         transport=ASGITransport(app=app), base_url="http://test"
+#     ) as client:
+#         yield client
+
+#
+#
+# # Create tables in the database
+# # Base.metadata.create_all(bind=async_engine)
+#
+#
+# @pytest.fixture(scope="function")
+# def db_session():
+#     """Create a new database session with a rollback at the end of the test."""
+#     connection = async_engine.connect()
+#     transaction = connection.begin()
+#     session = async_session(bind=connection)
+#     yield session
+#     session.close()
+#     transaction.rollback()
+#     connection.close()
