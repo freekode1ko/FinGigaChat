@@ -28,6 +28,5 @@ async def get_quote_last(quote: models.Quotes, session: AsyncSession) -> float |
     )
     quote_data = stmt.scalars().first()
     if not quote_data:
-        print(quote.name)
         return 0
     return quote_data.value

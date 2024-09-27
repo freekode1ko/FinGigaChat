@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, Response
 from fastapi import status
 
 from api.v1.quotation.schemas import ExchangeSectionData, DashboardSubscriptions, DashboardGraphData, SubscriptionSection, \
-    SubscriptionItem, SizeEnum as SubscriptionSizeEnum
+    SubscriptionItem, SizeEnum as SubscriptionSizeEnum, GraphData
 from api.v1.quotation.service import *
 from db import models
 from db.database import get_async_session
@@ -206,6 +206,39 @@ async def update_personal_dashboard(
 
 
 @router.get('/dashboard/data/{quote_id}')
-async def dashboard_quotation(quote_id: int, start_date: str | None, end_date: str | None) -> DashboardGraphData:
+async def dashboard_quotation(
+        quote_id: int,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        session: AsyncSession = Depends(get_async_session)
+) -> DashboardGraphData:
     """Данные для графиков Quotes"""
-    pass
+    print('$'*20)
+    start_date = (
+        datetime.datetime.strptime(start_date, '%d.%m.%Y').date()
+        if start_date is not None
+        else datetime.date.today() - datetime.timedelta(days=365)
+    )
+    end_date = datetime.datetime.strptime(start_date, '%d.%m.%Y').date() if end_date is not None else datetime.date.today()
+
+    stmt = await session.execute(
+        sa.select(models.QuotesValues)
+        .filter_by(quote_id=quote_id)
+        .order_by(models.QuotesValues.date.desc())
+        .where(models.QuotesValues.date.between(start_date, end_date))
+    )
+    quote_data = stmt.scalars().fetchall()
+    return DashboardGraphData(
+        id=quote_id,
+        data=[
+            GraphData(
+                date=quote.date,
+                value=quote.value,
+                open=quote.open,
+                close=quote.close,
+                high=quote.high,
+                low=quote.low,
+                # volume=quote_data.volume,
+            ) for quote in quote_data
+        ]
+    )
