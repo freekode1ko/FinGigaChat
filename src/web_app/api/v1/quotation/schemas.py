@@ -16,11 +16,12 @@ class Param(BaseModel):
 
 class DataItem(BaseModel):
     """"Элементы для дашбордов"""
-
-    name: str
-    value: Optional[float]
-    params: list[Param]
     quote_id: int
+    name: str
+    params: Optional[list[Param]]
+
+    value: Optional[float] = 0
+    view_type: SizeEnum = SizeEnum.TEXT
 
     research_item_id: Optional[int] = None
     tv_type: Optional[str] = None
@@ -34,7 +35,7 @@ class DataItem(BaseModel):
         """Получить айди для запросов к CIB, тип для графиков trading view и картинку"""
         for i in ids_to_type:
             if self.name in i.names:
-                return i.research_type_id, i.tv_type, i.image_path
+                return i.research_type_id, i.tv_type, i.image_path  # FXIME
         return (None,) * 3
 
 

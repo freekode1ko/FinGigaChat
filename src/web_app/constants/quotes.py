@@ -1,0 +1,3 @@
+quotes_data = [
+    None,
+]

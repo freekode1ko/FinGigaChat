@@ -3,10 +3,11 @@ import math
 
 import sqlalchemy as sa
 from dateutil.relativedelta import *
-
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.constants import bonds_names, commodity_pricing_names, metals_pricing_names
 from db.database import async_session
+from db import models
 from db.models import Exc, ExcType
 from .schemas import SectionData, DataItem, Param
 
@@ -133,6 +134,7 @@ async def get_quotation_from_bonds() -> SectionData:
         data=data
     )
 
+
 async def get_quotation_from_commodity_pricing() -> list[DataItem]:
     data = []
     async with async_session() as session:
@@ -150,18 +152,19 @@ async def get_quotation_from_commodity_pricing() -> list[DataItem]:
                         name='%мес',
                         value=None if math.isnan(
                             del_month := float(next(filter(lambda x: x[2] == i['name_db'], result))[5])) else 100 * del_month / (
-                                    value - del_month)
+                                value - del_month)
 
                     ),
                     Param(
                         name='%год',
                         value=None if math.isnan(del_year := next(filter(lambda x: x[2] == i['name_db'], result))[6]) else
-                            100 * del_year / (value - del_year)
+                        100 * del_year / (value - del_year)
                     ),
                 ]
             ),
         )
     return data
+
 
 async def get_quotation_from_metals() -> list[DataItem]:
     data = []
@@ -200,3 +203,14 @@ async def get_quotation_from_commodity() -> SectionData:
             *(await get_quotation_from_metals()),
         ]
     )
+
+
+async def get_quotations_by_id(
+        quotation_id: list[int],
+        session: AsyncSession,
+        start_date: datetime.date,
+        end_date: datetime.date):
+    pass
+    quotation = await session.execute(sa.select(models.Quotes))
+
+

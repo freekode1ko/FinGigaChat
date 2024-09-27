@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Request
-from starlette import status
+from fastapi import APIRouter, Request, Depends, Response
+from fastapi import status
 
 from api.v1.quotation.schemas import ExchangeSectionData, DashboardSubscriptions, DashboardGraphData, SubscriptionSection, \
     SubscriptionItem, SizeEnum as SubscriptionSizeEnum
 from api.v1.quotation.service import *
 from db import models
+from db.database import get_async_session
+from utils import quote_view, quotes_update
 
 router = APIRouter(tags=['quotation'])
 
@@ -19,6 +21,12 @@ async def popular_quotation(request: Request) -> ExchangeSectionData:
 @router.get('/dashboard')
 async def dashboard_quotation(request: Request) -> ExchangeSectionData:
     """Общий дашборд не для авторизованных пользователей"""
+
+    beautiful_dashboard = {
+        # Name : format
+        '12': models.SizeEnum.TEXT,
+    }
+
     return ExchangeSectionData(
         sections=[
             *(await get_quotation_from_fx()),
@@ -30,82 +38,171 @@ async def dashboard_quotation(request: Request) -> ExchangeSectionData:
 
 
 @router.get('/dashboard/{user_id}')
-async def personal_dashboard_quotation(request: Request) -> ExchangeSectionData:
+async def personal_dashboard_quotation(
+        user_id: int,
+        session: AsyncSession = Depends(get_async_session)
+) -> ExchangeSectionData:
     """Данные для пользовательского дашборда"""
-    pass
+    # Execute the query asynchronously
+    stmt = await session.execute(
+        sa.select(models.QuotesSections, models.Quotes, models.UsersQuotesSubscriptions)
+        .select_from(models.Quotes)
+        .join(models.QuotesSections)
+        .join(models.UsersQuotesSubscriptions)
+        .filter(models.UsersQuotesSubscriptions.user_id == user_id)
+    )
+    quotes_and_sections_subs = stmt.mappings().fetchall()
+
+    # Prepare sections data
+    sections = []
+    for section in set(x['QuotesSections'] for x in quotes_and_sections_subs):
+        data_items = []
+        for quote_and_section in quotes_and_sections_subs:
+            if quote_and_section['QuotesSections'].name == section.name:
+                if quote_and_section['Quotes'].last_update.date() != datetime.date.today():  # TODO FIXME
+                    update_func = getattr(quotes_update, quote_and_section['Quotes'].update_func, None)
+                    await update_func(quote_and_section['Quotes'], session)
+
+                params = []
+                data_item_value = None
+                for param_name, param_func in section.params.items():
+                    get_func = getattr(quote_view, param_func, None)
+                    value = await get_func(quote_and_section['Quotes'], session)
+                    if param_name == '_value':
+                        data_item_value = value
+                        continue
+                    if get_func is not None:
+                        params.append(Param(name=param_name, value=value))
+
+                data_items.append(
+                    DataItem(
+                        value=data_item_value,
+                        quote_id=quote_and_section['Quotes'].id,
+                        name=quote_and_section['Quotes'].name,
+                        view_type=quote_and_section['UsersQuotesSubscriptions'].view_size,
+                        image_path='123',
+                        params=params
+                    )
+                )
+        sections.append(
+            SectionData(
+                section_name=section.name,
+                section_params=[str(_) for _ in section.params.keys()],
+                data=data_items
+            )
+        )
+    return ExchangeSectionData(sections=sections)
+
+    # return ExchangeSectionData(
+    #     sections=[
+    #         SectionData(
+    #             section_name=section.name,
+    #             section_params=[str(_) for _ in section.params.keys()],
+    #             data=[
+    #                 DataItem(
+    #                     quote_id=quote_and_section['Quotes'].id,
+    #                     name=quote_and_section['Quotes'].name,
+    #                     view_type=quote_and_section['UsersQuotesSubscriptions'].view_size,
+    #                     image_path='123',
+    #                     params=[
+    #                         Param(
+    #                             name=param_name,
+    #                             value=(await get_func(quote_and_section['Quotes'], session))
+    #                         )
+    #                         for param_name, param_func in section.params if (get_func := getattr(quote_view, param_func, None)) is not None
+    #                     ]
+    #                 )
+    #                 for quote_and_section
+    #                 in quotes_and_sections_subs if quote_and_section['QuotesSections'].name == section
+    #             ],
+    #         )
+    #         for section
+    #         in set(x['QuotesSections'] for x in quotes_and_sections_subs)
+    #     ]
+    # )
 
 
 @router.get('/dashboard/{user_id}/subscriptions')
-async def get_personal_dashboard(user_id: int, ) -> DashboardSubscriptions:
+async def get_personal_dashboard(
+        user_id: int,
+        session: AsyncSession = Depends(get_async_session)
+) -> DashboardSubscriptions:
     """Получить пользовательские подписки"""
-    async with async_session() as session:
-        stmt = await session.execute(
-            sa.select(models.QuotesSections, models.Quotes)
-            .select_from(models.Quotes)
-            .join(models.QuotesSections)
+    stmt = await session.execute(
+        sa.select(models.QuotesSections, models.Quotes)
+        .select_from(models.Quotes)
+        .join(models.QuotesSections)
+    )
+    quotes_and_sections = stmt.mappings().fetchall()
+
+    stmt = await session.execute(
+        sa.select(models.UsersQuotesSubscriptions)
+        .filter(models.UsersQuotesSubscriptions.user_id == user_id)
+    )
+    subs = stmt.scalars().fetchall()
+    users_sub_ids = list(sub.quote_id for sub in subs)
+
+    return DashboardSubscriptions(subscription_sections=[
+        SubscriptionSection(
+            section_name=section_name,
+            subscription_items=[
+                SubscriptionItem(
+                    id=quote_and_section['Quotes'].id,
+                    name=quote_and_section['Quotes'].name,
+                    active=(active := bool(quote_and_section['Quotes'].id in users_sub_ids)),
+                    type=(
+                        next(filter(lambda x: x.quote_id == quote_and_section['Quotes'].id, subs)).view_size
+                        if active
+                        else SubscriptionSizeEnum.TEXT
+                    ),
+                )
+                for quote_and_section
+                in quotes_and_sections if quote_and_section['QuotesSections'].name == section_name
+            ]
         )
-        quotes_and_sections = stmt.mappings().fetchall()
-
-        stmt = await session.execute(
-            sa.select(models.UsersQuotesSubscriptions)
-            .filter(models.UsersQuotesSubscriptions.user_id == user_id)
-        )
-        subs = stmt.scalars().fetchall()
-        users_sub_ids = list(sub.quote_id for sub in subs)
-
-        return DashboardSubscriptions(subscription_sections=[
-            SubscriptionSection(
-                section_name=section_name,
-                subscription_items=[
-                    SubscriptionItem(
-                        id=quote_and_section['Quotes'].id,
-                        name=quote_and_section['Quotes'].name,
-                        active=(active := bool(quote_and_section['Quotes'].id in users_sub_ids)),
-                        type=(
-                            next(filter(lambda x: x.quote_id == quote_and_section['Quotes'].id, subs)).view_size
-                            if active
-                            else SubscriptionSizeEnum.TEXT
-                        ),
-                    )
-                    for quote_and_section
-                    in quotes_and_sections if quote_and_section['QuotesSections'].name == section_name
-                ]
-            )
-            for section_name
-            in set(x['QuotesSections'].name for x in quotes_and_sections)
-        ])
+        for section_name
+        in set(x['QuotesSections'].name for x in quotes_and_sections)
+    ])
 
 
-@router.put('/dashboard/{user_id}/subscriptions', status_code=status.HTTP_202_ACCEPTED)
-async def update_personal_dashboard(user_id: int, subs_data: DashboardSubscriptions):
+@router.put(
+    '/dashboard/{user_id}/subscriptions',
+    status_code=status.HTTP_202_ACCEPTED,
+    response_class=Response
+)
+async def update_personal_dashboard(
+        user_id: int,
+        subs_data: DashboardSubscriptions,
+        response: Response,
+        session: AsyncSession = Depends(get_async_session),
+) -> None:
     """Обновить пользовательские подписки"""
-    async with async_session() as session:
-        stmt = await session.execute(
-            sa.select(models.UsersQuotesSubscriptions)
-            .filter(models.UsersQuotesSubscriptions.user_id == user_id)
-        )
-        user_subs = stmt.scalars().fetchall()
+    stmt = await session.execute(
+        sa.select(models.UsersQuotesSubscriptions)
+        .filter(models.UsersQuotesSubscriptions.user_id == user_id)
+    )
+    user_subs = stmt.scalars().fetchall()
 
-        for section in subs_data.subscription_sections:
-            for sub in section.subscription_items:
-                try:
-                    quote = next(filter(lambda x: x.quote_id == sub.id, user_subs))
+    for section in subs_data.subscription_sections:
+        for sub in section.subscription_items:
+            try:
+                quote = next(filter(lambda x: x.quote_id == sub.id, user_subs))
+                quote.view_size = sub.type
+                if sub.active:
                     quote.view_size = sub.type
-                    if sub.active:
-                        quote.view_size = sub.type
-                    else:
-                        session.delete(quote)
-                except StopIteration:
-                    if sub.active:
-                        # create
-                        session.add(
-                            models.UsersQuotesSubscriptions(
-                                user_id=user_id,
-                                quote_id=sub.id,
-                                view_size=sub.type,
-                            )
+                else:
+                    session.delete(quote)
+            except StopIteration:
+                if sub.active:
+                    # create
+                    session.add(
+                        models.UsersQuotesSubscriptions(
+                            user_id=user_id,
+                            quote_id=sub.id,
+                            view_size=sub.type,
                         )
-        await session.commit()
+                    )
+    await session.commit()
 
 
 @router.get('/dashboard/data/{quote_id}')
