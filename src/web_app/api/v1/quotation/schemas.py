@@ -78,6 +78,7 @@ class GraphData(BaseModel):
     """"""
 
     date: datetime.date
+    value: float | None = None
     open: float | None = None
     close: float | None = None
     high: float | None = None

@@ -269,8 +269,26 @@ async def test_get_all_quote_date(
     from utils.quotes_update import update_all_CBR
 
     await load_CBR_quotes(_async_session)
-    await update_all_CBR(_async_session)
+    await update_all_CBR()
 
     stmt = await _async_session.execute(sa.select(models.QuotesValues))
     quote_data = stmt.scalars().fetchall()
     assert len(quote_data) >= 1
+
+@pytest.mark.asyncio
+async def test_update_get_graph_data(
+        _async_client: AsyncClient,
+        _async_session: AsyncSession,
+):
+    from utils.quotes import load_CBR_quotes
+    from utils.quotes_update import update_all_CBR
+
+    await load_CBR_quotes(_async_session)
+    await update_all_CBR()
+    quote_id = 14
+    stmt = await _async_session.execute(sa.select(models.QuotesValues))# .filter_by(quote_id=quote_id))
+    quote = stmt.scalars().fetchall()
+    print(len(quote))
+    response = await _async_client.get(f'/api/v1/quotation/dashboard/data/{quote_id}')
+    print(response.text)
+
