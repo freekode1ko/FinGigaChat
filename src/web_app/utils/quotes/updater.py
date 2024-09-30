@@ -5,15 +5,13 @@ import xml.etree.ElementTree as ET
 import sqlalchemy as sa
 from aiohttp import ClientSession
 from sqlalchemy.dialects.postgresql import insert as insert_pg
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import models
 from db.database import async_session
 
 
-async def update_cbr_quote(quote: models.Quotes, session: AsyncSession = None):
+async def update_cbr_quote(quote: models.Quotes):
     async with async_session() as session:
-
         url = 'https://www.cbr.ru/scripts/XML_dynamic.asp'  # FIXME to const
         async with ClientSession() as req_session:
             req = await req_session.get(
@@ -45,10 +43,11 @@ async def update_cbr_quote(quote: models.Quotes, session: AsyncSession = None):
         await session.commit()
 
 
-async def update_all_CBR():  # session: AsyncSession):
+async def update_all_cbr():
+    """Обновить все котировки с CBR асинхронно"""
 
     async with async_session() as session:
         stmt = await session.execute(sa.select(models.Quotes))
         quotes = stmt.scalars().fetchall()
 
-        await asyncio.gather(*[update_cbr_quote(quote, session) for quote in quotes])
+        await asyncio.gather(*[update_cbr_quote(quote) for quote in quotes])

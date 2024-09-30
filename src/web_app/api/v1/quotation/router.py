@@ -6,7 +6,7 @@ from api.v1.quotation.schemas import ExchangeSectionData, DashboardSubscriptions
 from api.v1.quotation.service import *
 from db import models
 from db.database import get_async_session
-from utils import quote_view, quotes_update
+from utils.quotes import view as quotes_view, updater as quotes_updater
 
 router = APIRouter(tags=['quotation'])
 
@@ -60,13 +60,13 @@ async def personal_dashboard_quotation(
         for quote_and_section in quotes_and_sections_subs:
             if quote_and_section['QuotesSections'].name == section.name:
                 if quote_and_section['Quotes'].last_update.date() != datetime.date.today():  # TODO FIXME
-                    update_func = getattr(quotes_update, quote_and_section['Quotes'].update_func, None)
+                    update_func = getattr(quotes_updater, quote_and_section['Quotes'].update_func, None)
                     await update_func(quote_and_section['Quotes'], session)
 
                 params = []
                 data_item_value = None
                 for param_name, param_func in section.params.items():
-                    get_func = getattr(quote_view, param_func, None)
+                    get_func = getattr(quotes_view, param_func, None)
                     value = await get_func(quote_and_section['Quotes'], session)
                     if param_name == '_value':
                         data_item_value = value
@@ -173,7 +173,6 @@ async def get_personal_dashboard(
 async def update_personal_dashboard(
         user_id: int,
         subs_data: DashboardSubscriptions,
-        response: Response,
         session: AsyncSession = Depends(get_async_session),
 ) -> None:
     """Обновить пользовательские подписки"""
@@ -191,7 +190,7 @@ async def update_personal_dashboard(
                 if sub.active:
                     quote.view_size = sub.type
                 else:
-                    session.delete(quote)
+                    await session.delete(quote)
             except StopIteration:
                 if sub.active:
                     # create

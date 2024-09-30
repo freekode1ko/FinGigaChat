@@ -220,7 +220,7 @@ async def test_get_quote_date(
         _async_session: AsyncSession
 ):
     from utils.quotes import load_CBR_quotes
-    from utils.quotes_update import update_cbr_quote
+    from utils.quotes.updater import update_cbr_quote
 
     await load_CBR_quotes(_async_session)
 
@@ -239,7 +239,7 @@ async def test_get_double_quote_date(
         _async_session: AsyncSession
 ):
     from utils.quotes import load_CBR_quotes
-    from utils.quotes_update import update_cbr_quote
+    from utils.quotes.updater import update_cbr_quote
 
     await load_CBR_quotes(_async_session)
 
@@ -266,10 +266,10 @@ async def test_get_all_quote_date(
         _async_session: AsyncSession,
 ):
     from utils.quotes import load_CBR_quotes
-    from utils.quotes_update import update_all_CBR
+    from utils.quotes.updater import update_all_cbr
 
     await load_CBR_quotes(_async_session)
-    await update_all_CBR()
+    await update_all_cbr()
 
     stmt = await _async_session.execute(sa.select(models.QuotesValues))
     quote_data = stmt.scalars().fetchall()
@@ -281,10 +281,10 @@ async def test_update_get_graph_data(
         _async_session: AsyncSession,
 ):
     from utils.quotes import load_CBR_quotes
-    from utils.quotes_update import update_all_CBR
+    from utils.quotes.updater import update_all_cbr
 
     await load_CBR_quotes(_async_session)
-    await update_all_CBR()
+    await update_all_cbr()
     quote_id = 14
     stmt = await _async_session.execute(sa.select(models.QuotesValues))# .filter_by(quote_id=quote_id))
     quote = stmt.scalars().fetchall()
