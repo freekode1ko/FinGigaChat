@@ -19,6 +19,7 @@ giga = GigaChat(logger)
 
 class RAGRouter:
     """Класс с классификацией запроса относительно RAG-сервисов(+GigaChat) и с получением ответа на запрос."""
+    RAG_BAD_ANSWERS = (DEFAULT_RAG_ANSWER, texts_manager.RAG_ERROR_ANSWER)
 
     def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
         """
@@ -160,10 +161,9 @@ class RAGRouter:
         if banker == texts_manager.RAG_ERROR_ANSWER and research == texts_manager.RAG_ERROR_ANSWER:
             return texts_manager.RAG_ERROR_ANSWER
 
-        banker = banker if banker != texts_manager.RAG_ERROR_ANSWER else DEFAULT_RAG_ANSWER
-        research = research if research != texts_manager.RAG_ERROR_ANSWER else DEFAULT_RAG_ANSWER
-
-        response = banker if banker != DEFAULT_RAG_ANSWER else ''
-        if research != DEFAULT_RAG_ANSWER:
+        response = ''
+        if banker not in self.RAG_BAD_ANSWERS:
+            response += banker
+        if research not in self.RAG_BAD_ANSWERS:
             response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
         return response.strip() or DEFAULT_RAG_ANSWER
