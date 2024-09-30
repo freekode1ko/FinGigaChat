@@ -1,9 +1,10 @@
 import urllib.parse
 
+import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.responses import PlainTextResponse
 
-from configs.config import LOG_FILE, LOG_LEVEL
+from configs.config import LOG_FILE, LOG_LEVEL, PORT
 from log.logger_base import selector_logger
 from retriever import WebRetriever
 
@@ -35,3 +36,7 @@ async def aanswer_tg(query: str = Query(min_length=2)) -> PlainTextResponse:
     final_answer = await engine.aget_answer(query, output_format="tg")
     engine.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
     return PlainTextResponse(content=''.join(map(str, final_answer)))
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

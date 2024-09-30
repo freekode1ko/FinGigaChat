@@ -7,6 +7,8 @@ env.read_env()
 
 PROJECT_DIR = Path(__file__).parent
 
+PORT = env.int('WEB_RETRIEVER_PORT', default=447)
+
 LOG_FILE = env.str('LOG_FILE', default='web_retriever')
 LOG_LEVEL = 20  # INFO
 
@@ -19,4 +21,3 @@ GIGA_CREDENTIALS: str = env.str('GIGA_CREDENTIALS', default='')
 N_NARROW_ANSWER = 2
 N_NORMAL_ANSWER = 5
 N_WIDE_ANSWER = 8
-
