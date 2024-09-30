@@ -118,7 +118,7 @@ def main():
             time.sleep(DEBUG_MODE_SLEEP_TIME)
 
     # сборка происходит каждый понедельник в 09:00
-    schedule.every().monday.at('09:00').do(collect_stat_and_send, collect=runner, logger=logger)
+    schedule.every().monday.at('09:00').do(collect_stat_and_send, runner=runner, logger=logger)
 
     while True:
         schedule.run_pending()
