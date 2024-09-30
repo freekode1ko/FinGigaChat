@@ -4,6 +4,7 @@ export {
   useFormField,
   useFormFieldContext,
 } from './form-hooks'
+export { getCurrentGreeting } from './get-greeting'
 export { useInfiniteScroll } from './infinite-scroll'
 export { useMediaQuery } from './media-query-hook'
 export {

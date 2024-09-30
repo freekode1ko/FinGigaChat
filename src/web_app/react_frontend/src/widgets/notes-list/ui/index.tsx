@@ -1,6 +1,8 @@
-import { Note, NoteCard, SkeletonNoteCard } from '@/entities/notes'
+import { Note, SkeletonNoteCard } from '@/entities/notes'
 import { PAGE_SIZE } from '@/shared/model'
 import { Paragraph } from '@/shared/ui'
+
+import { NoteCardWidget } from './single'
 
 interface NotesListProps {
   notes?: Array<Note>
@@ -16,14 +18,7 @@ const NotesList = ({ notes, showSkeleton }: NotesListProps) => {
           Array.from({ length: PAGE_SIZE }).map((_, idx) => (
             <SkeletonNoteCard key={idx} />
           ))}
-        {notes?.map((note) => (
-          <NoteCard
-            key={note.id}
-            client={note.client}
-            description={note.description}
-            report_date={note.report_date}
-          />
-        ))}
+        {notes?.map((note) => <NoteCardWidget key={note.id} note={note} />)}
       </div>
     </>
   )

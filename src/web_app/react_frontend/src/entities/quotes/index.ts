@@ -1,4 +1,11 @@
-export { useGetDashboardQuotesQuery, useGetPopularQuotesQuery } from './api'
+// eslint-disable-next-line simple-import-sort/exports
+export {
+  useGetDashboardQuotesQuery,
+  useGetDashboardSubscriptionsQuery,
+  useGetPopularQuotesQuery,
+  usePutDashboardSubscriptionsMutation,
+  useGetDashboardDataQuery,
+} from './api'
 export {
   favoriteQuotesSlice,
   type Quotes,
@@ -8,6 +15,7 @@ export {
   toggleFavoriteQuotes,
   TRADINGVIEW_QUOTES,
   type TradingViewSymbol,
+  type DashboardSubscription,
   updateFavoriteQuotesList,
 } from './model'
 export { QuotesTable, QuotesTableRow } from './ui'

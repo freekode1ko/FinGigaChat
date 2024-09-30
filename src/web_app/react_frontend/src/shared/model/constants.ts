@@ -8,6 +8,16 @@ export const API_ENDPOINTS = {
   notes: 'notes',
 }
 
+export const SITE_MAP = {
+  quotes: '/quotes',
+  dashboard: '/',
+  news: '/news',
+  meetings: '/meetings',
+  analytics: '/analytics',
+  subscriptions: '/subscriptions',
+  notes: '/notes',
+}
+
 export const MEETINGS_API_TAG = 'meetings'
 export const NOTES_API_TAG = 'notes'
 

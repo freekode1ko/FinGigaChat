@@ -26,6 +26,10 @@ export const appRouter = () =>
           element: <NewsPage />,
         },
         {
+          path: '/',
+          element: <DashboardPage />,
+        },
+        {
           path: '/subscriptions',
           element: (
             <ProtectedWrapper showHomeButton>
@@ -52,10 +56,6 @@ export const appRouter = () =>
               element: <QuoteDetailsPage />,
             },
           ],
-        },
-        {
-          path: '/',
-          element: <DashboardPage />,
         },
         {
           path: '/notes',

@@ -4,6 +4,7 @@ import { Provider as ReduxProvider } from 'react-redux'
 import { RouterProvider } from 'react-router-dom'
 
 import { ThemeProvider } from '@/entities/theme'
+import { Toaster } from '@/shared/ui'
 
 import { appRouter } from './router'
 import { store } from './store'
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <InitializationWrapper>
         <RouterProvider router={appRouter()} />
+        <Toaster />
       </InitializationWrapper>
     </ThemeProvider>
   </ReduxProvider>

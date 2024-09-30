@@ -6,13 +6,16 @@ import { useGetNewsForQuotationQuery } from '@/entities/news'
 import { selectAppTheme } from '@/entities/theme'
 import { TradingViewAdvancedChart } from '@/entities/tradingview'
 import { useAppSelector, useMediaQuery } from '@/shared/lib'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/shared/ui'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/shared/ui/dialog'
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/shared/ui'
 
 const QuoteDetailsPage = () => {
   const navigate = useNavigate()

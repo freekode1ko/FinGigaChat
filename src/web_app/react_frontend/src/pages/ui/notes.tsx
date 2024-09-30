@@ -1,5 +1,5 @@
 import { NotesList } from '@/widgets/notes-list'
-import { AddNoteButton } from '@/features/add-note'
+import { AddNoteButton } from '@/features/notes'
 import { type Note, useGetNotesQuery } from '@/entities/notes'
 import { selectUserData } from '@/entities/user'
 import { useAppSelector } from '@/shared/lib'

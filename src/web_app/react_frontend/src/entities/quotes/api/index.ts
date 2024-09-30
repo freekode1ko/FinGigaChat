@@ -1,10 +1,15 @@
 import { baseApi } from '@/shared/api'
 import { API_ENDPOINTS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
-import type { QuotesSection } from '../model'
+import type { DashboardSubscriptionSection, QuotesSection } from '../model'
+import { FinancialData } from '../model/types'
 
 interface QuotesResponse {
   sections: Array<QuotesSection>
+}
+
+interface DashboardSubscriptionsResponse {
+  subscription_sections: Array<DashboardSubscriptionSection>
 }
 
 const quotesApi = baseApi.injectEndpoints({
@@ -23,8 +28,42 @@ const quotesApi = baseApi.injectEndpoints({
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
+    getDashboardSubscriptions: build.query<
+      DashboardSubscriptionsResponse,
+      { userId: number }
+    >({
+      query: ({ userId }) => ({
+        url: `${API_ENDPOINTS.dashboardQuotes}/${userId}/subscriptions`,
+        method: 'GET',
+      }),
+      keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
+    }),
+    putDashboardSubscriptions: build.mutation<
+      string,
+      { userId: number; body: Array<DashboardSubscriptionSection> }
+    >({
+      query: ({ userId, body }) => ({
+        url: `${API_ENDPOINTS.dashboardQuotes}/${userId}/subscriptions`,
+        method: 'PUT',
+        body: body,
+      }),
+    }),
+    getDashboardData: build.query<
+      { id: number; data: Array<FinancialData> },
+      { quoteId: number }
+    >({
+      query: ({ quoteId }) => ({
+        url: `${API_ENDPOINTS.dashboardQuotes}/data/${quoteId}?start_date=01.01.2024`,
+        method: 'GET',
+      }),
+    }),
   }),
 })
 
-export const { useGetPopularQuotesQuery, useGetDashboardQuotesQuery } =
-  quotesApi
+export const {
+  useGetPopularQuotesQuery,
+  useGetDashboardQuotesQuery,
+  useGetDashboardSubscriptionsQuery,
+  usePutDashboardSubscriptionsMutation,
+  useGetDashboardDataQuery,
+} = quotesApi

@@ -6,5 +6,6 @@ export {
   MEETINGS_API_TAG,
   NOTES_API_TAG,
   PAGE_SIZE,
+  SITE_MAP,
 } from './constants'
 export type { PaginationProps } from './types'

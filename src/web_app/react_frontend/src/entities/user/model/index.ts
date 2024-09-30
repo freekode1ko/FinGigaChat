@@ -1,7 +1,6 @@
 export {
   selectUserData,
   selectUserIsAuthenticated,
-  selectUserState,
   setUser,
   userSlice,
 } from './slice'

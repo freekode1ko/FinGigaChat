@@ -12,6 +12,17 @@ interface NoteRequest {
   body: CreateNote
 }
 
+interface NoteDeleteRequest {
+  userId: number
+  noteId: Note['id']
+}
+
+interface NoteUpdateRequest {
+  userId: number
+  noteId: Note['id']
+  body: CreateNote
+}
+
 const notesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getNotes: build.query<Array<Note>, { userId: number }>({
@@ -24,13 +35,33 @@ const notesApi = baseApi.injectEndpoints({
     }),
     createNote: build.mutation<string, NoteRequest>({
       query: (note) => ({
-        url: `${API_ENDPOINTS.meetings}/${note.userId}`,
+        url: `${API_ENDPOINTS.notes}/${note.userId}`,
         method: 'POST',
         body: note.body,
+      }),
+      invalidatesTags: [NOTES_API_TAG],
+    }),
+    updateNote: build.mutation<string, NoteUpdateRequest>({
+      query: (note) => ({
+        url: `${API_ENDPOINTS.notes}/${note.userId}/${note.noteId}`,
+        method: 'PUT',
+        body: note.body,
+      }),
+      invalidatesTags: [NOTES_API_TAG],
+    }),
+    deleteNote: build.mutation<string, NoteDeleteRequest>({
+      query: (note) => ({
+        url: `${API_ENDPOINTS.notes}/${note.userId}/${note.noteId}`,
+        method: 'DELETE',
       }),
       invalidatesTags: [NOTES_API_TAG],
     }),
   }),
 })
 
-export const { useGetNotesQuery, useCreateNoteMutation } = notesApi
+export const {
+  useGetNotesQuery,
+  useCreateNoteMutation,
+  useDeleteNoteMutation,
+  useUpdateNoteMutation,
+} = notesApi

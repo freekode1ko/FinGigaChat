@@ -9,17 +9,23 @@ import {
 } from '@/shared/ui'
 
 interface NoteCardProps
-  extends Pick<Note, 'client' | 'description' | 'report_date'> {}
+  extends Pick<Note, 'client' | 'description' | 'report_date'> {
+  actionSlot?: React.ReactNode
+}
 
 export const NoteCard = ({
   client,
   description,
   report_date,
+  actionSlot,
 }: NoteCardProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{client}</CardTitle>
+        <div className="flex justify-between">
+          <CardTitle>{client}</CardTitle>
+          {actionSlot}
+        </div>
         <CardDescription>{report_date}</CardDescription>
       </CardHeader>
       <CardContent>

@@ -23,7 +23,7 @@ export const menuItems: Array<MenuItem> = [
   },
   {
     name: 'Дашборд',
-    path: '/',
+    path: '/dashboard',
     icon: LayoutDashboardIcon,
   },
   {
