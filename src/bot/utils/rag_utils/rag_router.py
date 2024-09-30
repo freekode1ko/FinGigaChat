@@ -158,7 +158,7 @@ class RAGRouter:
     async def get_combination_response(self) -> str:
         """Комбинация ответов от разных рагов."""
         banker, research = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
-        if banker == texts_manager.RAG_ERROR_ANSWER and research == texts_manager.RAG_ERROR_ANSWER:
+        if banker == research == texts_manager.RAG_ERROR_ANSWER:
             return texts_manager.RAG_ERROR_ANSWER
 
         response = ''
