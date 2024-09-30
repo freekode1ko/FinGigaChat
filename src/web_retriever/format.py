@@ -28,9 +28,7 @@ def make_short_link(link: str) -> str:
 
     url = urlparse(link)
     base_url = url.netloc.split('www.')[-1]
-    if not base_url:
-        return link
-    return f'<a href="{link}">{base_url}</a>'
+    return f'<a href="{link}">{base_url}</a>' if base_url else link
 
 
 def change_sources_format(answer: str) -> str:
@@ -42,13 +40,10 @@ def change_sources_format(answer: str) -> str:
     """
     sources = re.sub(pattern=SOURCES_PATTERN, repl=r'\1', string=answer)
     sources_list = sources.split(', ')
-    format_sources = ', '.join(
-        [
-            short_link for source in sources_list
-            if (short_link := make_short_link(source))
-        ]
+    return ', '.join(
+        short_link for source in sources_list
+        if (short_link := make_short_link(source))
     )
-    return format_sources
 
 
 def make_format_msg(answer: str) -> str:
@@ -72,10 +67,8 @@ def make_format_msg_with_sources_in_end(answer: str, sources: list[str]) -> str:
     :return:                    Ответ со ссылками в html разметке (в конце сообщения).
     """
     format_sources = ', '.join(
-        [
             short_link for source in sources
             if (short_link := make_short_link(source))
-        ]
     )
     return answer + format_sources
 

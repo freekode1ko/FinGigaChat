@@ -36,8 +36,7 @@ class WebRetriever:
 
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = self.model.invoke(messages)
-        content = response.content
-        return content
+        return response.content
 
     async def _aget_answer_giga(self, system_prompt: str, text: str) -> str:
         """
@@ -49,8 +48,7 @@ class WebRetriever:
         """
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = await self.model.ainvoke(messages)
-        content = response.content
-        return content
+        return response.content
 
     @staticmethod
     def _prepare_context_duckduck(result_search: dict) -> tuple[str, dict[str, str]]:
