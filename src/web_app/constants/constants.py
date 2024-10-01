@@ -64,7 +64,7 @@ metals_pricing_names = [
     },
 ]
 
-moex_parsing_list = [
+moex_names_parsing_list = [
     # "https://iss.moex.com/iss/engines/stock/markets/shares/securities/IRAO/candles.json?interval=1&from=2024-09-18
     'IRAO',
     'MRKY',
@@ -113,7 +113,7 @@ moex_parsing_list = [
     'KRSBP',
     'KLSB',
     'APTK',
-    'HHRU',
+    # 'HHRU',  FIXME: Никита скинул, но этого нет на moex
     'TMOS',
     'SARE',
     'TORS',
@@ -401,4 +401,11 @@ moex_parsing_list = [
     'ELMT',
     'EUTR',
     'ARSA',
+]
+
+moex_boards_names_order_list = [
+    'TQBR',
+    'TQIF',
+    'TQPI',
+    'TQTF',
 ]

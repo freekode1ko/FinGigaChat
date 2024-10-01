@@ -1,30 +1,16 @@
 import datetime
+import json
 import xml.etree.ElementTree as ET
+from collections import namedtuple
 
 import sqlalchemy as sa
 from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent
 from sqlalchemy.dialects.postgresql import insert as insert_pg
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.constants import moex_parsing_list
+from constants.constants import moex_names_parsing_list, moex_boards_names_order_list
 from db import models
 from db.database import async_session
-
-# def parse_moex(json_data: dict[str, Any]) -> list[Quote]:
-#     quotes = []
-#     candles = json_data['candles']['data']
-#     for candle in candles:
-#         quote = Quote(
-#             date=candle[0],  # Дата
-#             open=candle[1],  # Открытие
-#             high=candle[2],  # Максимум
-#             low=candle[3],  # Минимум
-#             close=candle[4],  # Закрытие
-#             volume=candle[5]  # Объем
-#         )
-#         quotes.append(quote)
-#     return quotes
 
 
 async def load_cbr_quotes() -> None:
@@ -40,7 +26,7 @@ async def load_cbr_quotes() -> None:
             section = models.QuotesSections(
                 name=section_name,
                 params={
-                    '_value': 'get_quote_now',
+                    '_value': 'get_quote_last',
                     '%день': 'get_quote_day_day_param',
                 }
             )
@@ -91,44 +77,80 @@ async def load_cbr_quotes() -> None:
                 await session.execute(upsert_stmt)
             await session.commit()
 
-async def load_MOEX_quotes():
-    pass
-#     section_name = 'MOEX'  # FIXME TO CONST
-#     last_update = datetime.date.today()
-#     update_func = 'update_moex_quote'
-#
-#     async with async_session() as session:
-#         for i in moex_parsing_list:
-#
-#             stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name=section_name))
-#             section = stmt.scalar_one_or_none()
-#             if section is None:
-#                 section = models.QuotesSections(
-#                     name=section_name,
-#                     params={
-#                         '_value': 'get_quote_now',
-#                         '%день': 'get_quote_day_day_param',
-#                     }
-#                 )
-#                 session.add(
-#                     section
-#                 )
-#                 await session.flush()
-#
-#         insert_stmt = insert_pg(models.QuotesValues).values(
-#             quote_id=quote.id,
-#             date=datetime.datetime.strptime(quote_date.attrib['Date'], "%d.%m.%Y").date(),
-#             value=float(quote_date.find('Value').text.replace(',', '.')),
-#         )
-#         upsert_stmt = insert_stmt.on_conflict_do_update(
-#             constraint='uq_quote_and_date',
-#             set_={
-#                 # 'quote_id': quote.id,
-#                 'date': datetime.datetime.strptime(quote_date.attrib['Date'], "%d.%m.%Y").date(),
-#                 'value': float(quote_date.find('Value').text.replace(',', '.')),
-#             }
-#         )
 
+async def load_moex_quotes():
+    """Загрузить котировки с MOEX"""
 
-async def laod_all_sources():
-    pass
+    async with async_session() as session:
+        section_name = 'Котировки (MOEX)'  # FIXME TO CONST
+        last_update = datetime.date.today()
+        update_func = 'update_moex_quote'
+
+        stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name=section_name))
+        section = stmt.scalar_one_or_none()
+        if section is None:
+            section = models.QuotesSections(
+                name=section_name,
+                params={
+                    '_value': 'get_quote_last',
+                    '%день': 'get_quote_day_day_param',
+                }
+            )
+            session.add(
+                section
+            )
+            await session.flush()
+
+        async with ClientSession() as req_session:
+            url = 'https://iss.moex.com/iss/engines/stock/markets/shares/securities.json'
+            req = await req_session.get(url=url, ssl=False, timeout=10)
+            quotes_name_json = await req.text()
+            if req.status != 200:
+                return HTTPNoContent
+
+            quotes_json = json.loads(quotes_name_json)
+            MOEXData = namedtuple('MOEXData', quotes_json['securities']['columns'])
+
+            quotes_list_from_json = [MOEXData(*x) for x in quotes_json['securities']['data']]
+
+            for quote_name in moex_names_parsing_list:
+                quotes_from_json_with_same_name = [_ for _ in quotes_list_from_json if _.SECID == quote_name]
+
+                for board_name in moex_boards_names_order_list:
+                    try:
+                        quote = next(filter(lambda x: x.BOARDID == board_name, quotes_from_json_with_same_name))
+                    except StopIteration:
+                        continue
+                else:
+                    quote = quotes_from_json_with_same_name[0]
+
+                name = quote.SHORTNAME
+                source = f'https://iss.moex.com/iss/engines/stock/markets/shares/securities/{quote.SECID}/candles.json'
+                params = {
+                    'MOEX_ID': quote.SECID,
+                    'MOEX_EngName': quote.LATNAME,
+                    'CBR_FullName': quote.SECNAME,
+                    'CBR_MARKETCODE': quote.MARKETCODE
+                }
+
+                insert_stmt = insert_pg(models.Quotes).values(
+                    name=name,
+                    params=params,
+                    source=source,
+                    quotes_section_id=section.id,
+                    last_update=last_update,
+                    update_func=update_func,
+                )
+                upsert_stmt = insert_stmt.on_conflict_do_update(
+                    constraint='uq_quote_name_and_section',
+                    set_={
+                        'name': name,
+                        'params': params,
+                        'source': source,
+                        'quotes_section_id': section.id,
+                        'last_update': last_update,
+                        'update_func': update_func,
+                    }
+                )
+                await session.execute(upsert_stmt)
+        await session.commit()

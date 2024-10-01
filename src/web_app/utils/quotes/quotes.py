@@ -1,5 +1,5 @@
-from utils.quotes.loader import load_cbr_quotes, load_MOEX_quotes
-from utils.quotes.updater import update_all_cbr
+from utils.quotes.loader import load_cbr_quotes, load_moex_quotes
+from utils.quotes.updater import update_all_cbr, update_all_moex
 
 
 async def get_quotes_data():
@@ -9,18 +9,6 @@ async def get_quotes_data():
 
     await update_all_cbr()
 
-    await load_MOEX_quotes()
+    await load_moex_quotes()
 
-    # existing_quotes = []
-    # not_existing_quotes = []
-
-    # Проверка, что уже есть в базе
-
-    # quotes = await session.execute(sa.select(models.Quotes))
-    # for i in session.scalars(quotes):
-    #     if i in quotes_data:  # FIXME изменить in проверку
-    #         existing_quotes.append(i)
-    #     not_existing_quotes.append(i)
-
-    # await update_quotes_params(existing_quotes)  # Обновить данные, если изменились
-    # await add_new_quotes(not_existing_quotes)  # Добавить новые
+    await update_all_moex()

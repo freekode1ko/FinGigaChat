@@ -1,6 +1,8 @@
 import asyncio
 import datetime
+import json
 import xml.etree.ElementTree as ET
+from collections import namedtuple
 
 import sqlalchemy as sa
 from aiohttp import ClientSession
@@ -11,11 +13,10 @@ from db.database import async_session
 
 
 async def update_cbr_quote(quote: models.Quotes):
-    async with async_session() as session:
-        url = 'https://www.cbr.ru/scripts/XML_dynamic.asp'  # FIXME to const
+    async with async_session() as session:  # FIXME to const
         async with ClientSession() as req_session:
             req = await req_session.get(
-                url=url,
+                url=quote.source,
                 params={
                     'date_req1': (datetime.date.today() - datetime.timedelta(days=365)).strftime('%d/%m/%Y'),
                     'date_req2': datetime.date.today().strftime('%d/%m/%Y'),
@@ -45,9 +46,84 @@ async def update_cbr_quote(quote: models.Quotes):
 
 async def update_all_cbr():
     """Обновить все котировки с CBR асинхронно"""
-
     async with async_session() as session:
-        stmt = await session.execute(sa.select(models.Quotes))
+        stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки ЦБ'))
+        section = stmt.scalar_one_or_none()
+
+        stmt = await session.execute(
+            sa.select(models.Quotes).filter_by(quotes_section_id=section.id)
+        )
         quotes = stmt.scalars().fetchall()
 
         await asyncio.gather(*[update_cbr_quote(quote) for quote in quotes])
+
+
+async def update_moex_quotes(quote: models.Quotes):
+    async with async_session() as session:
+        async with ClientSession() as req_session:
+
+            req = await req_session.get(
+                url=quote.source,
+                params={
+                    'from': (datetime.date.today() - datetime.timedelta(days=365)).strftime('%Y-%m-%d'),
+                    'till': datetime.date.today().strftime('%Y-%m-%d'),
+                },
+                ssl=False,
+                timeout=10
+            )
+            data = await req.text()
+            try:
+                quotes_data_json = json.loads(data)
+            except Exception as e:
+                print(req.url)
+                print(data)
+                raise e
+            MOEXDataCandles = namedtuple('MOEXDataCandles', quotes_data_json['candles']['columns'])
+
+            candles_list_from_json = [MOEXDataCandles(*x) for x in quotes_data_json['candles']['data']]
+
+        for quote_data in candles_list_from_json:
+            insert_stmt = insert_pg(models.QuotesValues).values(
+                quote_id=quote.id,
+                date=datetime.datetime.strptime(quote_data.begin.split()[0], "%Y-%m-%d").date(),
+                open=quote_data.open,
+                close=quote_data.close,
+                high=quote_data.high,
+                low=quote_data.low,
+                value=quote_data.low / quote_data.volume,
+                volume=quote_data.volume,
+
+            )
+            upsert_stmt = insert_stmt.on_conflict_do_update(
+                constraint='uq_quote_and_date',
+                set_={
+                    # 'date': datetime.datetime.strptime(quote_data.begin.split()[0], "%Y-%m-%d").date(),
+                    'open': quote_data.open,
+                    'close': quote_data.close,
+                    'high': quote_data.high,
+                    'low': quote_data.low,
+                    'value': quote_data.low / quote_data.volume,
+                    'volume': quote_data.volume,
+                }
+            )
+            await session.execute(upsert_stmt)
+        await session.commit()
+
+
+async def update_all_moex():
+    """Обновить все котировки с CBR асинхронно"""
+
+    async with async_session() as session:
+        stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки (MOEX)'))
+        section = stmt.scalar_one_or_none()
+
+        stmt = await session.execute(
+            sa.select(models.Quotes).filter_by(quotes_section_id=section.id)
+        )
+        quotes = stmt.scalars().fetchall()
+
+        batch = 50
+        for i in range(0, len(quotes), batch):
+            await asyncio.gather(*[update_moex_quotes(quote) for quote in quotes[i:i + batch]])
+
+

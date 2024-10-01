@@ -5,6 +5,7 @@ from pydantic_core import from_json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.v1.quotation.schemas import DashboardSubscriptions
+from constants.constants import moex_names_parsing_list
 from db import models
 
 
@@ -275,20 +276,20 @@ async def test_get_all_quote_date(
     quote_data = stmt.scalars().fetchall()
     assert len(quote_data) >= 1
 
+
 @pytest.mark.asyncio
-async def test_update_get_graph_data(
+async def test_load_moex_quotes(
         _async_client: AsyncClient,
         _async_session: AsyncSession,
 ):
-    from utils.quotes import load_CBR_quotes
-    from utils.quotes.updater import update_all_cbr
+    from utils.quotes.loader import load_moex_quotes
+    from utils.quotes.updater import update_all_moex
 
-    await load_CBR_quotes(_async_session)
-    await update_all_cbr()
-    quote_id = 14
-    stmt = await _async_session.execute(sa.select(models.QuotesValues))# .filter_by(quote_id=quote_id))
-    quote = stmt.scalars().fetchall()
-    print(len(quote))
-    response = await _async_client.get(f'/api/v1/quotation/dashboard/data/{quote_id}')
-    print(response.text)
+    await load_moex_quotes()
+    await update_all_moex()
+
+    stmt = await _async_session.execute(sa.select(models.Quotes))
+    quotes = stmt.scalars().fetchall()
+    assert len(quotes) == len(moex_names_parsing_list)
+
 

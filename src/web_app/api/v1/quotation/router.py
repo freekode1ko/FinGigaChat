@@ -67,7 +67,13 @@ async def personal_dashboard_quotation(
                 data_item_value = None
                 for param_name, param_func in section.params.items():
                     get_func = getattr(quotes_view, param_func, None)
-                    value = await get_func(quote_and_section['Quotes'], session)
+                    try:
+                        value = await get_func(quote_and_section['Quotes'], session)
+                    except Exception as e:
+                        print(section.params.items())
+                        print(param_name, param_func)
+                        print(quote_and_section['Quotes'])
+                        raise e
                     if param_name == '_value':
                         data_item_value = value
                         continue
