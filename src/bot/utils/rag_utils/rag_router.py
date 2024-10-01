@@ -19,6 +19,7 @@ giga = GigaChat(logger)
 
 class RAGRouter:
     """Класс с классификацией запроса относительно RAG-сервисов(+GigaChat) и с получением ответа на запрос."""
+
     RAG_BAD_ANSWERS = (DEFAULT_RAG_ANSWER, texts_manager.RAG_ERROR_ANSWER)
 
     def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
