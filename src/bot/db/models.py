@@ -828,23 +828,32 @@ class QuotesSections(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
 
+    # FIXME: переписать на m2m чтобы параметры можно было выностиь в БД
+    params = sa.Column(sa.JSON, nullable=True, comment='Параметры для отображения секции')
+
     quotes = relationship('Quotes', back_populates='quotes_section')
 
 
 class Quotes(Base):
     __tablename__ = 'quotes'
-    __table_args__ = {'comment': 'Таблица cо списком котировок, получаемых через сторонние API'}
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'quotes_section_id', name='uq_quote_name_and_section'),
+        {'comment': 'Таблица cо списком котировок, получаемых через сторонние API', }
+    )
 
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
     params = sa.Column(sa.JSON, nullable=True, comment='Параметры для запросов')
     source = sa.Column(sa.String, nullable=True, comment='Url для запросов')
+    ticker = sa.Column(sa.String, nullable=True, comment='Тикер')
     quotes_section_id = sa.Column(
         sa.Integer,
         sa.ForeignKey('quotes_section.id'),
         nullable=False,
         comment='Секция котировок'
     )
+    last_update = sa.Column(sa.DateTime, nullable=True, comment='Время последнего обновления')
+    update_func = sa.Column(sa.String, nullable=True, comment='Функция для апдейта')
 
     quotes_section = relationship('QuotesSections', back_populates='quotes')
     values = relationship('QuotesValues', back_populates='quote')
@@ -853,15 +862,22 @@ class Quotes(Base):
 
 class QuotesValues(Base):
     __tablename__ = 'quotes_values'
-    __table_args__ = {'comment': 'Таблица cо списком значений для графиков'}
+    __table_args__ = (
+        sa.UniqueConstraint('quote_id', 'date', name='uq_quote_and_date'),
+        {'comment': 'Таблица cо списком значений для графиков'}
+    )
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+
     date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
-    open = sa.Column(sa.Float, nullable=False, comment='Цента открытия')
-    close = sa.Column(sa.Float, nullable=False, comment='Цена закрытия')
-    high = sa.Column(sa.Float, nullable=False, comment='Максимальная стоимость')
-    low = sa.Column(sa.Float, nullable=False, comment='Минимальная стоимость')
+
+    open = sa.Column(sa.Float, nullable=True, comment='Цента открытия')
+    close = sa.Column(sa.Float, nullable=True, comment='Цена закрытия')
+    high = sa.Column(sa.Float, nullable=True, comment='Максимальная стоимость')
+    low = sa.Column(sa.Float, nullable=True, comment='Минимальная стоимость')
+
+    value = sa.Column(sa.Float, nullable=True, comment='Цента в данный момент')
 
     volume = sa.Column(sa.Float, nullable=True, comment='Объем торгов')
 
@@ -881,7 +897,7 @@ class UsersQuotesSubscriptions(Base):
     __table_args__ = {'comment': 'Таблица подписок пользователей на котировки'}
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    user_id = sa.Column(sa.Integer, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
+    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
     quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
     view_size = sa.Column(
         sa.Enum(SizeEnum),

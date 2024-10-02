@@ -47,7 +47,7 @@ async def update_cbr_quote(quote: models.Quotes):
 async def update_all_cbr():
     """Обновить все котировки с CBR асинхронно"""
     async with async_session() as session:
-        stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки ЦБ'))
+        stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки (ЦБ)'))
         section = stmt.scalar_one_or_none()
 
         stmt = await session.execute(
@@ -127,3 +127,48 @@ async def update_all_moex():
             await asyncio.gather(*[update_moex_quotes(quote) for quote in quotes[i:i + batch]])
 
 
+async def update_cbr_metals():
+    """Обновить все котировки по металлам с CBR асинхронно"""
+
+    async with ClientSession() as req_session:
+        req = await req_session.get(
+            url='https://www.cbr.ru/scripts/xml_metall.asp',
+            params={
+                'date_req1': (datetime.date.today() - datetime.timedelta(days=365)).strftime('%d/%m/%Y'),
+                'date_req2': datetime.date.today().strftime('%d/%m/%Y'),
+            },
+            ssl=False,
+            timeout=10
+        )
+        quotes_data_xml = await req.text()
+        quote_data = ET.fromstring(quotes_data_xml)
+    async with async_session() as session:
+        stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Металлы (ЦБ)'))
+        section = stmt.scalar_one_or_none()
+
+        stmt = await session.execute(
+            sa.select(models.Quotes).filter_by(quotes_section_id=section.id)
+        )
+        quotes = stmt.scalars().fetchall()
+
+
+        for quote in quotes:
+            for data in quote_data.findall('Record'):
+                if int(data.attrib['Code']) != quote.params['CBR_ID']:
+                    continue
+
+                insert_stmt = insert_pg(models.QuotesValues).values(
+                    quote_id=quote.id,
+                    date=datetime.datetime.strptime(data.attrib['Date'], "%d.%m.%Y").date(),
+                    value=float(data.find('Buy').text.replace(',', '.')),
+                )
+                upsert_stmt = insert_stmt.on_conflict_do_update(
+                    constraint='uq_quote_and_date',
+                    set_={
+                        # 'quote_id': quote.id,
+                        'date': datetime.datetime.strptime(data.attrib['Date'], "%d.%m.%Y").date(),
+                        'value': float(data.find('Buy').text.replace(',', '.')),
+                    }
+                )
+                await session.execute(upsert_stmt)
+        await session.commit()

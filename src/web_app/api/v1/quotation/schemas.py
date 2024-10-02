@@ -18,6 +18,7 @@ class DataItem(BaseModel):
     """"Элементы для дашбордов"""
     quote_id: int
     name: str
+    ticker: str | None = None
     params: Optional[list[Param]]
 
     value: Optional[float] = 0
@@ -62,6 +63,7 @@ class SubscriptionItem(BaseModel):
 
     id: int
     name: str
+    ticker: str | None = None
     active: bool
     type: SizeEnum = SizeEnum.TEXT
 

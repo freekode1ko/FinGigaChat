@@ -292,4 +292,16 @@ async def test_load_moex_quotes(
     quotes = stmt.scalars().fetchall()
     assert len(quotes) == len(moex_names_parsing_list)
 
+@pytest.mark.asyncio
+async def test_load_yahoo_quotes(
+        _async_client: AsyncClient,
+        _async_session: AsyncSession,
+):
+    from utils.quotes.loader import load_yahoo_quotes
+
+    await load_yahoo_quotes()
+
+    stmt = await _async_session.execute(sa.select(models.Quotes))
+    quotes = stmt.scalars().fetchall()
+
 

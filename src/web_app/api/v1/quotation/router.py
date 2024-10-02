@@ -6,7 +6,7 @@ from api.v1.quotation.schemas import ExchangeSectionData, DashboardSubscriptions
 from api.v1.quotation.service import *
 from db import models
 from db.database import get_async_session
-from utils.quotes import view as quotes_view, updater as quotes_updater
+from utils.quotes import view as quotes_view
 
 router = APIRouter(tags=['quotation'])
 
@@ -59,21 +59,12 @@ async def personal_dashboard_quotation(
         data_items = []
         for quote_and_section in quotes_and_sections_subs:
             if quote_and_section['QuotesSections'].name == section.name:
-                if quote_and_section['Quotes'].last_update.date() != datetime.date.today():  # TODO FIXME
-                    update_func = getattr(quotes_updater, quote_and_section['Quotes'].update_func, None)
-                    await update_func(quote_and_section['Quotes'], session)
-
                 params = []
                 data_item_value = None
                 for param_name, param_func in section.params.items():
                     get_func = getattr(quotes_view, param_func, None)
-                    try:
-                        value = await get_func(quote_and_section['Quotes'], session)
-                    except Exception as e:
-                        print(section.params.items())
-                        print(param_name, param_func)
-                        print(quote_and_section['Quotes'])
-                        raise e
+                    value = await get_func(quote_and_section['Quotes'], session)
+
                     if param_name == '_value':
                         data_item_value = value
                         continue
@@ -85,6 +76,7 @@ async def personal_dashboard_quotation(
                         value=data_item_value,
                         quote_id=quote_and_section['Quotes'].id,
                         name=quote_and_section['Quotes'].name,
+                        ticker=quote_and_section['Quotes'].ticker,
                         view_type=quote_and_section['UsersQuotesSubscriptions'].view_size,
                         image_path='123',
                         params=params
@@ -98,34 +90,6 @@ async def personal_dashboard_quotation(
             )
         )
     return ExchangeSectionData(sections=sections)
-
-    # return ExchangeSectionData(
-    #     sections=[
-    #         SectionData(
-    #             section_name=section.name,
-    #             section_params=[str(_) for _ in section.params.keys()],
-    #             data=[
-    #                 DataItem(
-    #                     quote_id=quote_and_section['Quotes'].id,
-    #                     name=quote_and_section['Quotes'].name,
-    #                     view_type=quote_and_section['UsersQuotesSubscriptions'].view_size,
-    #                     image_path='123',
-    #                     params=[
-    #                         Param(
-    #                             name=param_name,
-    #                             value=(await get_func(quote_and_section['Quotes'], session))
-    #                         )
-    #                         for param_name, param_func in section.params if (get_func := getattr(quote_view, param_func, None)) is not None
-    #                     ]
-    #                 )
-    #                 for quote_and_section
-    #                 in quotes_and_sections_subs if quote_and_section['QuotesSections'].name == section
-    #             ],
-    #         )
-    #         for section
-    #         in set(x['QuotesSections'] for x in quotes_and_sections_subs)
-    #     ]
-    # )
 
 
 @router.get('/dashboard/{user_id}/subscriptions')
@@ -155,6 +119,7 @@ async def get_personal_dashboard(
                 SubscriptionItem(
                     id=quote_and_section['Quotes'].id,
                     name=quote_and_section['Quotes'].name,
+                    ticker=quote_and_section['Quotes'].ticker,
                     active=(active := bool(quote_and_section['Quotes'].id in users_sub_ids)),
                     type=(
                         next(filter(lambda x: x.quote_id == quote_and_section['Quotes'].id, subs)).view_size
@@ -218,7 +183,6 @@ async def dashboard_quotation(
         session: AsyncSession = Depends(get_async_session)
 ) -> DashboardGraphData:
     """Данные для графиков Quotes"""
-    print('$'*20)
     start_date = (
         datetime.datetime.strptime(start_date, '%d.%m.%Y').date()
         if start_date is not None

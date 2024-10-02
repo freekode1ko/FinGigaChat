@@ -24,18 +24,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, relationship
 
-from db import enums
-
-class FormatType(IntEnum):
-    """Enum`сы форматов отправки файлов пользователю"""
-
-    # Выдача общего текста группы и затем выдача группы файлов
-    group_files = 1
-    # Выдача общего текста группы, затем для каждого документа выдача сообщений:
-    # document.name жирным
-    # document.description просто текст
-    # [document.file] если есть файл
-    individual_messages = 2
+from constants import enums
 
 
 class Base(DeclarativeBase):
@@ -707,8 +696,8 @@ class Product(Base):
 
     name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
     name_latin = Column(String(255), nullable=True, comment='Имя eng', server_default=sa.text("''"))
-    # send_documents_format_type = Column(Integer(), server_default=sa.text(str(FormatType.group_files)),
-    #                                     nullable=False, comment='Формат выдачи документов')
+    send_documents_format_type = Column(Integer(), server_default=sa.text(str(enums.FormatType.group_files)),
+                                        nullable=False, comment='Формат выдачи документов')
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
                          comment='Текст сообщения, которое выдается при нажатии на продукт')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
@@ -838,6 +827,7 @@ class QuotesSections(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
 
+    # FIXME: переписать на m2m чтобы параметры можно было выностиь в БД
     params = sa.Column(sa.JSON, nullable=True, comment='Параметры для отображения секции')
 
     quotes = relationship('Quotes', back_populates='quotes_section')
@@ -906,7 +896,7 @@ class UsersQuotesSubscriptions(Base):
     __table_args__ = {'comment': 'Таблица подписок пользователей на котировки'}
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    user_id = sa.Column(sa.Integer, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
+    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
     quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
     view_size = sa.Column(
         sa.Enum(SizeEnum),
