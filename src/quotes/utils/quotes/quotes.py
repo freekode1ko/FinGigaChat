@@ -1,3 +1,4 @@
+"""Обновление и загрузка котировок"""
 from utils.quotes.loader import load_cbr_quotes, load_moex_quotes, load_yahoo_quotes, load_cbr_metals
 from utils.quotes.updater import update_all_cbr, update_all_moex, update_cbr_metals
 

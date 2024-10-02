@@ -1,3 +1,4 @@
+"""Загрузка котировок в БД"""
 import asyncio
 import datetime
 import json
@@ -220,6 +221,7 @@ async def load_moex_quotes():
 
 
 async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
+    """Загрузка одной котировки с yahoo"""
     last_update = datetime.date.today()
     update_func = 'update_yahoo_quote'
 
@@ -315,7 +317,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
 
 
 async def load_yahoo_quotes():
-    """Загрузить котировки с Yahoo"""
+    """Загрузить котировок с Yahoo"""
 
     async with async_session() as session:
         for section_name, yahoo_sections_quotes in yahoo_names_parsing_dict.items():

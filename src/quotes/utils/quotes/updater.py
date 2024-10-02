@@ -1,3 +1,4 @@
+"""Обновление котировок"""
 import asyncio
 import datetime
 import json
@@ -13,7 +14,8 @@ from db.database import async_session
 
 
 async def update_cbr_quote(quote: models.Quotes):
-    async with async_session() as session:  # FIXME to const
+    """Обновление котировок с cbr"""
+    async with async_session() as session:
         async with ClientSession() as req_session:
             req = await req_session.get(
                 url=quote.source,
@@ -45,7 +47,7 @@ async def update_cbr_quote(quote: models.Quotes):
 
 
 async def update_all_cbr():
-    """Обновить все котировки с CBR асинхронно"""
+    """Обновить все котировки с cbr"""
     async with async_session() as session:
         stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки (ЦБ)'))
         section = stmt.scalar_one_or_none()
@@ -59,6 +61,7 @@ async def update_all_cbr():
 
 
 async def update_moex_quotes(quote: models.Quotes):
+    """Обновление котировок с moex"""
     async with async_session() as session:
         async with ClientSession() as req_session:
 
@@ -111,7 +114,7 @@ async def update_moex_quotes(quote: models.Quotes):
 
 
 async def update_all_moex():
-    """Обновить все котировки с CBR асинхронно"""
+    """Обновление всех котировок с moex"""
 
     async with async_session() as session:
         stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки (MOEX)'))
@@ -128,7 +131,7 @@ async def update_all_moex():
 
 
 async def update_cbr_metals():
-    """Обновить все котировки по металлам с CBR асинхронно"""
+    """Обновление всех котировок по металлам с cbr"""
 
     async with ClientSession() as req_session:
         req = await req_session.get(

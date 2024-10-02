@@ -43,7 +43,7 @@ async def personal_dashboard_quotation(
         session: AsyncSession = Depends(get_async_session)
 ) -> ExchangeSectionData:
     """Данные для пользовательского дашборда"""
-    # Execute the query asynchronously
+
     stmt = await session.execute(
         sa.select(models.QuotesSections, models.Quotes, models.UsersQuotesSubscriptions)
         .select_from(models.Quotes)
@@ -53,7 +53,6 @@ async def personal_dashboard_quotation(
     )
     quotes_and_sections_subs = stmt.mappings().fetchall()
 
-    # Prepare sections data
     sections = []
     for section in set(x['QuotesSections'] for x in quotes_and_sections_subs):
         data_items = []
@@ -147,6 +146,7 @@ async def update_personal_dashboard(
         session: AsyncSession = Depends(get_async_session),
 ) -> None:
     """Обновить пользовательские подписки"""
+
     stmt = await session.execute(
         sa.select(models.UsersQuotesSubscriptions)
         .filter(models.UsersQuotesSubscriptions.user_id == user_id)
@@ -164,7 +164,6 @@ async def update_personal_dashboard(
                     await session.delete(quote)
             except StopIteration:
                 if sub.active:
-                    # create
                     session.add(
                         models.UsersQuotesSubscriptions(
                             user_id=user_id,
@@ -207,7 +206,7 @@ async def dashboard_quotation(
                 close=quote.close,
                 high=quote.high,
                 low=quote.low,
-                # volume=quote_data.volume,
+                # volume=quote_data.volume, пока что это не нужно
             ) for quote in quote_data
         ]
     )
