@@ -109,9 +109,9 @@ async def show_all_subs(callback_query: types.CallbackQuery) -> None:
     user_id = callback_query.from_user.id
 
     list_of_subs = [
-        ('*Подписки на клиентов:*\n\n', user_client_subscription_db.get_subscription_df(user_id)),
-        ('*Подписки на сырьевые товары:*\n\n', user_commodity_subscription_db.get_subscription_df(user_id)),
-        ('*Подписки на отрасли:*\n\n', user_industry_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на новости по компаниям:*\n\n', user_client_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на новости по сырью:*\n\n', user_commodity_subscription_db.get_subscription_df(user_id)),
+        ('*Подписки на отраслевые новости:*\n\n', user_industry_subscription_db.get_subscription_df(user_id)),
         ('*Подписки на аналитические отчеты:*\n\n', user_research_subscription_db.get_subscription_df(user_id)),
     ]
     for tg_group in await telegram_group_db.get_all():
