@@ -118,7 +118,7 @@ async def main_menu_callback(
 
 
 @router.message(Command(callback_data_factories.ClientsMenuData.__prefix__))
-@has_access_to_feature(enums.FeatureType.clients_menu)
+@has_access_to_feature(enums.FeatureType.company_menu)
 async def main_menu_command(message: types.Message) -> None:
     """
     Получение меню клиенты

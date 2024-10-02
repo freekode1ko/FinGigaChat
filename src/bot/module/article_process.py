@@ -450,7 +450,7 @@ class ArticleProcessAdmin:
     def get_article_by_link(self, link: str) -> Optional[dict]:
         """Получение новости по ссылке"""
         dict_keys_article = ('Заголовок', 'Ссылка', 'Дата публикации', 'Саммари')
-        dict_keys_client = ('Клиент', 'Балл по клиенту')
+        dict_keys_client = ('Компания', 'Балл по компании')
         dict_keys_commodity = ('Товар', 'Балл по товару')
 
         query_article = f"SELECT title, link, date, text_sum FROM article WHERE link='{link}'"

@@ -23,14 +23,14 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     """
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
-        text='Выбрать клиента из моего списка подписок',
+        text='Выбрать компанию из моего списка подписок',
         callback_data=callback_data_factories.ClientsMenuData(
             menu=callback_data_factories.ClientsMenusEnum.clients_list,
             subscribed=True,
         ).pack(),
     ))
     keyboard.row(types.InlineKeyboardButton(
-        text='Выбрать другого клиента',
+        text='Выбрать другую компанию',
         callback_data=callback_data_factories.ClientsMenuData(
             menu=callback_data_factories.ClientsMenusEnum.clients_list,
             subscribed=False,

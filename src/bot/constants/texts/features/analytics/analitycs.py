@@ -23,8 +23,8 @@ class AnalyticsTexts(BaseSettings):
     )
 
     ANAL_CHOOSE_INDUSTRY: str = (
-        'Выберете отрасль клиента, '
-        'по которому вы хотели бы получить данные из SberCIB Investment Research'
+        'Выберете отрасль компании, '
+        'по которой вы хотели бы получить данные из SberCIB Investment Research'
     )
 
     ANAL_CHOOSE_PERIOD: str = (
@@ -34,10 +34,10 @@ class AnalyticsTexts(BaseSettings):
 
     ANAL_NOT_REPORT: str = 'На текущий момент, отчеты временно отсутствуют'
 
-    ANAL_WHAT_DATA: str = 'Какие данные вас интересуют по клиенту <b>{research}</b>?'
+    ANAL_WHAT_DATA: str = 'Какие данные вас интересуют по компании <b>{research}</b>?'
 
-    ANAL_NAVI_LINK: str = '<a href="{link}">Цифровая справка клиента: "{name}"</a>'
+    ANAL_NAVI_LINK: str = '<a href="{link}">Цифровая справка компании: "{name}"</a>'
 
-    ANAL_NOT_NAVI_LINK: str = 'Цифровая справка по клиенту "{name}" отсутствует'
+    ANAL_NOT_NAVI_LINK: str = 'Цифровая справка по компании "{name}" отсутствует'
 
     ANAL_FULL_VERSION_REPORT: str = 'Полная версия отчета: <b>{header}</b>'

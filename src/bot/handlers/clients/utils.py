@@ -12,7 +12,7 @@ from module.fuzzy_search import FuzzyAlternativeNames
 from utils.decorators import has_access_to_feature
 
 
-@has_access_to_feature(feature=FeatureType.clients_menu, is_need_answer=False)
+@has_access_to_feature(feature=FeatureType.company_menu, is_need_answer=False)
 async def is_client_in_message(
         message: types.Message,
         user_msg: str,
