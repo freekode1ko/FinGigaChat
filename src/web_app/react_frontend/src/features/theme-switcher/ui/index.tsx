@@ -14,8 +14,9 @@ const ThemeSwitcher = () => {
         variant="ghost"
         size="icon"
         onClick={() => dispatch(setTheme('dark'))}
+        className='w-full px-2 py-1.5 justify-start'
       >
-        <Sun />
+        <Sun /> Светлая тема
       </Button>
     )
   return (
@@ -23,8 +24,9 @@ const ThemeSwitcher = () => {
       variant="ghost"
       size="icon"
       onClick={() => dispatch(setTheme('light'))}
+      className='w-full px-2 py-1.5 justify-start'
     >
-      <Moon />
+      <Moon /> Темная тема
     </Button>
   )
 }

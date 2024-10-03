@@ -23,7 +23,6 @@ export const userSlice = createSlice({
   },
 })
 
-export const selectUserState = (state: RootState) => state.user
 export const selectUserIsAuthenticated = (state: RootState) =>
   state.user.isAuthenticated
 export const selectUserData = (state: RootState) => state.user.user

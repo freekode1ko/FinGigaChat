@@ -1,12 +1,45 @@
-import { QuotesSectionsList } from '@/widgets/quotes-sections-list'
-import { useGetDashboardQuotesQuery } from '@/entities/quotes'
+import { Outlet } from 'react-router-dom'
+
+import { DashboardSection } from '@/widgets/dashboard-section'
+import { ManageDashboardButton } from '@/features/manage-dashboard'
+import { ChartSkeleton } from '@/entities/charts'
+import { useGetDashboardSubscriptionsQuery } from '@/entities/quotes'
+import { selectUserData } from '@/entities/user'
+import { useAppSelector } from '@/shared/lib'
+import { TypographyH2 } from '@/shared/ui'
+import { skipToken } from '@reduxjs/toolkit/query'
 
 const DashboardPage = () => {
-  const { data } = useGetDashboardQuotesQuery()
+  const user = useAppSelector(selectUserData)
+  const { data: initialContent, isLoading } = useGetDashboardSubscriptionsQuery(
+    user
+      ? {
+          userId: user.userId,
+        }
+      : skipToken
+  )
 
   return (
     <>
-      <QuotesSectionsList sections={data?.sections} />
+      <div className="flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
+        <TypographyH2>Дашборд</TypographyH2>
+        <ManageDashboardButton />
+      </div>
+      <div className="grid grid-cols-1 gap-8 pt-6 lg:pt-0 lg:grid-cols-2 xl:grid-cols-3">
+        <>
+          {isLoading &&
+            Array.from({ length: 20 }).map((_, idx) => (
+              <div className="h-[300px]" key={idx}>
+                <ChartSkeleton />
+              </div>
+            ))}
+          {initialContent?.subscription_sections.map((section) => (
+            <DashboardSection key={section.section_name} section={section} />
+          ))}
+        </>
+      </div>
+      {/* Opens detailed drawer (dashboard quotation page) */}
+      <Outlet />
     </>
   )
 }

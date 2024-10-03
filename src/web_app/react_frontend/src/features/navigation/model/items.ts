@@ -1,10 +1,12 @@
 import {
   ActivityIcon,
-  // FileBarChart,
+  FileBarChart,
   LayoutDashboardIcon,
   ListChecks,
   type LucideIcon,
   NewspaperIcon,
+  NotebookPen,
+  Podcast,
 } from 'lucide-react'
 
 interface MenuItem {
@@ -21,7 +23,7 @@ export const menuItems: Array<MenuItem> = [
   },
   {
     name: 'Дашборд',
-    path: '/',
+    path: '/dashboard',
     icon: LayoutDashboardIcon,
   },
   {
@@ -29,14 +31,24 @@ export const menuItems: Array<MenuItem> = [
     path: '/news',
     icon: NewspaperIcon,
   },
-  // {
-  //   name: 'Аналитика',
-  //   path: '/analytics',
-  //   icon: FileBarChart,
-  // },
+  {
+    name: 'Подписки',
+    path: '/subscriptions',
+    icon: Podcast,
+  },
+  {
+    name: 'Аналитика',
+    path: '/analytics',
+    icon: FileBarChart,
+  },
   {
     name: 'Встречи',
     path: '/meetings',
     icon: ListChecks,
+  },
+  {
+    name: 'Заметки',
+    path: '/notes',
+    icon: NotebookPen,
   },
 ]
