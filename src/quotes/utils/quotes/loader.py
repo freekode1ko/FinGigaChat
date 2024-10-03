@@ -48,7 +48,7 @@ async def load_cbr_quotes() -> None:
             quotes_list_in_xml = ET.fromstring(quotes_xml).findall('Item')
             for quote in quotes_list_in_xml:
                 name = quote.find('Name').text
-                source = "https://www.cbr.ru/scripts/XML_dynamic.asp"
+                source = 'https://www.cbr.ru/scripts/XML_dynamic.asp'
                 params = {
                     'CBR_ID': quote.attrib['ID'].strip(),
                     'CBR_EngName': value.strip() if (value := quote.find('EngName').text) is not None else None,
@@ -82,6 +82,7 @@ async def load_cbr_quotes() -> None:
                 await session.execute(upsert_stmt)
             await session.commit()
 
+
 async def load_cbr_metals() -> None:
     """Загрузка металлов с cbr.ru"""
 
@@ -106,7 +107,7 @@ async def load_cbr_metals() -> None:
             await session.flush()
 
         async with ClientSession() as req_session:
-            url = 'https://www.cbr.ru/scripts/xml_metall.asp'  # FIXME TO CONST
+            url = 'https://www.cbr.ru/scripts/xml_metall.asp'
 
             for quote in cbr_metals_parsing_list:
                 name = quote['name']
@@ -139,6 +140,7 @@ async def load_cbr_metals() -> None:
 
                 await session.execute(upsert_stmt)
             await session.commit()
+
 
 async def load_moex_quotes():
     """Загрузить котировки с MOEX"""
@@ -279,40 +281,36 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
         await session.commit()
 
         quote_id = result.scalar()
-        try:
-            for timestamp, low, high, open, close, volume in zip(
-                    quote_data['chart']['result'][0]['timestamp'],
-                    quote_data['chart']['result'][0]['indicators']['quote'][0]['low'],
-                    quote_data['chart']['result'][0]['indicators']['quote'][0]['high'],
-                    quote_data['chart']['result'][0]['indicators']['quote'][0]['open'],
-                    quote_data['chart']['result'][0]['indicators']['quote'][0]['close'],
-                    quote_data['chart']['result'][0]['indicators']['quote'][0]['volume'],
-            ):
-                insert_stmt = insert_pg(models.QuotesValues).values(
-                    quote_id=quote_id,
-                    date=datetime.datetime.fromtimestamp(timestamp),  # FIXME
-                    open=open,
-                    close=close,
-                    high=high,
-                    low=low,
-                    value=close,
-                    volume=volume,
-                )
-                upsert_stmt = insert_stmt.on_conflict_do_update(
-                    constraint='uq_quote_and_date',
-                    set_={
-                        'open': open,
-                        'close': close,
-                        'high': high,
-                        'low': low,
-                        'value': close,
-                        'volume': volume,
-                    }
-                )
-                await session.execute(upsert_stmt)
-
-        except Exception as e:
-            print(url)
+        for timestamp, low, high, open, close, volume in zip(
+                quote_data['chart']['result'][0]['timestamp'],
+                quote_data['chart']['result'][0]['indicators']['quote'][0]['low'],
+                quote_data['chart']['result'][0]['indicators']['quote'][0]['high'],
+                quote_data['chart']['result'][0]['indicators']['quote'][0]['open'],
+                quote_data['chart']['result'][0]['indicators']['quote'][0]['close'],
+                quote_data['chart']['result'][0]['indicators']['quote'][0]['volume'],
+        ):
+            insert_stmt = insert_pg(models.QuotesValues).values(
+                quote_id=quote_id,
+                date=datetime.datetime.fromtimestamp(timestamp),  # FIXME
+                open=open,
+                close=close,
+                high=high,
+                low=low,
+                value=close,
+                volume=volume,
+            )
+            upsert_stmt = insert_stmt.on_conflict_do_update(
+                constraint='uq_quote_and_date',
+                set_={
+                    'open': open,
+                    'close': close,
+                    'high': high,
+                    'low': low,
+                    'value': close,
+                    'volume': volume,
+                }
+            )
+            await session.execute(upsert_stmt)
         await session.commit()
 
 

@@ -1,3 +1,5 @@
+"""Константы"""
+
 moex_names_parsing_list = [
     'IRAO',
     'MRKY',

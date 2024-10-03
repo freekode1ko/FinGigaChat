@@ -1,7 +1,5 @@
 from typing import Union
 
-import sqlalchemy as sa
-
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
@@ -24,6 +22,7 @@ async def custom_insert_or_update_to_postgres(
     )
     await session.execute(upsert_stmt)
     await session.commit()
+
 
 async def custom_many_insert_or_update_to_postgres(
         session: AsyncSession,

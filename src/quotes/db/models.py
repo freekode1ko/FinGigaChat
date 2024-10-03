@@ -1,7 +1,6 @@
 """Модели таблиц всех сервисов"""
 import datetime
 import enum
-from enum import auto, IntEnum
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -901,7 +900,7 @@ class UsersQuotesSubscriptions(Base):
         sa.Enum(SizeEnum),
         nullable=False,
         default=SizeEnum.TEXT,
-        comment="Размер отображения данных: график или текст"
+        comment='Размер отображения данных: график или текст',
     )
 
     user = relationship('RegisteredUser', back_populates='quote_subscriptions')

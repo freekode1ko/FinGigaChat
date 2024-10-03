@@ -1,5 +1,4 @@
 """Модуль для периодического сбора котировок."""
-import asyncio
 import datetime
 import multiprocessing
 import time
@@ -10,10 +9,10 @@ import click
 from configs import config
 from log import sentry
 from log.logger_base import Logger, logger
-from utils.quotes.quotes import load_quotes, update_quote_data
-from utils.run_async import run_async
 from utils.cli_utils import get_period
 from utils.quotes import get_groups
+from utils.quotes.quotes import load_quotes, update_quote_data
+from utils.run_async import run_async
 
 
 def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
@@ -66,6 +65,7 @@ def update_quotes():
         logger.error(f'Сборка котировок закончилась с ошибкой:{e}')
     else:
         logger.info('Сборка котировок закончилась')
+
 
 # ADD check if cant get new data from source
 # ADD save updated data time
