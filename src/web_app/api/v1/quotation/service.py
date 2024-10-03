@@ -215,11 +215,21 @@ async def get_dashboard(
         return None  # FIXME в будущем
 
     stmt = await session.execute(
+        sa.select(models.QuotesValues.quote_id)
+        .select_from(models.QuotesValues)
+        .distinct()
+    )
+    quote_ids_with_data = stmt.scalars().fetchall()
+
+    stmt = await session.execute(
         sa.select(models.QuotesSections, models.Quotes, models.UsersQuotesSubscriptions)
         .select_from(models.Quotes)
         .join(models.QuotesSections)
         .join(models.UsersQuotesSubscriptions)
-        .filter(models.UsersQuotesSubscriptions.user_id == user_id)
+        .filter(
+            models.UsersQuotesSubscriptions.user_id == user_id,
+            models.Quotes.id.in_(quote_ids_with_data)
+        )
     )
     quotes_and_sections_subs = stmt.mappings().fetchall()
 
@@ -263,11 +273,20 @@ async def get_dashboard(
 
 async def get_user_subscriptions(session: AsyncSession, user_id: int, ) -> DashboardSubscriptions:
     stmt = await session.execute(
+        sa.select(models.QuotesValues.quote_id)
+        .select_from(models.QuotesValues)
+        .distinct()
+    )
+    quote_ids_with_data = stmt.scalars().fetchall()
+
+    stmt = await session.execute(
         sa.select(models.QuotesSections, models.Quotes)
         .select_from(models.Quotes)
         .join(models.QuotesSections)
+        .filter(models.Quotes.id.in_(quote_ids_with_data))
     )
     quotes_and_sections = stmt.mappings().fetchall()
+
 
     stmt = await session.execute(
         sa.select(models.UsersQuotesSubscriptions)

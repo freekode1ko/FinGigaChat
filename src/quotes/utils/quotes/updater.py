@@ -8,8 +8,8 @@ from collections import namedtuple
 import sqlalchemy as sa
 from aiohttp import ClientSession
 
-from src.quotes.db.crud import custom_many_insert_or_update_to_postgres
 from db import models
+from db.crud import custom_many_insert_or_update_to_postgres
 from db.database import async_session
 
 
@@ -107,7 +107,6 @@ async def update_moex_quotes(quote: models.Quotes):
 
 async def update_all_moex():
     """Обновление всех котировок с moex"""
-
     async with async_session() as session:
         stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name='Котировки (MOEX)'))
         section = stmt.scalar_one_or_none()
@@ -124,7 +123,6 @@ async def update_all_moex():
 
 async def update_cbr_metals():
     """Обновление всех котировок по металлам с cbr"""
-
     async with ClientSession() as req_session:
         req = await req_session.get(
             url='https://www.cbr.ru/scripts/xml_metall.asp',

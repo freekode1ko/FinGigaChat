@@ -10,7 +10,7 @@ from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 
-from constants.constants import br_metals_parsing_list, moex_boards_names_order_list, moex_names_parsing_list, \
+from constants.constants import cbr_metals_parsing_list, moex_boards_names_order_list, moex_names_parsing_list, \
     yahoo_names_parsing_dict
 from db import models
 from db.database import async_session
