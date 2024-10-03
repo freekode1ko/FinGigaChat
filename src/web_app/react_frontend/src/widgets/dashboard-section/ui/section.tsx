@@ -12,7 +12,9 @@ const DashboardSection = ({ section }: DashboardSectionProps) => {
     <>
       {section.subscription_items.filter((item) => item.active).length > 0 ? (
         <div className="w-full space-y-2">
-          <TypographyH2>{section.section_name}</TypographyH2>
+          <div className='py-2 z-50 sticky top-0 bg-white dark:bg-dark-blue'>
+            <TypographyH2>{section.section_name}</TypographyH2>
+          </div>
           <div className="grid grid-cols-1 gap-4">
             {section.subscription_items
               .filter((item) => item.active)

@@ -2,12 +2,14 @@ import { MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { matchPath, NavLink, useLocation } from 'react-router-dom'
 
+import { ThemeSwitcher } from '@/features/theme-switcher'
 import { selectUserIsAuthenticated } from '@/entities/user'
 import { cn, useAppSelector } from '@/shared/lib'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui'
 
@@ -55,7 +57,7 @@ const MoreMenuButton = ({ overflowTabs }: { overflowTabs: MenuItem[] }) => {
           </span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
+      <DropdownMenuContent className="w-64">
         {overflowTabs.map((item) => (
           <DropdownMenuItem key={item.path}>
             <NavLink
@@ -77,6 +79,8 @@ const MoreMenuButton = ({ overflowTabs }: { overflowTabs: MenuItem[] }) => {
             </NavLink>
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><ThemeSwitcher /></DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
