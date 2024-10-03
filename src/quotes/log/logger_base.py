@@ -3,7 +3,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-from configs.config import log_lvl
+from configs.config import log_lvl, LOG_LEVEL_INFO, log_file
 
 LOG_FORMAT = '%(asctime)s,%(msecs)d %(levelname)-8s [%(module)s:%(lineno)d in %(funcName)s] %(message)s'
 MAX_BYTES = 10 * 1024 * 1024
@@ -44,3 +44,6 @@ def selector_logger(module_logger: str, level: int = log_lvl):
     if not os.path.isdir(logs_path):
         raise FileExistsError(f'Файл {logs_path} не является каталогом')
     return Logger(module_logger, level).logger
+
+
+logger = selector_logger(log_file, LOG_LEVEL_INFO)

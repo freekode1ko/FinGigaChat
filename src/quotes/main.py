@@ -9,7 +9,7 @@ import click
 
 from configs import config
 from log import sentry
-from log.logger_base import Logger, selector_logger
+from log.logger_base import Logger, logger
 from utils.quotes.quotes import load_quotes, update_quote_data
 from utils.run_async import run_async
 from utils.cli_utils import get_period
@@ -43,6 +43,30 @@ def collect_quotes_group(QuotesGetterClass, logger: Logger.logger) -> bool:
     return is_success
 
 
+def first_load_quotes():
+    """Первоначальная загрузка котировок"""
+    logger.info('Начата первоначальная загрузка котировок')
+    print('Начата первоначальная загрузка котировок')
+    try:
+        run_async(load_quotes)
+    except Exception as e:
+        logger.error(f'Загрузка котировок закончилась с ошибкой:{e}')
+        print(f'Загрузка котировок закончилась с ошибкой:{e}')
+    else:
+        logger.info('Загрузка котировок закончилась успешно')
+        print('Загрузка котировок закончилась успешно')
+
+
+def update_quotes():
+    """Сборка/обновление котировок"""
+    logger.info('Начала сборки котировок')
+    try:
+        run_async(update_quote_data)
+    except Exception as e:
+        logger.error(f'Сборка котировок закончилась с ошибкой:{e}')
+    else:
+        logger.info('Сборка котировок закончилась')
+
 # ADD check if cant get new data from source
 # ADD save updated data time
 @click.command()
@@ -65,7 +89,6 @@ def main(period):
 
     warnings.filterwarnings('ignore')
     # логгер для сохранения действий программы + пользователей
-    logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
     groups_logger_list = [(quotes_class, logger) for quotes_class in get_groups()]
 
     while True:
@@ -88,13 +111,7 @@ def main(period):
         print(collect_end_msg)
         logger.info(collect_end_msg)
 
-        logger.info('Начала сборки котировок')
-        try:
-            run_async(update_quote_data)
-        except Exception as e:
-            logger.error(f'Сборка котировок закончилась с ошибкой:{e}')
-        else:
-            logger.info('Сборка котировок закончилась')
+        update_quotes()
 
         print(f'Ожидание {current_period} {scale_txt} перед следующей сборкой...')
         logger.info(f'Ожидание {current_period} {scale_txt} перед следующей сборкой...')
@@ -106,17 +123,5 @@ def main(period):
 
 
 if __name__ == '__main__':
-    logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
-    logger.info('Начата первоначальная загрузка котировок')
-    print('Начата первоначальная загрузка котировок')
-    try:
-        run_async(load_quotes)
-        run_async(update_quote_data)
-    except Exception as e:
-        logger.error(f'Загрузка котировок закончилась с ошибкой:{e}')
-        print(f'Загрузка котировок закончилась с ошибкой:{e}')
-    else:
-        logger.info('Загрузка котировок закончилась успешно')
-        print('Загрузка котировок закончилась успешно')
-
+    first_load_quotes()
     main()

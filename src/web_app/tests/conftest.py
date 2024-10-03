@@ -69,7 +69,7 @@ async def _async_client(_async_session: AsyncSession):
     app.dependency_overrides[get_async_session] = lambda: _async_session
     async with AsyncClient(
             app=app,
-            base_url=f"http://localhost:8000",
+            base_url='http://localhost:8000',
     ) as client:
         yield client
 

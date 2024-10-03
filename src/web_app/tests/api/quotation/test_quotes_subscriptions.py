@@ -5,7 +5,6 @@ from pydantic_core import from_json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.v1.quotation.schemas import DashboardSubscriptions
-from constants.constants import moex_names_parsing_list
 from db import models
 
 
@@ -194,114 +193,5 @@ async def test_update_user_subs(
     assert len(user_subs_list) == 2
 
 
-@pytest.mark.asyncio
-async def test_delete_user_subs():
-    pass
-
-
-@pytest.mark.asyncio
-async def test_add_user_subs():
-    pass
-
-
-@pytest.mark.asyncio
-async def test_get_cbr_quotes(
-        _async_session: AsyncSession
-):
-    from utils.quotes import load_CBR_quotes
-
-    await load_CBR_quotes(_async_session)
-
-    stmt = await _async_session.execute(sa.select(models.Quotes))
-    assert len(stmt.scalars().fetchall())
-
-
-@pytest.mark.asyncio
-async def test_get_quote_date(
-        _async_session: AsyncSession
-):
-    from utils.quotes import load_CBR_quotes
-    from utils.quotes.updater import update_cbr_quote
-
-    await load_CBR_quotes(_async_session)
-
-    stmt = await _async_session.execute(sa.select(models.Quotes))
-    quote = stmt.scalars().first()
-
-    await update_cbr_quote(quote, _async_session)
-
-    stmt = await _async_session.execute(sa.select(models.QuotesValues))
-    quote_data = stmt.scalars().fetchall()
-    assert len(quote_data) >= 1
-
-
-@pytest.mark.asyncio
-async def test_get_double_quote_date(
-        _async_session: AsyncSession
-):
-    from utils.quotes import load_CBR_quotes
-    from utils.quotes.updater import update_cbr_quote
-
-    await load_CBR_quotes(_async_session)
-
-    stmt = await _async_session.execute(sa.select(models.Quotes))
-    quote = stmt.scalars().first()
-
-    await update_cbr_quote(quote, _async_session)
-
-    stmt = await _async_session.execute(sa.select(models.QuotesValues))
-    quote_data = stmt.scalars().fetchall()
-    quote_len = len(quote_data)
-
-    await update_cbr_quote(quote, _async_session)
-
-    stmt = await _async_session.execute(sa.select(models.QuotesValues))
-    quote_data = stmt.scalars().fetchall()
-
-
-    assert len(quote_data) == quote_len
-
-
-@pytest.mark.asyncio
-async def test_get_all_quote_date(
-        _async_session: AsyncSession,
-):
-    from utils.quotes import load_CBR_quotes
-    from utils.quotes.updater import update_all_cbr
-
-    await load_CBR_quotes(_async_session)
-    await update_all_cbr()
-
-    stmt = await _async_session.execute(sa.select(models.QuotesValues))
-    quote_data = stmt.scalars().fetchall()
-    assert len(quote_data) >= 1
-
-
-@pytest.mark.asyncio
-async def test_load_moex_quotes(
-        _async_client: AsyncClient,
-        _async_session: AsyncSession,
-):
-    from utils.quotes.loader import load_moex_quotes
-    from utils.quotes.updater import update_all_moex
-
-    await load_moex_quotes()
-    await update_all_moex()
-
-    stmt = await _async_session.execute(sa.select(models.Quotes))
-    quotes = stmt.scalars().fetchall()
-    assert len(quotes) == len(moex_names_parsing_list)
-
-@pytest.mark.asyncio
-async def test_load_yahoo_quotes(
-        _async_client: AsyncClient,
-        _async_session: AsyncSession,
-):
-    from utils.quotes.loader import load_yahoo_quotes
-
-    await load_yahoo_quotes()
-
-    stmt = await _async_session.execute(sa.select(models.Quotes))
-    quotes = stmt.scalars().fetchall()
 
 

@@ -7,10 +7,10 @@ from collections import namedtuple
 
 import sqlalchemy as sa
 from aiohttp import ClientSession
-from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from db import models
 from db.database import async_session
+from src.quotes.db.crud import custom_many_insert_or_update_to_postgres
 
 
 async def update_cbr_quote(quote: models.Quotes):
@@ -28,22 +28,21 @@ async def update_cbr_quote(quote: models.Quotes):
                 timeout=10
             )
             quotes_data_xml = await req.text()
+
+        values = []
         for quote_date in ET.fromstring(quotes_data_xml).findall('Record'):
-            insert_stmt = insert_pg(models.QuotesValues).values(
-                quote_id=quote.id,
-                date=datetime.datetime.strptime(quote_date.attrib['Date'], "%d.%m.%Y").date(),
-                value=float(quote_date.find('Value').text.replace(',', '.')),
-            )
-            upsert_stmt = insert_stmt.on_conflict_do_update(
-                constraint='uq_quote_and_date',
-                set_={
-                    # 'quote_id': quote.id,
-                    'date': datetime.datetime.strptime(quote_date.attrib['Date'], "%d.%m.%Y").date(),
-                    'value': float(quote_date.find('Value').text.replace(',', '.')),
-                }
-            )
-            await session.execute(upsert_stmt)
-        await session.commit()
+            values.append({
+                'quote_id': quote.id,
+                'date': datetime.datetime.strptime(quote_date.attrib['Date'], "%d.%m.%Y").date(),
+                'value': float(quote_date.find('Value').text.replace(',', '.')),
+            })
+
+        await custom_many_insert_or_update_to_postgres(
+            session=session,
+            model=models.QuotesValues,
+            values=values,
+            constraint='uq_quote_and_date',
+        )
 
 
 async def update_all_cbr():
@@ -85,32 +84,25 @@ async def update_moex_quotes(quote: models.Quotes):
 
             candles_list_from_json = [MOEXDataCandles(*x) for x in quotes_data_json['candles']['data']]
 
+        values = []
         for quote_data in candles_list_from_json:
-            insert_stmt = insert_pg(models.QuotesValues).values(
-                quote_id=quote.id,
-                date=datetime.datetime.strptime(quote_data.begin.split()[0], "%Y-%m-%d").date(),
-                open=quote_data.open,
-                close=quote_data.close,
-                high=quote_data.high,
-                low=quote_data.low,
-                value=quote_data.low / quote_data.volume,
-                volume=quote_data.volume,
+            values.append({
+                'quote_id': quote.id,
+                'date': datetime.datetime.strptime(quote_data.begin.split()[0], "%Y-%m-%d").date(),
+                'open': quote_data.open,
+                'close': quote_data.close,
+                'high': quote_data.high,
+                'low': quote_data.low,
+                'value': quote_data.low / quote_data.volume,
+                'volume': quote_data.volume,
+            })
 
-            )
-            upsert_stmt = insert_stmt.on_conflict_do_update(
-                constraint='uq_quote_and_date',
-                set_={
-                    # 'date': datetime.datetime.strptime(quote_data.begin.split()[0], "%Y-%m-%d").date(),
-                    'open': quote_data.open,
-                    'close': quote_data.close,
-                    'high': quote_data.high,
-                    'low': quote_data.low,
-                    'value': quote_data.low / quote_data.volume,
-                    'volume': quote_data.volume,
-                }
-            )
-            await session.execute(upsert_stmt)
-        await session.commit()
+        await custom_many_insert_or_update_to_postgres(
+            session=session,
+            model=models.QuotesValues,
+            values=values,
+            constraint='uq_quote_and_date',
+        )
 
 
 async def update_all_moex():
@@ -154,24 +146,21 @@ async def update_cbr_metals():
         )
         quotes = stmt.scalars().fetchall()
 
-
+        values = []
         for quote in quotes:
             for data in quote_data.findall('Record'):
                 if int(data.attrib['Code']) != quote.params['CBR_ID']:
                     continue
 
-                insert_stmt = insert_pg(models.QuotesValues).values(
-                    quote_id=quote.id,
-                    date=datetime.datetime.strptime(data.attrib['Date'], "%d.%m.%Y").date(),
-                    value=float(data.find('Buy').text.replace(',', '.')),
-                )
-                upsert_stmt = insert_stmt.on_conflict_do_update(
-                    constraint='uq_quote_and_date',
-                    set_={
-                        # 'quote_id': quote.id,
-                        'date': datetime.datetime.strptime(data.attrib['Date'], "%d.%m.%Y").date(),
-                        'value': float(data.find('Buy').text.replace(',', '.')),
-                    }
-                )
-                await session.execute(upsert_stmt)
-        await session.commit()
+                values.append({
+                    'quote_id': quote.id,
+                    'date': datetime.datetime.strptime(data.attrib['Date'], "%d.%m.%Y").date(),
+                    'value': float(data.find('Buy').text.replace(',', '.')),
+                })
+
+        await custom_many_insert_or_update_to_postgres(
+            session=session,
+            model=models.QuotesValues,
+            values=values,
+            constraint='uq_quote_and_date',
+        )

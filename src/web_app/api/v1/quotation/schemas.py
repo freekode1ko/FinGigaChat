@@ -18,7 +18,7 @@ class DataItem(BaseModel):
     """"Элементы для дашбордов"""
     quote_id: int
     name: str
-    ticker: str | None = None
+    ticker: Optional[str] = None
     params: Optional[list[Param]]
 
     value: Optional[float] = 0
@@ -52,7 +52,7 @@ class SubscriptionItem(BaseModel):
 
     id: int
     name: str
-    ticker: str | None = None
+    ticker: Optional[str] = None
     active: bool
     type: SizeEnum = SizeEnum.TEXT
 
@@ -73,12 +73,12 @@ class GraphData(BaseModel):
     """Данные для графиков за день"""
 
     date: datetime.date
-    value: float | None = None
-    open: float | None = None
-    close: float | None = None
-    high: float | None = None
-    low: float | None = None
-    volume: float | None = None
+    value: Optional[float] = None
+    open: Optional[float] = None
+    close: Optional[float] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    volume: Optional[float] = None
 
 
 class DashboardGraphData(BaseModel):

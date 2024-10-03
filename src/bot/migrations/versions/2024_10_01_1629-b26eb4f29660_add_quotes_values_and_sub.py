@@ -80,4 +80,5 @@ def downgrade() -> None:
     op.drop_table('quotes_values')
     op.drop_table('quotes')
     op.drop_table('quotes_section')
+    sa.Enum('GRAPH_LARGE', 'GRAPH_MEDIUM', 'TEXT', name='sizeenum').drop(op.get_bind())
     # ### end Alembic commands ###
