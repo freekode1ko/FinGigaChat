@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from aiohttp import ClientSession
 
 from db import models
-from db.crud import custom_many_insert_or_update_to_postgres
+from db.crud import custom_insert_or_update_to_postgres
 from db.database import async_session
 
 
@@ -36,8 +36,7 @@ async def update_cbr_quote(quote: models.Quotes):
                 'date': datetime.datetime.strptime(quote_date.attrib['Date'], '%d.%m.%Y').date(),
                 'value': float(quote_date.find('Value').text.replace(',', '.')),
             })
-
-        await custom_many_insert_or_update_to_postgres(
+        await custom_insert_or_update_to_postgres(
             session=session,
             model=models.QuotesValues,
             values=values,
@@ -56,7 +55,7 @@ async def update_all_cbr():
         )
         quotes = stmt.scalars().fetchall()
 
-        await asyncio.gather(*[update_cbr_quote(quote) for quote in quotes])
+    await asyncio.gather(*[update_cbr_quote(quote) for quote in quotes])
 
 
 async def update_moex_quotes(quote: models.Quotes):
@@ -97,7 +96,7 @@ async def update_moex_quotes(quote: models.Quotes):
                 'volume': quote_data.volume,
             })
 
-        await custom_many_insert_or_update_to_postgres(
+        await custom_insert_or_update_to_postgres(
             session=session,
             model=models.QuotesValues,
             values=values,
@@ -156,7 +155,7 @@ async def update_cbr_metals():
                     'value': float(data.find('Buy').text.replace(',', '.')),
                 })
 
-        await custom_many_insert_or_update_to_postgres(
+        await custom_insert_or_update_to_postgres(
             session=session,
             model=models.QuotesValues,
             values=values,
