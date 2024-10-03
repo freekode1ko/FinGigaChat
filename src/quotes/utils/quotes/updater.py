@@ -8,9 +8,9 @@ from collections import namedtuple
 import sqlalchemy as sa
 from aiohttp import ClientSession
 
+from src.quotes.db.crud import custom_many_insert_or_update_to_postgres
 from db import models
 from db.database import async_session
-from src.quotes.db.crud import custom_many_insert_or_update_to_postgres
 
 
 async def update_cbr_quote(quote: models.Quotes):
@@ -33,7 +33,7 @@ async def update_cbr_quote(quote: models.Quotes):
         for quote_date in ET.fromstring(quotes_data_xml).findall('Record'):
             values.append({
                 'quote_id': quote.id,
-                'date': datetime.datetime.strptime(quote_date.attrib['Date'], "%d.%m.%Y").date(),
+                'date': datetime.datetime.strptime(quote_date.attrib['Date'], '%d.%m.%Y').date(),
                 'value': float(quote_date.find('Value').text.replace(',', '.')),
             })
 
@@ -88,7 +88,7 @@ async def update_moex_quotes(quote: models.Quotes):
         for quote_data in candles_list_from_json:
             values.append({
                 'quote_id': quote.id,
-                'date': datetime.datetime.strptime(quote_data.begin.split()[0], "%Y-%m-%d").date(),
+                'date': datetime.datetime.strptime(quote_data.begin.split()[0], '%Y-%m-%d').date(),
                 'open': quote_data.open,
                 'close': quote_data.close,
                 'high': quote_data.high,
@@ -154,7 +154,7 @@ async def update_cbr_metals():
 
                 values.append({
                     'quote_id': quote.id,
-                    'date': datetime.datetime.strptime(data.attrib['Date'], "%d.%m.%Y").date(),
+                    'date': datetime.datetime.strptime(data.attrib['Date'], '%d.%m.%Y').date(),
                     'value': float(data.find('Buy').text.replace(',', '.')),
                 })
 

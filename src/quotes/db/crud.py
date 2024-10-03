@@ -1,3 +1,4 @@
+"""Функциия для работы с БД"""
 from typing import Union
 
 from sqlalchemy.dialects.postgresql import insert as insert_pg

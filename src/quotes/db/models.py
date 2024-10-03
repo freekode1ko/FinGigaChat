@@ -907,7 +907,6 @@ class UsersQuotesSubscriptions(Base):
     quote = relationship('Quotes', back_populates='user_quotes_subscriptions')
 
 
-
 class UserRole(Base):
     __tablename__ = 'user_role'
     __table_args__ = {'comment': 'Таблица описания пользовательских ролей'}

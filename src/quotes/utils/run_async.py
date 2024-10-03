@@ -1,11 +1,14 @@
+"""Функция для запуска асинхронной функции"""
 import asyncio
 
-from log.logger_base import selector_logger
 from configs import config
+from log.logger_base import selector_logger
 
 logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
 
+
 def run_async(func, *args, **kwargs):
+    """Функция для запуска асинхронной функции"""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:

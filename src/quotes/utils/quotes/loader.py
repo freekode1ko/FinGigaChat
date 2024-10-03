@@ -10,8 +10,8 @@ from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 
-from constants.constants import moex_names_parsing_list, moex_boards_names_order_list, yahoo_names_parsing_dict, \
-    cbr_metals_parsing_list
+from constants.constants import br_metals_parsing_list, moex_boards_names_order_list, moex_names_parsing_list, \
+    yahoo_names_parsing_dict
 from db import models
 from db.database import async_session
 
@@ -85,7 +85,6 @@ async def load_cbr_quotes() -> None:
 
 async def load_cbr_metals() -> None:
     """Загрузка металлов с cbr.ru"""
-
     async with async_session() as session:
         section_name = 'Металлы (ЦБ)'  # FIXME TO CONST
         last_update = datetime.date.today()
@@ -106,45 +105,43 @@ async def load_cbr_metals() -> None:
             )
             await session.flush()
 
-        async with ClientSession() as req_session:
-            url = 'https://www.cbr.ru/scripts/xml_metall.asp'
+        url = 'https://www.cbr.ru/scripts/xml_metall.asp'
 
-            for quote in cbr_metals_parsing_list:
-                name = quote['name']
-                source = url
-                params = {
-                    'CBR_ID': quote['CBR_ID'],
+        for quote in cbr_metals_parsing_list:
+            name = quote['name']
+            source = url
+            params = {
+                'CBR_ID': quote['CBR_ID'],
+            }
+            ticker = quote['ticker']
+            insert_stmt = insert_pg(models.Quotes).values(
+                name=name,
+                params=params,
+                source=source,
+                ticker=ticker,
+                quotes_section_id=section.id,
+                last_update=last_update,
+                update_func=update_func,
+            )
+            upsert_stmt = insert_stmt.on_conflict_do_update(
+                constraint='uq_quote_name_and_section',
+                set_={
+                    'name': name,
+                    'params': params,
+                    'source': source,
+                    'ticker': ticker,
+                    'quotes_section_id': section.id,
+                    'last_update': last_update,
+                    'update_func': update_func,
                 }
-                ticker = quote['ticker']
-                insert_stmt = insert_pg(models.Quotes).values(
-                    name=name,
-                    params=params,
-                    source=source,
-                    ticker=ticker,
-                    quotes_section_id=section.id,
-                    last_update=last_update,
-                    update_func=update_func,
-                )
-                upsert_stmt = insert_stmt.on_conflict_do_update(
-                    constraint='uq_quote_name_and_section',
-                    set_={
-                        'name': name,
-                        'params': params,
-                        'source': source,
-                        'ticker': ticker,
-                        'quotes_section_id': section.id,
-                        'last_update': last_update,
-                        'update_func': update_func,
-                    }
-                )
+            )
 
-                await session.execute(upsert_stmt)
-            await session.commit()
+            await session.execute(upsert_stmt)
+        await session.commit()
 
 
 async def load_moex_quotes():
     """Загрузить котировки с MOEX"""
-
     async with async_session() as session:
         section_name = 'Котировки (MOEX)'  # FIXME TO CONST
         last_update = datetime.date.today()
@@ -245,11 +242,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
     quote_meta_info = quote_data['chart']['result'][0]['meta']
 
     async with async_session() as session:
-        try:
-            name = quote_meta_info['shortName']
-        except Exception as e:
-            print(quote_meta_info)
-            raise e
+        name = quote_meta_info['shortName']
         source = url
         ticker = quote_name
         params = {
@@ -281,7 +274,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
         await session.commit()
 
         quote_id = result.scalar()
-        for timestamp, low, high, open, close, volume in zip(
+        for timestamp, low, high, open, close, volume in zip(  # noqa:A001
                 quote_data['chart']['result'][0]['timestamp'],
                 quote_data['chart']['result'][0]['indicators']['quote'][0]['low'],
                 quote_data['chart']['result'][0]['indicators']['quote'][0]['high'],
@@ -291,7 +284,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
         ):
             insert_stmt = insert_pg(models.QuotesValues).values(
                 quote_id=quote_id,
-                date=datetime.datetime.fromtimestamp(timestamp),  # FIXME
+                date=datetime.datetime.fromtimestamp(timestamp),
                 open=open,
                 close=close,
                 high=high,
@@ -316,7 +309,6 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
 
 async def load_yahoo_quotes():
     """Загрузить котировок с Yahoo"""
-
     async with async_session() as session:
         for section_name, yahoo_sections_quotes in yahoo_names_parsing_dict.items():
             stmt = await session.execute(sa.select(models.QuotesSections).filter_by(name=section_name))
