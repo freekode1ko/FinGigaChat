@@ -24,9 +24,9 @@ const MenuItemLink = ({ item }: { item: MenuItem }) => (
       )
     }
   >
-    <span className="flex flex-col items-center justify-center p-2">
+    <span className="flex flex-col items-center justify-center gap-1 p-2">
       <item.icon />
-      {item.name}
+      <p className="text-center leading-tight">{item.name}</p>
     </span>
   </NavLink>
 )
@@ -72,7 +72,7 @@ const MoreMenuButton = ({ overflowTabs }: { overflowTabs: MenuItem[] }) => {
             >
               <span className="flex items-center">
                 <item.icon className="mr-2" />
-                {item.name}
+                <p className="text-center leading-tight">{item.name}</p>
               </span>
             </NavLink>
           </DropdownMenuItem>
@@ -87,13 +87,13 @@ export const NavigationTabs = () => {
   const filteredMenuItems = menuItems.filter(
     (item) => !item.needAuth || isAuthenticated
   )
-  const visibleTabs = filteredMenuItems.slice(0, 3)
-  const overflowTabs = filteredMenuItems.slice(3)
+  const visibleTabs = filteredMenuItems.slice(0, 2)
+  const overflowTabs = filteredMenuItems.slice(2)
   return (
     <nav
       className={cn(
-        'fixed bottom-0 w-full dark:bg-dark-blue bg-white z-40 items-center grid',
-        overflowTabs.length > 0 ? 'grid-cols-4' : 'grid-cols-3'
+        'sticky bottom-0 w-full dark:bg-dark-blue bg-white z-40 items-center grid',
+        overflowTabs.length > 0 ? 'grid-cols-3' : 'grid-cols-2'
       )}
     >
       {visibleTabs.map((item) => (

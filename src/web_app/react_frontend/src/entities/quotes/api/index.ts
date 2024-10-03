@@ -1,5 +1,5 @@
 import { baseApi } from '@/shared/api'
-import { API_ENDPOINTS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
+import { API_ENDPOINTS, API_TAGS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
 import type { DashboardSubscriptionSection, QuotesSection } from '../model'
 import { FinancialData } from '../model/types'
@@ -37,6 +37,7 @@ const quotesApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
+      providesTags: [API_TAGS.dashboard],
     }),
     putDashboardSubscriptions: build.mutation<
       string,
@@ -45,15 +46,16 @@ const quotesApi = baseApi.injectEndpoints({
       query: ({ userId, body }) => ({
         url: `${API_ENDPOINTS.dashboardQuotes}/${userId}/subscriptions`,
         method: 'PUT',
-        body: body,
+        body: { subscription_sections: body },
       }),
+      invalidatesTags: [API_TAGS.dashboard],
     }),
     getDashboardData: build.query<
       { id: number; data: Array<FinancialData> },
-      { quoteId: number }
+      { quoteId: number; startDate: string }
     >({
-      query: ({ quoteId }) => ({
-        url: `${API_ENDPOINTS.dashboardQuotes}/data/${quoteId}?start_date=01.01.2024`,
+      query: ({ quoteId, startDate }) => ({
+        url: `${API_ENDPOINTS.dashboardQuotes}/data/${quoteId}?start_date=${startDate}`,
         method: 'GET',
       }),
     }),

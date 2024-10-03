@@ -1,9 +1,5 @@
 import { baseApi } from '@/shared/api'
-import {
-  API_ENDPOINTS,
-  KEEP_UNUSED_DATA_TEMP,
-  NOTES_API_TAG,
-} from '@/shared/model'
+import { API_ENDPOINTS, API_TAGS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
 import type { CreateNote, Note } from '../model'
 
@@ -31,7 +27,7 @@ const notesApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
-      providesTags: [NOTES_API_TAG],
+      providesTags: [API_TAGS.notes],
     }),
     createNote: build.mutation<string, NoteRequest>({
       query: (note) => ({
@@ -39,7 +35,7 @@ const notesApi = baseApi.injectEndpoints({
         method: 'POST',
         body: note.body,
       }),
-      invalidatesTags: [NOTES_API_TAG],
+      invalidatesTags: [API_TAGS.notes],
     }),
     updateNote: build.mutation<string, NoteUpdateRequest>({
       query: (note) => ({
@@ -47,14 +43,14 @@ const notesApi = baseApi.injectEndpoints({
         method: 'PUT',
         body: note.body,
       }),
-      invalidatesTags: [NOTES_API_TAG],
+      invalidatesTags: [API_TAGS.notes],
     }),
     deleteNote: build.mutation<string, NoteDeleteRequest>({
       query: (note) => ({
         url: `${API_ENDPOINTS.notes}/${note.userId}/${note.noteId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: [NOTES_API_TAG],
+      invalidatesTags: [API_TAGS.notes],
     }),
   }),
 })

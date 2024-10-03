@@ -1,1 +1,1 @@
-export { ChartDemo } from './ui'
+export { ChartDemo, ChartSkeleton } from './ui'

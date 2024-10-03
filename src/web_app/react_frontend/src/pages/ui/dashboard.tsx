@@ -1,53 +1,46 @@
-import { useEffect, useState } from 'react'
+import { Outlet } from 'react-router-dom'
 
 import { DashboardSection } from '@/widgets/dashboard-section'
 import { ManageDashboardButton } from '@/features/manage-dashboard'
-import {
-  useGetDashboardSubscriptionsQuery,
-  usePutDashboardSubscriptionsMutation,
-} from '@/entities/quotes'
-import type { DashboardSubscriptionSection } from '@/entities/quotes/model/types'
+import { ChartSkeleton } from '@/entities/charts'
+import { useGetDashboardSubscriptionsQuery } from '@/entities/quotes'
 import { selectUserData } from '@/entities/user'
 import { useAppSelector } from '@/shared/lib'
+import { TypographyH2 } from '@/shared/ui'
+import { skipToken } from '@reduxjs/toolkit/query'
 
 const DashboardPage = () => {
   const user = useAppSelector(selectUserData)
-  const { data: initialContent } = useGetDashboardSubscriptionsQuery({ userId: 1 })
-  const [trigger] = usePutDashboardSubscriptionsMutation()
-  const [pageContent, setPageContent] = useState<
-    Array<DashboardSubscriptionSection>
-  >([])
-
-  useEffect(() => {
-    if (initialContent) {
-      setPageContent(initialContent.subscription_sections)
-    }
-  }, [initialContent])
-
-  const handleSave = async () => {
-    if (!user) return
-    await trigger({ userId: user.userId, body: pageContent }).unwrap()
-    console.log('Dashboard subscriptions updated')
-  }
-
-  const handleCancel = () => {
-    setPageContent(initialContent ? initialContent.subscription_sections : [])
-  }
+  const { data: initialContent, isLoading } = useGetDashboardSubscriptionsQuery(
+    user
+      ? {
+          userId: user.userId,
+        }
+      : skipToken
+  )
 
   return (
-    <div className="p-4">
-      <ManageDashboardButton
-        pageContent={pageContent}
-        setPageContent={setPageContent}
-        handleSave={handleSave}
-        handleCancel={handleCancel}
-      />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {pageContent.map((section) => (
-          <DashboardSection key={section.section_name} section={section} />
-        ))}
+    <>
+      <div className="flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
+        <TypographyH2>Дашборд</TypographyH2>
+        <ManageDashboardButton />
       </div>
-    </div>
+      <div className="grid grid-cols-1 gap-8 pt-6 lg:pt-0 lg:grid-cols-2 xl:grid-cols-3">
+        <>
+          {isLoading &&
+            Array.from({ length: 20 }).map((_, idx) => (
+              <div className="h-[300px]" key={idx}>
+                <ChartSkeleton />
+              </div>
+            ))}
+          {initialContent?.subscription_sections.map((section) => (
+            <DashboardSection key={section.section_name} section={section} />
+          ))}
+        </>
+      </div>
+      {/* Opens detailed drawer (dashboard quotation page) */}
+      <Outlet />
+    </>
   )
 }
 

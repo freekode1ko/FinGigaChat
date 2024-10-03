@@ -1,5 +1,4 @@
 import {
-  ActivityIcon,
   FileBarChart,
   LayoutDashboardIcon,
   ListChecks,
@@ -21,14 +20,7 @@ export interface MenuItem {
 
 export const menuItems: Array<MenuItem> = [
   {
-    name: 'Котировки',
-    path: SITE_MAP.quotes,
-    icon: ActivityIcon,
-    needAuth: false,
-    description: 'Отслеживайте последние рыночные котировки и данные',
-  },
-  {
-    name: 'Дашборд',
+    name: 'BRIEF Terminal',
     path: SITE_MAP.dashboard,
     icon: LayoutDashboardIcon,
     needAuth: false,

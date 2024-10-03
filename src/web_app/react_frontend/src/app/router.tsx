@@ -26,10 +26,6 @@ export const appRouter = () =>
           element: <NewsPage />,
         },
         {
-          path: '/',
-          element: <DashboardPage />,
-        },
-        {
           path: '/subscriptions',
           element: (
             <ProtectedWrapper showHomeButton>
@@ -44,6 +40,16 @@ export const appRouter = () =>
             {
               path: ':analyticId',
               element: <AnalyticDetailsPage />,
+            },
+          ],
+        },
+        {
+          path: '/dashboard',
+          element: <DashboardPage />,
+          children: [
+            {
+              path: ':quotationId',
+              element: <QuoteDetailsPage />,
             },
           ],
         },

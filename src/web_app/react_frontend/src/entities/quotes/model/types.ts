@@ -15,6 +15,7 @@ export interface Quotes {
 export interface DashboardSubscription {
   id: number
   name: string
+  ticker: string | null
   active: boolean
   type: number
 }

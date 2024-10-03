@@ -1,86 +1,57 @@
-import { Eye, EyeOff, Grid2X2, List, Square } from 'lucide-react'
+import { Eye, EyeOff, Grid2X2, List, Settings, Square } from 'lucide-react'
+import { useState } from 'react'
 
-import type { DashboardSubscriptionSection } from '@/entities/quotes/model'
 import {
   Button,
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Input,
 } from '@/shared/ui'
 
-interface ManageDashboardButtonProps {
-  pageContent: Array<DashboardSubscriptionSection>
-  setPageContent: React.Dispatch<
-    React.SetStateAction<Array<DashboardSubscriptionSection>>
-  >
-  handleSave: () => void
-  handleCancel: () => void
-}
+import { useManageDashboard } from '../lib'
 
-const ManageDashboardButton = ({
-  pageContent,
-  setPageContent,
-  handleSave,
-  handleCancel,
-}: ManageDashboardButtonProps) => {
-  const handleActiveToggle = (sectionIdx: number, itemIdx: number) => {
-    setPageContent((prevContent) =>
-      prevContent.map((section, sIdx) =>
-        sIdx === sectionIdx
-          ? {
-              ...section,
-              subscription_items: section.subscription_items.map(
-                (item, iIdx) =>
-                  iIdx === itemIdx ? { ...item, active: !item.active } : item
-              ),
-            }
-          : section
-      )
-    )
-  }
+const ManageDashboardButton = () => {
+  const {
+    handleSave,
+    handleCancel,
+    handleActiveToggle,
+    handleTypeChange,
+    searchSubscriptions,
+  } = useManageDashboard()
 
-  const handleTypeChange = (
-    sectionIdx: number,
-    itemIdx: number,
-    newType: number
-  ) => {
-    setPageContent((prevContent) =>
-      prevContent.map((section, sIdx) =>
-        sIdx === sectionIdx
-          ? {
-              ...section,
-              subscription_items: section.subscription_items.map(
-                (item, iIdx) =>
-                  iIdx === itemIdx ? { ...item, type: newType } : item
-              ),
-            }
-          : section
-      )
-    )
-  }
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const filteredContent = searchSubscriptions(searchQuery)
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">Настроить дашборд</Button>
+        <Button variant="ghost" size="icon">
+          <Settings />
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Настроить дашборд</DialogTitle>
           <DialogDescription>
-            Вы можете выбрать, как отображать финансовые данные: в строчку, в
-            виде маленького или большого графика.
+            Выберите, какие котировки отображать на дашборде
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4 max-h-96 overflow-y-auto">
-          {pageContent.map((section, sectionIdx) => (
+        <Input
+          placeholder="Поиск по котировкам..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <div className="flex flex-col gap-4 py-4 h-[260px] lg:h-[360px] xl:h-[420px] overflow-y-auto">
+          {filteredContent.map((section) => (
             <div key={section.section_name} className="mb-4">
               <h2 className="text-xl font-semibold">{section.section_name}</h2>
-              {section.subscription_items.map((item, itemIdx) => (
+              {section.subscription_items.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between py-2 border-b"
@@ -89,7 +60,7 @@ const ManageDashboardButton = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleActiveToggle(sectionIdx, itemIdx)}
+                      onClick={() => handleActiveToggle(item.id)}
                     >
                       {item.active ? (
                         <Eye className="w-5 h-5" />
@@ -108,7 +79,7 @@ const ManageDashboardButton = ({
                       variant={item.type === 1 ? 'secondary' : 'ghost'}
                       size="icon"
                       disabled={!item.active}
-                      onClick={() => handleTypeChange(sectionIdx, itemIdx, 1)}
+                      onClick={() => handleTypeChange(item.id, 1)}
                     >
                       <List className="w-5 h-5" />
                     </Button>
@@ -116,7 +87,7 @@ const ManageDashboardButton = ({
                       variant={item.type === 2 ? 'secondary' : 'ghost'}
                       size="icon"
                       disabled={!item.active}
-                      onClick={() => handleTypeChange(sectionIdx, itemIdx, 2)}
+                      onClick={() => handleTypeChange(item.id, 2)}
                     >
                       <Grid2X2 className="w-5 h-5" />
                     </Button>
@@ -124,7 +95,7 @@ const ManageDashboardButton = ({
                       variant={item.type === 3 ? 'secondary' : 'ghost'}
                       size="icon"
                       disabled={!item.active}
-                      onClick={() => handleTypeChange(sectionIdx, itemIdx, 3)}
+                      onClick={() => handleTypeChange(item.id, 3)}
                     >
                       <Square className="w-6 h-6" />
                     </Button>
@@ -135,7 +106,9 @@ const ManageDashboardButton = ({
           ))}
         </div>
         <DialogFooter>
-          <Button onClick={handleSave}>Сохранить</Button>
+          <DialogClose asChild>
+            <Button onClick={handleSave}>Сохранить</Button>
+          </DialogClose>
           <Button variant="outline" onClick={handleCancel}>
             Отменить
           </Button>

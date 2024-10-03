@@ -6,7 +6,9 @@ import {
   ChartCanvas,
   CrossHairCursor,
   discontinuousTimeScaleProviderBuilder,
+  EdgeIndicator,
   Label,
+  lastVisibleItemBasedZoomAnchor,
   LineSeries,
   MouseCoordinateX,
   MouseCoordinateY,
@@ -25,14 +27,6 @@ const axisStyles = {
   tickStrokeStyle: '#383E55',
   gridLinesStrokeStyle: 'rgba(56, 62, 85, 0.5)',
 }
-
-const zoomButtonStyles = {
-  fill: '#383E55',
-  fillOpacity: 0.75,
-  strokeWidth: 0,
-  textFill: '#9EAAC7',
-}
-
 const coordinateStyles = {
   fill: '#383E55',
   textFill: '#FFFFFF',
@@ -42,15 +36,28 @@ const crossHairStyles = {
   strokeStyle: '#9EAAC7',
 }
 
+const zoomButtonStyles = {
+  fill: '#383E55',
+  fillOpacity: 0.75,
+  strokeWidth: 0,
+  textFill: '#9EAAC7',
+}
+
 export const ChartDemo = ({
   inputData,
-  symbol,
+  size,
+  maxHeight,
 }: {
   inputData: Array<FinancialData>
-  symbol: string
+  size: 'small' | 'large'
+  maxHeight?: number
 }) => {
   const [resetCount, setResetCount] = useState(0)
-  const { containerRef, width, height } = useResizeObserver()
+  const { containerRef, width, height } = useResizeObserver(
+    size === 'small'
+      ? { initialHeight: maxHeight || 150 }
+      : { initialHeight: maxHeight || 250 }
+  )
   const timeDisplayFormat = timeFormat('%d.%m.%Y')
 
   const xScaleProvider =
@@ -72,6 +79,7 @@ export const ChartDemo = ({
           xAccessor={xAccessor}
           displayXAccessor={displayXAccessor}
           xExtents={xExtents}
+          zoomAnchor={lastVisibleItemBasedZoomAnchor}
         >
           <Chart
             id={1}
@@ -80,33 +88,41 @@ export const ChartDemo = ({
               d.value + d.value * 0.02,
             ]}
           >
-            <Label
-              x={width / 4}
-              y={height / 2}
-              fontSize={9}
-              fillStyle="#bebbbb"
-              fontWeight="bold"
-              text={symbol}
-            />
-            <LineSeries yAccessor={(d) => d.value} />
-            <XAxis {...axisStyles} showGridLines />
-            <MouseCoordinateX
-              displayFormat={timeDisplayFormat}
-              {...coordinateStyles}
-            />
-            <YAxis {...axisStyles} showGridLines />
-            <MouseCoordinateY
-              displayFormat={format('.2f')}
-              {...coordinateStyles}
-            />
-            {width > 200 && height > 150 && (
+            {size === 'large' && (
               <>
+                <EdgeIndicator
+                  itemType="last"
+                  rectWidth={48}
+                  fill="#7f7f7f"
+                  lineStroke="#7f7f7f"
+                  displayFormat={format('.2f')}
+                  yAccessor={(d) => d.value}
+                />
                 <ZoomButtons
                   onReset={() => setResetCount(resetCount + 1)}
                   {...zoomButtonStyles}
                 />
               </>
             )}
+            <LineSeries yAccessor={(d) => d.value} />
+            <XAxis {...axisStyles} showGridLines={size === 'large'} />
+            <MouseCoordinateX
+              displayFormat={timeDisplayFormat}
+              {...coordinateStyles}
+            />
+            <YAxis {...axisStyles} showGridLines={size === 'large'} />
+            <MouseCoordinateY
+              displayFormat={format('.2f')}
+              {...coordinateStyles}
+            />
+            <Label
+              fillStyle="#7f7f7f"
+              fontSize={size === 'large' ? 16 : 12}
+              fontWeight="bold"
+              text="BRIEF"
+              y={height / 2}
+              x={width / 2}
+            />
           </Chart>
           <CrossHairCursor {...crossHairStyles} />
         </ChartCanvas>

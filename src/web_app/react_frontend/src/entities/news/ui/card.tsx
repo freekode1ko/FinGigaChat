@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
@@ -20,6 +21,7 @@ export const NewsCard = ({
   date,
   sendReportButton,
 }: NewsCardProps) => {
+  const [isTruncated, setIsTruncated] = useState(true)
   return (
     <Card>
       <CardHeader>
@@ -30,7 +32,38 @@ export const NewsCard = ({
         </div>
       </CardHeader>
       <CardContent>
-        <CardDescription>{text}</CardDescription>
+        <CardDescription
+          className="mb-2"
+          style={
+            isTruncated
+              ? {
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 3,
+                }
+              : undefined
+          }
+        >
+          {text}
+        </CardDescription>
+        {isTruncated ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsTruncated(false)}
+          >
+            Подробнее
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsTruncated(true)}
+          >
+            Свернуть
+          </Button>
+        )}
       </CardContent>
     </Card>
   )

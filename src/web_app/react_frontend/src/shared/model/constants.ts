@@ -8,18 +8,21 @@ export const API_ENDPOINTS = {
   notes: 'notes',
 }
 
+export const API_TAGS = {
+  meetings: 'MEETINGS',
+  notes: 'NOTES',
+  dashboard: 'DASHBOARD',
+}
+
 export const SITE_MAP = {
   quotes: '/quotes',
-  dashboard: '/',
+  dashboard: '/dashboard',
   news: '/news',
   meetings: '/meetings',
   analytics: '/analytics',
   subscriptions: '/subscriptions',
   notes: '/notes',
 }
-
-export const MEETINGS_API_TAG = 'meetings'
-export const NOTES_API_TAG = 'notes'
 
 export const PAGE_SIZE = 10
 export const KEEP_UNUSED_DATA_TEMP = 120

@@ -5,6 +5,7 @@ export {
   AccordionTrigger,
 } from './accordion'
 export { Alert, AlertDescription, AlertTitle, ErrorMessage } from './alert'
+export { Badge } from './badge'
 export { Button } from './button'
 export {
   Card,
