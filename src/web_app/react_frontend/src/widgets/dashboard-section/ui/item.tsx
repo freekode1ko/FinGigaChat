@@ -17,7 +17,7 @@ const DashboardItem = ({ item }: DashboardItemProps) => {
   })
 
   return (
-    <div ref={ref}>
+    <div ref={ref} className='break-inside-avoid-column'>
       {inView && (
         <>
           {item.type === 1 && <TextItem item={item} />}
