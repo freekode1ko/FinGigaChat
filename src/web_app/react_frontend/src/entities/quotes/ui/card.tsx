@@ -36,7 +36,7 @@ export const QuoteCard = ({
       return (
         <Card className="flex flex-col items-center p-1 gap-2 lg:grid lg:grid-cols-3 lg:p-2">
           <div className="grid grid-cols-2 w-full items-center lg:items-start lg:gap-4 lg:flex lg:flex-col lg:col-span-1">
-            <CardTitle className="text-lg col-span-1" onClick={onCardClick}>
+            <CardTitle className="text-lg col-span-1 cursor-pointer" onClick={onCardClick}>
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <div className="text-xl lg:text-2xl justify-end font-semibold flex flex-row lg:flex-col gap-2 lg:gap-0">
@@ -53,7 +53,7 @@ export const QuoteCard = ({
       return (
         <Card>
           <div className="grid grid-cols-4 items-center gap-2 p-1 lg:p-2">
-            <CardTitle className="text-lg col-span-2" onClick={onCardClick}>
+            <CardTitle className="text-lg col-span-2 cursor-pointer" onClick={onCardClick}>
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <Badge variant="outline" className="col-span-1">
@@ -75,7 +75,7 @@ export const QuoteCard = ({
       return (
         <Card>
           <div className="grid grid-cols-4 items-center gap-2 p-1 lg:p-2">
-            <CardTitle className="text-md col-span-2" onClick={onCardClick}>
+            <CardTitle className="text-md col-span-2 cursor-pointer" onClick={onCardClick}>
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <Badge variant="outline" className="col-span-1">

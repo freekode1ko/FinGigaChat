@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 
 import { DashboardSection } from '@/widgets/dashboard-section'
 import { ManageDashboardButton } from '@/features/manage-dashboard'
+import { TelegramAuthButton } from '@/features/user'
 import { ChartSkeleton } from '@/entities/charts'
 import { useGetDashboardSubscriptionsQuery } from '@/entities/quotes'
 import { selectUserData } from '@/entities/user'
@@ -19,13 +20,19 @@ const DashboardPage = () => {
       : skipToken
   )
 
+  if (!user) {
+    return (
+      <div className='pt-4 lg:pt-10 flex justify-center'><TelegramAuthButton /></div>
+    )
+  }
+
   return (
     <>
       <div className="flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
         <TypographyH2>Дашборд</TypographyH2>
         <ManageDashboardButton />
       </div>
-      <div className="grid grid-cols-1 gap-8 pt-6 lg:pt-0 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="gap-8 pt-6 columns-1 lg:columns-2 xl:columns-3 lg:pt-0">
         <>
           {isLoading &&
             Array.from({ length: 20 }).map((_, idx) => (

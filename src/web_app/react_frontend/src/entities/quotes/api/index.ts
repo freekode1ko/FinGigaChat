@@ -16,14 +16,14 @@ const quotesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getPopularQuotes: build.query<QuotesResponse, void>({
       query: () => ({
-        url: API_ENDPOINTS.popularQuotes,
+        url: `${API_ENDPOINTS.popularQuotes}/`,
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
     }),
     getDashboardQuotes: build.query<QuotesResponse, void>({
       query: () => ({
-        url: API_ENDPOINTS.dashboardQuotes,
+        url: `${API_ENDPOINTS.dashboardQuotes}/`,
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,

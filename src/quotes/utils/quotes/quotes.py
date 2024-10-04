@@ -21,8 +21,3 @@ async def update_quote_data():
                 continue
             else:
                 break
-        # await update_all_cbr()
-        # await update_all_moex()
-        # await load_yahoo_quotes()
-        # await update_cbr_metals()
-

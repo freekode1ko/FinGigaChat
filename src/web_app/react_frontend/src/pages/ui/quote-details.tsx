@@ -79,11 +79,7 @@ const QuoteDetailsPage = () => {
                 <ChartSkeleton />
               )}
             </div>
-            {data ? (
-              <NewsList news={data?.news} showSkeleton={isLoading} />
-            ) : (
-              <p>Ошибка загрузки новостей</p>
-            )}
+            <NewsList news={data?.news} showSkeleton={isLoading} />
           </div>
         </DialogContent>
       </Dialog>
@@ -118,11 +114,7 @@ const QuoteDetailsPage = () => {
           <div className="p-2 flex-shrink-0 text-center">
             <CopyPageLinkButton />
           </div>
-          {data ? (
-            <NewsList news={data?.news} showSkeleton={isLoading} />
-          ) : (
-            <p>Ошибка загрузки новостей</p>
-          )}
+          <NewsList news={data?.news} showSkeleton={isLoading} />
         </div>
       </DrawerContent>
     </Drawer>
