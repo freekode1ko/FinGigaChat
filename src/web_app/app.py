@@ -93,9 +93,7 @@ async def create_meeting(
 
     return 'OK'
 
-@app.get("/", response_class=HTMLResponse)
-@app.get("/news", response_class=HTMLResponse)
-@app.get("/quotes", response_class=HTMLResponse)
+@app.get("/{full_path:path}", response_class=HTMLResponse)
 @handle_jinja_template_exceptions
-async def show_quotes(request: Request) -> HTMLResponse:
+async def show_react_app(request: Request, full_path: str) -> HTMLResponse:
     return templates.TemplateResponse("index.html", {"request": request})

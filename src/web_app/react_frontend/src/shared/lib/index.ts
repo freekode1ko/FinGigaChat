@@ -22,3 +22,4 @@ export {
   useWebApp,
 } from './telegram-hooks'
 export { cn } from './tw-merge'
+export { useDebounce } from './use-debounce'

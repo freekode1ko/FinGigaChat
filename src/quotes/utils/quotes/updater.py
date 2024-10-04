@@ -74,6 +74,8 @@ async def update_moex_quotes(quote: models.Quotes):
                 params={
                     'from': (datetime.date.today() - datetime.timedelta(days=365)).strftime('%Y-%m-%d'),
                     'till': datetime.date.today().strftime('%Y-%m-%d'),
+                    'interval': 24,
+                    'start': 0,
                 },
                 ssl=False,
                 timeout=10
