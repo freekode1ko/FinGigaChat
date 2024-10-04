@@ -5,7 +5,7 @@ from aiogram.filters.callback_data import CallbackData
 
 from constants.enums import FinancialIndicatorsType
 
-MENU = 'clients_menu'
+MENU = 'company_menu'
 
 
 class ClientsMenusEnum(IntEnum):

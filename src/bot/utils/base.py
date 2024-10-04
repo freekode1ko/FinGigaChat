@@ -622,7 +622,7 @@ async def has_access_to_feature_logic(
                             либо None без сообщения (задекорирована промежуточная функция).
     """
     tg_obj: types.Message | types.CallbackQuery = args[0]
-    user_id = tg_obj.chat.id
+    user_id = tg_obj.chat.id if isinstance(tg_obj, types.Message) else tg_obj.message.chat.id
     full_name = tg_obj.from_user.full_name
     user_msg = tg_obj.text if isinstance(tg_obj, types.Message) else tg_obj.data
     func_name = func.__name__
