@@ -7,11 +7,12 @@ from langchain_community.chat_models import GigaChat
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
 
 from configs.config import *
-from configs.prompts import *
+from configs.text_constants import *
 from format import format_answer
 
 
 class WebRetriever:
+    """Класс с цепочкой для генерации ответа с аугментацией данных из поиска DuckDuckGo"""
 
     def __init__(self, logger):
         self.model = GigaChat(verbose=True,
@@ -28,12 +29,11 @@ class WebRetriever:
     def _get_answer_giga(self, system_prompt: str, text: str) -> str:
         """
         Получение ответа от GigaChat.
+
         :param system_prompt: Системный промпт.
         :param text: Текст запроса.
         :return: Ответ от GigaChat.
-
         """
-
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = self.model.invoke(messages)
         return response.content
@@ -41,10 +41,10 @@ class WebRetriever:
     async def _aget_answer_giga(self, system_prompt: str, text: str) -> str:
         """
         Асинхронное получение ответа от GigaChat.
+
         :param system_prompt: Системный промпт.
         :param text: Текст запроса.
         :return: Ответ от GigaChat.
-
         """
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = await self.model.ainvoke(messages)
@@ -54,9 +54,9 @@ class WebRetriever:
     def _prepare_context_duckduck(result_search: dict) -> tuple[str, dict[str, str]]:
         """
         Подготавливает результат, возвращаемый duckduck движком, для подачи в LLM.
+
         :param result_search: Возвращаемый результат от ретривера в json формате.
         :return: Строка для подачи в LLM, словарь с маппингом ссылок.
-
         """
         link_dict = {}
         parsed_answer = ''
@@ -71,12 +71,11 @@ class WebRetriever:
     @staticmethod
     def _post_processing_duckduck(raw_answer: str, link_dict: dict[str, str]) -> str:
         """
-        Подготавливает сырой ответ LLM для возвращению пользователю. Заменяет токены ссылок на реальные ссылки и
-        добавляет в конце ответа техническое сообщение.
+        Заменяет токены ссылок на реальные ссылки и добавляет в конце ответа техническое сообщение.
+
         :param: raw_answer. Сырой ответ LLM.
         :param: link_dict. Словарь с маппингом токенов ссылок обратно.
         :return: Строка с готовым ответом.
-
         """
         rep = dict((re.escape(k), v) for k, v in link_dict.items())
         pattern = re.compile("|".join(rep.keys()))
@@ -88,6 +87,8 @@ class WebRetriever:
         """
         Ловит плохой ответ гигачата и заменяет его на дефолтную заглушку
 
+        :param answer: Гигачата.
+        :param: default_answer. Ответ, который будет использован в случае плохого ответа
         """
         return default_answer if re.search(BAD_ANSWER, answer) else answer
 
@@ -97,11 +98,11 @@ class WebRetriever:
                              output_format: str = "default") -> str:
         """
         Цепочка с продвинутым форматированием источников.
+
         :param: question. Запрос пользователя.
         :param: n_retrieved. Количество документов, которые будут использоваться для формирования ответа.
         :param: output_format. Формат ответа. Принимает строку "default" или "tg".
         :return: Ответ с учетом поиска в интернете с форматированием ссылок.
-
         """
         contexts = self.search_engine.results(question, max_results=n_retrieved)
         prepared_context, link_dict = self._prepare_context_duckduck(contexts)
@@ -113,15 +114,14 @@ class WebRetriever:
             answer = format_answer(answer, list(link_dict.values()))
         return answer
 
-    async def aget_answer(self, query: str, output_format: str = "default") -> str:
+    async def aget_answer(self, query: str, output_format: str = 'default') -> str:
         """
         Формирование ответа на запрос с помощью нескольких цепочек.
+
         :param: query. Запрос пользователя.
         :param: output_format. Формат ответа. Принимает строку "default" или "tg".
         :return: Самый широкий ответ из нескольких цепочек.
-
         """
-
         tasks = [
             self._aanswer_chain(query, N_WIDE_ANSWER, output_format),
             self._aanswer_chain(query, N_NORMAL_ANSWER, output_format),
@@ -129,4 +129,5 @@ class WebRetriever:
         ]
         answers = await asyncio.gather(*tasks)
         final_answer = next(filter(lambda x: x not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
+        self.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
         return final_answer

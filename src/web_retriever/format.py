@@ -3,7 +3,7 @@
 import re
 from urllib.parse import urlparse
 
-from configs.prompts import DEFAULT_ANSWER, USELESS_FRASES, SOURCES_PATTERN
+from configs.text_constants import DEFAULT_ANSWER, USELESS_FRASES, SOURCES_PATTERN
 
 pattern = re.compile(r'(</a>)(?!\n\n)(\s*[^,])')
 
@@ -25,7 +25,6 @@ def make_short_link(link: str) -> str:
     :param link:     Ссылка.
     :return:         Ссылка в разметке html.
     """
-
     url = urlparse(link)
     base_url = url.netloc.split('www.')[-1]
     return f'<a href="{link}">{base_url}</a>' if base_url else link
@@ -103,9 +102,7 @@ def clear_from_sources(answer: str) -> str:
     :param answer:  Ответ от LLM.
     :return:        Ответ без ссылок.
     """
-    answer = re.sub(pattern=SOURCES_PATTERN, repl='', string=answer)
-    answer = clear_answer(answer)
-    return answer
+    return clear_answer(re.sub(pattern=SOURCES_PATTERN, repl='', string=answer))
 
 
 def format_answer(answer: str, sources: list[str]) -> str:
@@ -122,8 +119,7 @@ def format_answer(answer: str, sources: list[str]) -> str:
     processed_answer = make_format_msg(answer)
     processed_answer = clear_answer(processed_answer)
     if is_contain_link(processed_answer):
-        processed_answer = add_paragraphs(processed_answer)
-        return processed_answer.strip()
+        return add_paragraphs(processed_answer).strip()
 
     answer = clear_answer(answer)
     return make_format_msg_with_sources_in_end(answer, sources)

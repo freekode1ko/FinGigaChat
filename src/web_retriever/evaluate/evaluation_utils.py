@@ -14,9 +14,9 @@ from retriever import WebRetriever
 async def get_answers(engine: WebRetriever, logger: logging.Logger, filepath: str = EVALUATION_DATASET_PATH) -> None:
     """
     Составляет ответы на вопросы из целевого датасета и сохраняет его в excel таблицу в файл "result_chain.xlsx"
+
     :param: logger. Логгер.
     :param: filepath. Путь к файлу с вопросами.
-
     """
     df = pd.read_excel(filepath)
     start_time = time.time()

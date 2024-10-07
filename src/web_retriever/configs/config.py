@@ -18,6 +18,6 @@ GIGA_MODEL = 'GigaChat-Pro'
 GIGA_SCOPE = 'GIGACHAT_API_CORP'
 GIGA_CREDENTIALS: str = env.str('GIGA_CREDENTIALS', default='')
 
-N_NARROW_ANSWER = 2
-N_NORMAL_ANSWER = 5
-N_WIDE_ANSWER = 8
+N_NARROW_ANSWER = 2  # количество документов, которые используем для генерации вопроса
+N_NORMAL_ANSWER = 5  # пытаемся сделать 3 ответа с разной развернутостью и берем тот,
+N_WIDE_ANSWER = 8  # где больше ответ получился

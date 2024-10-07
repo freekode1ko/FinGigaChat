@@ -22,7 +22,6 @@ async def aanswer(query: str = Query(min_length=2)) -> PlainTextResponse:
     """
     query = urllib.parse.unquote(query)
     final_answer = await engine.aget_answer(query)
-    engine.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
     return PlainTextResponse(content=''.join(map(str, final_answer)))
 
 
@@ -34,7 +33,6 @@ async def aanswer_tg(query: str = Query(min_length=2)) -> PlainTextResponse:
     """
     query = urllib.parse.unquote(query)
     final_answer = await engine.aget_answer(query, output_format="tg")
-    engine.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
     return PlainTextResponse(content=''.join(map(str, final_answer)))
 
 
