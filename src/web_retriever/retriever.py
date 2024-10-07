@@ -5,9 +5,10 @@ import re
 
 from langchain_community.chat_models import GigaChat
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-from configs.config import *
 from configs.text_constants import *
+from configs.config import *
 from format import format_answer
 
 
@@ -25,6 +26,7 @@ class WebRetriever:
                               )
         self.search_engine = DuckDuckGoSearchAPIWrapper(region='ru-ru')
         self.logger = logger
+        self.vectorizer = TfidfVectorizer()
 
     def _get_answer_giga(self, system_prompt: str, text: str) -> str:
         """
@@ -50,8 +52,48 @@ class WebRetriever:
         response = await self.model.ainvoke(messages)
         return response.content
 
-    @staticmethod
-    def _prepare_context_duckduck(result_search: dict) -> tuple[str, dict[str, str]]:
+    async def _deduplicate(self, result_search: list[dict]) -> list[dict]:
+        """
+        Проводит дедубликацию документов, которые вернулись от duckduck.
+
+        :param result_search: Возвращаемый результат от ретривера в json формате.
+        :return: Результат без дублей.
+        """
+        self.logger.info(f'Начало дедубликации {len(result_search)} документов.')
+
+        for doc in result_search:
+            self.logger.info(doc)
+        result_search.sort(reverse=True, key=lambda x: len(x['snippet'] + x['title']))
+        deduplicated_docs = list()
+        deduplicated_docs_idxs = set()
+
+        texts = [doc['title'] + doc['snippet'] for doc in result_search]
+        vec_texts = self.vectorizer.fit_transform(texts)
+        scores = vec_texts @ vec_texts.T  # (n_docs, n_dim) @ (n_docs, n_dim).T -> (n_docs, n_docs)
+
+        for i in range(len(texts)):
+            flag_unique_document = True
+            for j in range(i):
+                is_docs_similarity = scores[i, j] > DEDUPLICATION_THRESHOLD
+                is_previously_added = j in deduplicated_docs_idxs
+                if is_docs_similarity and is_previously_added:
+                    flag_unique_document = False
+                    self.logger.info(
+                        f'Документы определены как дубли со скором {scores[i, j]}'
+                    )
+                    self.logger.info(f'Документ: {result_search[i]}')
+                    self.logger.info(f'Документ: {result_search[j]}')
+
+            if flag_unique_document:
+                deduplicated_docs.append(result_search[i])
+                deduplicated_docs_idxs.add(i)
+        self.logger.info('Дедубликация документов завершена')
+
+        for doc in deduplicated_docs:
+            self.logger.info(doc)
+        return deduplicated_docs
+
+    async def _prepare_context_duckduck(self, result_search: list[dict]) -> tuple[str, dict[str, str]]:
         """
         Подготавливает результат, возвращаемый duckduck движком, для подачи в LLM.
 
@@ -60,6 +102,7 @@ class WebRetriever:
         """
         link_dict = {}
         parsed_answer = ''
+        result_search = await self._deduplicate(result_search)
         for i, result in enumerate(result_search):
             link_dict[f'<{i}>'] = result['link']
             context = ' '.join(f'{tag}: {result[tag]}' for tag in
@@ -90,7 +133,7 @@ class WebRetriever:
         :param answer: Гигачата.
         :param: default_answer. Ответ, который будет использован в случае плохого ответа
         """
-        return default_answer if re.search(BAD_ANSWER, answer) else answer
+        return default_answer if re.search(BAD_ANSWER, answer.lower()) else answer
 
     async def _aanswer_chain(self,
                              question: str,
@@ -105,7 +148,7 @@ class WebRetriever:
         :return: Ответ с учетом поиска в интернете с форматированием ссылок.
         """
         contexts = self.search_engine.results(question, max_results=n_retrieved)
-        prepared_context, link_dict = self._prepare_context_duckduck(contexts)
+        prepared_context, link_dict = await self._prepare_context_duckduck(contexts)
         raw_answer = await self._aget_answer_giga(QNA_WITH_REFS_SYSTEM, QNA_WITH_REFS_USER.format(
             question=question, context=prepared_context))
         answer = self._post_processing_duckduck(raw_answer=raw_answer, link_dict=link_dict)
