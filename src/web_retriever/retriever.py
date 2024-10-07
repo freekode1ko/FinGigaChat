@@ -36,8 +36,10 @@ class WebRetriever:
         :param text: Текст запроса.
         :return: Ответ от GigaChat.
         """
+        self.logger.info('Отправлен запрос в GigaChat')
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = self.model.invoke(messages)
+        self.logger.info('Получен ответ от GigaChat')
         return response.content
 
     async def _aget_answer_giga(self, system_prompt: str, text: str) -> str:
@@ -48,8 +50,10 @@ class WebRetriever:
         :param text: Текст запроса.
         :return: Ответ от GigaChat.
         """
+        self.logger.info('Отправлен запрос в GigaChat')
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = await self.model.ainvoke(messages)
+        self.logger.info('Получен ответ от GigaChat')
         return response.content
 
     async def _deduplicate(self, result_search: list[dict]) -> list[dict]:
@@ -61,8 +65,6 @@ class WebRetriever:
         """
         self.logger.info(f'Начало дедубликации {len(result_search)} документов.')
 
-        for doc in result_search:
-            self.logger.info(doc)
         result_search.sort(reverse=True, key=lambda x: len(x['snippet'] + x['title']))
         deduplicated_docs = list()
         deduplicated_docs_idxs = set()
@@ -87,10 +89,7 @@ class WebRetriever:
             if flag_unique_document:
                 deduplicated_docs.append(result_search[i])
                 deduplicated_docs_idxs.add(i)
-        self.logger.info('Дедубликация документов завершена')
-
-        for doc in deduplicated_docs:
-            self.logger.info(doc)
+        self.logger.info(f'Дедубликация документов завершена. Осталось {len(deduplicated_docs)} документов.')
         return deduplicated_docs
 
     async def _prepare_context_duckduck(self, result_search: list[dict]) -> tuple[str, dict[str, str]]:
@@ -165,12 +164,15 @@ class WebRetriever:
         :param: output_format. Формат ответа. Принимает строку "default" или "tg".
         :return: Самый широкий ответ из нескольких цепочек.
         """
+        self.logger(f'Старт обработки запроса {query}.')
+        self.logger('Формирование ответов с разным объемом контекста.')
         tasks = [
             self._aanswer_chain(query, N_WIDE_ANSWER, output_format),
             self._aanswer_chain(query, N_NORMAL_ANSWER, output_format),
             self._aanswer_chain(query, N_NARROW_ANSWER, output_format)
         ]
         answers = await asyncio.gather(*tasks)
+        self.logger('Получены ответы. Выбор лучшего из них.')
         final_answer = next(filter(lambda x: x not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
         self.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
         return final_answer
