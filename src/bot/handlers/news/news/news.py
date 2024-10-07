@@ -177,7 +177,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str, features:
     chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
 
-    if features.get(enums.FeatureType.clients_menu):
+    if features.get(enums.FeatureType.company_menu):
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
     else:
         nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(
@@ -414,7 +414,7 @@ async def process_user_message(
             await send_nearest_subjects(message, user_msg, features)
 
 
-@has_access_to_feature(feature=enums.FeatureType.clients_menu, is_need_answer=False)
+@has_access_to_feature(feature=enums.FeatureType.company_menu, is_need_answer=False)
 async def is_stakeholder_in_message(
         message: types.Message,
         user_msg: str,

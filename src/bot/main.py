@@ -180,6 +180,7 @@ async def main():
         await sessions.GigaChatClient().close()
         await sessions.RagQaBankerClient().close()
         await sessions.RagStateSupportClient().close()
+        await sessions.RagQaResearchClient().close()
 
 
 if __name__ == '__main__':

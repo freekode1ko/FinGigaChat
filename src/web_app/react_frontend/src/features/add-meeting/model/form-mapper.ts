@@ -1,6 +1,6 @@
 import type { UserId } from '@/entities/user'
 
-import type { AddMeetingFormData } from '../model'
+import type { AddMeetingFormData } from '.'
 
 export const mapFormData = (data: AddMeetingFormData, userId: UserId) => {
   return {

@@ -13,6 +13,7 @@ pandas = "^2.2.1"
 psycopg2 = "^2.9.9"
 schedule = "^1.2.1"
 sqlalchemy = "^2.0.28"
+typing-extensions = "^4.11.0"
 
 
 [build-system]

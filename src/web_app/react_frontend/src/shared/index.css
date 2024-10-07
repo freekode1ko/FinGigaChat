@@ -5,24 +5,15 @@
 @layer base {
     ::-webkit-scrollbar {
         width: 0.4rem;
-        height: 0.8rem;
+        height: 0.4rem;
     }
 
     ::-webkit-scrollbar-track {
-        @apply bg-white;
+        @apply bg-white dark:bg-dark-blue;
     }
 
     ::-webkit-scrollbar-thumb {
-        @apply bg-secondary-200;
+        @apply bg-secondary-200 dark:bg-secondary-600;
         border-radius: 100vh;
     }
-
-    .dark ::-webkit-scrollbar-track {
-        @apply bg-dark-blue;
-    }
-
-    .dark ::-webkit-scrollbar-thumb {
-        @apply bg-secondary-600;
-    }
-
 }

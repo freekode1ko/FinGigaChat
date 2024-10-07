@@ -1,11 +1,15 @@
 import { createBrowserRouter } from 'react-router-dom'
 
 import {
+  AnalyticDetailsPage,
+  AnalyticsPage,
   DashboardPage,
   MeetingsPage,
   NewsPage,
+  NotesPage,
   QuoteDetailsPage,
   QuotesPage,
+  SubscriptionsPage,
 } from '@/pages/ui'
 
 import { baseLayout } from './layouts/base'
@@ -22,23 +26,47 @@ export const appRouter = () =>
           element: <NewsPage />,
         },
         {
-          path: '/quotes',
-          element: <QuotesPage />,
+          path: '/subscriptions',
+          element: (
+            <ProtectedWrapper showHomeButton>
+              <SubscriptionsPage />
+            </ProtectedWrapper>
+          ),
+        },
+        {
+          path: '/analytics',
+          element: <AnalyticsPage />,
           children: [
             {
-              path: '/quotes/:quotationId',
+              path: ':analyticId',
+              element: <AnalyticDetailsPage />,
+            },
+          ],
+        },
+        {
+          path: '/dashboard',
+          element: <DashboardPage />,
+          children: [
+            {
+              path: ':quotationId',
               element: <QuoteDetailsPage />,
             },
           ],
         },
         {
-          path: '/',
-          element: <DashboardPage />,
+          path: '/quotes',
+          element: <QuotesPage />,
+          children: [
+            {
+              path: ':quotationId',
+              element: <QuoteDetailsPage />,
+            },
+          ],
         },
-        // {
-        //   path: '/analytics',
-        //   element: <AnalyticsPage />,
-        // },
+        {
+          path: '/notes',
+          element: <NotesPage />,
+        },
         {
           path: '/meetings',
           element: (

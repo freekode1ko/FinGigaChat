@@ -3,6 +3,7 @@ from aiohttp import ClientSession, TCPConnector
 
 from configs.config import (
     BASE_QA_BANKER_URL,
+    BASE_QA_RESEARCH_URL,
     BASE_STATE_SUPPORT_URL,
     giga_chat_url,
     giga_oauth_url,
@@ -58,3 +59,11 @@ class RagStateSupportClient(BaseClient):
 
     def __init__(self):
         super().__init__(BASE_STATE_SUPPORT_URL)
+
+
+@singleton
+class RagQaResearchClient(BaseClient):
+    """Клиент для получения ответа от RAG по CIB Research."""
+
+    def __init__(self):
+        super().__init__(BASE_QA_RESEARCH_URL)

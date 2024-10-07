@@ -93,18 +93,18 @@ class NewsItems(AutoEnum):
         return self._subject_subscription_db_
 
     clients = {
-        'title': 'Новости по клиентам',
-        'subject_name': 'клиента',
-        'subject_name_genitive': 'клиента',
+        'title': 'Новости по компаниям',
+        'subject_name': 'компании',
+        'subject_name_genitive': 'компании',
         'subject_db': client_db,
         'subject_subscription_db': user_client_subscription_db,
         'buttons': [
             {
-                'text': 'Выбрать клиента из моих подписок',
+                'text': 'Выбрать компанию из моих подписок',
                 'subscribed': True,
             },
             {
-                'text': 'Выбрать другого клиента',
+                'text': 'Выбрать другую компанию',
                 'subscribed': False,
             },
         ],

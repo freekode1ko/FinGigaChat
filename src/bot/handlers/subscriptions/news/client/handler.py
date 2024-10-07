@@ -31,9 +31,9 @@ class ClientSubscriptionsHandler(ClientAndCommoditySubscriptionsHandler):
             keyboard,
             ClientSubscriptionsStates.client_user_subscriptions,
             [models.ClientAlternative],
-            'клиенты',
-            'клиентов',
-            'клиентов',
+            'компании',
+            'компаний',
+            'компании',
         )
 
 

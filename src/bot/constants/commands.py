@@ -14,8 +14,8 @@ PUBLIC_COMMANDS: list[dict] = [
         'description': 'Котировки',
     },
     {
-        'command': 'clients_menu',
-        'description': 'Клиенты',
+        'command': 'company_menu',
+        'description': 'Компании',
     },
     {
         'command': 'products_menu',

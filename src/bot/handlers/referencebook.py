@@ -31,7 +31,7 @@ async def reference_book(message: types.Message) -> None:
     user_logger.info(f'*{chat_id}* {full_name} {user_msg} - Запросил справочник')
 
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='Клиенты', callback_data='ref_books:client'))
+    keyboard.row(types.InlineKeyboardButton(text='Компании', callback_data='ref_books:client'))
     keyboard.row(types.InlineKeyboardButton(text='Бенефициары и ЛПР', callback_data='ref_books:beneficiaries'))
     keyboard.row(types.InlineKeyboardButton(text='Commodities', callback_data='ref_books:commodity'))
 
@@ -50,9 +50,9 @@ async def ref_books(callback_query: types.CallbackQuery, state: FSMContext) -> N
     handbooks = [pd.DataFrame(columns=['industry_name', 'object'])]
     what_is_this = ''
     if book == 'client':
-        await callback_query.message.answer(text='Справочник по клиентам:')
+        await callback_query.message.answer(text='Справочник по компаниям:')
         handbooks = await show_ref_book_by_request(chat_id, book, logger)
-        what_is_this = 'клиенты (холдинги)'
+        what_is_this = 'компании (холдинги)'
     elif book == 'beneficiaries':
         what_is_this = 'бенефициары и ЛПР'
         pass
@@ -74,7 +74,7 @@ async def ref_books(callback_query: types.CallbackQuery, state: FSMContext) -> N
                 'Справочник по бенефициарам и ЛПР находится в процессе обновления, '
                 'приносим извинения за неудобства. Функционал активной и пассивной '
                 'рассылки по бенефициарам остается активным, для этого сформируйте '
-                'новый список рассылки, вставив фамилии интересующих лиц и клиентов '
+                'новый список рассылки, вставив фамилии интересующих лиц '
                 'или просто введите их диалоговую строку, чтобы получить текущие новости.'
             )
 
@@ -97,7 +97,7 @@ async def isthisall(callback_query: types.CallbackQuery, state: FSMContext) -> N
     user_logger.info(f'*{chat_id}* {user_first_name} - Пользователь удовлетворен наполнением справочника?  {need_new}')
     if need_new == 'no':
         await callback_query.message.answer(
-            text='Если вы не нашли интересующего вас клиента (холдинг), '
+            text='Если вы не нашли интересующую вас компанию (холдинг), '
             'бенефициара, ЛПР или commodity в списке, напишите его наименование в чат.'
             '\nВы также можете написать его альтернативные названия и синонимы. '
             'Мы добавим их в справочник в ближайшее время.\n'

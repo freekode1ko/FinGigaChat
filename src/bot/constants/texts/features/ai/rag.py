@@ -31,3 +31,4 @@ class RAGTexts(BaseSettings):
     )
 
     RAG_FORMAT_ANSWER: str = '{answer}\n\n' + RAG_GIGA_RAG_FOOTER
+    RAG_RESEARCH_SUFFIX: str = '\n\n<b>Мнение аналитиков:</b>\n\n{answer}'

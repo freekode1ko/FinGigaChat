@@ -1,5 +1,6 @@
 """Модели таблиц всех сервисов"""
 import datetime
+import enum
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -261,6 +262,7 @@ class RegisteredUser(Base):
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
 
 class Whitelist(Base):
@@ -816,6 +818,92 @@ class RelationClientStakeholder(Base):
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     stakeholder_type = Column(Enum(enums.StakeholderType), nullable=False, comment='Тип стейкхолдера')
+
+
+class QuotesSections(Base):
+    __tablename__ = 'quotes_section'
+    __table_args__ = {'comment': 'Таблица cо секциями котировок'}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String, nullable=False, comment='Название')
+    params = sa.Column(sa.JSON, comment='Параметры для отображения секции')
+
+    quotes = relationship('Quotes', back_populates='quotes_section')
+
+
+class Quotes(Base):
+    __tablename__ = 'quotes'
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'quotes_section_id', name='uq_quote_name_and_section'),
+        {'comment': 'Таблица cо списком котировок, получаемых через сторонние API', }
+    )
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String, nullable=False, comment='Название')
+    params = sa.Column(sa.JSON, comment='Параметры для запросов')
+    source = sa.Column(sa.String, comment='Url для запросов')
+    ticker = sa.Column(sa.String, comment='Тикер (например AAPL)')
+    quotes_section_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('quotes_section.id'),
+        nullable=False,
+        comment='Секция котировок'
+    )
+    last_update = sa.Column(sa.DateTime, comment='Время последнего обновления')
+
+    quotes_section = relationship('QuotesSections', back_populates='quotes')
+    values = relationship('QuotesValues', back_populates='quote')
+    user_quotes_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='quote')
+
+
+class QuotesValues(Base):
+    __tablename__ = 'quotes_values'
+    __table_args__ = (
+        sa.UniqueConstraint('quote_id', 'date', name='uq_quote_and_date'),
+        {'comment': 'Таблица cо списком значений для графиков'}
+    )
+
+    id = sa.Column(sa.Integer, primary_key=True,)
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+
+    date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
+
+    open = sa.Column(sa.Float, comment='Цена открытия')
+    close = sa.Column(sa.Float, comment='Цена закрытия')
+    high = sa.Column(sa.Float, comment='Максимальная стоимость')
+    low = sa.Column(sa.Float, comment='Минимальная стоимость')
+
+    value = sa.Column(sa.Float, comment='Цента в данный момент')
+
+    volume = sa.Column(sa.Float, comment='Объем торгов')
+
+    quote = relationship('Quotes', back_populates='values')
+
+
+class SizeEnum(enum.IntEnum):
+    """Размеры для отображения котировок"""
+
+    GRAPH_LARGE = enum.auto()
+    GRAPH_MEDIUM = enum.auto()
+    TEXT = enum.auto()
+
+
+class UsersQuotesSubscriptions(Base):
+    __tablename__ = 'users_quotes_subscriptions'
+    __table_args__ = {'comment': 'Таблица подписок пользователей на котировки'}
+
+    id = sa.Column(sa.Integer, primary_key=True, )
+    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    view_size = sa.Column(
+        sa.Enum(SizeEnum),
+        nullable=False,
+        default=SizeEnum.TEXT,
+        comment='Размер отображения данных: график или текст',
+    )
+
+    user = relationship('RegisteredUser', back_populates='quote_subscriptions')
+    quote = relationship('Quotes', back_populates='user_quotes_subscriptions')
 
 
 class UserRole(Base):

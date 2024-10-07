@@ -14,6 +14,8 @@ import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
+from constants import constants
+from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
 
@@ -27,7 +29,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(api_router, prefix="/api")
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+app.mount(
+    '/static',
+    StaticFiles(directory=str(constants.PROJECT_DIR / 'frontend' / 'static')),
+    name="static"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -87,8 +93,7 @@ async def create_meeting(
 
     return 'OK'
 
-@app.get("/", response_class=HTMLResponse)
-@app.get("/news", response_class=HTMLResponse)
-@app.get("/quotes", response_class=HTMLResponse)
-async def show_quotes(request: Request) -> HTMLResponse:
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+@handle_jinja_template_exceptions
+async def show_react_app(request: Request, full_path: str) -> HTMLResponse:
     return templates.TemplateResponse("index.html", {"request": request})
