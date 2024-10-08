@@ -15,7 +15,7 @@ from db.rag_user_feedback import add_rag_activity, update_response, update_user_
 from db.redis import del_dialog_and_history_query, get_history_query, get_last_user_msg, update_dialog, update_history_query
 from handlers.ai.handler import router
 from keyboards.analytics.constructors import get_few_full_research_kb
-from keyboards.rag.callbacks import RegenerateResponse, GetReports
+from keyboards.rag.callbacks import GetReports, RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
 from utils.base import clear_text_from_url

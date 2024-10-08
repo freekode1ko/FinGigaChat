@@ -11,4 +11,5 @@ class RegenerateResponse(CallbackData, prefix='regenerate'):
 
 class GetReports(CallbackData, prefix='show_reports'):
     """Посмотреть отчеты, на основе которых генерировался ответ РАГа."""
+
     pass

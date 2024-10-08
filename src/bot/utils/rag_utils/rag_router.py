@@ -154,6 +154,13 @@ class RAGRouter:
         return {'body': response, 'metadata': metadata}
 
     def format_combination_answer(self, banker: str, research: str) -> str:
+        """
+        Форматирование, комбинация ответов от рага по новостям и рага рисерч.
+
+        :param banker:    Ответ от рага по новостям.
+        :param research:  Ответ от рага рисерч.
+        :return:          Комбинированный ответ.
+        """
         if banker == research == texts_manager.RAG_ERROR_ANSWER:
             return texts_manager.RAG_ERROR_ANSWER
 
