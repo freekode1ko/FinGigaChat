@@ -75,3 +75,34 @@ def get_full_research_kb(research_id: int) -> InlineKeyboardMarkup:
         callback_data=callbacks.GetFullResearch(research_id=research_id).pack(),
     ))
     return keyboard.as_markup()
+
+
+def get_few_full_research_kb(
+        kb: InlineKeyboardBuilder,
+        reports_data: list[dict[str, str | int]] | None,
+) -> InlineKeyboardMarkup:
+    """
+    Получить клавиатуру для выдачи полной версии нескольких отчетов.
+
+    :param kb:           Генератор клавиатуры.
+    :param reports_data: Список из словарей с данными об обзорах {'header': ..., 'research_id': ...}
+    :return:             Клавиатура с новыми кнопками для получения обзоров.
+    """
+    if not reports_data:
+        return kb.as_markup()
+
+    added_ids = set()
+    for r_data in reports_data:
+        if (research_id := r_data['research_id']) in added_ids:
+            continue
+        added_ids.add(research_id)
+        header = r_data['header']
+        header_point = header.find('. ')
+        if header_point != -1:
+            header = header[:header_point]
+        kb.row(types.InlineKeyboardButton(
+            text=header,
+            callback_data=callbacks.GetFullResearch(research_id=research_id).pack(),
+        ))
+
+    return kb.as_markup()

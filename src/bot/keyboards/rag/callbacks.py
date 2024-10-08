@@ -7,3 +7,8 @@ class RegenerateResponse(CallbackData, prefix='regenerate'):
 
     rephrase_query: bool  # использовать для генерации ответа перефразированный вопрос
     initially_query: bool  # использовать для генерации ответа изначальный вопрос пользователя
+
+
+class GetReports(CallbackData, prefix='show_reports'):
+    """Посмотреть отчеты, на основе которых генерировался ответ РАГа."""
+    pass
