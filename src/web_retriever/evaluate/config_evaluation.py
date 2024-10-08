@@ -11,3 +11,5 @@ LOG_FILE = "evaluation"
 LOG_LEVEL = 20
 
 N_ATTEMPTS = 3
+
+ANSWER_FORMAT = "tg"

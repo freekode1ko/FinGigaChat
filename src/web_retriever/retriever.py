@@ -164,15 +164,15 @@ class WebRetriever:
         :param: output_format. Формат ответа. Принимает строку "default" или "tg".
         :return: Самый широкий ответ из нескольких цепочек.
         """
-        self.logger(f'Старт обработки запроса {query}.')
-        self.logger('Формирование ответов с разным объемом контекста.')
+        self.logger.info(f'Старт обработки запроса {query}.')
+        self.logger.info('Формирование ответов с разным объемом контекста.')
         tasks = [
             self._aanswer_chain(query, N_WIDE_ANSWER, output_format),
             self._aanswer_chain(query, N_NORMAL_ANSWER, output_format),
             self._aanswer_chain(query, N_NARROW_ANSWER, output_format)
         ]
         answers = await asyncio.gather(*tasks)
-        self.logger('Получены ответы. Выбор лучшего из них.')
+        self.logger.info('Получены ответы. Выбор лучшего из них.')
         final_answer = next(filter(lambda x: x not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
         self.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
         return final_answer
