@@ -20,4 +20,13 @@ class Subscription(BaseModel):
     name: str
     subscription_id: Optional[int] = None
     subscription_type: Optional[SubscriptionTypeEnum] = None
+    is_subscribed: Optional[bool] = None
     nearest_menu: list['Subscription'] = []
+
+
+class DetailSubscriptionsResponse(BaseModel):
+    """Схема для отображения детализированной аналитики"""
+
+    subscription_id: int
+    name: str
+    subscriptions: list[Subscription]

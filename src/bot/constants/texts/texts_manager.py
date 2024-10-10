@@ -26,7 +26,7 @@ class TextsManager:
 
     def __getattr__(self, item):
         """Получение атрибута из редиса"""
-        value = redis_client.get(f'{self.PATTERN}{item}')
+        value = redis_client.get(f'{self.PATTERN}_{item}')
         if value is not None:
             return value
         for config in self.__configs:

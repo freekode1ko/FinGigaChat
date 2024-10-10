@@ -1,5 +1,12 @@
-export { useGetDashboardQuotesQuery, useGetPopularQuotesQuery } from './api'
 export {
+  useGetDashboardDataQuery,
+  useGetDashboardQuotesQuery,
+  useGetDashboardSubscriptionsQuery,
+  useGetPopularQuotesQuery,
+  usePutDashboardSubscriptionsMutation,
+} from './api'
+export {
+  type DashboardSubscription,
   favoriteQuotesSlice,
   type Quotes,
   type QuotesSection,
@@ -10,4 +17,4 @@ export {
   type TradingViewSymbol,
   updateFavoriteQuotesList,
 } from './model'
-export { QuotesTable, QuotesTableRow } from './ui'
+export { QuoteCard, QuotesTable, QuotesTableRow } from './ui'

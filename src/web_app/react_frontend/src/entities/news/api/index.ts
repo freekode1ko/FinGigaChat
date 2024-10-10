@@ -21,7 +21,7 @@ const newsApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getInfiniteNews: build.query<NewsResponse, GetNewsQuery>({
       query: ({ page, size }) => ({
-        url: `${API_ENDPOINTS.news}?page=${page}&size=${size}`,
+        url: `${API_ENDPOINTS.news}/?page=${page}&size=${size}`,
         method: 'GET',
       }),
       serializeQueryArgs: ({ endpointName }) => {
@@ -37,7 +37,7 @@ const newsApi = baseApi.injectEndpoints({
     }),
     getNews: build.query<NewsResponse, void>({
       query: () => ({
-        url: API_ENDPOINTS.news,
+        url: `${API_ENDPOINTS.news}/`,
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,

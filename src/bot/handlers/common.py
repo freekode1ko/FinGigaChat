@@ -227,7 +227,7 @@ async def open_web_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     markup = types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [types.InlineKeyboardButton(text='WebApp (beta)', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/'))],
+            [types.InlineKeyboardButton(text='WebApp (beta)', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/news'))],
         ],
         resize_keyboard=True
     )

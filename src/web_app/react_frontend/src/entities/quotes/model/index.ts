@@ -6,4 +6,10 @@ export {
   toggleFavoriteQuotes,
   updateFavoriteQuotesList,
 } from './slice'
-export type { Quotes, QuotesSection, TradingViewSymbol } from './types'
+export type {
+  DashboardSubscription,
+  DashboardSubscriptionSection,
+  Quotes,
+  QuotesSection,
+  TradingViewSymbol,
+} from './types'

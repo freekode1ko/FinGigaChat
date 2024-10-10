@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react'
 
 import { Logo } from '@/features/logo'
-import { setUser } from '@/entities/user'
-import { useAppDispatch, useInitData, useWebApp } from '@/shared/lib'
+import { selectUserData, setUser } from '@/entities/user'
+import { useAppDispatch, useAppSelector, useInitData, useWebApp } from '@/shared/lib'
 import { Paragraph } from '@/shared/ui'
 
 const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
   const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUserData)
   const tg = useWebApp()
   const [userData] = useInitData()
   const [isReady, setIsReady] = useState<boolean>(false)
 
   useEffect(() => {
-    if (tg && userData && userData.user) {
-      dispatch(setUser({ userId: userData.user.id }))
+    if (!user && tg && userData && userData.user) {
+      dispatch(
+        setUser({ userId: userData.user.id, name: userData.user.first_name })
+      )
       tg.expand()
       tg.ready()
     } else {
@@ -22,7 +25,7 @@ const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
       )
     }
     setIsReady(true)
-  }, [tg, userData])
+  }, [tg, userData, dispatch, user])
 
   if (!isReady)
     return (
