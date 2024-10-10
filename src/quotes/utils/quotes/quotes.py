@@ -17,7 +17,7 @@ async def update_quote_data():
         for _ in range(5):
             try:
                 await func()
-            except Exception as e:
+            except Exception:
                 continue
             else:
                 break
