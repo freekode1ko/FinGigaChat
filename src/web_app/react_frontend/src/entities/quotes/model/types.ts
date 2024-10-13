@@ -1,21 +1,26 @@
 interface QuotesParams {
   readonly name: string
-  readonly value: Optional<number>
+  readonly value: number
 }
 
 export interface Quotes {
-  readonly name: string
-  readonly value: Optional<number>
-  readonly params: Array<QuotesParams>
-  readonly research_item_id: number
-  readonly tv_type: string
-  readonly image_path: string
+  name: string
+  ticker: Optional<string>
+  value: number
+  params: Array<QuotesParams>
+  view_type: number
+  quote_id: number
+  image_path: string
+
+  // legacy
+  tv_type: string
+  research_item_id: string
 }
 
 export interface DashboardSubscription {
   id: number
   name: string
-  ticker: string | null
+  ticker: Optional<string>
   active: boolean
   type: number
 }
@@ -39,9 +44,15 @@ export interface TradingViewSymbol {
 export interface FinancialData {
   date: Date
   value: number
-  open: number | null
-  close: number | null
-  high: number | null
-  low: number | null
-  volume: number | null
+  open: Optional<number>
+  close: Optional<number>
+  high: Optional<number>
+  low: Optional<number>
+  volume: Optional<number>
+}
+
+export interface FlattenedDashboardItem {
+  type: 'section' | 'item'
+  sectionName?: string
+  item?: DashboardSubscription
 }

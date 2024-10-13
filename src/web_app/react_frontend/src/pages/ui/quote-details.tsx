@@ -2,12 +2,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import { NewsList } from '@/widgets/news-list'
 import { CopyPageLinkButton } from '@/features/copy-page-link'
-import { ChartDemo, ChartSkeleton } from '@/entities/charts'
+import { ChartSkeleton, CustomChart, mapFinancialData } from '@/entities/charts'
 import { useGetNewsQuery } from '@/entities/news'
 import {
   useGetDashboardDataQuery,
   useGetDashboardSubscriptionsQuery,
 } from '@/entities/quotes'
+import { selectAppTheme } from '@/entities/theme'
 import { selectUserData } from '@/entities/user'
 import { useAppSelector, useMediaQuery } from '@/shared/lib'
 import {
@@ -26,28 +27,19 @@ import {
 import { skipToken } from '@reduxjs/toolkit/query'
 
 const QuoteDetailsPage = () => {
+  const theme = useAppSelector(selectAppTheme)
   const navigate = useNavigate()
   const user = useAppSelector(selectUserData)
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const { quotationId } = useParams() as { quotationId: string }
   const { data: subData } = useGetDashboardSubscriptionsQuery(
-    user ? { userId: user.userId } : skipToken
+    user ? { userId: user.id } : skipToken
   )
   const { data: finData } = useGetDashboardDataQuery({
     quoteId: parseInt(quotationId),
     startDate: '01.01.2024',
   })
   const { data, isLoading } = useGetNewsQuery()
-
-  const chartData = finData?.data.map((d) => ({
-    date: new Date(`${d.date}T00:00:00`),
-    value: d.value,
-    open: d.open,
-    high: d.high,
-    low: d.low,
-    close: d.close,
-    volume: d.volume,
-  }))
 
   const currentQuote = subData?.subscription_sections
     .flatMap((section) => section.subscription_items)
@@ -70,10 +62,11 @@ const QuoteDetailsPage = () => {
           <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto">
             <div className="max-h-[300px]">
               {finData ? (
-                <ChartDemo
-                  inputData={chartData!.reverse()}
+                <CustomChart
+                  inputData={mapFinancialData([...finData.data].reverse())}
                   size="large"
-                  maxHeight={300}
+                  height={300}
+                  theme={theme}
                 />
               ) : (
                 <ChartSkeleton />
@@ -102,10 +95,11 @@ const QuoteDetailsPage = () => {
           </DrawerHeader>
           <div className="max-h-[220px]">
             {finData ? (
-              <ChartDemo
-                inputData={chartData!.reverse()}
+              <CustomChart
+                inputData={mapFinancialData([...finData.data].reverse())}
                 size="large"
-                maxHeight={220}
+                height={220}
+                theme={theme}
               />
             ) : (
               <ChartSkeleton />

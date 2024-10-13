@@ -63,6 +63,7 @@ export {
 export { Input } from './input'
 export { Label } from './label'
 export { Layout } from './layout'
+export { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from './otp'
 export { ShowMoreButton } from './pagination'
 export {
   Select,
@@ -89,6 +90,7 @@ export {
   SheetTrigger,
 } from './sheet'
 export { Skeleton } from './skeleton'
+export { Step } from './step'
 export { Switch } from './switch'
 export {
   Table,

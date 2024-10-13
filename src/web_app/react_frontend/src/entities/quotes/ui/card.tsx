@@ -10,6 +10,7 @@ interface QuoteCardProps
   change: number
   onCardClick?: () => void
   graph?: React.ReactNode
+  actionSlot?: React.ReactNode
 }
 
 const getChangeColor = (change: number): string => {
@@ -29,14 +30,23 @@ export const QuoteCard = ({
   change,
   type,
   graph,
+  actionSlot,
   onCardClick,
 }: QuoteCardProps) => {
   switch (type) {
     case 2:
       return (
-        <Card className="flex flex-col items-center p-1 gap-2 lg:grid lg:grid-cols-3 lg:p-2">
+        <Card className="flex flex-col items-center p-2 gap-2 lg:grid lg:grid-cols-3 relative">
+          {actionSlot && (
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-white dark:bg-dark-blue rounded-md">
+              {actionSlot}
+            </div>
+          )}
           <div className="grid grid-cols-2 w-full items-center lg:items-start lg:gap-4 lg:flex lg:flex-col lg:col-span-1">
-            <CardTitle className="text-lg col-span-1 cursor-pointer" onClick={onCardClick}>
+            <CardTitle
+              className="text-lg col-span-1 cursor-pointer"
+              onClick={onCardClick}
+            >
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <div className="text-xl lg:text-2xl justify-end font-semibold flex flex-row lg:flex-col gap-2 lg:gap-0">
@@ -51,9 +61,17 @@ export const QuoteCard = ({
       )
     case 3:
       return (
-        <Card>
+        <Card className="relative p-2">
+          {actionSlot && (
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-white dark:bg-dark-blue rounded-md">
+              {actionSlot}
+            </div>
+          )}
           <div className="grid grid-cols-4 items-center gap-2 p-1 lg:p-2">
-            <CardTitle className="text-lg col-span-2 cursor-pointer" onClick={onCardClick}>
+            <CardTitle
+              className="text-lg col-span-2 cursor-pointer"
+              onClick={onCardClick}
+            >
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <Badge variant="outline" className="col-span-1">
@@ -73,9 +91,17 @@ export const QuoteCard = ({
       )
     default:
       return (
-        <Card>
+        <Card className="relative p-2">
+          {actionSlot && (
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-white dark:bg-dark-blue rounded-md">
+              {actionSlot}
+            </div>
+          )}
           <div className="grid grid-cols-4 items-center gap-2 p-1 lg:p-2">
-            <CardTitle className="text-md col-span-2 cursor-pointer" onClick={onCardClick}>
+            <CardTitle
+              className="text-md col-span-2 cursor-pointer"
+              onClick={onCardClick}
+            >
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <Badge variant="outline" className="col-span-1">

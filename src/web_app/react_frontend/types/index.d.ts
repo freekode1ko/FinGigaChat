@@ -3,7 +3,7 @@ export {}
 declare global {
   interface Window {
     Telegram: TelegramWebApps
-    onTelegramAuth?: (user: TelegramWebApps.WebAppUser) => void
+    onTelegramAuth?: (user: TelegramAuthWidget.CallbackAuthData) => void
     TradingView: unknown
   }
 }

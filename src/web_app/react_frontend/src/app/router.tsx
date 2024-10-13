@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import {
   AnalyticDetailsPage,
   AnalyticsPage,
+  AuthPage,
   DashboardPage,
   MeetingsPage,
   NewsPage,
@@ -12,11 +13,21 @@ import {
   SubscriptionsPage,
 } from '@/pages/ui'
 
-import { baseLayout } from './layouts/base'
+import { baseLayout, emptyLayout } from './layouts/base'
 import { ProtectedWrapper } from './router-guard'
 
 export const appRouter = () =>
   createBrowserRouter([
+    {
+      element: emptyLayout,
+      errorElement: <div>error</div>,
+      children: [
+        {
+          path: '/login',
+          element: <AuthPage />,
+        },
+      ],
+    },
     {
       element: baseLayout,
       errorElement: <div>error</div>,
@@ -43,16 +54,28 @@ export const appRouter = () =>
             },
           ],
         },
+        //
         {
           path: '/dashboard',
           element: <DashboardPage />,
           children: [
             {
-              path: ':quotationId',
+              path: 'quote/:quotationId',
               element: <QuoteDetailsPage />,
             },
           ],
         },
+        {
+          path: '/dashboard/:userId',
+          element: <DashboardPage />,
+          children: [
+            {
+              path: 'quote/:quotationId',
+              element: <QuoteDetailsPage />,
+            },
+          ],
+        },
+        //
         {
           path: '/quotes',
           element: <QuotesPage />,
