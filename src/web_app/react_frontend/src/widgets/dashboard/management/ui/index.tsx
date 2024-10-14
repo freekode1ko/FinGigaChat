@@ -5,8 +5,8 @@ import { VariableSizeList } from 'react-window'
 import { useDashboardSearch } from '@/features/dashboard/search/lib'
 import {
   flattenQuotesContent,
+  quotesApi,
   useGetDashboardSubscriptionsQuery,
-  usePutDashboardSubscriptionsMutation,
 } from '@/entities/quotes'
 import { setSubscriptions } from '@/entities/quotes'
 import { selectDashboardSubscriptions } from '@/entities/quotes/model/slice'
@@ -33,7 +33,7 @@ const ManageDashboardButton = () => {
   const dispatch = useAppDispatch()
   const user = useAppSelector(selectUserData)
   const subscriptions = useAppSelector(selectDashboardSubscriptions)
-  const [trigger] = usePutDashboardSubscriptionsMutation()
+  const [trigger] = quotesApi.endpoints.putDashboardSubscriptionsOnMain.useMutation()
   const { data } = useGetDashboardSubscriptionsQuery(
     user ? { userId: user.id } : skipToken
   )

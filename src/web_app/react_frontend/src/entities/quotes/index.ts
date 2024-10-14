@@ -1,4 +1,5 @@
 export {
+  quotesApi,
   useGetDashboardDataQuery,
   useGetDashboardQuotesQuery,
   useGetDashboardSubscriptionsQuery,

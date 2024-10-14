@@ -14,7 +14,7 @@ interface DashboardSubscriptionsResponse {
   subscription_sections: Array<DashboardSubscriptionSection>
 }
 
-const quotesApi = baseApi.injectEndpoints({
+export const quotesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getPopularQuotes: build.query<QuotesResponse, void>({
       query: () => ({
@@ -85,7 +85,6 @@ const quotesApi = baseApi.injectEndpoints({
             }
           )
         )
-
         try {
           await queryFulfilled
           toast.success('Подписки успешно обновлены!')
@@ -95,6 +94,17 @@ const quotesApi = baseApi.injectEndpoints({
         }
       },
     }),
+    putDashboardSubscriptionsOnMain: build.mutation<
+    string,
+    { userId: number; body: Array<DashboardSubscriptionSection> }
+  >({
+    query: ({ userId, body }) => ({
+      url: `${API_ENDPOINTS.dashboardQuotes}/${userId}/subscriptions`,
+      method: 'PUT',
+      body: { subscription_sections: body },
+    }),
+    invalidatesTags: [API_TAGS.dashboardQuotes],
+  }),
     getDashboardData: build.query<
       { id: number; data: Array<FinancialData> },
       { quoteId: number; startDate: string }
@@ -109,6 +119,7 @@ const quotesApi = baseApi.injectEndpoints({
         url: `${API_ENDPOINTS.dashboardQuotes}/${userId}`,
         method: 'GET',
       }),
+      providesTags: [API_TAGS.dashboardQuotes]
     }),
   }),
 })

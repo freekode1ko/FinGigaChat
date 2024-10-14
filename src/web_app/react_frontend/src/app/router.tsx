@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import {
   AnalyticDetailsPage,
@@ -32,6 +32,12 @@ export const appRouter = () =>
       element: baseLayout,
       errorElement: <div>error</div>,
       children: [
+        // temp solution
+        {
+          path: '/',
+          element: <Navigate to='/dashboard' />
+        },
+        // temp solution
         {
           path: '/news',
           element: <NewsPage />,
