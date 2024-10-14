@@ -1,4 +1,4 @@
-    """Обновление котировок"""
+"""Обновление котировок"""
 import asyncio
 import datetime
 import json
