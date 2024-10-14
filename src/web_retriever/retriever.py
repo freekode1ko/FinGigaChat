@@ -16,7 +16,8 @@ class WebRetriever:
     """Класс с цепочкой для генерации ответа с аугментацией данных из поиска DuckDuckGo"""
 
     def __init__(self, logger):
-        self.model = GigaChat(verbose=True,
+        self.model = GigaChat(base_url=GIGA_URL,
+                              verbose=True,
                               credentials=GIGA_CREDENTIALS,
                               scope=GIGA_SCOPE,
                               model=GIGA_MODEL,
@@ -37,6 +38,7 @@ class WebRetriever:
         :return: Ответ от GigaChat.
         """
         self.logger.info('Отправлен запрос в GigaChat')
+        self.logger.info(f"Запрос: {text}")
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": f"Запрос: {text}"}]
         response = self.model.invoke(messages)
         self.logger.info('Получен ответ от GigaChat')
@@ -136,15 +138,13 @@ class WebRetriever:
 
     async def _aanswer_chain(self,
                              question: str,
-                             n_retrieved: int = N_NARROW_ANSWER,
-                             output_format: str = "default") -> str:
+                             n_retrieved: int = N_NARROW_ANSWER) -> tuple[str, list[str]]:
         """
         Цепочка с продвинутым форматированием источников.
 
         :param: question. Запрос пользователя.
         :param: n_retrieved. Количество документов, которые будут использоваться для формирования ответа.
-        :param: output_format. Формат ответа. Принимает строку "default" или "tg".
-        :return: Ответ с учетом поиска в интернете с форматированием ссылок.
+        :return: Ответ и массив ссылок, которые были использованы в ответе.
         """
         contexts = self.search_engine.results(question, max_results=n_retrieved)
         prepared_context, link_dict = await self._prepare_context_duckduck(contexts)
@@ -152,27 +152,30 @@ class WebRetriever:
             question=question, context=prepared_context))
         answer = self._post_processing_duckduck(raw_answer=raw_answer, link_dict=link_dict)
         answer = self._change_answer_to_default(answer)
-        if output_format == "tg":
-            answer = format_answer(answer, list(link_dict.values()))
-        return answer
+        return answer, list(link_dict.values())
 
-    async def aget_answer(self, query: str, output_format: str = 'default') -> str:
+    async def aget_answer(self, query: str, output_format: str = 'default', debug: bool = False) -> list[str]:
         """
         Формирование ответа на запрос с помощью нескольких цепочек.
 
         :param: query. Запрос пользователя.
         :param: output_format. Формат ответа. Принимает строку "default" или "tg".
+        :param: debug. Если True, то возвращает и обычный и отформатированный ответ одновременно.
         :return: Самый широкий ответ из нескольких цепочек.
         """
         self.logger.info(f'Старт обработки запроса {query}.')
         self.logger.info('Формирование ответов с разным объемом контекста.')
         tasks = [
-            self._aanswer_chain(query, N_WIDE_ANSWER, output_format),
-            self._aanswer_chain(query, N_NORMAL_ANSWER, output_format),
-            self._aanswer_chain(query, N_NARROW_ANSWER, output_format)
+            self._aanswer_chain(query, N_WIDE_ANSWER),
+            self._aanswer_chain(query, N_NORMAL_ANSWER),
+            self._aanswer_chain(query, N_NARROW_ANSWER)
         ]
         answers = await asyncio.gather(*tasks)
         self.logger.info('Получены ответы. Выбор лучшего из них.')
-        final_answer = next(filter(lambda x: x not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
+        final_answer = next(filter(lambda x: x[0] not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
         self.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
-        return final_answer
+        if debug:
+            return [final_answer[0], format_answer(final_answer[0], final_answer[1])]
+        elif output_format == 'tg':
+            final_answer = [format_answer(final_answer[0], final_answer[1])]
+        return [final_answer]

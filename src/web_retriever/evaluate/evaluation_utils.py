@@ -21,12 +21,14 @@ async def get_answers(engine: WebRetriever, logger: logging.Logger, filepath: st
     df = pd.read_excel(filepath)
     start_time = time.time()
     results = []
+    formatted_results = []
     for question in df['query']:
         flag = False
         for i in range(N_ATTEMPTS):
             try:
-                ans = await engine.aget_answer(question, output_format=ANSWER_FORMAT)
-                results.append(ans)
+                ans = await engine.aget_answer(question, debug=True)
+                results.append(ans[0])
+                formatted_results.append(ans[1])
                 flag = True
                 logger.info(f"Обработан запрос: {question}, с ответом: {results[-1]}")
                 break
@@ -36,5 +38,6 @@ async def get_answers(engine: WebRetriever, logger: logging.Logger, filepath: st
             results.append("Не удалось получить ответ.")
 
     df['answers'] = results
+    df['formatted_answers'] = formatted_results
     df.to_excel('result_chain.xlsx')
     logger.info("---Elapsed time %s seconds ---" % (time.time() - start_time))

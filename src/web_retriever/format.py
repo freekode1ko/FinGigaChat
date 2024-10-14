@@ -3,6 +3,7 @@
 import re
 from urllib.parse import urlparse
 
+from configs.config import N_LINKS_AFTER_TOPIC, N_LINKS_AFTER_ANSWER
 from configs.text_constants import DEFAULT_ANSWER, USELESS_FRASES, SOURCES_PATTERN
 
 pattern = re.compile(r'(</a>)(?!\n\n)(\s*[^,])')
@@ -30,17 +31,18 @@ def make_short_link(link: str) -> str:
     return f'<a href="{link}">{base_url}</a>' if base_url else link
 
 
-def change_sources_format(answer: str) -> str:
+def change_sources_format(answer: str, leave_amount: int = N_LINKS_AFTER_TOPIC) -> str:
     """
-    Изменяет все ссылки на нужный формат.
+    Изменяет все ссылки на нужный формат и оставляеть leave_amount, если ссылок слишком много.
 
     :param answer:               Ответ от GigaChat.
+    :param leave_amount:         Количество ссылок, которое нужно оставить
     :return:                     Строка из ссылок в разметке html.
     """
     sources = re.sub(pattern=SOURCES_PATTERN, repl=r'\1', string=answer)
     sources_list = sources.split(', ')
     return ', '.join(
-        short_link for source in sources_list
+        short_link for source in sources_list[0:leave_amount]
         if (short_link := make_short_link(source))
     )
 
@@ -57,16 +59,19 @@ def make_format_msg(answer: str) -> str:
     )
 
 
-def make_format_msg_with_sources_in_end(answer: str, sources: list[str]) -> str:
+def make_format_msg_with_sources_in_end(answer: str,
+                                        sources: list[str],
+                                        leave_amount: int = N_LINKS_AFTER_ANSWER) -> str:
     """
     Формирует ответ для передачи его в Telegram, релевантные ссылки находятся в конце сообщения.
 
     :param answer:              Ответ, сгенерированный GigaChat (не содержит ссылок).
     :param sources:             Список ссылок на источники.
+    :param leave_amount:        Количество ссылок, которые оставляем.
     :return:                    Ответ со ссылками в html разметке (в конце сообщения).
     """
     format_sources = ', '.join(
-            short_link for source in sources
+            short_link for source in sources[0:leave_amount]
             if (short_link := make_short_link(source))
     )
     return answer + format_sources
@@ -119,7 +124,7 @@ def format_answer(answer: str, sources: list[str]) -> str:
     processed_answer = make_format_msg(answer)
     processed_answer = clear_answer(processed_answer)
     if is_contain_link(processed_answer):
-        return add_paragraphs(processed_answer).strip()
-
+        return re.sub(r'\n+', '\n\n', add_paragraphs(processed_answer).strip()).strip()
     answer = clear_answer(answer)
-    return make_format_msg_with_sources_in_end(answer, sources)
+    return re.sub(r'\n+', '\n\n', make_format_msg_with_sources_in_end(answer, sources)).strip()
+
