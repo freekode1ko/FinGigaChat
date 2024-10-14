@@ -80,7 +80,9 @@ const MoreMenuButton = ({ overflowTabs }: { overflowTabs: MenuItem[] }) => {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><ThemeSwitcher /></DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <ThemeSwitcher />
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

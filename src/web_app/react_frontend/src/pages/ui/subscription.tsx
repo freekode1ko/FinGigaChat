@@ -10,7 +10,7 @@ const SubscriptionsPage = () => {
   const { data: initialData } = useGetSubscriptionsQuery(
     user
       ? {
-          userId: user.userId,
+          userId: user.id,
         }
       : skipToken
   )

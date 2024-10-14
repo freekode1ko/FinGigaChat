@@ -9,7 +9,7 @@ import { skipToken } from '@reduxjs/toolkit/query'
 const NotesPage = () => {
   const user = useAppSelector(selectUserData)
   const { isFetching } = useGetNotesQuery(
-    user ? { userId: user.userId } : skipToken
+    user ? { userId: user.id } : skipToken
   )
 
   const data = [

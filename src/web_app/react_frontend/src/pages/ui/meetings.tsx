@@ -7,7 +7,7 @@ import { TypographyH2 } from '@/shared/ui'
 
 const MeetingsPage = () => {
   const user = useAppSelector(selectUserData)
-  const { data, isFetching } = useGetMeetingsQuery({ userId: user!.userId })
+  const { data, isFetching } = useGetMeetingsQuery({ userId: user!.id })
 
   return (
     <>

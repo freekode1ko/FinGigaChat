@@ -1,21 +1,25 @@
 import { useNavigate } from 'react-router-dom'
 
-import { ChartDemo, ChartSkeleton } from '@/entities/charts'
+import { DashboardSubscriptionUpdateMenu } from '@/features/dashboard/update'
+import { ChartSkeleton, CustomChart, mapFinancialData } from '@/entities/charts'
 import {
-  type DashboardSubscription,
   QuoteCard,
+  type Quotes,
   useGetDashboardDataQuery,
 } from '@/entities/quotes'
+import { selectAppTheme } from '@/entities/theme'
+import { useAppSelector } from '@/shared/lib'
 import { SITE_MAP } from '@/shared/model'
 
 interface SmallChartItemProps {
-  item: DashboardSubscription
+  item: Quotes
 }
 
 const SmallChartItem = ({ item }: SmallChartItemProps) => {
+  const theme = useAppSelector(selectAppTheme)
   const navigate = useNavigate()
-  const { data, isLoading, error } = useGetDashboardDataQuery({
-    quoteId: item.id,
+  const { data, isLoading } = useGetDashboardDataQuery({
+    quoteId: item.quote_id,
     startDate: '01.01.2024',
   })
 
@@ -25,45 +29,44 @@ const SmallChartItem = ({ item }: SmallChartItemProps) => {
         <ChartSkeleton />
       </div>
     )
-  if (error || data?.data.length === 0)
+
+  if (!data || data?.data.length === 0)
     return (
       <QuoteCard
         name={item.name}
         value={0}
         change={0}
-        type={item.type}
+        type={item.view_type}
         ticker={item.ticker}
       />
     )
 
-  const chartData = data?.data.map((d) => ({
-    date: new Date(`${d.date}T00:00:00`),
-    value: d.value,
-    open: d.open,
-    high: d.high,
-    low: d.low,
-    close: d.close,
-    volume: d.volume,
-  }))
-
-  const latestData = data?.data[0]
-  const previousData = data?.data[1]
-
-  let dailyChange = 0
-  if (latestData && previousData) {
-    dailyChange =
-      ((latestData.value - previousData.value) / previousData.value) * 100
-  }
-
   return (
     <QuoteCard
       name={item.name}
-      value={latestData?.value || 0}
-      change={dailyChange}
-      type={item.type}
+      value={item.value}
+      change={item.params[0].value}
+      type={item.view_type}
       ticker={item.ticker}
-      onCardClick={() => navigate(`${SITE_MAP.dashboard}/${item.id}`)}
-      graph={<ChartDemo inputData={chartData!.reverse()} size="small" />}
+      onCardClick={() =>
+        navigate(`${SITE_MAP.dashboard}/quote/${item.quote_id}`)
+      }
+      graph={
+        <CustomChart
+          inputData={mapFinancialData([...data.data].reverse())}
+          size="small"
+          theme={theme}
+        />
+      }
+      actionSlot={
+        <DashboardSubscriptionUpdateMenu
+          quoteId={item.quote_id}
+          isActive={true}
+          viewType={item.view_type}
+          instantUpdate={true}
+          display="dropdown"
+        />
+      }
     />
   )
 }

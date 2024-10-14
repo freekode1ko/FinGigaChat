@@ -1,37 +1,45 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
-import { INITIAL_TRADINGVIEW_QUOTES } from './constants'
-import type { TradingViewSymbol } from './types'
+import type { DashboardSubscriptionSection } from '../model'
 
-type FavoriteQuotesSlice = {
-  isShown: boolean
-  list: Array<TradingViewSymbol>
+interface DashboardState {
+  subscriptions: Array<DashboardSubscriptionSection>
 }
 
-const initialState: FavoriteQuotesSlice = {
-  isShown: true,
-  list: INITIAL_TRADINGVIEW_QUOTES,
+const initialState: DashboardState = {
+  subscriptions: [],
 }
 
-export const favoriteQuotesSlice = createSlice({
-  name: 'favoriteQuotes',
+export const dashboardSubscriptionsSlice = createSlice({
+  name: 'dashboardSubscriptions',
   initialState,
   reducers: {
-    toggleFavoriteQuotes: (state) => {
-      state.isShown = !state.isShown
-    },
-    updateFavoriteQuotesList: (
+    setSubscriptions(
       state,
-      action: PayloadAction<Array<TradingViewSymbol>>
-    ) => {
-      state.list = action.payload
+      action: PayloadAction<DashboardSubscriptionSection[]>
+    ) {
+      state.subscriptions = action.payload
+    },
+    updateSubscription(
+      state,
+      action: PayloadAction<{
+        itemId: number
+        changes: Partial<{ active: boolean; type: number }>
+      }>
+    ) {
+      state.subscriptions = state.subscriptions.map((section) => ({
+        ...section,
+        subscription_items: section.subscription_items.map((item) =>
+          item.id === action.payload.itemId
+            ? { ...item, ...action.payload.changes }
+            : item
+        ),
+      }))
     },
   },
 })
 
-export const selectIsFavoriteQuotesShown = (state: RootState) =>
-  state.favoriteQuotes.isShown
-export const selectFavoriteQuotesList = (state: RootState) =>
-  state.favoriteQuotes.list
-export const { toggleFavoriteQuotes, updateFavoriteQuotesList } =
-  favoriteQuotesSlice.actions
+export const selectDashboardSubscriptions = (state: RootState) =>
+  state.dashboardSubscriptions.subscriptions
+export const { setSubscriptions, updateSubscription } =
+  dashboardSubscriptionsSlice.actions

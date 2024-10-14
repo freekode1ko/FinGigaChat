@@ -18,13 +18,13 @@ export const useManageDashboard = () => {
     Array<DashboardSubscriptionSection>
   >([])
   const { data: initialContent } = useGetDashboardSubscriptionsQuery(
-    user ? { userId: user.userId } : skipToken
+    user ? { userId: user.id } : skipToken
   )
   const [trigger] = usePutDashboardSubscriptionsMutation()
 
   const handleSave = async (): Promise<void> => {
     if (!user) return
-    await trigger({ userId: user.userId, body: pageContent }).unwrap()
+    await trigger({ userId: user.id, body: pageContent }).unwrap()
   }
 
   const handleCancel = (): void => {

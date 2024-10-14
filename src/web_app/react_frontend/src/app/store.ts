@@ -1,4 +1,7 @@
-import { favoriteQuotesSlice } from '@/entities/quotes'
+import {
+  dashboardSubscriptionsSlice,
+  favoriteQuotesSlice,
+} from '@/entities/quotes'
 import { manageSubscriptionsSlice } from '@/entities/subscriptions'
 import { themeSlice } from '@/entities/theme'
 import { userSlice } from '@/entities/user'
@@ -18,6 +21,7 @@ export const store = configureStore({
     [themeSlice.name]: themeSlice.reducer,
     [manageSubscriptionsSlice.name]: manageSubscriptionsSlice.reducer,
     [favoriteQuotesSlice.name]: favoriteQuotesSlice.reducer,
+    [dashboardSubscriptionsSlice.name]: dashboardSubscriptionsSlice.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(baseApi.middleware),

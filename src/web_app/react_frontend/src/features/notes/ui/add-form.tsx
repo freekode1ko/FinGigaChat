@@ -40,7 +40,7 @@ const AddNoteForm = ({ afterSubmit }: { afterSubmit: () => void }) => {
   return (
     <Form {...noteForm}>
       <form
-        onSubmit={noteForm.handleSubmit(() => onSubmit(user!.userId))}
+        onSubmit={noteForm.handleSubmit(() => onSubmit(user!.id))}
         className="space-y-4 w-full max-h-[400px] overflow-y-auto p-2"
       >
         <FormField

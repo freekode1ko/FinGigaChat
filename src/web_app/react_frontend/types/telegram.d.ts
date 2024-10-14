@@ -39,6 +39,18 @@ interface OkCloseCancelPopupButton extends BasePopupButton {
   type: 'ok' | 'close' | 'cancel'
 }
 
+declare namespace TelegramAuthWidget {
+  interface CallbackAuthData {
+    readonly id: number
+    first_name: string
+    last_name?: string
+    username?: string
+    photo_url?: string
+    auth_date: number
+    hash: string
+  }
+}
+
 declare namespace TelegramWebApps {
   /**
    * To connect your Web App to the Telegram client, place the script telegram-web-app.js
@@ -1271,5 +1283,8 @@ declare namespace TelegramWebApps {
 }
 
 declare global {
-  const Telegram: { WebApp: TelegramWebApps.WebApp }
+  const Telegram: {
+    WebApp: TelegramWebApps.WebApp
+    AuthWidget: TelegramAuthWidget
+  }
 }
