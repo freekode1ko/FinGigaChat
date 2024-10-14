@@ -190,5 +190,5 @@ main.css
 # test dir
 test/
 
-**/data/
+**/projects/*/data/
 **/sources/
