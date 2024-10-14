@@ -35,7 +35,7 @@ async def custom_insert_or_update_to_postgres(
 
 
 async def get_or_load_quote_section_by_name(session: AsyncSession, name: str, params: dict[str, str] | None) -> models.QuotesSections:
-    """Получить QuotesSection по имени или создать ее """
+    """Получить QuotesSection по имени или создать ее"""
     if not params:
         params = {}
 

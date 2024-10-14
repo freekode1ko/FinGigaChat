@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 const useResizeObserver = ({
-  initialWidth = 400,
-  initialHeight = 150,
+  initialWidth,
+  initialHeight,
 }: {
   initialWidth?: number
   initialHeight?: number

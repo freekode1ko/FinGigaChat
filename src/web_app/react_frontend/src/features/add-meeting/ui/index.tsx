@@ -46,7 +46,7 @@ const AddMeetingButton = () => {
     disabled: isLoading,
   })
   const onSubmit = async () => {
-    await trigger(mapFormData(meetingForm.getValues(), user!.userId)).unwrap()
+    await trigger(mapFormData(meetingForm.getValues(), user!.id)).unwrap()
     meetingForm.reset()
     setIsOpen(false)
   }

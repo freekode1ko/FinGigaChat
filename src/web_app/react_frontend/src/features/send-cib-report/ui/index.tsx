@@ -32,7 +32,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   return (
     <Button
       size="sm"
-      onClick={() => trigger({ newsId: newsId, tgUserId: user.userId })}
+      onClick={() => trigger({ newsId: newsId, tgUserId: user.id })}
     >
       <Send className="h-4 w-4" /> Отправить отчет CIB
     </Button>

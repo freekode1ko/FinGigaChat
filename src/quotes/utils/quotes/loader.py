@@ -66,6 +66,7 @@ async def load_cbr_quotes() -> None:
             logger.error(f'Во время загрузки котировок по cbr произошла ошибка: {e}')
     logger.info('Закончена загрузка котировок с cbr')
 
+
 async def load_cbr_metals() -> None:
     """Загрузка металлов с cbr.ru"""
     logger.info('Начата загрузка металлов с cbr')
@@ -103,6 +104,7 @@ async def load_cbr_metals() -> None:
         except Exception as e:
             logger.error(f'Во время загрузки металлов с cbr произошла ошибка: {e}')
     logger.info('Закончена загрузка металлов с cbr')
+
 
 async def load_moex_quotes():
     """Загрузить котировки с MOEX"""
@@ -169,6 +171,7 @@ async def load_moex_quotes():
         except Exception as e:
             logger.error(f'Во время загрузки с moex произошла ошибка: {e}')
     logger.info('Закончена загрузка котировок с moex')
+
 
 async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
     """Загрузка одной котировки с yahoo"""
@@ -257,6 +260,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
         logger.error(f'Во время загрузки котировки {ticker} c yahoo произошла ошибка: {e}')
     logger.info(f'Загрузка котировки {ticker} c yahoo произошла успешно')
 
+
 async def load_yahoo_quotes():
     """Загрузить котировок с Yahoo"""
     logger.info('Начата загрузка котировок с yahoo')
@@ -272,7 +276,9 @@ async def load_yahoo_quotes():
                 section = await crud.get_or_load_quote_section_by_name(session, section_name, section_params)
 
                 for i in range(0, len(yahoo_sections_quotes), batch):
-                    await asyncio.gather(*[_load_yahoo_quote(section, quote_name) for quote_name in yahoo_sections_quotes[i:i + batch]])
+                    await asyncio.gather(
+                        *[_load_yahoo_quote(section, quote_name) for quote_name in yahoo_sections_quotes[i:i + batch]]
+                    )
                 # await asyncio.gather(*[_load_yahoo_quote(section, quote_name) for quote_name in yahoo_sections_quotes])
                 logger.info(f'Закончена загрузка котировок с секции yahoo: {section_name}')
     except Exception as e:

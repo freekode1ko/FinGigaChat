@@ -38,7 +38,7 @@ const UpdateNoteForm = ({
   })
   const onSubmit = async () => {
     await trigger(
-      mapUpdateFormData(updateNoteForm.getValues(), user!.userId, note.id)
+      mapUpdateFormData(updateNoteForm.getValues(), user!.id, note.id)
     ).unwrap()
     updateNoteForm.reset()
     onEdited()

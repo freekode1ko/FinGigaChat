@@ -132,6 +132,7 @@ async def update_all_moex():
         logger.error(f'Во время обновление с moex произошла ошибка: {e}')
     logger.info('Закончено обновление котировок с moex')
 
+
 async def update_cbr_metals():
     """Обновление всех котировок по металлам с cbr"""
     logger.info('Начато обновление металлов с cbr')

@@ -1,5 +1,6 @@
 export { AnalyticDetailsPage } from './analytic-details'
 export { AnalyticsPage } from './analytics'
+export { AuthPage } from './auth'
 export { DashboardPage } from './dashboard'
 export { MeetingsPage } from './meetings'
 export { NewsPage } from './news'

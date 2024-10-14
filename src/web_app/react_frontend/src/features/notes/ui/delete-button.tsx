@@ -15,7 +15,7 @@ const DeleteNoteButton = ({ noteId }: { noteId: Note['id'] }) => {
   if (user) {
     return (
       <Button
-        onClick={() => trigger({ userId: user.userId, noteId: noteId })}
+        onClick={() => trigger({ userId: user.id, noteId: noteId })}
         variant="ghost"
         size="sm"
         className="w-full justify-start"

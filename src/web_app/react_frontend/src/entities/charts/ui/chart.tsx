@@ -17,46 +17,56 @@ import {
   ZoomButtons,
 } from 'react-financial-charts'
 
-import { FinancialData } from '@/entities/quotes/model/types'
+import type { FinancialData } from '@/entities/quotes'
 import { useResizeObserver } from '@/shared/lib'
 
-const axisStyles = {
-  strokeStyle: '#383E55',
-  strokeWidth: 2,
-  tickLabelFill: '#9EAAC7',
-  tickStrokeStyle: '#383E55',
-  gridLinesStrokeStyle: 'rgba(56, 62, 85, 0.5)',
-}
-const coordinateStyles = {
-  fill: '#383E55',
-  textFill: '#FFFFFF',
-}
-
-const crossHairStyles = {
-  strokeStyle: '#9EAAC7',
-}
-
-const zoomButtonStyles = {
-  fill: '#383E55',
-  fillOpacity: 0.75,
-  strokeWidth: 0,
-  textFill: '#9EAAC7',
-}
-
-export const ChartDemo = ({
+export const CustomChart = ({
   inputData,
   size,
-  maxHeight,
+  height,
+  width,
+  theme,
 }: {
   inputData: Array<FinancialData>
   size: 'small' | 'large'
-  maxHeight?: number
+  height?: number
+  width?: number
+  theme: Theme
 }) => {
+  const axisStyles = {
+    strokeStyle: theme === 'dark' ? '#383E55' : '#E1E1EA',
+    strokeWidth: 2,
+    tickLabelFill: theme === 'dark' ? '#9EAAC7' : '#F4F6F9',
+    tickStrokeStyle: theme === 'dark' ? '#383E55' : '#E1E1EA',
+    gridLinesStrokeStyle:
+      theme === 'dark' ? 'rgba(56, 62, 85, 0.5)' : 'rgba(245, 245, 234, 0.5)',
+  }
+
+  const coordinateStyles = {
+    fill: theme === 'dark' ? '#383E55' : '#E1E1EA',
+    textFill: theme === 'dark' ? '#FFFFFF' : '#000115',
+  }
+
+  const crossHairStyles = {
+    strokeStyle: theme === 'dark' ? '#9EAAC7' : '#F4F6F9',
+  }
+
+  const zoomButtonStyles = {
+    fill: theme === 'dark' ? '#383E55' : '#E1E1EA',
+    fillOpacity: 0.75,
+    strokeWidth: 0,
+    textFill: theme === 'dark' ? '#9EAAC7' : '#F4F6F9',
+  }
+
   const [resetCount, setResetCount] = useState(0)
-  const { containerRef, width, height } = useResizeObserver(
+  const {
+    containerRef,
+    width: observableWidth,
+    height: observableHeight,
+  } = useResizeObserver(
     size === 'small'
-      ? { initialHeight: maxHeight || 150 }
-      : { initialHeight: maxHeight || 250 }
+      ? { initialHeight: height || 150, initialWidth: width || 200 }
+      : { initialHeight: height || 250, initialWidth: width || 400 }
   )
   const timeDisplayFormat = timeFormat('%d.%m.%Y')
 
@@ -67,11 +77,11 @@ export const ChartDemo = ({
   const xExtents = [xAccessor(data[0]), xAccessor(data[data.length - 1])]
   return (
     <div ref={containerRef} className="h-full w-full">
-      {width && height && (
+      {observableWidth && observableHeight && (
         <ChartCanvas
-          height={height}
+          height={observableHeight}
           ratio={1.2}
-          width={width}
+          width={observableWidth}
           seriesName={`Chart ${resetCount}`}
           margin={{ left: 0, right: 48, top: 0, bottom: 24 }}
           data={data}
@@ -120,8 +130,8 @@ export const ChartDemo = ({
               fontSize={size === 'large' ? 16 : 12}
               fontWeight="bold"
               text="BRIEF"
-              y={height / 2}
-              x={width / 2}
+              y={observableHeight / 2}
+              x={observableWidth / 2}
             />
           </Chart>
           <CrossHairCursor {...crossHairStyles} />

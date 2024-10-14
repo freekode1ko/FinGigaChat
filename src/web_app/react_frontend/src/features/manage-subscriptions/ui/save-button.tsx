@@ -19,7 +19,7 @@ const SaveSubscriptionsButton = () => {
     return (
       <Button
         className="w-full"
-        onClick={() => handleSave(user.userId)}
+        onClick={() => handleSave(user.id)}
         disabled={isLoading}
       >
         Сохранить
