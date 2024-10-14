@@ -1,4 +1,4 @@
-"""Обновление котировок"""
+    """Обновление котировок"""
 import asyncio
 import datetime
 import json
@@ -131,6 +131,7 @@ async def update_all_moex():
     except Exception as e:
         logger.error(f'Во время обновление с moex произошла ошибка: {e}')
     logger.info('Закончено обновление котировок с moex')
+
 
 async def update_cbr_metals():
     """Обновление всех котировок по металлам с cbr"""
