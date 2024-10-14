@@ -12,7 +12,7 @@ const TelegramAuthButton = () => {
     const button = document.createElement('script')
     button.async = true
     button.src = 'https://telegram.org/js/telegram-widget.js?22'
-    button.setAttribute('data-telegram-login', 'test_fgc1_bot') // FinGigaChatDev_bot
+    button.setAttribute('data-telegram-login', 'FinGigaChatDev_bot')
     button.setAttribute('data-size', 'medium')
     button.setAttribute('data-radius', '20')
     button.setAttribute('data-userpic', 'false')
