@@ -32,12 +32,12 @@ export const appRouter = () =>
       element: baseLayout,
       errorElement: <div>error</div>,
       children: [
-        // temp solution
+        // FIXME: в корне что-то будет, не редирект
         {
           path: '/',
-          element: <Navigate to='/dashboard' />
+          element: <Navigate to='/news' />
         },
-        // temp solution
+        // FIXME
         {
           path: '/news',
           element: <NewsPage />,
