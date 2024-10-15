@@ -100,7 +100,7 @@ async def update_moex_quotes(quote: models.Quotes):
                 'close': quote_data.close,
                 'high': quote_data.high,
                 'low': quote_data.low,
-                'value': quote_data.low / quote_data.volume,
+                'value': quote_data.open,
                 'volume': quote_data.volume,
             })
 
