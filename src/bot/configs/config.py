@@ -15,7 +15,7 @@ _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
-PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
+PROJECT_DIR = pathlib.Path(__file__).parent.parent.parent.parent  # noqa
 
 DATA_DIR = PROJECT_DIR / 'data'
 STATIC_ASSETS_PATH = DATA_DIR / 'assets'
@@ -81,6 +81,8 @@ giga_model = 'GigaChat-Pro'
 # url к rag-сервисам
 BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'
 BASE_QA_RESEARCH_URL = 'http://193.124.47.175:8000'
+#BASE_QA_WEB_URL = 'http://web_retriever_container:447'
+BASE_QA_WEB_URL = 'http://localhost:447'
 BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
 POST_TO_SERVICE_TIMEOUT = 90
 

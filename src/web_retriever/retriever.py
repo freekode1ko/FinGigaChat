@@ -152,7 +152,7 @@ class WebRetriever:
             question=question, context=prepared_context))
         answer = self._post_processing_duckduck(raw_answer=raw_answer, link_dict=link_dict)
         answer = self._change_answer_to_default(answer)
-        return answer, list(link_dict.values())
+        return (answer, list(link_dict.values()))
 
     async def aget_answer(self, query: str, output_format: str = 'default', debug: bool = False) -> list[str]:
         """
@@ -166,16 +166,18 @@ class WebRetriever:
         self.logger.info(f'Старт обработки запроса {query}.')
         self.logger.info('Формирование ответов с разным объемом контекста.')
         tasks = [
-            self._aanswer_chain(query, N_WIDE_ANSWER),
+            #self._aanswer_chain(query, N_WIDE_ANSWER),
             self._aanswer_chain(query, N_NORMAL_ANSWER),
-            self._aanswer_chain(query, N_NARROW_ANSWER)
+            #self._aanswer_chain(query, N_NARROW_ANSWER)
         ]
         answers = await asyncio.gather(*tasks)
         self.logger.info('Получены ответы. Выбор лучшего из них.')
         final_answer = next(filter(lambda x: x[0] not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
         self.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
+        if final_answer == DEFAULT_ANSWER:
+            return [DEFAULT_ANSWER]
         if debug:
             return [final_answer[0], format_answer(final_answer[0], final_answer[1])]
         elif output_format == 'tg':
-            final_answer = [format_answer(final_answer[0], final_answer[1])]
+            final_answer = format_answer(final_answer[0], final_answer[1])
         return [final_answer]

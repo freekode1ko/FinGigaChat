@@ -12,7 +12,8 @@ from constants.enums import HTTPMethod, RetrieverType
 from constants.texts import texts_manager
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
-from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient
+from utils.rag_utils.rag_format import extract_summarization
+from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
 
@@ -109,6 +110,18 @@ class RAGRouter:
         session = RagQaResearchClient().session
         return await self._request_to_rag_api(session, HTTPMethod.POST, **self.req_kwargs)
 
+    async def rag_web(self) -> str:
+        """Создание сессии для API по ВОС web_retriever и получение ответа"""
+        query = self.add_question_mark(self.query)
+        query = urllib.parse.quote(query)
+        query_part = f'/aquery_tg?query={query}'
+        req_kwargs = dict(
+            url=query_part,
+            timeout=config.POST_TO_SERVICE_TIMEOUT
+        )
+        session = RagWebClient().session
+        return await self._request_to_rag_api(session, HTTPMethod.GET, **req_kwargs)
+
     async def _request_to_rag_api(self,
                                   session: ClientSession,
                                   request_method: HTTPMethod,
@@ -124,6 +137,7 @@ class RAGRouter:
         try:
             async with session.request(method=request_method, **kwargs) as rag_response:
                 if request_method == HTTPMethod.GET:
+                    print(rag_response)
                     rag_answer = await rag_response.text()
                 else:
                     rag_answer = await rag_response.json()
@@ -158,7 +172,13 @@ class RAGRouter:
 
     async def get_combination_response(self) -> str:
         """Комбинация ответов от разных рагов."""
-        banker, research = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
+        banker, research, web = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
+        logger.info('Тексты до объединения ответов:')
+        logger.info(f'{banker}')
+        logger.info(f'{web}')
+        logger.info(f'{research}')
+        banker = extract_summarization(banker, web)
+        logger.info(f'{banker}')
         if banker == research == texts_manager.RAG_ERROR_ANSWER:
             return texts_manager.RAG_ERROR_ANSWER
 
@@ -168,3 +188,4 @@ class RAGRouter:
         if research not in self.RAG_BAD_ANSWERS:
             response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
         return response.strip() or DEFAULT_RAG_ANSWER
+
