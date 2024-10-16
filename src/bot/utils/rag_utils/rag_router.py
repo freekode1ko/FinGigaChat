@@ -102,9 +102,7 @@ class RAGRouter:
         """Создание сессии для API по ВОС CIB Research и получение ответа."""
         session = RagQaResearchClient().session
         req_kwargs = deepcopy(self.req_kwargs)
-        data = req_kwargs['json']
-        data['with_metadata'] = True
-        req_kwargs['json'] = data
+        req_kwargs['json']['with_metadata'] = True
         return await self._request_to_rag_api(session, **req_kwargs)
 
     async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:

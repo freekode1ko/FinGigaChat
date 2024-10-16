@@ -128,8 +128,7 @@ async def get_full_version_of_research(
                 protect_content=texts_manager.PROTECT_CONTENT,
             )
 
-    state_name = await state.get_state()
-    if state_name != RagState.rag_mode:
+    if await state.get_state() != RagState.rag_mode:
         try:
             await callback_query.message.delete()
         except TelegramAPIError:

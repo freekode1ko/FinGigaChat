@@ -96,12 +96,8 @@ def get_few_full_research_kb(
         if (research_id := r_data['research_id']) in added_ids:
             continue
         added_ids.add(research_id)
-        header = r_data['header']
-        header_point = header.find('. ')
-        if header_point != -1:
-            header = header[:header_point]
         kb.row(types.InlineKeyboardButton(
-            text=header,
+            text=r_data['header'].split('. ', 1)[0],
             callback_data=callbacks.GetFullResearch(research_id=research_id).pack(),
         ))
 
