@@ -2,7 +2,8 @@
 import asyncio
 import json
 import re
-import urllib.parse
+from copy import deepcopy
+from typing import Any
 
 from aiohttp import ClientError, ClientSession
 
@@ -40,7 +41,7 @@ class RAGRouter:
         self.retriever_type = None
         self.req_kwargs = dict(
             url='/api/v1/question',
-            json={'body': self.query},
+            json={'body': self.add_question_mark(self.query)},
             timeout=config.POST_TO_SERVICE_TIMEOUT
         )
 
@@ -79,7 +80,7 @@ class RAGRouter:
         query = query.strip()
         return query if query[-1] == '?' else query + '?'
 
-    async def get_response(self) -> str:
+    async def get_response(self) -> str | dict[str, Any]:
         """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
             return await self.rag_state_support()
@@ -87,57 +88,43 @@ class RAGRouter:
             return await self.get_combination_response()
         return await self._request_to_giga()
 
-    async def rag_qa_banker(self) -> str:
+    async def rag_qa_banker(self) -> dict[str, Any]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
-        query = self.add_question_mark(self.query)
-        query = urllib.parse.quote(query)
-        query_part = f'/api/queries?query={query}'
-        req_kwargs = dict(
-            url=query_part,
-            timeout=config.POST_TO_SERVICE_TIMEOUT
-        )
         session = RagQaBankerClient().session
-        return await self._request_to_rag_api(session, HTTPMethod.GET, **req_kwargs)
+        return await self._request_to_rag_api(session, **self.req_kwargs)
 
-    async def rag_state_support(self) -> str:
+    async def rag_state_support(self) -> dict[str, Any]:
         """Создание сессии для API по господдержке и получение ответа."""
         session = RagStateSupportClient().session
-        return await self._request_to_rag_api(session, HTTPMethod.POST, **self.req_kwargs)
+        return await self._request_to_rag_api(session, **self.req_kwargs)
 
-    async def rag_qa_research(self) -> str:
+    async def rag_qa_research(self) -> dict[str, Any]:
         """Создание сессии для API по ВОС CIB Research и получение ответа."""
         session = RagQaResearchClient().session
-        return await self._request_to_rag_api(session, HTTPMethod.POST, **self.req_kwargs)
+        req_kwargs = deepcopy(self.req_kwargs)
+        req_kwargs['json']['with_metadata'] = True
+        return await self._request_to_rag_api(session, **req_kwargs)
 
-    async def _request_to_rag_api(self,
-                                  session: ClientSession,
-                                  request_method: HTTPMethod,
-                                  **kwargs) -> str:
+    async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
         :param  session:            Сессия для подключения.
-        :param  request_method:     HTTP метод.
-        :param kwargs:              Параметры http запроса.
-        :return:                    Оригинальный ответ RAG.
+        :param  kwargs:             Параметры http запроса.
+        :return:                    Словарь ответа от RAG.
         """
         try:
-            async with session.request(method=request_method, **kwargs) as rag_response:
-                if request_method == HTTPMethod.GET:
-                    rag_answer = await rag_response.text()
-                else:
-                    rag_answer = await rag_response.json()
-                    rag_answer = rag_answer['body']
-
+            async with session.request(method=HTTPMethod.POST, **kwargs) as rag_response:
+                rag_response_dict = await rag_response.json()
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
-                             (self.chat_id, self.full_name, self.query, rag_answer))
+                             (self.chat_id, self.full_name, self.query, rag_response_dict))
         except ClientError as e:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
                                  (self.chat_id, self.full_name, self.query, e))
         else:
-            return rag_answer
-        return texts_manager.RAG_ERROR_ANSWER
+            return rag_response_dict
+        return {'body': texts_manager.RAG_ERROR_ANSWER}
 
     async def _request_to_giga(self) -> str:
         """
@@ -156,9 +143,22 @@ class RAGRouter:
                                  f'GigaChat не сформировал ответ по причине: {e}"')
         return giga_answer
 
-    async def get_combination_response(self) -> str:
+    async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker, research = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
+        banker_json, research_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
+        banker, research = banker_json['body'], research_json['body']
+        response = self.format_combination_answer(banker, research)
+        metadata = research_json.get('metadata')
+        return {'body': response, 'metadata': metadata}
+
+    def format_combination_answer(self, banker: str, research: str) -> str:
+        """
+        Форматирование, комбинация ответов от рага по новостям и рага рисерч.
+
+        :param banker:    Ответ от рага по новостям.
+        :param research:  Ответ от рага рисерч.
+        :return:          Комбинированный ответ.
+        """
         if banker == research == texts_manager.RAG_ERROR_ANSWER:
             return texts_manager.RAG_ERROR_ANSWER
 

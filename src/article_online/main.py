@@ -182,7 +182,7 @@ def post_new_links(subject_links: list, tg_links: list) -> None:
     try:
         response = try_post_n_times(
             config.POST_TO_SERVICE_ATTEMPTS,
-            url=config.BASE_QABANKER_URL.format('articles'),
+            url=config.QABANKER_STORE_UPDATE_URL,
             json=links_dict,
             timeout=config.POST_TO_SERVICE_TIMEOUT,
         )
