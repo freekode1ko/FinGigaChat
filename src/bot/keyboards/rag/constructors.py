@@ -61,5 +61,5 @@ def get_button_for_full_researches_kb(kb: InlineKeyboardBuilder, with_reports: b
     """
     if not with_reports:
         return kb
-    kb.row(types.InlineKeyboardButton(text='Посмотреть отчеты источники', callback_data=GetReports().pack()))
+    kb.row(types.InlineKeyboardButton(text='Получить полные отчеты', callback_data=GetReports().pack()))
     return kb
