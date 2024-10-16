@@ -137,8 +137,8 @@ class RAGRouter:
         try:
             async with session.request(method=request_method, **kwargs) as rag_response:
                 if request_method == HTTPMethod.GET:
-                    print(rag_response)
                     rag_answer = await rag_response.text()
+                    print(rag_answer)
                 else:
                     rag_answer = await rag_response.json()
                     rag_answer = rag_answer['body']

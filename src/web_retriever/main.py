@@ -24,7 +24,10 @@ async def aanswer(query: str = Query(min_length=2)) -> PlainTextResponse:
     try:
         query = urllib.parse.unquote(query)
         final_answer = await engine.aget_answer(query)
-    except:
+        logger_app.info(final_answer[0])
+        final_answer = final_answer[0]
+    except Exception as e:
+        logger_app.error(f"Не получен ответ на запрос {query} по причине: {e}")
         final_answer = DEFAULT_ANSWER
     return PlainTextResponse(content=''.join(map(str, final_answer[0])))
 
@@ -35,10 +38,15 @@ async def aanswer_tg(query: str = Query(min_length=2)) -> PlainTextResponse:
     Формирование ответа на запрос с помощью интернет ретривера с форматированием ссылок для Telegram.
 
     """
-    query = urllib.parse.unquote(query)
-    final_answer = await engine.aget_answer(query, output_format="tg")
-    logger_app.info(final_answer[0])
-    final_answer = final_answer[0]
+    try:
+        query = urllib.parse.unquote(query)
+        final_answer = await engine.aget_answer(query, output_format="tg")
+        logger_app.info(final_answer[0])
+        final_answer = final_answer[0]
+    except Exception as e:
+        logger_app.error(f"Не получен ответ на запрос {query} по причине: {e}")
+        final_answer = DEFAULT_ANSWER
+    print(final_answer)
     return PlainTextResponse(content=final_answer)
 
 

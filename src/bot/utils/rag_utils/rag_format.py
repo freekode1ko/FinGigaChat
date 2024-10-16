@@ -5,9 +5,28 @@ import re
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)'
+BEGINNING_LEN = 30
+
+BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)|(в базе знаний нет)|(не могу ответить)|' \
+              '(в предоставленных отрывках нет)|(рекомендуется обратиться)|(не указано в )|(не указаны в )'
 LINKS_PATTERN = '(https)|(html)'
 GIGA_MARK = 'Ответ сгенерирован Gigachat с помощью Базы Знаний. Информация требует дополнительной верификации'
+ENDING_REGEXP = '(Подводя итог, )|(Подводя итоги, )|(И наконец, )|(Наконец, )|(По итогу, )|(В итоге, )|(Итак, )' \
+                '|(Обобщая вышесказанное, )|(Резюмируя, )|(Исходя из сказанного, )|(В общем, )|(Завершая, )' \
+                '|(В результате, )|(Если резюмировать, то )|(Таким образом, )|(В заключении, )'
+
+
+def filter_endings(text: str) -> str:
+    """
+    Убирает из начала текста фразы маркеры конца ответа, чтобы не было логических противоречий в итоговом ответе.
+
+    :param text:     Параграф текста.
+    :return:         Очищенная строка.
+    """
+    updated_str = re.sub(ENDING_REGEXP, '', text) if re.search(ENDING_REGEXP, text[:BEGINNING_LEN]) else text
+    if updated_str:
+        return updated_str[0].upper() + updated_str[1:]
+    return ''
 
 
 def get_text_and_links(text: str) -> tuple[str, list[str]]:
@@ -154,7 +173,6 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
     ans = copy(chunks1)
     # если второй оказался пустым - то отвечаем первым
     if len(chunks2) == 0:
-        #ans.append(GIGA_MARK)
         return '\n\n'.join(ans)
     # Добираем параграфы из второго ответа, которые непохожи на параграфы из первого ответа
     all_batch = chunks1 + chunks2
@@ -184,5 +202,7 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
                 flag_unique = False
         if flag_unique:
             ans.append(candidate)
-    #ans.append(GIGA_MARK)
-    return '\n\n'.join(ans)
+    # чистим итоговый ответ от вводных слов окончания параграфов
+    for i in range(len(ans)):
+        ans[i] = filter_endings(ans[i])
+    return '\n\n'.join(filter(lambda x: x != '', ans))
