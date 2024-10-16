@@ -59,7 +59,6 @@ def get_button_for_full_researches_kb(kb: InlineKeyboardBuilder, with_reports: b
     :param with_reports:  Использовались ли обзоры из Research для генерации ответа.
     :return:              Генератор с новой кнопкой для получения обзоров или без нее, если обзоры не использовались.
     """
-    if not with_reports:
-        return kb
-    kb.row(types.InlineKeyboardButton(text='Получить полные отчеты', callback_data=GetReports().pack()))
+    if with_reports:
+        kb.row(types.InlineKeyboardButton(text='Получить полные отчеты', callback_data=GetReports().pack()))
     return kb
