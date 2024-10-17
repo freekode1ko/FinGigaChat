@@ -108,7 +108,7 @@ async def handler_rag_mode(message: types.Message, state: FSMContext, session: A
 
 
 async def _get_response(
-        chat_id: int,
+        user_id: int,
         full_name: str,
         user_query: str,
         use_rephrase: bool,
@@ -117,7 +117,7 @@ async def _get_response(
     """
     Получение ответа от Базы Знаний или GigaChat.
 
-    :param chat_id:              Telegram id пользователя.
+    :param user_id:              Telegram id пользователя.
     :param full_name:            Полное имя пользователя.
     :param user_query:           Запрос пользователя.
     :param rephrase_query:       Перефразированный с помощью GigaChat запрос пользователя.
@@ -125,7 +125,7 @@ async def _get_response(
     :return:                     Тип ретривера или GigaChat, который ответил на запрос, и ответы на запрос
                                  (чистый (без футера) и отформатированный (с футером)).
     """
-    rag_obj = RAGRouter(chat_id, full_name, user_query, rephrase_query, use_rephrase)
+    rag_obj = RAGRouter(user_id, full_name, user_query, rephrase_query, use_rephrase)
     await rag_obj.get_rag_type()
     response = await rag_obj.get_response()
     if isinstance(response, str):
@@ -208,12 +208,13 @@ async def ask_with_dialog(
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    user_id = message.from_user.id
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
         user_query = first_user_query if first_user_query else user_msg
-        history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
-        result = await _get_response(chat_id, full_name, user_query, True, history_query)
+        history_query = await get_rephrase_query_by_history(user_id, full_name, user_query)
+        result = await _get_response(user_id, full_name, user_query, True, history_query)
         retriever_type, response, metadata = result
         reports_data = metadata.get('reports_data') if metadata else None
 
@@ -255,19 +256,20 @@ async def ask_without_dialog(
     """
     async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
         chat_id = call.message.chat.id
+        user_id = call.message.from_user.id
         full_name = call.message.from_user.full_name
-        user_query = await get_last_user_msg(chat_id)
+        user_query = await get_last_user_msg(user_id)
         if not user_query:
             await update_keyboard_of_penultimate_bot_msg(call.message, state)
             await call.bot.send_message(chat_id, texts_manager.RAG_TRY_AGAIN)
 
         if callback_data.rephrase_query:
-            history_query = await get_history_query(chat_id)
-            rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
-            result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
+            history_query = await get_history_query(user_id)
+            rephrase_query = await get_rephrase_query(user_id, full_name, user_query, history_query)
+            result = await _get_response(user_id, full_name, user_query, True, rephrase_query)
         else:
             rephrase_query = ''
-            result = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
+            result = await _get_response(user_id, full_name, user_query, use_rephrase=False)
 
         retriever_type, response, metadata = result
         reports_data = metadata.get('reports_data') if metadata else None
