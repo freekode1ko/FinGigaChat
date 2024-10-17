@@ -612,9 +612,7 @@ async def is_has_access_to_feature(session: AsyncSession, user_id: int, feature:
         return False
 
     access_features = await get_users_access_features(user, session)
-    if feature in access_features:
-        return True
-    return False
+    return feature in access_features
 
 
 async def has_access_to_feature_logic(
