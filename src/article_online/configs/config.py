@@ -36,7 +36,7 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
-BASE_QABANKER_URL = 'http://213.171.8.248:8000/api/{}'
+QABANKER_STORE_UPDATE_URL = 'http://213.171.8.248:8000/api/v1/store/update'
 ROBERTA_CLIENT_RELEVANCE_LINK = 'http://bert_client_relevance_container:444/query'
 ROBERTA_COMMODITY_RELEVANCE_LINK = 'http://bert_commodity_relevance_container:446/query'
 

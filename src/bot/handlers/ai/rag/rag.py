@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionSender
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
@@ -13,7 +14,8 @@ from constants.texts import texts_manager
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
 from db.redis import del_dialog_and_history_query, get_history_query, get_last_user_msg, update_dialog, update_history_query
 from handlers.ai.handler import router
-from keyboards.rag.callbacks import RegenerateResponse
+from keyboards.analytics.constructors import get_few_full_research_kb
+from keyboards.rag.callbacks import GetReports, RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
 from log.bot_logger import user_logger
 from utils.base import clear_text_from_url
@@ -29,6 +31,7 @@ class RagState(StatesGroup):
     rag_mode = State()
     rag_query = State()
     rag_last_bot_msg = State()
+    reports_data = State()
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
@@ -110,7 +113,7 @@ async def _get_response(
         user_query: str,
         use_rephrase: bool,
         rephrase_query: str = '',
-) -> tuple[RetrieverType, str, str]:
+) -> tuple[RetrieverType, str, dict | None]:
     """
     Получение ответа от Базы Знаний или GigaChat.
 
@@ -124,10 +127,17 @@ async def _get_response(
     """
     rag_obj = RAGRouter(chat_id, full_name, user_query, rephrase_query, use_rephrase)
     await rag_obj.get_rag_type()
-    clear_response = format_response = await rag_obj.get_response()
-    if clear_response != DEFAULT_RAG_ANSWER:
-        format_response = texts_manager.RAG_FORMAT_ANSWER.format(answer=clear_response)
-    return rag_obj.retriever_type, clear_response, format_response
+    response = await rag_obj.get_response()
+    if isinstance(response, str):
+        return rag_obj.retriever_type, response, None
+    return rag_obj.retriever_type, response['body'], response.get('metadata')
+
+
+def format_response(answer: str) -> str:
+    """Добавление футера к ответу от РАГ."""
+    if answer != DEFAULT_RAG_ANSWER:
+        answer = texts_manager.RAG_FORMAT_ANSWER.format(answer=answer)
+    return answer
 
 
 async def _add_data_to_db(
@@ -204,26 +214,27 @@ async def ask_with_dialog(
         user_query = first_user_query if first_user_query else user_msg
         history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
         result = await _get_response(chat_id, full_name, user_query, True, history_query)
-        retriever_type, clear_response, response = result
+        retriever_type, response, metadata = result
+        reports_data = metadata.get('reports_data') if metadata else None
 
         msg = await message.answer(
-            text=response,
+            text=format_response(response),
             parse_mode='HTML',
             disable_web_page_preview=True,
-            reply_markup=get_feedback_regenerate_kb(rephrase_query=True)
+            reply_markup=get_feedback_regenerate_kb(rephrase_query=True, with_reports=reports_data is not None)
         )
 
         await _add_data_to_db(
             session=session,
             msg=msg,
             user_query=user_query,
-            clear_response=clear_response,
+            clear_response=response,
             retriever_type=retriever_type,
             history_query=history_query
         )
 
         await update_history_query(chat_id, history_query)
-        await state.update_data(rag_last_bot_msg=msg.message_id)
+        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
 
 
 @router.callback_query(RegenerateResponse.filter())
@@ -254,16 +265,20 @@ async def ask_without_dialog(
             history_query = await get_history_query(chat_id)
             rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
             result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
-            kb = get_feedback_regenerate_kb(initially_query=True)
         else:
             rephrase_query = ''
             result = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
-            kb = get_feedback_kb()
 
-        retriever_type, clear_response, response = result
+        retriever_type, response, metadata = result
+        reports_data = metadata.get('reports_data') if metadata else None
+        with_reports = reports_data is not None
+        if rephrase_query:
+            kb = get_feedback_regenerate_kb(initially_query=True, with_reports=with_reports)
+        else:
+            kb = get_feedback_kb(with_reports=with_reports)
 
         msg = await call.message.edit_text(
-            text=response,
+            text=format_response(response),
             parse_mode='HTML',
             disable_web_page_preview=True,
             reply_markup=kb
@@ -273,13 +288,13 @@ async def ask_without_dialog(
             session,
             msg,
             user_query,
-            clear_response,
+            response,
             retriever_type,
             rephrase_query=rephrase_query,
             need_replace=True
         )
 
-        await state.update_data(rag_last_bot_msg=msg.message_id)
+        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
 
 
 @router.callback_query(F.data.endswith('like'))
@@ -304,7 +319,7 @@ async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncS
 async def update_keyboard_of_penultimate_bot_msg(message: types.Message, state: FSMContext) -> None:
     """Обновляет клавиатуру предпоследнего сообщения от рага: убирает кнопку генерации."""
     data = await state.get_data()
-    if (rag_last_bot_msg := data.get('rag_last_bot_msg', None)) is not None:
+    if (rag_last_bot_msg := data.get('rag_last_bot_msg')) is not None:
         try:
             await message.bot.edit_message_reply_markup(
                 chat_id=message.chat.id,
@@ -313,3 +328,34 @@ async def update_keyboard_of_penultimate_bot_msg(message: types.Message, state: 
             )
         except TelegramBadRequest:
             pass
+
+
+@router.callback_query(GetReports.filter())
+async def get_full_version_of_research(
+        callback_query: types.CallbackQuery,
+        callback_data: GetReports,
+        state: FSMContext,
+) -> None:
+    """
+    Получить полную версию отчета
+
+    :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:   Содержит дополнительную информацию по отчету.
+    :param state:           Состояние, в котором находится пользователь.
+    """
+    kb = InlineKeyboardBuilder()
+    buttons = callback_query.message.reply_markup.inline_keyboard[0]  # берем первую строчку из существующей клавиатуры
+    for b in buttons:
+        kb.add(types.InlineKeyboardButton(text=b.text, callback_data=b.callback_data))
+
+    data = await state.get_data()
+    reports_data = data.get('reports_data')
+    kb = get_few_full_research_kb(kb, reports_data)
+
+    try:
+        await callback_query.message.edit_text(
+            text=callback_query.message.text, reply_markup=kb, disable_web_page_preview=True, parse_mode='HTML'
+        )
+    except TelegramBadRequest:
+        pass
+    user_logger.info(f'*{callback_query.message.chat.id}* {callback_query.from_user.full_name} - {callback_data.pack()}')

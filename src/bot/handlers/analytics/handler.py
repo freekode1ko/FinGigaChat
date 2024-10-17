@@ -16,6 +16,7 @@ from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
+from handlers.ai.rag.rag import RagState
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
@@ -85,6 +86,7 @@ async def get_full_version_of_research(
         callback_query: types.CallbackQuery,
         callback_data: callbacks.GetFullResearch,
         session: AsyncSession,
+        state: FSMContext,
 ) -> None:
     """
     Получить полную версию отчета
@@ -92,6 +94,7 @@ async def get_full_version_of_research(
     :param callback_query:  Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data:   содержит дополнительную информацию по отчету
     :param session:         Асинхронная сессия базы данных.
+    :param state:           Состояние пользователя.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
@@ -125,9 +128,10 @@ async def get_full_version_of_research(
                 protect_content=texts_manager.PROTECT_CONTENT,
             )
 
-    try:
-        await callback_query.message.delete()
-    except TelegramAPIError:
-        pass
+    if await state.get_state() != RagState.rag_mode:
+        try:
+            await callback_query.message.delete()
+        except TelegramAPIError:
+            pass
 
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
