@@ -104,6 +104,7 @@ class RAGRouter:
         session = RagQaResearchClient().session
         req_kwargs = deepcopy(self.req_kwargs)
         req_kwargs['json']['with_metadata'] = True
+        print(req_kwargs)
         return await self._request_to_rag_api(session, **req_kwargs)
 
     async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
@@ -154,8 +155,8 @@ class RAGRouter:
 
     @staticmethod
     async def prepare_reports_data(
-            metadata: dict[str, dict[str, list[dict[str, str]]]] | None
-    ) -> dict[str, dict[str, list[dict[str, str | int]]]] | None:
+            metadata: dict[str, list[dict[str, str]]] | None
+    ) -> dict[str, list[dict[str, str | int]]] | None:
         """
         Подготавливает данные отчетов, добавляя к ним id отчета.
 
@@ -166,14 +167,9 @@ class RAGRouter:
             return metadata
 
         reports_data = metadata['reports_data']
-        tasks = [
-            research_db.get_research_id_by_report_id(report.get('report_id'))
-            for report in reports_data
-        ]
-        research_ids = await asyncio.gather(*tasks)
-
         has_ids = False
-        for report, research_id in zip(reports_data, research_ids):
+        for report in reports_data:
+            research_id = await research_db.get_research_id_by_report_id(report.get('report_id'))
             if research_id:
                 has_ids = True
                 report['research_id'] = research_id
