@@ -1,13 +1,12 @@
-import urllib.parse
+"""API сервиса web_retriever"""
 
 import uvicorn
-from fastapi import FastAPI, Query
-from fastapi.responses import PlainTextResponse, HTMLResponse
+from fastapi import FastAPI
 
 from configs.config import LOG_FILE, LOG_LEVEL, PORT
 from configs.text_constants import DEFAULT_ANSWER
 from log.logger_base import selector_logger
-from retriever import WebRetriever
+from retriever import WebRetriever, RagResponse, Question
 
 app = FastAPI()
 
@@ -15,39 +14,36 @@ logger_app = selector_logger(LOG_FILE, LOG_LEVEL)
 engine = WebRetriever(logger_app)
 
 
-@app.get('/aquery')
-async def aanswer(query: str = Query(min_length=2)) -> PlainTextResponse:
+@app.post('/api/v1/question_raw', response_model=RagResponse)
+async def aanswer(query: Question) -> RagResponse:
     """
     Формирование ответа на запрос с помощью интернет ретривера в обычном формате.
 
     """
     try:
-        query = urllib.parse.unquote(query)
-        final_answer = await engine.aget_answer(query)
-        logger_app.info(final_answer[0])
+        final_answer = await engine.aget_answer(query.body)
         final_answer = final_answer[0]
+        logger_app.info(f"На запрос {query.body} получен ответ: {final_answer[0]}")
     except Exception as e:
-        logger_app.error(f"Не получен ответ на запрос {query} по причине: {e}")
+        logger_app.error(f"Не получен ответ на запрос {query.body} по причине: {e}")
         final_answer = DEFAULT_ANSWER
-    return PlainTextResponse(content=''.join(map(str, final_answer[0])))
+    return RagResponse(body=final_answer)
 
 
-@app.get('/aquery_tg')
-async def aanswer_tg(query: str = Query(min_length=2)) -> PlainTextResponse:
+@app.post('/api/v1/question', response_model=RagResponse)
+async def aanswer_tg(query: Question) -> RagResponse:
     """
     Формирование ответа на запрос с помощью интернет ретривера с форматированием ссылок для Telegram.
 
     """
     try:
-        query = urllib.parse.unquote(query)
-        final_answer = await engine.aget_answer(query, output_format="tg")
-        logger_app.info(final_answer[0])
+        final_answer = await engine.aget_answer(query.body, output_format="tg")
         final_answer = final_answer[0]
+        logger_app.info(f"На запрос {query.body} получен ответ: {final_answer}")
     except Exception as e:
-        logger_app.error(f"Не получен ответ на запрос {query} по причине: {e}")
+        logger_app.error(f"Не получен ответ на запрос {query.body} по причине: {e}")
         final_answer = DEFAULT_ANSWER
-    print(final_answer)
-    return PlainTextResponse(content=final_answer)
+    return RagResponse(body=final_answer)
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ DEBUG: bool = env.bool('DEBUG', default=False)
 GIGA_MODEL = "GigaChat-Pro-preview"
 GIGA_SCOPE = 'GIGACHAT_API_CORP'
 GIGA_CREDENTIALS: str = env.str('GIGA_CREDENTIALS', default='')
-GIGA_URL = 'https://gigachat-preview.devices.sberbank.ru/api/v1'
+GIGA_URL = 'https://gigachat-preview.devices.sberbank.ru/api/v1'  # TODO: поменять ссылку перед выкаткой
 
 N_NARROW_ANSWER = 2  # количество документов, которые используем для генерации вопроса
 N_NORMAL_ANSWER = 5  # пытаемся сделать 3 ответа с разной развернутостью и берем тот,

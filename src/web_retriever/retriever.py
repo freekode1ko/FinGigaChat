@@ -5,11 +5,20 @@ import re
 
 from langchain_community.chat_models import GigaChat
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
+from pydantic import BaseModel
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from configs.text_constants import *
 from configs.config import *
+from configs.text_constants import *
 from format import format_answer
+
+
+class Question(BaseModel):
+    body: str
+
+
+class RagResponse(BaseModel):
+    body: str
 
 
 class WebRetriever:
@@ -152,8 +161,8 @@ class WebRetriever:
         :return: Ответ и массив ссылок, которые были использованы в ответе.
         """
         # небольшие таймауты, чтобы не ловить rate limit от duckduck
-        await asyncio.sleep((N_WIDE_ANSWER - n_retrieved) // 3)
-        # TODO: добавить еще один интернет движок, потому что дак дак отваливается периодически
+        await asyncio.sleep((N_WIDE_ANSWER - n_retrieved) // STEP)
+        # TODO: добавить еще один интернет движок запасной, потому что дак дак может отваливаться
         try:
             contexts = self.search_engine.results(question, max_results=n_retrieved)
         except Exception as e:

@@ -106,17 +106,10 @@ class RAGRouter:
         req_kwargs['json']['with_metadata'] = True
         return await self._request_to_rag_api(session, **req_kwargs)
 
-    async def rag_web(self) -> str:
+    async def rag_web(self) -> dict[str, Any]:
         """Создание сессии для API по ВОС web_retriever и получение ответа"""
-        query = self.add_question_mark(self.query)
-        query = urllib.parse.quote(query)
-        query_part = f'/aquery_tg?query={query}'
-        req_kwargs = dict(
-            url=query_part,
-            timeout=config.POST_TO_SERVICE_TIMEOUT
-        )
         session = RagWebClient().session
-        return await self._request_to_rag_api(session, **req_kwargs)
+        return await self._request_to_rag_api(session, **self.req_kwargs)
 
     async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
         """
@@ -187,4 +180,3 @@ class RAGRouter:
         if research not in self.RAG_BAD_ANSWERS:
             response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
         return response.strip() or DEFAULT_RAG_ANSWER
-
