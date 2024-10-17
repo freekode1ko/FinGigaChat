@@ -1,11 +1,10 @@
-import asyncio
 import logging
 import sys
 import time
 
 import pandas as pd
 
-from config_evaluation import EVALUATION_DATASET_PATH, N_ATTEMPTS, ANSWER_FORMAT
+from config_evaluation import EVALUATION_DATASET_PATH, N_ATTEMPTS
 
 sys.path.append('../')
 from retriever import WebRetriever

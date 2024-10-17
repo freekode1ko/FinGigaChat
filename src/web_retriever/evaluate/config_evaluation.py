@@ -1,5 +1,4 @@
 """Параметры для оценки качества ретривера"""
-import sys
 
 from pathlib import Path
 

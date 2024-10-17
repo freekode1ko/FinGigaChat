@@ -1,7 +1,7 @@
 """Функции для форматирования и обработки ответов от РАГов"""
 
-from copy import copy
 import re
+from copy import copy
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -99,13 +99,13 @@ def union_paragraphs(text: str) -> str:
         par = paragrahs[i]
         if contains_only_links(par):
             if contains_only_text(new_ans[-1]):
-                new_ans[-1] += f" {par}"
+                new_ans[-1] += f' {par}'
             else:
                 union_links = set(get_text_and_links(new_ans[-1])[1]).union(get_text_and_links(par)[1])
                 new_ans[-1] = get_text_and_links(new_ans[-1])[0] + ','.join(union_links)
         else:
             new_ans.append(par)
-    return "\n\n".join(new_ans)
+    return '\n\n'.join(new_ans)
 
 
 def union_paragraphs_with_same_links(text: str) -> str:
@@ -126,7 +126,7 @@ def union_paragraphs_with_same_links(text: str) -> str:
     for i in range(1, len(texts)):
         # если есть пересечение по ссылкам с прошлым параграфом - объединяем их
         if len(links_sets[i].intersection(new_links[-1])) > 0:
-            new_texts[-1] += f" {texts[i]}"
+            new_texts[-1] += f' {texts[i]}'
             new_links[-1] = links_sets[i].union(new_links[-1])
         # иначе добавляем как новый параграф
         else:
@@ -194,7 +194,7 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
             # Если не близкие, но есть одинаковые ссылки - добавляем текст и разницу ссылок в предыдущий параграф
             if is_contains_links_intersection and not is_similar_to_previous:
                 flag_unique = False
-                texts[j] += f" {texts[index]}"
+                texts[j] += f' {texts[index]}'
                 links_sets[j] = links_sets[j].union(links_sets[index])
                 ans[j] = texts[j] + ', '.join(links_sets[j])
             # Если близкие, но есть или нет одинаковые ссылки - пропускаем просто

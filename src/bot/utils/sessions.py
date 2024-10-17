@@ -4,8 +4,8 @@ from aiohttp import ClientSession, TCPConnector
 from configs.config import (
     BASE_QA_BANKER_URL,
     BASE_QA_RESEARCH_URL,
-    BASE_STATE_SUPPORT_URL,
     BASE_QA_WEB_URL,
+    BASE_STATE_SUPPORT_URL,
     giga_chat_url,
     giga_oauth_url,
 )

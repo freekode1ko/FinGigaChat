@@ -14,7 +14,7 @@ LOG_LEVEL = 20  # INFO
 
 DEBUG: bool = env.bool('DEBUG', default=False)
 
-#GIGA_MODEL = 'GigaChat-Pro'
+# GIGA_MODEL = 'GigaChat-Pro'
 GIGA_MODEL = "GigaChat-Pro-preview"
 GIGA_SCOPE = 'GIGACHAT_API_CORP'
 GIGA_CREDENTIALS: str = env.str('GIGA_CREDENTIALS', default='')

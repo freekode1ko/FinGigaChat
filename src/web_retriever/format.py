@@ -127,4 +127,3 @@ def format_answer(answer: str, sources: list[str]) -> str:
         return re.sub(r'\n+', '\n\n', add_paragraphs(processed_answer).strip()).strip()
     answer = clear_answer(answer)
     return re.sub(r'\n+', '\n\n', make_format_msg_with_sources_in_end(answer, sources)).strip()
-
