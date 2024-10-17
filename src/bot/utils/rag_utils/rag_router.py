@@ -167,8 +167,7 @@ class RAGRouter:
 
         reports_data = metadata['reports_data']
         tasks = [
-            research_db.get_research_id_by_report_id(report['report_id'])
-            if 'report_id' in report else None
+            research_db.get_research_id_by_report_id(report.get('report_id'))
             for report in reports_data
         ]
         research_ids = await asyncio.gather(*tasks)
