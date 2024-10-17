@@ -104,7 +104,6 @@ class RAGRouter:
         session = RagQaResearchClient().session
         req_kwargs = deepcopy(self.req_kwargs)
         req_kwargs['json']['with_metadata'] = True
-        print(req_kwargs)
         return await self._request_to_rag_api(session, **req_kwargs)
 
     async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
@@ -150,21 +149,23 @@ class RAGRouter:
         banker_json, research_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
         banker, research = banker_json['body'], research_json['body']
         response = self.format_combination_answer(banker, research)
-        metadata = await self.prepare_reports_data(research_json.get('metadata'))
+        metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
         return {'body': response, 'metadata': metadata}
 
-    @staticmethod
     async def prepare_reports_data(
+            self,
+            answer: str,
             metadata: dict[str, list[dict[str, str]]] | None
     ) -> dict[str, list[dict[str, str | int]]] | None:
         """
         Подготавливает данные отчетов, добавляя к ним id отчета.
 
+        :param answer:      Ответ от Рага.
         :param metadata:    Исходные метаданные.
         :return:            Обновленные метаданные с id отчетов.
         """
-        if not metadata or 'reports_data' not in metadata:
-            return metadata
+        if answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data' not in metadata:
+            return
 
         reports_data = metadata['reports_data']
         has_ids = False
