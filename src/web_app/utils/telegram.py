@@ -9,7 +9,8 @@ from constants.constants import TELEGRAM_DATA_VALIDITY_PERIOD
 
 
 def validate_telegram_data(data: TelegramData) -> bool:
-    """Функция для проверки валидности данных пользователя
+    """
+    Функция для проверки валидности данных пользователя
     Telegram, полученных по API.
 
     :param TelegramData telegram_data: Объект с данными пользователя

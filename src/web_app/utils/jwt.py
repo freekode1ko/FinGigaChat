@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, timezone
 
 
 def create_jwt_token(user_id: int, expires_in: int = JWT_TOKEN_EXPIRE) -> str:
-    """Создание JWT-токена для пользователя.
+    """
+    Создание JWT-токена для пользователя.
 
     :param int user_id: Идентификатор пользователя
     :param int expires_in: Время жизни токена в секундах
@@ -23,7 +24,8 @@ def create_jwt_token(user_id: int, expires_in: int = JWT_TOKEN_EXPIRE) -> str:
 
 
 def read_jwt_token(token: str) -> int:
-    """Декодирование JWT-токена пользователя. Если токен валидный
+    """
+    Декодирование JWT-токена пользователя. Если токен валидный
     возвращает (int) идентификатор пользователя. В противном
     случае вызывает ошибку ValueError (некорректный токен).
 

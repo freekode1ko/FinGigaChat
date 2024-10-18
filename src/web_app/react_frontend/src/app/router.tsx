@@ -51,18 +51,26 @@ export const appRouter = () =>
         {
           path: '/subscriptions',
           element: (
-            <ProtectedWrapper showHomeButton>
+            <ProtectedWrapper>
               <SubscriptionsPage />
             </ProtectedWrapper>
           ),
         },
         {
           path: '/analytics',
-          element: <AnalyticsPage />,
+          element: (
+            <ProtectedWrapper>
+              <AnalyticsPage />
+            </ProtectedWrapper>
+          ),
           children: [
             {
               path: ':analyticId',
-              element: <AnalyticDetailsPage />,
+              element: (
+                <ProtectedWrapper>
+                  <AnalyticDetailsPage />
+                </ProtectedWrapper>
+              ),
             },
           ],
         },
@@ -90,12 +98,12 @@ export const appRouter = () =>
         // FIXME
         {
           path: '/notes',
-          element: <NotesPage />,
+          element: <ProtectedWrapper><NotesPage /></ProtectedWrapper>,
         },
         {
           path: '/meetings',
           element: (
-            <ProtectedWrapper showHomeButton>
+            <ProtectedWrapper>
               <MeetingsPage />
             </ProtectedWrapper>
           ),

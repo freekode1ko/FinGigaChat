@@ -6,12 +6,10 @@ import { useAppSelector } from '@/shared/lib'
 import { Button, Paragraph, TypographyH2 } from '@/shared/ui'
 
 interface ProtectionWrapperInterface extends React.PropsWithChildren {
-  showHomeButton?: boolean
   redirectHome?: boolean
 }
 
 const ProtectedWrapper = ({
-  showHomeButton,
   redirectHome,
   children,
 }: ProtectionWrapperInterface) => {
@@ -22,7 +20,7 @@ const ProtectedWrapper = ({
   }
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-8 py-10">
         <div className="flex gap-2">
           <Info className="h-8 w-8" />
           <TypographyH2>Данный раздел недоступен</TypographyH2>
@@ -32,11 +30,9 @@ const ProtectedWrapper = ({
             Пожалуйста, войдите через Telegram, чтобы получить доступ к этому
             разделу
           </Paragraph>
-          {showHomeButton && (
-            <Button asChild>
-              <Link to="/">На главную</Link>
-            </Button>
-          )}
+          <Button asChild>
+            <Link to="/">На главную</Link>
+          </Button>
         </div>
       </div>
     )

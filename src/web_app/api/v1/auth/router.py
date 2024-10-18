@@ -7,6 +7,7 @@ from fastapi import status
 import config
 
 from api.security import get_token, set_auth_cookie
+from api.v1.common_schemas import Error
 from constants import constants
 from db.user import is_new_user_email, get_user_id_by_email, get_user_by_id
 from db.redis import redis_client
@@ -20,9 +21,18 @@ from .schemas import AuthData, AuthConfirmation, TelegramData, UserData
 router = APIRouter(tags=['auth'])
 
 
-@router.post("/login")
+@router.post(
+        "/login",
+        responses={
+            status.HTTP_400_BAD_REQUEST: {
+                'description': 'Некорректная почта или не пройдена авторизация в боте',
+                'model': Error,
+            },
+        }
+)
 async def login(data: AuthData):
-    """Аутентификация через EMail.
+    """
+    Аутентификация через EMail.
     Подходит для использования приложения вне Telegram.
     """
     if not re.search(r'\w+@sber(bank)?.ru', data.email):
@@ -41,13 +51,13 @@ async def login(data: AuthData):
         constants.REGISTRATION_CODE_TTL,
         reg_code
     )
-    with SmtpSend(
+    async with SmtpSend(
         config.MAIL_RU_LOGIN,
         config.MAIL_RU_PASSWORD,
         config.MAIL_SMTP_SERVER,
         config.MAIL_SMTP_PORT
     ) as smtp_email:
-        smtp_email.send_msg(
+        await smtp_email.send_msg(
             config.MAIL_RU_LOGIN,
             data.email,
             constants.REGISTRATION_MAIL_TITLE,
@@ -57,7 +67,15 @@ async def login(data: AuthData):
     return "ok"
 
 
-@router.post("/verify")
+@router.post(
+        "/verify",
+        responses={
+            status.HTTP_400_BAD_REQUEST: {
+                'description': 'Неверный одноразовый код',
+                'model': Error,
+            },
+        }
+)
 async def verify(data: AuthConfirmation, response: Response):
     """Подтверждение входа с помощью одноразового пароля."""
     reg_code = await redis_client.get(f"reg_code:{data.email}")
@@ -73,7 +91,15 @@ async def verify(data: AuthConfirmation, response: Response):
     return "ok"
 
 
-@router.post("/validate_telegram")
+@router.post(
+        "/validate_telegram",
+        responses={
+            status.HTTP_400_BAD_REQUEST: {
+                'description': 'Невалидные данные Telegram-пользователя',
+                'model': Error,
+            },
+        }
+)
 async def validate_telegram(data: TelegramData, response: Response):
     """Валидация данных, полученных из Telegram WebApp."""
     if not validate_telegram_data(data):
@@ -86,7 +112,16 @@ async def validate_telegram(data: TelegramData, response: Response):
     return "ok"
 
 
-@router.get("/me", response_model=UserData)
+@router.get(
+        "/me",
+        response_model=UserData,
+        responses={
+            status.HTTP_400_BAD_REQUEST: {
+                'description': 'Ошибка чтения JWT-токена: истек срок действия или неверный токен',
+                'model': Error,
+            },
+        }
+)
 async def user_identity(token: str = Depends(get_token)):
     """Получение текущего пользователя по JWT-токену."""
     try:

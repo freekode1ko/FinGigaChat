@@ -86,9 +86,9 @@ async def create_meeting(
     await utils.add_notify_job(logger=logger, meeting=data)
 
     user_email = await get_user_email(user_id=user_id)
-    with (utils.SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.MAIL_SMTP_SERVER, config.MAIL_SMTP_PORT)
+    async with (utils.SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.MAIL_SMTP_SERVER, config.MAIL_SMTP_PORT)
           as smtp_email):
-        smtp_email.send_meeting(user_email, data)
+        await smtp_email.send_meeting(user_email, data)
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
