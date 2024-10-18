@@ -93,7 +93,7 @@ def get_few_full_research_kb(
 
     added_ids = set()
     for r_data in reports_data:
-        if (research_id := r_data['research_id']) in added_ids:
+        if not (research_id := r_data.get('research_id')) or research_id in added_ids:
             continue
         added_ids.add(research_id)
         kb.row(types.InlineKeyboardButton(
