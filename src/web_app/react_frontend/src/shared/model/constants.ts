@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   analytics: 'analytics',
   subscriptions: 'subscriptions',
   notes: 'notes',
+  auth: 'auth'
 }
 
 export const API_TAGS = {

@@ -39,11 +39,11 @@ const DashboardPage = () => {
   return (
     <>
       {!user && (
-        <div className="pt-10 flex justify-center">
+        <div className="pt-10 pb-4 flex justify-center">
           <TelegramAuthButton />
         </div>
       )}
-      <div className="flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
+      <div className="pt-10 pb-4 flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
         <TypographyH2>
           Дашборд {userId && `пользователя ${userId}`}
         </TypographyH2>

@@ -1,0 +1,100 @@
+import re
+import random
+
+from fastapi import APIRouter, HTTPException, Response, Depends
+from fastapi import status
+
+import config
+
+from api.security import get_token, set_auth_cookie
+from constants import constants
+from db.user import is_new_user_email, get_user_id_by_email, get_user_by_id
+from db.redis import redis_client
+from utils.jwt import create_jwt_token, read_jwt_token
+from utils.telegram import validate_telegram_data
+from utils.email_send import SmtpSend
+
+from .schemas import AuthData, AuthConfirmation, TelegramData, UserData
+
+
+router = APIRouter(tags=['auth'])
+
+
+@router.post("/login")
+async def login(data: AuthData):
+    """Аутентификация через EMail.
+    Подходит для использования приложения вне Telegram.
+    """
+    if not re.search(r'\w+@sber(bank)?.ru', data.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Введите корпоративную почту"
+        )
+    if await is_new_user_email(data.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пожалуйста, сначала зарегистрируйтесь в боте"
+        )
+    reg_code = str(random.randint(constants.REGISTRATION_CODE_MIN, constants.REGISTRATION_CODE_MAX))
+    await redis_client.setex(
+        f"reg_code:{data.email}",
+        constants.REGISTRATION_CODE_TTL,
+        reg_code
+    )
+    with SmtpSend(
+        config.MAIL_RU_LOGIN,
+        config.MAIL_RU_PASSWORD,
+        config.MAIL_SMTP_SERVER,
+        config.MAIL_SMTP_PORT
+    ) as smtp_email:
+        smtp_email.send_msg(
+            config.MAIL_RU_LOGIN,
+            data.email,
+            constants.REGISTRATION_MAIL_TITLE,
+            # FIXME: texts_manager OR await redis_client.get('settings_REGISTRATION_EMAIL_TEXT'.format(code=reg_code))
+            f'Одноразовый код: {reg_code}',
+        )
+    return "ok"
+
+
+@router.post("/verify")
+async def verify(data: AuthConfirmation, response: Response):
+    """Подтверждение входа с помощью одноразового пароля."""
+    reg_code = await redis_client.get(f"reg_code:{data.email}")
+    if not reg_code or reg_code != data.reg_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Запросите код еще раз и повторите попытку"
+        )
+    user_id = await get_user_id_by_email(data.email)
+    jwt_token = create_jwt_token(user_id, constants.JWT_TOKEN_EXPIRE)
+    set_auth_cookie(response, jwt_token)
+    await redis_client.delete(f"reg_code:{data.email}")
+    return "ok"
+
+
+@router.post("/validate_telegram")
+async def validate_telegram(data: TelegramData, response: Response):
+    """Валидация данных, полученных из Telegram WebApp."""
+    if not validate_telegram_data(data):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Некорректные данные пользователя"
+        )
+    jwt_token = create_jwt_token(user_id=data.id)
+    set_auth_cookie(response, jwt_token)
+    return "ok"
+
+
+@router.get("/me", response_model=UserData)
+async def user_identity(token: str = Depends(get_token)):
+    """Получение текущего пользователя по JWT-токену."""
+    try:
+        user_id = read_jwt_token(token)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+    user = await get_user_by_id(user_id)
+    return UserData.model_validate(user)

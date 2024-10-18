@@ -98,7 +98,7 @@ export const NavigationTabs = () => {
   return (
     <nav
       className={cn(
-        'sticky bottom-0 w-full dark:bg-dark-blue bg-white z-50 items-center grid',
+        'sticky bottom-0 w-full dark:bg-dark-blue bg-white z-50 items-center grid py-2',
         overflowTabs.length > 0 ? 'grid-cols-3' : 'grid-cols-2'
       )}
     >

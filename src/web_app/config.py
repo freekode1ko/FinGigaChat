@@ -17,7 +17,12 @@ env.read_env()
 
 DEBUG: bool = env.bool('DEBUG', default=False)
 PSQL_ENGINE: str = env.str('PSQL_ENGINE', default='')
+REDIS_PASSWORD: str = env.str('REDIS_PASSWORD', default='')
+REDIS_HOST: str = env.str('REDIS_HOST', default='')
+REDIS_PORT: int = env.int('REDIS_PORT', default='')
 DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
+JWT_SECRET: str = env.str('JWT_SECRET', default='')
+
 
 
 # ___________________________config_js_________________________

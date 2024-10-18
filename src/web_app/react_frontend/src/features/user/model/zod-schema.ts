@@ -11,7 +11,7 @@ export const loginFormSchema = z
 
 export const confirmationFormSchema = z
   .object({
-    code: z.string().min(6, {
+    reg_code: z.string().min(6, {
       message: 'Одноразовый код должен составлять 6 символов.',
     }),
   })
