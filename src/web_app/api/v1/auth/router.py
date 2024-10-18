@@ -116,7 +116,7 @@ async def validate_telegram(data: TelegramData, response: Response):
         "/me",
         response_model=UserData,
         responses={
-            status.HTTP_400_BAD_REQUEST: {
+            status.HTTP_401_UNAUTHORIZED: {
                 'description': 'Ошибка чтения JWT-токена: истек срок действия или неверный токен',
                 'model': Error,
             },
