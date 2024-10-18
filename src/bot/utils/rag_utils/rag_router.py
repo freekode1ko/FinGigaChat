@@ -12,6 +12,7 @@ from constants import enums
 from constants.constants import DEFAULT_RAG_ANSWER
 from constants.enums import HTTPMethod, RetrieverType
 from constants.texts import texts_manager
+from db.api.research import research_db
 from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
@@ -154,8 +155,37 @@ class RAGRouter:
         banker_json, research_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
         banker, research = banker_json['body'], research_json['body']
         response = self.format_combination_answer(banker, research)
-        metadata = research_json.get('metadata')
+        metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
         return {'body': response, 'metadata': metadata}
+
+    async def prepare_reports_data(
+            self,
+            answer: str,
+            metadata: dict[str, list[dict[str, str]]] | None
+    ) -> dict[str, list[dict[str, str | int]]] | None:
+        """
+        Подготавливает данные отчетов, добавляя к ним id отчета.
+
+        :param answer:      Ответ от Рага.
+        :param metadata:    Исходные метаданные.
+        :return:            Обновленные метаданные с id отчетов.
+        """
+        if answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data' not in metadata:
+            return
+
+        reports_data = metadata['reports_data']
+        has_ids = False
+        for report in reports_data:
+            research_id = await research_db.get_research_id_by_report_id(report.get('report_id'))
+            if research_id:
+                has_ids = True
+                report['research_id'] = research_id
+
+        if has_ids:
+            metadata['reports_data'] = reports_data
+        else:
+            metadata.pop('reports_data')
+        return metadata
 
     def format_combination_answer(self, banker: str, research: str) -> str:
         """
