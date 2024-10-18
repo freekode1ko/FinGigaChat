@@ -46,7 +46,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
         await update_keyboard_of_penultimate_bot_msg(message, state)
-        await del_dialog_and_history_query(message.from_user.id)
+        await del_dialog_and_history_query(message.chat.id)
         await message.answer(texts_manager.RAG_CLEAR_HISTORY)
 
 
@@ -187,7 +187,7 @@ async def _add_data_to_db(
 
     # обновление истории диалога пользователя и ИИ
     await update_dialog(
-        user_id=msg.chat.id,
+        chat_id=msg.chat.id,
         msgs={'user': user_query, 'ai': clear_response},
         need_replace=need_replace
     )
@@ -213,7 +213,7 @@ async def ask_with_dialog(
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
         user_query = first_user_query if first_user_query else user_msg
-        history_query = await get_rephrase_query_by_history(user_id, full_name, user_query)
+        history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
         result = await _get_response(user_id, full_name, user_query, True, history_query)
         retriever_type, response, metadata = result
         reports_data = metadata.get('reports_data') if metadata else None
@@ -258,14 +258,14 @@ async def ask_without_dialog(
         chat_id = call.message.chat.id
         user_id = call.message.from_user.id
         full_name = call.message.from_user.full_name
-        user_query = await get_last_user_msg(user_id)
+        user_query = await get_last_user_msg(chat_id)
         if not user_query:
             await update_keyboard_of_penultimate_bot_msg(call.message, state)
             await call.bot.send_message(chat_id, texts_manager.RAG_TRY_AGAIN)
 
         if callback_data.rephrase_query:
-            history_query = await get_history_query(user_id)
-            rephrase_query = await get_rephrase_query(user_id, full_name, user_query, history_query)
+            history_query = await get_history_query(chat_id)
+            rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
             result = await _get_response(user_id, full_name, user_query, True, rephrase_query)
         else:
             rephrase_query = ''
