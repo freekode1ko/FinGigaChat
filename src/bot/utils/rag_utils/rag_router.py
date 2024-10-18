@@ -104,8 +104,8 @@ class RAGRouter:
     async def rag_qa_research(self) -> dict[str, Any]:
         """Создание сессии для API по ВОС CIB Research и получение ответа."""
         async with async_session() as ses:
-            if not is_has_access_to_feature(ses, self.user_id, enums.FeatureType.rag_research):
-                return self.RAG_BAD_ANSWERS[0]
+            if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.rag_research):
+                return {'body': DEFAULT_RAG_ANSWER}
         session = RagQaResearchClient().session
         req_kwargs = deepcopy(self.req_kwargs)
         req_kwargs['json']['with_metadata'] = True
