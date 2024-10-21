@@ -191,3 +191,5 @@ class FeatureType(str, Enum):
     knowledgebase = 'knowledgebase'
     common = 'common'
     admin = 'admin'
+
+    rag_research = 'rag_research'

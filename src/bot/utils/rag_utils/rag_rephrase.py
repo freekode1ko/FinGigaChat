@@ -28,22 +28,22 @@ async def _make_rephrase_query_by_history(query: str, dialog: list[dict[str, str
     return giga_answer
 
 
-async def get_rephrase_query_by_history(user_id: int, full_name: str, query: str) -> str:
+async def get_rephrase_query_by_history(chat_id: int, full_name: str, query: str) -> str:
     """
     Получение нового запроса на основе пользовательского с помощью истории диалога.
 
-    :param user_id:     Telegram id пользователя.
+    :param chat_id:     Telegram chat_id с пользователем.
     :param full_name:   Полное имя пользователя.
     :param query:       Запрос пользователя.
     :return:            Переписанный (если нужно) на основе диалога запрос пользователя.
     """
-    user_dialog_history = await get_dialog(user_id)
+    user_dialog_history = await get_dialog(chat_id)
     rephrase_query = await _make_rephrase_query_by_history(query, user_dialog_history)
 
     if matches := re.findall(r'Отдельный вопрос:(.*?)(?:\n|$)', rephrase_query):
         rephrase_query = matches[-1]
     rephrase_query = rephrase_query.strip()
-    logger.info(f'*{user_id}* {full_name} - "{query}" : По истории диалога сформирован запрос: "{rephrase_query}"')
+    logger.info(f'*{chat_id}* {full_name} - "{query}" : По истории диалога сформирован запрос: "{rephrase_query}"')
     return rephrase_query
 
 
@@ -60,11 +60,11 @@ async def _make_rephrase_query(query: str, history_query: str) -> str:
     return giga_answer
 
 
-async def get_rephrase_query(user_id: int, full_name: str, query: str, history_query: str) -> str:
+async def get_rephrase_query(chat_id: int, full_name: str, query: str, history_query: str) -> str:
     """
     Получение нового запроса на основе пользовательского.
 
-    :param user_id:         Telegram id пользователя.
+    :param chat_id:         Telegram chat_id с пользователем.
     :param full_name:       Полное имя пользователя.
     :param query:           Запрос пользователя.
     :param history_query:   Исторический запрос пользователя.
@@ -75,5 +75,5 @@ async def get_rephrase_query(user_id: int, full_name: str, query: str, history_q
         rephrase_query = matches[-1]
     rephrase_query = rephrase_query.strip()
 
-    logger.info(f'*{user_id}* {full_name} - "{query}" : После перефразирования сформирован запрос: "{rephrase_query}"')
+    logger.info(f'*{chat_id}* {full_name} - "{query}" : После перефразирования сформирован запрос: "{rephrase_query}"')
     return rephrase_query
