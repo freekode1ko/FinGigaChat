@@ -14,22 +14,6 @@ logger_app = selector_logger(LOG_FILE, LOG_LEVEL)
 engine = WebRetriever(logger_app)
 
 
-@app.post('/api/v1/question_raw', response_model=RagResponse)
-async def aanswer(query: Question) -> RagResponse:
-    """
-    Формирование ответа на запрос с помощью интернет ретривера в обычном формате.
-
-    """
-    try:
-        final_answer = await engine.aget_answer(query.body)
-        final_answer = final_answer[0]
-        logger_app.info(f"На запрос {query.body} получен ответ: {final_answer[0]}")
-    except Exception as e:
-        logger_app.error(f"Не получен ответ на запрос {query.body} по причине: {e}")
-        final_answer = DEFAULT_ANSWER
-    return RagResponse(body=final_answer)
-
-
 @app.post('/api/v1/question', response_model=RagResponse)
 async def aanswer_tg(query: Question) -> RagResponse:
     """

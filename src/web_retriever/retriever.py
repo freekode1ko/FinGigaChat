@@ -25,8 +25,7 @@ class WebRetriever:
     """Класс с цепочкой для генерации ответа с аугментацией данных из поиска DuckDuckGo"""
 
     def __init__(self, logger):
-        self.model = GigaChat(base_url=GIGA_URL,
-                              verbose=True,
+        self.model = GigaChat(verbose=True,
                               credentials=GIGA_CREDENTIALS,
                               scope=GIGA_SCOPE,
                               model=GIGA_MODEL,
@@ -191,14 +190,14 @@ class WebRetriever:
             self._aanswer_chain(query, N_NORMAL_ANSWER),
             self._aanswer_chain(query, N_NARROW_ANSWER)
         ]
-        answers = await asyncio.gather(*tasks, return_exceptions=True)
+        answers_list = await asyncio.gather(*tasks, return_exceptions=True)
         self.logger.info('Получены ответы. Выбор лучшего из них.')
-        final_answer = next(filter(lambda x: x[0] not in [DEFAULT_ANSWER], answers), DEFAULT_ANSWER)
-        self.logger.info(f"Обработан запрос: {query}, с ответом: {final_answer}")
-        if final_answer == DEFAULT_ANSWER:
-            return [DEFAULT_ANSWER]
+        answer_and_links = next(filter(lambda x: x[0] != DEFAULT_ANSWER, answers_list), (DEFAULT_ANSWER, list()))
+        self.logger.info(f"Обработан запрос: {query}, с ответом: {answer_and_links}")
         if debug:
-            return [final_answer[0], format_answer(final_answer[0], final_answer[1])]
-        elif output_format == 'tg':
-            final_answer = format_answer(final_answer[0], final_answer[1])
-        return [final_answer]
+            return [answer_and_links[0], format_answer(answer_and_links[0], answer_and_links[1])]
+        if answer_and_links[0] == DEFAULT_ANSWER:
+            return [DEFAULT_ANSWER]
+        if output_format == 'tg':
+            answer_and_links = format_answer(answer_and_links[0], answer_and_links[1])
+        return [answer_and_links]

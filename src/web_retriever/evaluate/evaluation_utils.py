@@ -32,7 +32,7 @@ async def get_answers(engine: WebRetriever, logger: logging.Logger, filepath: st
                 logger.info(f"Обработан запрос: {question}, с ответом: {results[-1]}")
                 break
             except Exception as e:
-                logger.error(str(e))
+                logger.error(f"Ошибка при обработке запроса '{question}': {e}")
         if not flag:
             results.append("Не удалось получить ответ.")
 

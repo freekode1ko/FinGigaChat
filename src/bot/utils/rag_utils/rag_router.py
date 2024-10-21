@@ -159,11 +159,15 @@ class RAGRouter:
 
     async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker_json, research_json, web_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
+        banker_json, research_json, web_json = await \
+            asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
         banker, research, web = banker_json['body'], research_json['body'], web_json['body']
         logger.info('Тексты до объединения ответов:')
+        logger.info('Ответ новостного рага:')
         logger.info(f'{banker}')
+        logger.info('Ответ веб ретривера:')
         logger.info(f'{web}')
+        logger.info('Ответ рага по ресерчу:')
         logger.info(f'{research}')
         banker = extract_summarization(banker, web)
         logger.info(f'{banker}')

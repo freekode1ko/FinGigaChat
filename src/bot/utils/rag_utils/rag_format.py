@@ -8,7 +8,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 BEGINNING_LEN = 30
 
 BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)|(в базе знаний нет)|(не могу ответить)|' \
-              '(в предоставленных отрывках нет)|(рекомендуется обратиться)|(не указано в )|(не указаны в )'
+              '(в предоставленных отрывках нет)|(рекомендуется обратиться)|(не указано в )|(не указаны в )' \
+              '|(отсутствуют в представленных документах)'
 LINKS_PATTERN = '(https)|(html)'
 GIGA_MARK = 'Ответ сгенерирован Gigachat с помощью Базы Знаний. Информация требует дополнительной верификации'
 ENDING_REGEXP = '(Подводя итог, )|(Подводя итоги, )|(И наконец, )|(Наконец, )|(По итогу, )|(В итоге, )|(Итак, )' \
@@ -25,7 +26,7 @@ def filter_endings(text: str) -> str:
     """
     updated_str = re.sub(ENDING_REGEXP, '', text) if re.search(ENDING_REGEXP, text[:BEGINNING_LEN]) else text
     if updated_str:
-        return updated_str[0].upper() + updated_str[1:]
+        return updated_str.capitalize()
     return ''
 
 
@@ -37,8 +38,8 @@ def get_text_and_links(text: str) -> tuple[str, list[str]]:
     :return: Строка смыслового параграфа и массив ссылок.
     """
     splitted = text.split('<')
-    plain_text = text.split('<')[0]
-    links = '<' + '<'.join(splitted[i] for i in range(1, len(splitted))) if len(splitted) > 1 else ''
+    plain_text = splitted[0]
+    links = '<' + '<'.join(splitted[1:])
     links_list = links.split(',') if len(links) > 1 else list()
     return plain_text, links_list
 
@@ -80,8 +81,7 @@ def filter_broken_links_paragraphs(text: str) -> str:
     :param text: текст ответа.
     :return: очищенный текст ответа.
     """
-    paragrahs = text.split('\n\n')
-    return '\n\n'.join(filter(lambda x: not contains_only_text(x) or not contains_bad_links(x), paragrahs))
+    return '\n\n'.join(i for i in text.split('\n\n') if not contains_only_text(i) or not contains_bad_links(i))
 
 
 def union_paragraphs(text: str) -> str:
@@ -95,14 +95,14 @@ def union_paragraphs(text: str) -> str:
     if len(paragrahs) == 0:
         return text
     new_ans = [paragrahs[0]]
-    for i in range(1, len(paragrahs)):
-        par = paragrahs[i]
+    for par in paragrahs[1:]:
         if contains_only_links(par):
             if contains_only_text(new_ans[-1]):
                 new_ans[-1] += f' {par}'
             else:
-                union_links = set(get_text_and_links(new_ans[-1])[1]).union(get_text_and_links(par)[1])
-                new_ans[-1] = get_text_and_links(new_ans[-1])[0] + ','.join(union_links)
+                txt, links = get_text_and_links(new_ans[-1])
+                union_links = set(links).union(get_text_and_links(par)[1])
+                new_ans[-1] = txt + ','.join(union_links)
         else:
             new_ans.append(par)
     return '\n\n'.join(new_ans)
@@ -115,23 +115,24 @@ def union_paragraphs_with_same_links(text: str) -> str:
     :param text: текст параграфа.
     :return: текст с объединенными параграфами.
     """
-    paragrahs = text.split('\n\n')
-    if len(paragrahs) == 0:
+    paragraphs = text.split('\n\n')
+    if len(paragraphs) < 2:
         return text
     # формируем списки с текстами и сетами ссылок каждого параграфа
-    texts = [get_text_and_links(text)[0] for text in text.split('\n\n')]
-    links_sets = [set(map(lambda x: x.lstrip(), get_text_and_links(text)[1])) for text in text.split('\n\n')]
+    texts_and_links = [get_text_and_links(text) for text in paragraphs]
+    texts = [i[0] for i in texts_and_links]
+    links_sets = [set(map(str.lstrip, i[1])) for i in texts_and_links]
     new_texts = [texts[0]]
     new_links = [links_sets[0]]
-    for i in range(1, len(texts)):
+    for txt, links_set in zip(texts[1:], links_sets[1:]):
         # если есть пересечение по ссылкам с прошлым параграфом - объединяем их
-        if len(links_sets[i].intersection(new_links[-1])) > 0:
-            new_texts[-1] += f' {texts[i]}'
-            new_links[-1] = links_sets[i].union(new_links[-1])
+        if len(links_set.intersection(new_links[-1])) > 0:
+            new_texts[-1] += f' {txt}'
+            new_links[-1] = links_set.union(new_links[-1])
         # иначе добавляем как новый параграф
         else:
-            new_texts.append(texts[i])
-            new_links.append(links_sets[i])
+            new_texts.append(txt)
+            new_links.append(links_set)
     # собираем все это дело в один ответ
     return '\n\n'.join(new_texts[i] + ', '.join(new_links[i]) for i in range(len(new_texts)))
 
@@ -167,24 +168,28 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
     # оставляем только смысловые параграфы
     chunks1 = list(filter(lambda x: not contains_bad_pattern(x.lower()), news_answer.split('\n\n')))
     chunks2 = list(filter(lambda x: not contains_bad_pattern(x.lower()), duckduck_answer.split('\n\n')))
+    n_chunks1 = len(chunks1)
+    n_chunks2 = len(chunks2)
     # в chunks1 оставляем тот, где больше число параграфов
-    if len(chunks1) < len(chunks2):
+    if n_chunks1 < n_chunks2:
         chunks1, chunks2 = chunks2, chunks1
+        n_chunks1, n_chunks2 = n_chunks2, n_chunks1
     ans = copy(chunks1)
     # если второй оказался пустым - то отвечаем первым
-    if len(chunks2) == 0:
+    if n_chunks2 == 0:
         return '\n\n'.join(ans)
     # Добираем параграфы из второго ответа, которые непохожи на параграфы из первого ответа
     all_batch = chunks1 + chunks2
-    texts = [get_text_and_links(text)[0] for text in all_batch]
-    links_sets = [set(map(lambda x: x.lstrip(), get_text_and_links(text)[1])) for text in all_batch]
+    texts_and_links = [get_text_and_links(text) for text in all_batch]
+    texts = [i[0] for i in texts_and_links]
+    links_sets = [set(map(str.lstrip, i[1])) for i in texts_and_links]
     # считаем скоры схожести
     vectorizer = TfidfVectorizer()
     texts_vectorized = vectorizer.fit_transform(texts)
     scores_tf_idf = texts_vectorized @ texts_vectorized.T
     for i, candidate in enumerate(chunks2):
         flag_unique = True
-        index = i + len(chunks1)
+        index = i + n_chunks1
         # если параграф состоит только из ссылок, то пропускаем его
         if len(texts[index]) == 0:
             continue
@@ -203,6 +208,4 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
         if flag_unique:
             ans.append(candidate)
     # чистим итоговый ответ от вводных слов окончания параграфов
-    for i in range(len(ans)):
-        ans[i] = filter_endings(ans[i])
-    return '\n\n'.join(filter(lambda x: x != '', ans))
+    return '\n\n'.join(filtered for i in ans if (filtered := filter_endings(i)))
