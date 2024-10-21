@@ -16,7 +16,6 @@ from db.api.research import research_db
 from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
-
 from utils.base import is_has_access_to_feature
 from utils.rag_utils.rag_format import extract_summarization
 from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
