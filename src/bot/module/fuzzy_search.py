@@ -107,7 +107,7 @@ class FuzzyAlternativeNames:
             self,
             subject_name: str,
             criteria: int = 5,
-            subject_types: Optional[list[models.Base]] = None,
+            subject_types: Optional[list[Type[models.Base]]] = None,
     ) -> list[str]:
         """
         Поиск ближайших похожих имен субъектов

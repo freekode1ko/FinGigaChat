@@ -6,7 +6,6 @@
 Парсит фин. показатели.
 """
 import asyncio
-import copy
 import datetime
 import json
 import os
@@ -370,88 +369,6 @@ class ResearchParser:
 
         return df_new
 
-    def __get_client_fin_indicators(self, page_html, company: str) -> pd.DataFrame:
-        """
-        Get singe company financial indicators table
-
-        :param page_html:   html page of company
-        :param company:     company name
-        :return:            table in DataFrame format
-        """
-        self._logger.info(f'Получение таблицы финансовых показателей для компании: {company}')
-        soup = BeautifulSoup(page_html, 'html.parser')
-        table_soup = (
-            soup.find('div', attrs={'class': 'report company-summary-financials'})
-                .find('div', attrs={'class': 'grid_container grid-bottom-border'})
-                .find('div', attrs={'class': 'table-scroll'})
-                .find('table', attrs={'class': 'grid container black right'})
-        )
-
-        self._logger.info(f'Обработка найденной таблицы для компании {company}')
-        tables = pd.read_html(str(table_soup), thousands='', decimal=',')
-        df = tables[0]
-        df['Unnamed: 0'].fillna(method='ffill', inplace=True)
-        df['alias'] = df['Unnamed: 0'].ffill(limit=1).fillna('')
-        df.drop('Unnamed: 0', axis=1, inplace=True)
-        df = df.dropna(how='all', subset=df.columns.difference(['alias']))
-        df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace('\xa0', ''))
-        df.iloc[:, 1:] = df.iloc[:, 1:].apply(lambda x: x.str.replace(',', '.'))
-        df = df.rename(columns={'Unnamed: 1': 'name'})
-
-        self._logger.info(f'Выборка нужных значений из собранной таблицы для {company}')
-        cols_to_convert = df.columns[~df.columns.isin(['alias', 'name'])]
-        mask = ~df.apply(lambda x: 'IFRS' in x.values, axis=1)
-        df.loc[mask, cols_to_convert] = df.loc[mask, cols_to_convert].apply(pd.to_numeric, errors='coerce')
-
-        numeric_cols = df.columns[df.columns.str.match(r'^\d{4}')].tolist()[:5]
-        # df_new = df.loc[:, numeric_cols]
-        df_new = df[['name'] + numeric_cols + ['alias']].copy()
-        df_new['company'] = company.lower()
-        return df_new
-
-    def get_companies_financial_indicators_table(self):
-        """
-        Get financial indicators' table for all companies
-
-        :return: table in dataframe format
-        """
-        self._logger.info('Получение таблиц с фин.показателями для всех компаний')
-        companies = copy.deepcopy(config.dict_of_companies)
-        companies_research_link = f'{config.research_base_url}group/guest/companies?companyId=id_id'
-
-        fin_indicators_tables = {}
-        for company in companies:
-
-            link = copy.deepcopy(companies_research_link)
-            link = link.replace('id_id', companies[company]['company_id'])
-            self.__sleep_some_time(3.0, 4.0)
-            # time.sleep(3)
-            try:
-                self.driver.get(link)
-            except Exception as e:
-                self._logger.error(f'При получении таблицы с фин. показателями для {company} произошла ошибка: %s', e)
-                self.driver.quit()
-                self.driver = get_driver(self._logger)
-                continue
-
-            page_html = self.driver.page_source
-            fin_indicators_table = self.__get_client_fin_indicators(page_html, company)
-            fin_indicators_tables[company] = fin_indicators_table
-            self._logger.info(f'Таблица для {company} - получена')
-
-        self._logger.info('Предварительная обработка таблиц')
-        result = pd.concat(list(fin_indicators_tables.values()))
-        result['id'] = range(1, result.shape[0] + 1)
-        result = result.replace('Рентабельность', 'Рентабельность, %')
-        result = result.replace('Рост', 'Рост, %')
-        result = result.replace('EPS (скорр.), R', 'EPS (скорр.), руб.')
-        result = result.replace('Финансовые показатели, R млн.', 'Финансовые показатели, млн руб.')
-        result = result.replace('Операционные показатели, R млн.', 'Операционные показатели, млн руб.')
-        result = result.replace('BVPS, R', 'BVPS, руб.')
-        result = result.replace('EPS (прибыль на акцию), R', 'EPS (прибыль на акцию), руб.')
-
-        return result
-
     def get_emulator_cookies(self, driver: WebDriver) -> requests.Session():
         """
         Sets selenium session params to requests.Session() object
@@ -794,14 +711,22 @@ class ResearchAPIParser:
         for i in range(self.REPEAT_TRIES):
             if params['before_link']:
                 # Тут нужно запрашивать отчеты по порядку
-                requests.get(url=params['before_link'], cookies=self.cookies, verify=False)
-                req = requests.request(
-                    method=params['request_method'],
-                    url=params['url'],
-                    params=params['params'],
-                    cookies=self.cookies,
-                    verify=False
-                )
+                try:
+                    requests.get(url=params['before_link'], cookies=self.cookies, verify=False, timeout=10)
+                    req = requests.request(
+                        method=params['request_method'],
+                        url=params['url'],
+                        params=params['params'],
+                        cookies=self.cookies,
+                        verify=False,
+                        timeout=10,
+                    )
+                except Exception as e:
+                    self._logger.error(
+                        f'Во время запроса отчетов со страницы {params["url"]} и id:{params["research_type_id"]} произошла ошибка: %s',
+                        e
+                    )
+                    continue
                 status_code = req.status_code
                 content = req.content
             else:
@@ -811,11 +736,15 @@ class ResearchAPIParser:
                         params=params['params'],
                         cookies=self.cookies,
                         ssl=False,
+                        timeout=10
                     )
                     content = await req.text()
                     status_code = req.status
                 except Exception as e:
-                    self._logger.error(f'Во время запроса отчетов со страницы {params["url"]} произошла ошибка: %s', e)
+                    self._logger.error(
+                        f'Во время запроса отчетов со страницы {params["url"]} и id:{params["research_type_id"]} произошла ошибка: %s',
+                        e
+                    )
                     continue
             if status_code == 200 and len(content) > self.content_len:
                 break
@@ -829,7 +758,12 @@ class ResearchAPIParser:
         reports_ids = html_parser.find_all('div', class_='hidden publication-id')
         reports_titles = html_parser.find_all('tr', class_=self.report_title_tr_pattern)
 
-        self._logger.info('CIB: получен успешный ответ со страницы: %s. И найдено %s отчетов', params['url'], len(reports_ids))
+        self._logger.info(
+            'CIB: получен успешный ответ со страницы c id: %s ;url: %s. И найдено %s отчетов',
+            str(params['research_type_id']),
+            params['url'],
+            len(reports_ids)
+        )
 
         new_reports = []
         for report_id, report_name in zip(reports_ids, reports_titles):

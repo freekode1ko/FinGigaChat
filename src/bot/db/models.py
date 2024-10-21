@@ -1,5 +1,6 @@
 """Модели таблиц всех сервисов"""
 import datetime
+import enum
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -110,24 +111,6 @@ t_eco_stake = Table(
     'eco_stake', metadata,
     Column('0', Text),
     Column('1', Text)
-)
-
-
-t_financial_indicators = Table(
-    'financial_indicators', metadata,
-    Column('name', Text),
-    Column('2021', Text),
-    Column('2022', Text),
-    Column('2023E', Text),
-    Column('2024E', Text),
-    Column('2025E', Text),
-    Column('alias', Text),
-    Column('company', Text),
-    Column('2020', Float(53)),
-    Column('2022E', Float(53)),
-    Column('2019', Float(53)),
-    Column('2021E', Float(53)),
-    Column('id', BigInteger)
 )
 
 
@@ -275,9 +258,11 @@ class RegisteredUser(Base):
     user_type = Column(Text)
     user_status = Column(Text)
     user_email = Column(Text, server_default=sa.text("''::text"))
+    role_id = Column(ForeignKey('user_role.id', ondelete='RESTRICT', onupdate='CASCADE'))
 
     message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
 
 class Whitelist(Base):
@@ -833,3 +818,119 @@ class RelationClientStakeholder(Base):
     client_id = Column(ForeignKey('client.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     stakeholder_id = Column(ForeignKey('stakeholder.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     stakeholder_type = Column(Enum(enums.StakeholderType), nullable=False, comment='Тип стейкхолдера')
+
+
+class QuotesSections(Base):
+    __tablename__ = 'quotes_section'
+    __table_args__ = {'comment': 'Таблица cо секциями котировок'}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String, nullable=False, comment='Название')
+    params = sa.Column(sa.JSON, comment='Параметры для отображения секции')
+
+    quotes = relationship('Quotes', back_populates='quotes_section')
+
+
+class Quotes(Base):
+    __tablename__ = 'quotes'
+    __table_args__ = (
+        sa.UniqueConstraint('name', 'quotes_section_id', name='uq_quote_name_and_section'),
+        {'comment': 'Таблица cо списком котировок, получаемых через сторонние API', }
+    )
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String, nullable=False, comment='Название')
+    params = sa.Column(sa.JSON, comment='Параметры для запросов')
+    source = sa.Column(sa.String, comment='Url для запросов')
+    ticker = sa.Column(sa.String, comment='Тикер (например AAPL)')
+    quotes_section_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey('quotes_section.id'),
+        nullable=False,
+        comment='Секция котировок'
+    )
+    last_update = sa.Column(sa.DateTime, comment='Время последнего обновления')
+
+    quotes_section = relationship('QuotesSections', back_populates='quotes')
+    values = relationship('QuotesValues', back_populates='quote')
+    user_quotes_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='quote')
+
+
+class QuotesValues(Base):
+    __tablename__ = 'quotes_values'
+    __table_args__ = (
+        sa.UniqueConstraint('quote_id', 'date', name='uq_quote_and_date'),
+        {'comment': 'Таблица cо списком значений для графиков'}
+    )
+
+    id = sa.Column(sa.Integer, primary_key=True,)
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+
+    date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
+
+    open = sa.Column(sa.Float, comment='Цена открытия')
+    close = sa.Column(sa.Float, comment='Цена закрытия')
+    high = sa.Column(sa.Float, comment='Максимальная стоимость')
+    low = sa.Column(sa.Float, comment='Минимальная стоимость')
+
+    value = sa.Column(sa.Float, comment='Цента в данный момент')
+
+    volume = sa.Column(sa.Float, comment='Объем торгов')
+
+    quote = relationship('Quotes', back_populates='values')
+
+
+class SizeEnum(enum.IntEnum):
+    """Размеры для отображения котировок"""
+
+    GRAPH_LARGE = enum.auto()
+    GRAPH_MEDIUM = enum.auto()
+    TEXT = enum.auto()
+
+
+class UsersQuotesSubscriptions(Base):
+    __tablename__ = 'users_quotes_subscriptions'
+    __table_args__ = {'comment': 'Таблица подписок пользователей на котировки'}
+
+    id = sa.Column(sa.Integer, primary_key=True, )
+    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    view_size = sa.Column(
+        sa.Enum(SizeEnum),
+        nullable=False,
+        default=SizeEnum.TEXT,
+        comment='Размер отображения данных: график или текст',
+    )
+
+    user = relationship('RegisteredUser', back_populates='quote_subscriptions')
+    quote = relationship('Quotes', back_populates='user_quotes_subscriptions')
+
+
+class UserRole(Base):
+    __tablename__ = 'user_role'
+    __table_args__ = {'comment': 'Таблица описания пользовательских ролей'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(64), unique=True, nullable=False, comment='Имя роли')
+    description = Column(Text, comment='Описание роли')
+
+    features = relationship('Feature', secondary='relation_role_to_feature', back_populates='user_roles')
+
+
+class Feature(Base):
+    __tablename__ = 'feature'
+    __table_args__ = {'comment': 'Таблица с перечнем функционала, мб как разделом, так и функцией'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False, comment='Имя функционала/раздела')
+    description = Column(Text, comment='Описание функционала, его составляющих')
+
+    user_roles = relationship('UserRole', secondary='relation_role_to_feature', back_populates='features')
+
+
+class RelationRoleToFeature(Base):
+    __tablename__ = 'relation_role_to_feature'
+    __table_args__ = {'comment': 'Таблица отношений между ролью пользователя и доступным ему функционалом'}
+
+    user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
+    feature_id = Column(ForeignKey('feature.id'), primary_key=True)

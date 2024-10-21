@@ -14,6 +14,8 @@ import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
+from constants import constants
+from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
 
@@ -26,8 +28,12 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(api_router)
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+app.include_router(api_router, prefix="/api")
+app.mount(
+    '/static',
+    StaticFiles(directory=str(constants.PROJECT_DIR / 'frontend' / 'static')),
+    name="static"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +48,7 @@ async def show_meetings(request: Request):
     return templates.TemplateResponse("meeting.html", {"request": request})
 
 
-@app.get("/meeting/show/{user_id}", response_class=JSONResponse)
+@app.get("/meeting/show/{user_id}", response_class=JSONResponse, deprecated=True)
 async def show_user_meetings(user_id: int | str):
     meetings = await get_user_meetings(user_id)
     meetings = utils.format_date(meetings)
@@ -55,7 +61,7 @@ async def create_meeting_form(request: Request):
     return templates.TemplateResponse("create.html", {"request": request})
 
 
-@app.get('/meeting/save')
+@app.get('/meeting/save', deprecated=True)
 async def create_meeting(
         user_id: int | str,
         theme: str,
@@ -86,3 +92,8 @@ async def create_meeting(
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
+
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+@handle_jinja_template_exceptions
+async def show_react_app(request: Request, full_path: str) -> HTMLResponse:
+    return templates.TemplateResponse("index.html", {"request": request})

@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    ::-webkit-scrollbar {
+        width: 0.4rem;
+        height: 0.4rem;
+    }
+
+    ::-webkit-scrollbar-track {
+        @apply bg-white dark:bg-dark-blue;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-secondary-200 dark:bg-secondary-600;
+        border-radius: 100vh;
+    }
+}

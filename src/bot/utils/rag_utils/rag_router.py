@@ -1,16 +1,23 @@
 """Описание класса RAGRouter."""
+import asyncio
 import json
 import re
-import urllib.parse
+from copy import deepcopy
+from typing import Any
 
 from aiohttp import ClientError, ClientSession
 
 from configs import config, prompts
+from constants import enums
+from constants.constants import DEFAULT_RAG_ANSWER
 from constants.enums import HTTPMethod, RetrieverType
 from constants.texts import texts_manager
+from db.api.research import research_db
+from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
-from utils.sessions import RagQaBankerClient, RagStateSupportClient
+from utils.base import is_has_access_to_feature
+from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient
 
 giga = GigaChat(logger)
 
@@ -18,22 +25,29 @@ giga = GigaChat(logger)
 class RAGRouter:
     """Класс с классификацией запроса относительно RAG-сервисов(+GigaChat) и с получением ответа на запрос."""
 
-    def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
+    RAG_BAD_ANSWERS = (DEFAULT_RAG_ANSWER, texts_manager.RAG_ERROR_ANSWER)
+
+    def __init__(self, user_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
         """
         Инициализация экземпляра RAGRouter.
 
-        :param chat_id:         Id Telegram чата с пользователем.
+        :param user_id:         Id Telegram пользователя.
         :param full_name:       Полное имя пользователя в Telegram.
         :param user_query:      Запрос пользователя.
         :param rephrase_query:  Перефразированный запрос пользователя.
         :param use_rephrase:    Нужно ли использовать перефразированный запрос пользователя для получения ответа.
         """
-        self.chat_id = chat_id
+        self.user_id = user_id
         self.full_name = full_name
         self.user_query = user_query
         self.rephrase_query = rephrase_query
         self.query = self.rephrase_query if use_rephrase else self.user_query
         self.retriever_type = None
+        self.req_kwargs = dict(
+            url='/api/v1/question',
+            json={'body': self.add_question_mark(self.query)},
+            timeout=config.POST_TO_SERVICE_TIMEOUT
+        )
 
     async def get_rag_type(self) -> None:
         """По пользовательскому запросу определяет класс рага, который нужно вызвать."""
@@ -70,65 +84,54 @@ class RAGRouter:
         query = query.strip()
         return query if query[-1] == '?' else query + '?'
 
-    async def get_response(self) -> str:
+    async def get_response(self) -> str | dict[str, Any]:
         """Вызов ретривера относительно типа ретривера."""
         if self.retriever_type == RetrieverType.state_support:
             return await self.rag_state_support()
         elif self.retriever_type == RetrieverType.qa_banker:
-            return await self.rag_qa_banker()
+            return await self.get_combination_response()
         return await self._request_to_giga()
 
-    async def rag_qa_banker(self) -> str:
+    async def rag_qa_banker(self) -> dict[str, Any]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
-        query = self.add_question_mark(self.query)
-        query = urllib.parse.quote(query)
-        query_part = f'/api/queries?query={query}'
-        req_kwargs = dict(
-            url=query_part,
-            timeout=config.POST_TO_SERVICE_TIMEOUT
-        )
         session = RagQaBankerClient().session
-        return await self._request_to_rag_api(session, HTTPMethod.GET, **req_kwargs)
+        return await self._request_to_rag_api(session, **self.req_kwargs)
 
-    async def rag_state_support(self) -> str:
-        """Формирование параметров к запросу API по господдержке и получение ответа."""
-        req_kwargs = dict(
-            url='/api/v1/question',
-            json={'body': self.query},
-            timeout=config.POST_TO_SERVICE_TIMEOUT
-        )
+    async def rag_state_support(self) -> dict[str, Any]:
+        """Создание сессии для API по господдержке и получение ответа."""
         session = RagStateSupportClient().session
-        return await self._request_to_rag_api(session, HTTPMethod.POST, **req_kwargs)
+        return await self._request_to_rag_api(session, **self.req_kwargs)
 
-    async def _request_to_rag_api(self,
-                                  session: ClientSession,
-                                  request_method: HTTPMethod,
-                                  **kwargs) -> str:
+    async def rag_qa_research(self) -> dict[str, Any]:
+        """Создание сессии для API по ВОС CIB Research и получение ответа."""
+        async with async_session() as ses:
+            if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.rag_research):
+                return {'body': DEFAULT_RAG_ANSWER}
+        session = RagQaResearchClient().session
+        req_kwargs = deepcopy(self.req_kwargs)
+        req_kwargs['json']['with_metadata'] = True
+        return await self._request_to_rag_api(session, **req_kwargs)
+
+    async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
         """
         Отправляет запрос к RAG API И формирует ответ.
 
         :param  session:            Сессия для подключения.
-        :param  request_method:     HTTP метод.
-        :param kwargs:              Параметры http запроса.
-        :return:                    Оригинальный ответ RAG.
+        :param  kwargs:             Параметры http запроса.
+        :return:                    Словарь ответа от RAG.
         """
         try:
-            async with session.request(method=request_method, **kwargs) as rag_response:
-                if request_method == HTTPMethod.GET:
-                    rag_answer = await rag_response.text()
-                else:
-                    rag_answer = await rag_response.json()
-                    rag_answer = rag_answer['body']
-
+            async with session.request(method=HTTPMethod.POST, **kwargs) as rag_response:
+                rag_response_dict = await rag_response.json()
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
-                             (self.chat_id, self.full_name, self.query, rag_answer))
+                             (self.user_id, self.full_name, self.query, rag_response_dict))
         except ClientError as e:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
-                                 (self.chat_id, self.full_name, self.query, e))
+                                 (self.user_id, self.full_name, self.query, e))
         else:
-            return rag_answer
-        return texts_manager.RAG_ERROR_ANSWER
+            return rag_response_dict
+        return {'body': texts_manager.RAG_ERROR_ANSWER}
 
     async def _request_to_giga(self) -> str:
         """
@@ -138,11 +141,66 @@ class RAGRouter:
         """
         try:
             giga_answer = await giga.aget_giga_answer(text=self.query)
-            user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
+            user_logger.info(f'*{self.user_id}* {self.full_name} - "{self.query}" : '
                              f'На запрос GigaChat ответил: "{giga_answer}"')
         except Exception as e:
             giga_answer = texts_manager.RAG_ERROR_ANSWER
             logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
-            user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
+            user_logger.critical(f'*{self.user_id}* {self.full_name} - "{self.query}" : '
                                  f'GigaChat не сформировал ответ по причине: {e}"')
         return giga_answer
+
+    async def get_combination_response(self) -> dict[str, Any]:
+        """Комбинация ответов от разных рагов."""
+        banker_json, research_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
+        banker, research = banker_json['body'], research_json['body']
+        response = self.format_combination_answer(banker, research)
+        metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
+        return {'body': response, 'metadata': metadata}
+
+    async def prepare_reports_data(
+            self,
+            answer: str,
+            metadata: dict[str, list[dict[str, str]]] | None
+    ) -> dict[str, list[dict[str, str | int]]] | None:
+        """
+        Подготавливает данные отчетов, добавляя к ним id отчета.
+
+        :param answer:      Ответ от Рага.
+        :param metadata:    Исходные метаданные.
+        :return:            Обновленные метаданные с id отчетов.
+        """
+        if answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data' not in metadata:
+            return
+
+        reports_data = metadata['reports_data']
+        has_ids = False
+        for report in reports_data:
+            research_id = await research_db.get_research_id_by_report_id(report.get('report_id'))
+            if research_id:
+                has_ids = True
+                report['research_id'] = research_id
+
+        if has_ids:
+            metadata['reports_data'] = reports_data
+        else:
+            metadata.pop('reports_data')
+        return metadata
+
+    def format_combination_answer(self, banker: str, research: str) -> str:
+        """
+        Форматирование, комбинация ответов от рага по новостям и рага рисерч.
+
+        :param banker:    Ответ от рага по новостям.
+        :param research:  Ответ от рага рисерч.
+        :return:          Комбинированный ответ.
+        """
+        if banker == research == texts_manager.RAG_ERROR_ANSWER:
+            return texts_manager.RAG_ERROR_ANSWER
+
+        response = ''
+        if banker not in self.RAG_BAD_ANSWERS:
+            response += banker
+        if research not in self.RAG_BAD_ANSWERS:
+            response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
+        return response.strip() or DEFAULT_RAG_ANSWER

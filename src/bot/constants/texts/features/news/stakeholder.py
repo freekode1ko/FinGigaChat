@@ -22,4 +22,4 @@ class StakeholderTexts(BaseSettings):
     ONE_COMMON_SHOW_NEWS: str = 'Вот новости по компании'
 
     # Сообщение для отображения меню по клиенту
-    CLIENT_MENU_START: str = 'Дополнительные данные о клиенте <b>{client}</b>'
+    CLIENT_MENU_START: str = 'Дополнительные данные о компании <b>{client}</b>'

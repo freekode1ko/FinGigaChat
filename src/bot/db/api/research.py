@@ -94,5 +94,15 @@ class ResearchCRUD(BaseCRUD[models.Research]):
 
         return data_df
 
+    async def get_research_id_by_report_id(self, report_id: str) -> int:
+        """
+        Получение research.id по report_id.
+
+        :param report_id: research.report_id.
+        :return:          id PK research.
+        """
+        async with self._async_session_maker() as session:
+            return await session.scalar(sa.select(self._table.id).where(self._table.report_id == report_id))
+
 
 research_db = ResearchCRUD(models.Research, models.Research.publication_date.desc(), logger)

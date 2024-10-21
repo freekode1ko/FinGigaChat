@@ -14,8 +14,8 @@ PUBLIC_COMMANDS: list[dict] = [
         'description': 'Котировки',
     },
     {
-        'command': 'clients_menu',
-        'description': 'Клиенты',
+        'command': 'company_menu',
+        'description': 'Компании',
     },
     {
         'command': 'products_menu',
@@ -100,5 +100,9 @@ SECRET_COMMANDS: list[dict] = [
     {
         'command': 'delete_newsletter_messages',
         'description': 'Удаление сообщений, отправленных с помощью пассивной рассылки',
+    },
+    {
+        'command': 'web_app',
+        'description': 'Отправить кнопку с веб апом',
     },
 ]

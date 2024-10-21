@@ -36,7 +36,9 @@ from middlewares.logger import LoggingMiddleware
 from middlewares.state import StateMiddleware
 from utils import newsletter, sessions
 from utils.base import (
-    next_weekday_time, wait_until,
+    check_relevance_features,
+    next_weekday_time,
+    wait_until
 )
 
 storage = MemoryStorage()
@@ -137,6 +139,9 @@ async def main():
     init_sentry(dsn=config.SENTRY_CHAT_BOT_DSN)
     warnings.filterwarnings('ignore')
 
+    # проверка соответствия между названиями фичей в коде и в базе данных (ролевая модель)
+    await check_relevance_features()
+
     # запускам рассылки
     print('Инициализация бота')
     loop = asyncio.get_event_loop()
@@ -175,6 +180,7 @@ async def main():
         await sessions.GigaChatClient().close()
         await sessions.RagQaBankerClient().close()
         await sessions.RagStateSupportClient().close()
+        await sessions.RagQaResearchClient().close()
 
 
 if __name__ == '__main__':

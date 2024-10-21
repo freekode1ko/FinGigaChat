@@ -175,3 +175,21 @@ class StakeholderType(str, Enum):
     lpr = 'лпр'
     beneficiary = 'бенефициар'
     undefined = 'не определено'
+
+
+class FeatureType(str, Enum):
+    """Перечень функционала в боте."""
+
+    news = 'news'
+    analytics_menu = 'analytics_menu'
+    quotes_menu = 'quotes_menu'
+    company_menu = 'company_menu'
+    products_menu = 'products_menu'
+    subscriptions_menu = 'subscriptions_menu'
+    notes = 'notes'
+    meeting = 'meeting'
+    knowledgebase = 'knowledgebase'
+    common = 'common'
+    admin = 'admin'
+
+    rag_research = 'rag_research'

@@ -1,0 +1,98 @@
+"""Инференс модели"""
+
+import torch
+from transformers import AutoTokenizer
+from optimum.onnxruntime import ORTModelForSequenceClassification
+
+from config import MODEL_PATH, LOG_LEVEL, LOG_FILE
+from log.logger_base import selector_logger
+
+logger = selector_logger(LOG_FILE, LOG_LEVEL)
+
+MAX_INPUT_LENGTH = 512
+
+N_ATTEMPTS = 5
+
+
+def load_model() -> tuple[ORTModelForSequenceClassification, AutoTokenizer]:
+    """"
+    Обработчик ошибки загрузки модели
+    :return: Возвращает загруженную модель и токенайзер.
+    """
+
+    logger.info('Старт загрузки модели с Huggingface')
+    logger.info(f'Модель: {MODEL_PATH}')
+    for _ in range(N_ATTEMPTS):
+        try:
+            model = ORTModelForSequenceClassification.from_pretrained(MODEL_PATH)
+            auto_tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+            logger.info('Модель загружена')
+            return model, auto_tokenizer
+        except Exception as e:
+            logger.info(f'Ошибка загрузки модели с Huggingface: {e}')
+
+
+async def get_prediction_cpu(text: str, model: ORTModelForSequenceClassification,
+                             tokenizer: AutoTokenizer) -> list[float]:
+    """
+    Получаем вероятности от модели принадлежности текста новости релевантости или нерелевантности.
+    :param text: текст новости
+    :param model: модель
+    :param tokenizer: токенизатор
+    :return: вероятности от модели
+    """
+
+    try:
+        # токенизируем и обрезаем текст новости до максимального входа
+        inputs = tokenizer(text, padding=True, truncation=True, max_length=MAX_INPUT_LENGTH, return_tensors="pt")
+        # получаем предсказания модели
+        with torch.inference_mode():
+            outputs = model(**inputs)
+        # достаем вероятности из логитов
+        probs = outputs[0].softmax(1)
+        # возвращаем вероятности
+        results = list(probs.detach().numpy()[0])
+        logger.info(f"Получены вероятности: {results}. Новость: {text}")
+    except Exception as e:
+        logger.error(f"Ошибка при получении вероятностей: {e}")
+        results = [-1, -1]
+    return results
+
+
+async def get_prediction_batch_cpu(texts: list[str], model: ORTModelForSequenceClassification, tokenizer: AutoTokenizer,
+                                   batch_size: int = 4) -> list[list[float]]:
+    """
+    TODO: Переписать обработку текстов по батчам, с учетом нормального паддинга. Пока работает не совсем корректно
+    Получаем вероятности от модели принадлежности текстов новостей релевантости или нерелевантности.
+    :param texts: список текстов новостей.
+    :param model: модель
+    :param tokenizer: токенизатор
+    :param batch_size: размер батча
+    :return: вероятности от модели для каждой новости в формате строки вида: 'prob1_0:prob1_1;prob2_0:prob2_1'
+    """
+
+    try:
+        # токенизируем и обрезаем текст новости до максимального входа
+        inputs = torch.tensor([tokenizer.encode(text, padding='max_length', truncation=True,
+                                                max_length=MAX_INPUT_LENGTH,
+                                                add_special_tokens=True) for text in texts])
+    except Exception as e:
+        logger.error(f"Ошибка при токенизации: {e}")
+        return [[-1, -1] for _ in range(len(texts))]
+    try:
+        # получаем предсказания модели
+        probs = []
+        with torch.inference_mode():
+            # разбиваем тексты на батчи и получаем предсказания для каждого батча
+            amount = len(texts)
+            for i in range(0, amount, batch_size):
+                batch = inputs[i: min(i + batch_size, amount), :]
+                outputs = model(batch)
+                probs += [outputs.logits[j, :].softmax(0) for j in range(len(batch))]
+        # возвращаем вероятности
+        results = [list(prob.detach().numpy()) for prob in probs]
+        logger.info(f"Обработан батч размера {len(results)}. Результаты: {results}")
+    except Exception as e:
+        logger.error(f"Ошибка при получении вероятностей: {e}")
+        results = [[-1, -1] for _ in range(len(texts))]
+    return results

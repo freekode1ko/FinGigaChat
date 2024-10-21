@@ -1,6 +1,5 @@
 """Хендлеры новостей новостей новостей"""
 from aiogram import Bot, F, types
-from aiogram.enums import ChatAction
 from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.context import FSMContext
@@ -34,7 +33,8 @@ from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
 from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.base import bot_send_msg, is_user_has_access, process_fin_table, send_or_edit
+from utils.base import bot_send_msg, send_or_edit
+from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 
 
@@ -128,52 +128,21 @@ async def send_next_news(call: types.CallbackQuery, callback_data: NextNewsCallb
         )
 
 
-async def show_client_fin_table(message: types.Message, s_id: int, msg_text: str, ap_obj: ArticleProcess) -> bool:
-    """
-    Вывод таблицы с финансовыми показателями в виде фотокарточки
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param s_id: ID клиента или комоды
-    :param msg_text: Текст сообщения
-    :param ap_obj: экземпляр класса ArticleProcess
-    return значение об успешности создания таблицы
-    """
-    logger.info(f'НАЧАЛО Вывода таблицы с финансовыми показателями в виде фотокарточки для клиента {s_id}')
-    client_fin_tables = await ap_obj.get_client_fin_indicators(s_id)
-    client_name = msg_text.strip().lower()
-    if not client_fin_tables.empty:
-        await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
-
-        # Создание и отправка таблиц
-        await process_fin_table(message, client_name, 'Обзор', client_fin_tables['review_table'][0], logger)
-        await process_fin_table(message, client_name, 'P&L', client_fin_tables['pl_table'][0], logger)
-        await process_fin_table(message, client_name, 'Баланс', client_fin_tables['balance_table'][0], logger)
-        await process_fin_table(message, client_name, 'Денежный поток', client_fin_tables['money_table'][0], logger)
-
-        return True  # Создание таблицы успешно
-    logger.info(f'Не удалось найти таблицу финансовых показателей для клиента: {client_name}')
-    return False
-
-
 @router.message(Command('newsletter'))
+@has_access_to_feature(enums.FeatureType.analytics_menu)
 async def show_newsletter_buttons(message: types.Message) -> None:
     """Отображает кнопки с доступными рассылками"""
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
+    newsletter_dict = dt.Newsletter.get_newsletter_dict()  # {тип рассылки: заголовок рассылки}
+    callback_func = 'send_newsletter_by_button'  # функция по отображению рассылки
 
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        newsletter_dict = dt.Newsletter.get_newsletter_dict()  # {тип рассылки: заголовок рассылки}
-        callback_func = 'send_newsletter_by_button'  # функция по отображению рассылки
+    keyboard = InlineKeyboardBuilder()
+    for type_, title in newsletter_dict.items():
+        callback = f'{callback_func}:{type_}'
+        keyboard.row(types.InlineKeyboardButton(text=title, callback_data=callback))
 
-        keyboard = InlineKeyboardBuilder()
-        for type_, title in newsletter_dict.items():
-            callback = f'{callback_func}:{type_}'
-            keyboard.row(types.InlineKeyboardButton(text=title, callback_data=callback))
-
-        await message.answer('Какую информацию вы хотите получить?', reply_markup=keyboard.as_markup())
-
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    await message.answer('Какую информацию вы хотите получить?', reply_markup=keyboard.as_markup())
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(F.data.startswith('send_newsletter_by_button'))
@@ -202,16 +171,24 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
-async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
+@has_access_to_feature(enums.FeatureType.news)
+async def send_nearest_subjects(message: types.Message, user_msg: str, features: dict[str, bool]) -> None:
     """Отправляет пользователю близкие к его запросу названия clients или commodities"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
     fuzzy_searcher = FuzzyAlternativeNames()
-    nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
 
-    buttons = [
-        [types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)],
-        [types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)],
-    ]
+    if features.get(enums.FeatureType.company_menu):
+        nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(user_msg)
+    else:
+        nearest_subjects = await fuzzy_searcher.find_nearest_to_subject(
+            user_msg,
+            subject_types=[models.CommodityAlternative, models.IndustryAlternative]
+        )
+
+    buttons = [[types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)], ]
+    if features.get(enums.FeatureType.knowledgebase):
+        buttons.append([types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)])
+
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
 
@@ -234,6 +211,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str) -> None:
     )
 
 
+@has_access_to_feature(feature=enums.FeatureType.analytics_menu, is_need_answer=False)
 async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: ArticleProcess) -> None:
     """
     Отправляет сообщение с ссылкой на invaigator клиента
@@ -253,6 +231,7 @@ async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: 
         logger.error(f'ERROR *{message.chat.id}* {message.text} - {e}')
 
 
+@has_access_to_feature(feature=enums.FeatureType.news, is_need_answer=False)
 async def send_news(message: types.Message, user_msg: str, full_name: str) -> bool:
     """Отправка новостей по клиенту/сырьевому товару/отрасли"""
     chat_id = message.chat.id
@@ -363,6 +342,7 @@ async def get_industry_news(callback_query: types.CallbackQuery, callback_data: 
     await utils.base.send_full_copy_of_message(callback_query)
 
 
+@has_access_to_feature(feature=enums.FeatureType.analytics_menu, is_need_answer=False)
 async def is_eco_in_message(
         message: types.Message,
         user_msg: str,
@@ -386,7 +366,13 @@ async def is_eco_in_message(
 
 
 @router.message(F.content_type.in_({'voice', 'text'}))
-async def find_news(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+@has_access_to_feature(enums.FeatureType.common)
+async def process_user_message(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        features: dict[str, bool]
+) -> None:
     """Обработка пользовательского сообщения"""
     chat_id, full_name = message.chat.id, message.from_user.full_name
 
@@ -395,44 +381,40 @@ async def find_news(message: types.Message, state: FSMContext, session: AsyncSes
     else:
         user_msg = message.text
 
-    if await is_user_has_access(message.from_user.model_dump_json()):
-        if (
-                await is_client_in_message(message, user_msg) or
-                await is_stakeholder_in_message(message, user_msg, state, session) or
-                await is_eco_in_message(message, user_msg) or
-                await is_commodity_in_message(message, user_msg)
-        ):
-            return
+    if (
+            await is_client_in_message(message, user_msg) or
+            await is_stakeholder_in_message(message, user_msg, state, session) or
+            await is_eco_in_message(message, user_msg) or
+            await is_commodity_in_message(message, user_msg)
+    ):
+        return
 
-        return_ans = await send_news(message, user_msg, full_name)
+    return_ans = await send_news(message, user_msg, full_name)
 
-        if return_ans:
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил таблицу фин показателей')
-        else:
-            aliases_dict = {
-                **{alias: (common.help_handler, {'state': state, 'user_msg': user_msg}) for alias in aliases.help_aliases},
-                **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
-                **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
-                **{alias: (quotes.bonds_info_command, {}) for alias in aliases.bonds_aliases},
-                **{alias: (quotes.economy_info_command, {}) for alias in aliases.eco_aliases},
-                **{alias: (quotes.metal_info_command, {}) for alias in aliases.metal_aliases},
-                **{alias: (quotes.exchange_info_command, {}) for alias in aliases.exchange_aliases},
-                **{alias: (analytics_sell_side.data_mart_body, {}) for alias in aliases.view_aliases},
-            }
-            message_text = user_msg.lower().strip()
-            function_to_call, kwargs = aliases_dict.get(message_text, (None, None))
-            if function_to_call:
-                await function_to_call(message, **kwargs)
-            else:
-                await state.set_state(rag.RagState.rag_query)
-                await state.update_data(rag_query=user_msg)
-                await send_nearest_subjects(message, user_msg)
-
+    if return_ans:
+        user_logger.info(f'*{chat_id}* {full_name} - {user_msg} : получил новости')
     else:
-        await message.answer('Неавторизованный пользователь. Отказано в доступе.', protect_content=texts_manager.PROTECT_CONTENT)
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+        aliases_dict = {
+            **{alias: (common.help_handler, {'state': state, 'user_msg': user_msg}) for alias in aliases.help_aliases},
+            **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
+            **{alias: (common.open_meeting_app, {}) for alias in aliases.web_app_aliases},
+            **{alias: (quotes.bonds_info_command, {}) for alias in aliases.bonds_aliases},
+            **{alias: (quotes.economy_info_command, {}) for alias in aliases.eco_aliases},
+            **{alias: (quotes.metal_info_command, {}) for alias in aliases.metal_aliases},
+            **{alias: (quotes.exchange_info_command, {}) for alias in aliases.exchange_aliases},
+            **{alias: (analytics_sell_side.data_mart_body, {}) for alias in aliases.view_aliases},
+        }
+        message_text = user_msg.lower().strip()
+        function_to_call, kwargs = aliases_dict.get(message_text, (None, None))
+        if function_to_call:
+            await function_to_call(message, **kwargs)
+        else:
+            await state.set_state(rag.RagState.rag_query)
+            await state.update_data(rag_query=user_msg)
+            await send_nearest_subjects(message, user_msg, features)
 
 
+@has_access_to_feature(feature=enums.FeatureType.company_menu, is_need_answer=False)
 async def is_stakeholder_in_message(
         message: types.Message,
         user_msg: str,
@@ -475,6 +457,7 @@ async def is_stakeholder_in_message(
     return True
 
 
+@has_access_to_feature(feature=enums.FeatureType.news, is_need_answer=False)
 async def is_commodity_in_message(
         message: types.Message,
         user_msg: str,

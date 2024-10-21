@@ -49,7 +49,7 @@ async def get_client_financial_indicators(
             logger,
         )
     else:
-        msg_text = f'По клиенту {client["name"]} отсутствуют финансовые показатели'
+        msg_text = f'По компании {client["name"]} отсутствуют финансовые показатели'
         await callback_query.message.answer(msg_text, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 

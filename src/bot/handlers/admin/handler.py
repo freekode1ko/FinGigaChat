@@ -1,5 +1,4 @@
 """Файл с админскими хендлерами"""
-import json
 from typing import Union
 
 import pandas as pd
@@ -14,6 +13,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import keyboards.admin.constructors as keyboards
 from configs import config
 from constants.admin import BACK_TO_DELETE_NEWSLETTER_MSG_MENU
+from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.database import engine
 from db.message import add_all, delete_messages, get_messages_by_type
@@ -22,7 +22,8 @@ from keyboards.admin.callbacks import ApproveDeleteMessageByType, DeleteMessageB
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcessAdmin
 from module.model_pipe import summarization_by_chatgpt
-from utils.base import file_cleaner, is_admin_user, is_user_has_access, send_msg_to
+from utils.base import file_cleaner, send_msg_to
+from utils.decorators import has_access_to_feature
 from utils.newsletter import subscriptions_newsletter
 
 TG_DELETE_MESSAGE_IDS_LEN_LIMIT = 100
@@ -41,6 +42,7 @@ class AdminStates(StatesGroup):
 
 
 @router.message(Command('sendtoall'))
+@has_access_to_feature(FeatureType.admin)
 async def message_to_all(message: types.Message, state: FSMContext) -> None:
     """
     Входная точка для ручной рассылки новостей на всех пользователей
@@ -48,24 +50,13 @@ async def message_to_all(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
-    user_str = message.from_user.model_dump_json()
-    user = json.loads(message.from_user.model_dump_json())
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if await is_user_has_access(user_str):
-        if await is_admin_user(user):
-            await state.set_state(AdminStates.send_to_users)
-            await message.answer(
-                'Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
-                'или, если передумали, напишите слово "Отмена".'
-            )
-            user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-        else:
-            await message.answer('Недостаточно прав для этой команды!')
-            user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
-    else:
-        await message.answer('Неавторизованный пользователь')
-        user_logger.info(f'*{chat_id}* Неавторизованный пользователь {full_name} - {user_msg}')
+    await state.set_state(AdminStates.send_to_users)
+    await message.answer(
+        'Сформируйте сообщение для всех пользователей в следующем своем сообщении\n'
+        'или, если передумали, напишите слово "Отмена".'
+    )
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(AdminStates.send_to_users, F.content_type.in_({'text', 'document', 'photo'}))
@@ -126,6 +117,7 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
 
 
 @router.message(Command('admin_help'))
+@has_access_to_feature(FeatureType.admin)
 async def admin_help(message: types.Message) -> None:
     """
     Вывод в чат подсказки по командам для администратора
@@ -133,28 +125,19 @@ async def admin_help(message: types.Message) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await is_admin_user(user)
-
-    if admin_flag:
-        # TODO: '<b>/analyse_bad_article</b> - показать возможные нерелевантные новости\n'
-        help_msg = (
-            '<b>/show_article</b> - показать детальную информацию о новости\n'
-            '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
-            '<b>/delete_article</b> - удалить новость из базы данных\n'
-            '<b>/sendtoall</b> - отправить сообщение на всех пользователей'
-        )
-        await message.answer(help_msg, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        await message.answer(
-            'У Вас недостаточно прав для использования данной команды.',
-            protect_content=texts_manager.PROTECT_CONTENT,
-        )
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+    help_msg = (
+        '<b>/show_article</b> - показать детальную информацию о новости\n'
+        '<b>/change_summary</b> - поменять саммари новости с помощью LLM\n'
+        '<b>/delete_article</b> - удалить новость из базы данных\n'
+        '<b>/sendtoall</b> - отправить сообщение на всех пользователей\n'
+        '<b>/delete_newsletter_messages</b> - удалить разосланные сообщения'
+    )
+    await message.answer(help_msg, protect_content=texts_manager.PROTECT_CONTENT, parse_mode='HTML')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(Command('show_article'))
+@has_access_to_feature(FeatureType.admin)
 async def show_article(message: types.Message, state: FSMContext) -> None:
     """
     Вывод в чат новости по ссылке
@@ -163,26 +146,16 @@ async def show_article(message: types.Message, state: FSMContext) -> None:
     :param state: Объект, который хранит состояние FSM для пользователя
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-    user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await is_admin_user(user)
-
-    if admin_flag:
-        ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
-        await state.set_state(AdminStates.link)
-        await message.bot.send_message(
-            chat_id=message.chat.id,
-            text=ask_link,
-            parse_mode='HTML',
-            protect_content=texts_manager.PROTECT_CONTENT,
-            disable_web_page_preview=True,
-        )
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        await message.answer(
-            'У Вас недостаточно прав для использования данной команды.',
-            protect_content=texts_manager.PROTECT_CONTENT,
-        )
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+    ask_link = 'Вставьте ссылку на новость, которую хотите получить.'
+    await state.set_state(AdminStates.link)
+    await message.bot.send_message(
+        chat_id=message.chat.id,
+        text=ask_link,
+        parse_mode='HTML',
+        protect_content=texts_manager.PROTECT_CONTENT,
+        disable_web_page_preview=True,
+    )
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(AdminStates.link)
@@ -225,6 +198,7 @@ async def continue_show_article(message: types.Message, state: FSMContext) -> No
 
 
 @router.message(Command('change_summary'))
+@has_access_to_feature(FeatureType.admin)
 async def change_summary(message: types.Message, state: FSMContext) -> None:
     """
     Получение ссылки на новость для изменения ее короткой версии
@@ -239,26 +213,16 @@ async def change_summary(message: types.Message, state: FSMContext) -> None:
         user_logger.critical('Нет токена доступа к chatGPT')
         return
 
-    user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await is_admin_user(user)
-
-    if admin_flag:
-        ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
-        await state.set_state(AdminStates.link_change_summary)
-        await message.bot.send_message(
-            chat_id=message.chat.id,
-            text=ask_link,
-            parse_mode='HTML',
-            protect_content=texts_manager.PROTECT_CONTENT,
-            disable_web_page_preview=True,
-        )
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        await message.answer(
-            'У Вас недостаточно прав для использования данной команды.',
-            protect_content=texts_manager.PROTECT_CONTENT,
-        )
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+    ask_link = 'Вставьте ссылку на новость, которую хотите изменить.'
+    await state.set_state(AdminStates.link_change_summary)
+    await message.bot.send_message(
+        chat_id=message.chat.id,
+        text=ask_link,
+        parse_mode='HTML',
+        protect_content=texts_manager.PROTECT_CONTENT,
+        disable_web_page_preview=True,
+    )
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(AdminStates.link_change_summary)
@@ -321,6 +285,7 @@ async def continue_change_summary(message: types.Message, state: FSMContext) -> 
 
 
 @router.message(Command('delete_article'))
+@has_access_to_feature(FeatureType.admin)
 async def delete_article(message: types.Message, state: FSMContext) -> None:
     """
     Получение ссылки на новость от пользователя для ее удаления (снижения значимости)
@@ -328,18 +293,11 @@ async def delete_article(message: types.Message, state: FSMContext) -> None:
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param state: Объект, который хранит состояние FSM для пользователя
     """
-    user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await is_admin_user(user)
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if admin_flag:
-        ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
-        await state.set_state(AdminStates.link_to_delete)
-        await message.answer(text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.')
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+    ask_link = 'Вставьте ссылку на новость, которую хотите удалить.'
+    await state.set_state(AdminStates.link_to_delete)
+    await message.answer(text=ask_link, parse_mode='HTML', disable_web_page_preview=True)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.message(AdminStates.link_to_delete)
@@ -415,14 +373,11 @@ async def end_del_article(callback_query: types.CallbackQuery) -> None:
 
 
 @router.message(Command('dailynews'))
+@has_access_to_feature(FeatureType.admin)
 async def dailynews(message: types.Message) -> None:
     """Рассылка по команде dailynews"""
-    if await is_admin_user(message.from_user.model_dump_json()):
-        await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
-        user_logger.warning('Завершена рассылка от админа')
-    else:
-        chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-        user_logger.critical(f'*{chat_id}* {full_name} - {user_msg}. МЕТОД НЕ РАЗРЕШЕН!')
+    await subscriptions_newsletter(message.bot, None, client_hours=20, commodity_hours=20)
+    user_logger.warning(f'*{message.from_user.id}* : завершена рассылка от админа')
 
 
 async def delete_newsletter_menu(message: Union[types.CallbackQuery, types.Message]) -> None:
@@ -444,22 +399,16 @@ async def delete_newsletter_menu(message: Union[types.CallbackQuery, types.Messa
 
 
 @router.message(Command('delete_newsletter_messages'))
+@has_access_to_feature(FeatureType.admin)
 async def delete_newsletter_messages(message: types.Message) -> None:
     """
     Формирует меню для выбора типа сообщения, по которому будут удалены все сообщения с этим типом младше 48 часов
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    user = json.loads(message.from_user.model_dump_json())
-    admin_flag = await is_admin_user(user)
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
-
-    if admin_flag:
-        await delete_newsletter_menu(message)
-        user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
-    else:
-        await message.answer('У Вас недостаточно прав для использования данной команды.')
-        user_logger.warning(f'*{chat_id}* {full_name} - {user_msg} : недостаточно прав для команды')
+    await delete_newsletter_menu(message)
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @router.callback_query(ApproveDeleteMessageByType.filter())

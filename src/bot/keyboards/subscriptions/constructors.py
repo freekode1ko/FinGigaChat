@@ -69,10 +69,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
     match menu_type:
         case callbacks.SubsMenusEnum.my_subscriptions:
             buttons = {
-                'Подписки на клиентов': client_callback_factory.GetUserSubs().pack(),
-                'Подписки на сырьевые товары': commodity_callback_factory.GetUserSubs().pack(),
-                'Подписки на отрасли': industry_callback_factory.GetUserSubs().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                'Подписки на новости по компаниям': client_callback_factory.GetUserSubs().pack(),
+                'Подписки на новости по сырью': commodity_callback_factory.GetUserSubs().pack(),
+                'Подписки на отраслевые новости': industry_callback_factory.GetUserSubs().pack(),
+                'Подписки на новости из телеграм-каналов': telegram_callback_factory.TelegramSubsMenuData(
                     menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
                     action=callbacks.SubsMenusEnum.my_subscriptions,
                 ).pack(),
@@ -82,10 +82,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
             }
         case callbacks.SubsMenusEnum.change_subscriptions:
             buttons = {
-                'Подписки на клиентов': client_callback_factory.ChangeUserSubs().pack(),
-                'Подписки на сырьевые товары': commodity_callback_factory.ChangeUserSubs().pack(),
-                'Подписки на отрасли': industry_callback_factory.SelectSubs().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                'Подписки на новости по компаниям': client_callback_factory.ChangeUserSubs().pack(),
+                'Подписки на новости по сырью': commodity_callback_factory.ChangeUserSubs().pack(),
+                'Подписки на отраслевые новости': industry_callback_factory.SelectSubs().pack(),
+                'Подписки на новости из телеграм-каналов': telegram_callback_factory.TelegramSubsMenuData(
                     menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
                     action=callbacks.SubsMenusEnum.change_subscriptions,
                 ).pack(),
@@ -93,10 +93,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
             }
         case callbacks.SubsMenusEnum.delete_subscriptions:
             buttons = {
-                'Подписки на клиентов': client_callback_factory.DeleteUserSub().pack(),
-                'Подписки на сырьевые товары': commodity_callback_factory.DeleteUserSub().pack(),
-                'Подписки на отрасли': industry_callback_factory.DeleteUserSub().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                'Подписки на новости по компаниям': client_callback_factory.DeleteUserSub().pack(),
+                'Подписки на новости по сырью': commodity_callback_factory.DeleteUserSub().pack(),
+                'Подписки на отраслевые новости': industry_callback_factory.DeleteUserSub().pack(),
+                'Подписки на новости из телеграм-каналов': telegram_callback_factory.TelegramSubsMenuData(
                     menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
                     action=callbacks.SubsMenusEnum.delete_subscriptions,
                 ).pack(),
@@ -106,10 +106,10 @@ def get_subscriptions_menu_kb(menu_type: callbacks.SubsMenusEnum) -> InlineKeybo
             }
         case callbacks.SubsMenusEnum.delete_all_subscriptions:
             buttons = {
-                'Подписки на клиентов': client_callback_factory.PrepareDeleteAllSubs().pack(),
-                'Подписки на сырьевые товары': commodity_callback_factory.PrepareDeleteAllSubs().pack(),
-                'Подписки на отрасли': industry_callback_factory.PrepareDeleteAllSubs().pack(),
-                'Подписки на телеграм-каналы': telegram_callback_factory.TelegramSubsMenuData(
+                'Подписки на новости по компаниям': client_callback_factory.PrepareDeleteAllSubs().pack(),
+                'Подписки на новости по сырью': commodity_callback_factory.PrepareDeleteAllSubs().pack(),
+                'Подписки на отраслевые новости': industry_callback_factory.PrepareDeleteAllSubs().pack(),
+                'Подписки на новости из телеграм-каналов': telegram_callback_factory.TelegramSubsMenuData(
                     menu=telegram_callback_factory.TelegramSubsMenusEnum.main_menu,
                     action=callbacks.SubsMenusEnum.delete_all_subscriptions,
                 ).pack(),
