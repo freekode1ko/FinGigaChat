@@ -151,7 +151,7 @@ class WebRetriever:
 
     async def _aanswer_chain(self,
                              question: str,
-                             n_retrieved: int = N_NARROW_ANSWER) -> tuple[str, list[str]]:
+                             contexts: list[dict]) -> tuple[str, list[str]]:
         """
         Цепочка с продвинутым форматированием источников.
 
@@ -159,20 +159,16 @@ class WebRetriever:
         :param: n_retrieved. Количество документов, которые будут использоваться для формирования ответа.
         :return: Ответ и массив ссылок, которые были использованы в ответе.
         """
-        # небольшие таймауты, чтобы не ловить rate limit от duckduck
-        await asyncio.sleep((N_WIDE_ANSWER - n_retrieved) // STEP)
-        # TODO: добавить еще один интернет движок запасной, потому что дак дак может отваливаться
         try:
-            contexts = self.search_engine.results(question, max_results=n_retrieved)
+            prepared_context, link_dict = await self._prepare_context_duckduck(contexts)
+            raw_answer = await self._aget_answer_giga(QNA_WITH_REFS_SYSTEM, QNA_WITH_REFS_USER.format(
+                question=question, context=prepared_context))
+            answer = self._post_processing_duckduck(raw_answer=raw_answer, link_dict=link_dict)
+            answer = self._change_answer_to_default(answer)
+            return answer, list(link_dict.values())
         except Exception as e:
-            self.logger.error(f"Не получены ответы от duckduck по причине: {e}")
-            return DEFAULT_ANSWER, []
-        prepared_context, link_dict = await self._prepare_context_duckduck(contexts)
-        raw_answer = await self._aget_answer_giga(QNA_WITH_REFS_SYSTEM, QNA_WITH_REFS_USER.format(
-            question=question, context=prepared_context))
-        answer = self._post_processing_duckduck(raw_answer=raw_answer, link_dict=link_dict)
-        answer = self._change_answer_to_default(answer)
-        return answer, list(link_dict.values())
+            self.logger.error(f'Не был сформирован ответ по причине: {e}')
+            return DEFAULT_ANSWER, list()
 
     async def aget_answer(self, query: str, output_format: str = 'default', debug: bool = False) -> list[str]:
         """
@@ -183,12 +179,18 @@ class WebRetriever:
         :param: debug. Если True, то возвращает и обычный и отформатированный ответ одновременно.
         :return: Самый широкий ответ из нескольких цепочек.
         """
+        # TODO: добавить еще один интернет движок запасной, потому что дак дак может отваливаться
         self.logger.info(f'Старт обработки запроса {query}.')
+        try:
+            contexts = self.search_engine.results(query, max_results=N_WIDE_ANSWER)
+        except Exception as e:
+            self.logger.error(f"Не получены ответы от duckduck по причине: {e}")
+            return [DEFAULT_ANSWER]
         self.logger.info('Формирование ответов с разным объемом контекста.')
         tasks = [
-            self._aanswer_chain(query, N_WIDE_ANSWER),
-            self._aanswer_chain(query, N_NORMAL_ANSWER),
-            self._aanswer_chain(query, N_NARROW_ANSWER)
+            self._aanswer_chain(query, contexts),
+            self._aanswer_chain(query, contexts[:N_NORMAL_ANSWER]),
+            self._aanswer_chain(query, contexts[:N_NARROW_ANSWER])
         ]
         answers_list = await asyncio.gather(*tasks, return_exceptions=True)
         self.logger.info('Получены ответы. Выбор лучшего из них.')

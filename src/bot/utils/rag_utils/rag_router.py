@@ -161,15 +161,15 @@ class RAGRouter:
         banker_json, research_json, web_json = await \
             asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
         banker, research, web = banker_json['body'], research_json['body'], web_json['body']
-        logger.info('Тексты до объединения ответов:')
-        logger.info('Ответ новостного рага:')
-        logger.info(f'{banker}')
-        logger.info('Ответ веб ретривера:')
-        logger.info(f'{web}')
-        logger.info('Ответ рага по ресерчу:')
-        logger.info(f'{research}')
+        logger.debug('Тексты до объединения ответов:')
+        logger.debug('Ответ новостного рага:')
+        logger.debug(f'{banker}')
+        logger.debug('Ответ веб ретривера:')
+        logger.debug(f'{web}')
+        logger.debug('Ответ рага по ресерчу:')
+        logger.debug(f'{research}')
         banker = extract_summarization(banker, web)
-        logger.info(f'{banker}')
+        logger.debug(f'{banker}')
         response = self.format_combination_answer(banker, research)
         metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
         return {'body': response, 'metadata': metadata}

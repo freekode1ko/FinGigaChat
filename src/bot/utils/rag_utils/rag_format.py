@@ -26,7 +26,7 @@ def filter_endings(text: str) -> str:
     """
     updated_str = re.sub(ENDING_REGEXP, '', text) if re.search(ENDING_REGEXP, text[:BEGINNING_LEN]) else text
     if updated_str:
-        return updated_str.capitalize()
+        return updated_str[0].upper() + updated_str[1:]
     return ''
 
 
@@ -168,15 +168,12 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
     # оставляем только смысловые параграфы
     chunks1 = list(filter(lambda x: not contains_bad_pattern(x.lower()), news_answer.split('\n\n')))
     chunks2 = list(filter(lambda x: not contains_bad_pattern(x.lower()), duckduck_answer.split('\n\n')))
-    n_chunks1 = len(chunks1)
-    n_chunks2 = len(chunks2)
     # в chunks1 оставляем тот, где больше число параграфов
-    if n_chunks1 < n_chunks2:
+    if len(chunks1) < len(chunks2):
         chunks1, chunks2 = chunks2, chunks1
-        n_chunks1, n_chunks2 = n_chunks2, n_chunks1
     ans = copy(chunks1)
     # если второй оказался пустым - то отвечаем первым
-    if n_chunks2 == 0:
+    if len(chunks2) == 0:
         return '\n\n'.join(ans)
     # Добираем параграфы из второго ответа, которые непохожи на параграфы из первого ответа
     all_batch = chunks1 + chunks2
@@ -187,9 +184,8 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
     vectorizer = TfidfVectorizer()
     texts_vectorized = vectorizer.fit_transform(texts)
     scores_tf_idf = texts_vectorized @ texts_vectorized.T
-    for i, candidate in enumerate(chunks2):
+    for index, candidate in enumerate(chunks2, len(chunks1)):
         flag_unique = True
-        index = i + n_chunks1
         # если параграф состоит только из ссылок, то пропускаем его
         if len(texts[index]) == 0:
             continue
