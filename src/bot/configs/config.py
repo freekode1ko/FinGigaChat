@@ -15,7 +15,7 @@ _env_value = env.str('ENV', default='local')
 ENV: Environment = Environment.from_str(_env_value)
 
 # config.py должен лежать в корне для правильного вычисления путей ко всем ассетам
-PROJECT_DIR = pathlib.Path(__file__).parent.parent # noqa
+PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 
 DATA_DIR = PROJECT_DIR / 'data'
 STATIC_ASSETS_PATH = DATA_DIR / 'assets'
