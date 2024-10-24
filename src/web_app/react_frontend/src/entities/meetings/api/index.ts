@@ -24,7 +24,7 @@ const meetingsApi = baseApi.injectEndpoints({
     }),
     createMeeting: build.mutation<string, MeetingRequest>({
       query: (meeting) => ({
-        url: API_ENDPOINTS.meetings,
+        url: `${API_ENDPOINTS.meetings}/`,
         method: 'POST',
         body: meeting,
       }),

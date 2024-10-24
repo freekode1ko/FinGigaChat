@@ -14,7 +14,7 @@ async def get_quote_day_day_param(quote: models.Quotes, session: AsyncSession) -
     quote_data = stmt.scalars().fetchall()
     if not quote_data:
         return 0
-    return (quote_data[1].value - quote_data[0].value) / quote_data[0].value * 100
+    return (quote_data[0].value - quote_data[1].value) / quote_data[1].value * 100
 
 
 async def get_quote_last(quote: models.Quotes, session: AsyncSession) -> float | None:
