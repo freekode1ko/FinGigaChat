@@ -8,13 +8,17 @@ from typing import Any
 from aiohttp import ClientError, ClientSession
 
 from configs import config, prompts
+from constants import enums
 from constants.constants import DEFAULT_RAG_ANSWER
 from constants.enums import HTTPMethod, RetrieverType
 from constants.texts import texts_manager
 from db.api.research import research_db
+from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
-from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient
+from utils.base import is_has_access_to_feature
+from utils.rag_utils.rag_format import extract_summarization
+from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
 
@@ -24,17 +28,17 @@ class RAGRouter:
 
     RAG_BAD_ANSWERS = (DEFAULT_RAG_ANSWER, texts_manager.RAG_ERROR_ANSWER)
 
-    def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
+    def __init__(self, user_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
         """
         Инициализация экземпляра RAGRouter.
 
-        :param chat_id:         Id Telegram чата с пользователем.
+        :param user_id:         Id Telegram пользователя.
         :param full_name:       Полное имя пользователя в Telegram.
         :param user_query:      Запрос пользователя.
         :param rephrase_query:  Перефразированный запрос пользователя.
         :param use_rephrase:    Нужно ли использовать перефразированный запрос пользователя для получения ответа.
         """
-        self.chat_id = chat_id
+        self.user_id = user_id
         self.full_name = full_name
         self.user_query = user_query
         self.rephrase_query = rephrase_query
@@ -101,10 +105,18 @@ class RAGRouter:
 
     async def rag_qa_research(self) -> dict[str, Any]:
         """Создание сессии для API по ВОС CIB Research и получение ответа."""
+        async with async_session() as ses:
+            if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.rag_research):
+                return {'body': DEFAULT_RAG_ANSWER}
         session = RagQaResearchClient().session
         req_kwargs = deepcopy(self.req_kwargs)
         req_kwargs['json']['with_metadata'] = True
         return await self._request_to_rag_api(session, **req_kwargs)
+
+    async def rag_web(self) -> dict[str, Any]:
+        """Создание сессии для API по ВОС web_retriever и получение ответа"""
+        session = RagWebClient().session
+        return await self._request_to_rag_api(session, **self.req_kwargs)
 
     async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
         """
@@ -118,11 +130,11 @@ class RAGRouter:
             async with session.request(method=HTTPMethod.POST, **kwargs) as rag_response:
                 rag_response_dict = await rag_response.json()
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
-                             (self.chat_id, self.full_name, self.query, rag_response_dict))
+                             (self.user_id, self.full_name, self.query, rag_response_dict))
         except ClientError as e:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
-                                 (self.chat_id, self.full_name, self.query, e))
+                                 (self.user_id, self.full_name, self.query, e))
         else:
             return rag_response_dict
         return {'body': texts_manager.RAG_ERROR_ANSWER}
@@ -135,19 +147,29 @@ class RAGRouter:
         """
         try:
             giga_answer = await giga.aget_giga_answer(text=self.query)
-            user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
+            user_logger.info(f'*{self.user_id}* {self.full_name} - "{self.query}" : '
                              f'На запрос GigaChat ответил: "{giga_answer}"')
         except Exception as e:
             giga_answer = texts_manager.RAG_ERROR_ANSWER
             logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
-            user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
+            user_logger.critical(f'*{self.user_id}* {self.full_name} - "{self.query}" : '
                                  f'GigaChat не сформировал ответ по причине: {e}"')
         return giga_answer
 
     async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker_json, research_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
-        banker, research = banker_json['body'], research_json['body']
+        banker_json, research_json, web_json = await \
+            asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
+        banker, research, web = banker_json['body'], research_json['body'], web_json['body']
+        logger.debug('Тексты до объединения ответов:')
+        logger.debug('Ответ новостного рага:')
+        logger.debug(f'{banker}')
+        logger.debug('Ответ веб ретривера:')
+        logger.debug(f'{web}')
+        logger.debug('Ответ рага по ресерчу:')
+        logger.debug(f'{research}')
+        banker = extract_summarization(banker, web)
+        logger.debug(f'{banker}')
         response = self.format_combination_answer(banker, research)
         metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
         return {'body': response, 'metadata': metadata}

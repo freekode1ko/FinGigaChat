@@ -598,6 +598,23 @@ async def get_users_access_features(user: models.RegisteredUser, session: AsyncS
     return [f.name for f in role.features]
 
 
+async def is_has_access_to_feature(session: AsyncSession, user_id: int, feature: str) -> bool:
+    """
+    Есть ли доступ у пользователя к фиче?
+
+    :param session: Сессия БД.
+    :param user_id: ID пользователя.
+    :param feature: Название функциональности, к которой необходимо проверить доступ.
+    :returns: True - если есть доступ, иначе - False
+    """
+    user = await get_user(session, user_id)
+    if not user:
+        return False
+
+    access_features = await get_users_access_features(user, session)
+    return feature in access_features
+
+
 async def has_access_to_feature_logic(
         feature: str,
         is_need_answer: bool,
