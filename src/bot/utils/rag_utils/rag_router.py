@@ -17,7 +17,8 @@ from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.base import is_has_access_to_feature
-from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient
+from utils.rag_utils.rag_format import extract_summarization
+from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
 
@@ -112,6 +113,11 @@ class RAGRouter:
         req_kwargs['json']['with_metadata'] = True
         return await self._request_to_rag_api(session, **req_kwargs)
 
+    async def rag_web(self) -> dict[str, Any]:
+        """Создание сессии для API по ВОС web_retriever и получение ответа"""
+        session = RagWebClient().session
+        return await self._request_to_rag_api(session, **self.req_kwargs)
+
     async def _request_to_rag_api(self, session: ClientSession, **kwargs) -> dict[str, Any]:
         """
         Отправляет запрос к RAG API И формирует ответ.
@@ -152,8 +158,18 @@ class RAGRouter:
 
     async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker_json, research_json = await asyncio.gather(self.rag_qa_banker(), self.rag_qa_research())
-        banker, research = banker_json['body'], research_json['body']
+        banker_json, research_json, web_json = await \
+            asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
+        banker, research, web = banker_json['body'], research_json['body'], web_json['body']
+        logger.debug('Тексты до объединения ответов:')
+        logger.debug('Ответ новостного рага:')
+        logger.debug(f'{banker}')
+        logger.debug('Ответ веб ретривера:')
+        logger.debug(f'{web}')
+        logger.debug('Ответ рага по ресерчу:')
+        logger.debug(f'{research}')
+        banker = extract_summarization(banker, web)
+        logger.debug(f'{banker}')
         response = self.format_combination_answer(banker, research)
         metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
         return {'body': response, 'metadata': metadata}
