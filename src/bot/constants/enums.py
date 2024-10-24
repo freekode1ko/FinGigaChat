@@ -193,3 +193,4 @@ class FeatureType(str, Enum):
     admin = 'admin'
 
     rag_research = 'rag_research'
+    web_retriever = 'web_retriever'

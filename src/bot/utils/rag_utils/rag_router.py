@@ -115,6 +115,9 @@ class RAGRouter:
 
     async def rag_web(self) -> dict[str, Any]:
         """Создание сессии для API по ВОС web_retriever и получение ответа"""
+        async with async_session() as ses:
+            if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.web_retriever):
+                return {'body': DEFAULT_RAG_ANSWER}
         session = RagWebClient().session
         return await self._request_to_rag_api(session, **self.req_kwargs)
 
