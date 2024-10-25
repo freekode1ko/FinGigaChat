@@ -2,6 +2,7 @@
 import pandas as pd
 
 from db.database import engine
+from constants.enums import LinksType
 
 
 def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str, str]:
@@ -116,3 +117,17 @@ def modify_commodity_rating_system_dict(commodity_rating_system_dict: list[dict]
     for group in commodity_rating_system_dict:
         group['key words'] = ','.join(f' {word.strip().lower()}' for word in group['key words'].split(','))
     return commodity_rating_system_dict
+
+
+def add_links_to_queue(subject_links: list[str], tg_links: list[str]) -> None:
+    """
+    Отправка только что сохраненных ссылок в таблицу article_online_pending_links_queue.
+
+    :param subject_links:   Ссылки на новости по объектам.
+    :param tg_links:        Ссылки на новости из тг каналов по отраслям
+    """
+    df = pd.concat([
+        pd.DataFrame({'type_of_link': LinksType.subject_link, 'link': subject_links}),
+        pd.DataFrame({'type_of_link': LinksType.tg_link, 'link': tg_links})
+    ], ignore_index=True)
+    df.to_sql('article_online_pending_links_queue', if_exists='append', index=False, con=engine)
