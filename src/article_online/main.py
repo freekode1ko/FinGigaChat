@@ -128,6 +128,8 @@ def regular_func() -> tuple[str, list, list]:
                     ap_obj_online.make_text_sum()
                     ap_obj_online.remove_html_tags()
                     tg_links = ap_obj_online.save_tg_tables()
+                else:
+                    logger.info('Телеграмм новостей в батче нет')
 
                 print('Окончание обработки новостей с помощью моделей')
                 logger.info('Окончание обработки новостей с помощью моделей')
