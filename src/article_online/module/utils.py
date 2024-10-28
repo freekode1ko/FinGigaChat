@@ -1,8 +1,8 @@
 """Доп функции для обработки новостей"""
 import pandas as pd
 
-from db.database import engine
 from constants.enums import LinksType
+from db.database import engine
 
 
 def get_alternative_names_pattern_commodity(alt_names: pd.DataFrame) -> dict[str, str]:
