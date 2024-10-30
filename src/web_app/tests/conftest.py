@@ -1,28 +1,27 @@
 import asyncio
 from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncConnection, async_sessionmaker
-from sqlalchemy.orm import sessionmaker
 
 from app import app
 from db.database import get_async_session
 from db.models import Base
+from tests.constants import MOCK_REG_CODE
 
-# client = TestClient(app)
-
-# SQLite database URL for testing
-DATABASE_TEST_URL = "postgresql://postgres:password@127.0.0.1:5555/test_db"
+# Database URL for testing
+DATABASE_TEST_URL = "postgresql://postgres:postgres@127.0.0.1:5555/test_db"
 
 
 @pytest.fixture(autouse=True)
 def env_setup(monkeypatch):
     monkeypatch.setenv("PSQL_ENGINE", DATABASE_TEST_URL)
 
-@pytest.fixture(scope="function")
+
+@pytest.fixture(scope='session')
 def event_loop(request) -> Generator:
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
@@ -36,15 +35,10 @@ async def _db_connection():
         echo=False,
         future=True,
     )
-
-    async with async_engine.connect() as conn:
+    async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        await conn.commit()
-        yield conn
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.commit()
-
+    yield async_engine
     await async_engine.dispose()
 
 
@@ -52,26 +46,42 @@ async def _db_connection():
 async def _async_session(
         _db_connection: AsyncConnection,
 ) -> AsyncGenerator[AsyncSession, None]:
-    session = sessionmaker(
+    session = async_sessionmaker(
         bind=_db_connection,
         class_=AsyncSession,
         expire_on_commit=False,
     )
-
     async with session() as s:
-        s.commit = s.flush
         yield s
-        await s.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
 async def _async_client(_async_session: AsyncSession):
     app.dependency_overrides[get_async_session] = lambda: _async_session
     async with AsyncClient(
-            app=app,
+            transport=ASGITransport(app=app),
             base_url='http://localhost:8000',
     ) as client:
         yield client
+
+
+@pytest.fixture
+def mock_redis_client():
+    client = AsyncMock()
+    client.get.return_value = MOCK_REG_CODE
+    client.setex.return_value = True
+    client.delete.return_value = True
+    return client
+
+
+@pytest.fixture
+def mock_smtp_send():
+    smtp_send = AsyncMock()
+    smtp_send.send_msg.return_value = True
+    return smtp_send
+
+
+
 
 # @pytest_asyncio.fixture(scope="function")
 # async def _async_client(_async_session: AsyncSession):

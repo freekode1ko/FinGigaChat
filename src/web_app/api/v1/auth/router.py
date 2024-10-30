@@ -1,6 +1,7 @@
 import re
 import random
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, HTTPException, Response, Depends
 from fastapi import status
 
@@ -9,6 +10,7 @@ import config
 from api.security import get_token, set_auth_cookie
 from api.v1.common_schemas import Error
 from constants import constants
+from db.database import get_async_session
 from db.user import is_new_user_email, get_user_id_by_email, get_user_by_id
 from db.redis import redis_client
 from utils.jwt import create_jwt_token, read_jwt_token
@@ -30,7 +32,7 @@ router = APIRouter(tags=['auth'])
             },
         }
 )
-async def login(data: AuthData):
+async def login(data: AuthData, session: AsyncSession = Depends(get_async_session)):
     """
     Аутентификация через EMail.
     Подходит для использования приложения вне Telegram.
@@ -38,12 +40,12 @@ async def login(data: AuthData):
     if not re.search(r'\w+@sber(bank)?.ru', data.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Введите корпоративную почту"
+            detail='Введите корпоративную почту'
         )
-    if await is_new_user_email(data.email):
+    if await is_new_user_email(session, data.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пожалуйста, сначала зарегистрируйтесь в боте"
+            detail='Пожалуйста, сначала зарегистрируйтесь в боте'
         )
     reg_code = str(random.randint(constants.REGISTRATION_CODE_MIN, constants.REGISTRATION_CODE_MAX))
     await redis_client.setex(
@@ -61,8 +63,10 @@ async def login(data: AuthData):
             config.MAIL_RU_LOGIN,
             data.email,
             constants.REGISTRATION_MAIL_TITLE,
-            # FIXME: texts_manager OR await redis_client.get('settings_REGISTRATION_EMAIL_TEXT'.format(code=reg_code))
-            f'Одноразовый код: {reg_code}',
+            (
+                await redis_client.get('settings_REGISTRATION_EMAIL_TEXT'.format(code=reg_code))
+                or f'Ваш одноразовый код для входа: {reg_code}'
+            ),
         )
     return "ok"
 
@@ -76,15 +80,19 @@ async def login(data: AuthData):
             },
         }
 )
-async def verify(data: AuthConfirmation, response: Response):
+async def verify(
+    data: AuthConfirmation,
+    response: Response,
+    session: AsyncSession = Depends(get_async_session),
+):
     """Подтверждение входа с помощью одноразового пароля."""
     reg_code = await redis_client.get(f"reg_code:{data.email}")
     if not reg_code or reg_code != data.reg_code:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Запросите код еще раз и повторите попытку"
+            detail='Запросите код еще раз и повторите попытку'
         )
-    user_id = await get_user_id_by_email(data.email)
+    user_id = await get_user_id_by_email(session, data.email)
     jwt_token = create_jwt_token(user_id, constants.JWT_TOKEN_EXPIRE)
     set_auth_cookie(response, jwt_token)
     await redis_client.delete(f"reg_code:{data.email}")
@@ -105,7 +113,7 @@ async def validate_telegram(data: TelegramData, response: Response):
     if not validate_telegram_data(data):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Некорректные данные пользователя"
+            detail='Некорректные данные пользователя'
         )
     jwt_token = create_jwt_token(user_id=data.id)
     set_auth_cookie(response, jwt_token)
@@ -122,7 +130,10 @@ async def validate_telegram(data: TelegramData, response: Response):
             },
         }
 )
-async def user_identity(token: str = Depends(get_token)):
+async def user_identity(
+    token: str = Depends(get_token),
+    session: AsyncSession = Depends(get_async_session)
+):
     """Получение текущего пользователя по JWT-токену."""
     try:
         user_id = read_jwt_token(token)
@@ -131,5 +142,5 @@ async def user_identity(token: str = Depends(get_token)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
         )
-    user = await get_user_by_id(user_id)
+    user = await get_user_by_id(session, user_id)
     return UserData.model_validate(user)

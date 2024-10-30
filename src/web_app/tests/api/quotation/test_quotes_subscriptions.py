@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 import sqlalchemy as sa
 from httpx import AsyncClient
@@ -37,12 +39,19 @@ async def test_get_user_list_subs_without_subs(
     )
     _async_session.add(section)
     await _async_session.flush()
-    _async_session.add(
-        models.Quotes(
-            name=(quote_name := 'test_quote'),
-            quotes_section_id=section.id
-        )
+    quote = models.Quotes(
+        name=(quote_name := 'test_quote'),
+        quotes_section_id=section.id
     )
+    _async_session.add(quote)
+    await _async_session.flush()
+    # Котировка должна быть с данными, иначе вернется пустой список
+    quote_value = models.QuotesValues(
+        quote_id=quote.id,
+        value=1,
+        date=datetime.datetime.now(),
+    )
+    _async_session.add(quote_value)
     await _async_session.commit()
 
     response = await _async_client.get(f'/api/v1/quotation/dashboard/{user_id}/subscriptions')
@@ -92,6 +101,12 @@ async def test_get_user_list_subs_with_subs(
     )
     _async_session.add(quote)
     await _async_session.flush()
+    quote_value = models.QuotesValues(
+        quote_id=quote.id,
+        value=1,
+        date=datetime.datetime.now(),
+    )
+    _async_session.add(quote_value)
     _async_session.add(
         models.UsersQuotesSubscriptions(
             user_id=user_id,
@@ -149,13 +164,26 @@ async def test_update_user_subs(
     )
     _async_session.add(quote1)
     await _async_session.flush()
+    quote_value = models.QuotesValues(
+        quote_id=quote1.id,
+        value=1,
+        date=datetime.datetime.now(),
+    )
+    _async_session.add(quote_value)
+
     quote2 = models.Quotes(
         name='test_quote2',
         quotes_section_id=section.id
     )
     _async_session.add(quote2)
-
     await _async_session.flush()
+    quote_value = models.QuotesValues(
+        quote_id=quote2.id,
+        value=1,
+        date=datetime.datetime.now(),
+    )
+    _async_session.add(quote_value)
+
     _async_session.add(
         models.UsersQuotesSubscriptions(
             user_id=user_id,
@@ -191,7 +219,3 @@ async def test_update_user_subs(
     )
     user_subs_list = stmt.scalars().fetchall()
     assert len(user_subs_list) == 2
-
-
-
-
