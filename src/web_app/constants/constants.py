@@ -3,7 +3,7 @@ import pathlib
 REGISTRATION_CODE_TTL = 60 * 5  # 5 минут
 REGISTRATION_CODE_MIN = 100_000
 REGISTRATION_CODE_MAX = 999_999
-REGISTRATION_MAIL_TITLE = 'Регистрация в AI-помощнике'
+AUTH_MAIL_TITLE = 'Авторизация в AI-помощнике'
 
 TELEGRAM_DATA_VALIDITY_PERIOD = 60 * 60  # 1 час
 

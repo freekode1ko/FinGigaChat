@@ -16,6 +16,7 @@ from db.redis import redis_client
 from utils.jwt import create_jwt_token, read_jwt_token
 from utils.telegram import validate_telegram_data
 from utils.email_send import SmtpSend
+from utils.utils import format_reg_code
 
 from .schemas import AuthData, AuthConfirmation, TelegramData, UserData
 
@@ -62,11 +63,9 @@ async def login(data: AuthData, session: AsyncSession = Depends(get_async_sessio
         await smtp_email.send_msg(
             config.MAIL_RU_LOGIN,
             data.email,
-            constants.REGISTRATION_MAIL_TITLE,
-            (
-                await redis_client.get('settings_REGISTRATION_EMAIL_TEXT'.format(code=reg_code))
-                or f'Ваш одноразовый код для входа: {reg_code}'
-            ),
+            constants.AUTH_MAIL_TITLE,
+            # FIXME: в идеале нужно добавить текст для авторизации в Redis
+            format_reg_code(reg_code, await redis_client.get('settings_REGISTRATION_EMAIL_TEXT')),
         )
     return "ok"
 

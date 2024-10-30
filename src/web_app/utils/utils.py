@@ -81,3 +81,15 @@ def add_watermark_cli(
     ]
 
     subprocess.call(cmd, timeout=SUBPROCESS_CALL_TIMEOUT)
+
+
+def format_reg_code(reg_code: str, text: str | None = None) -> str:
+    """
+    Форматирование текста с одноразовым кодом для входа.
+    Если текст предоставлен, то код вставляется вместо {code}.
+    Если текст отсутствует, то используется стандартный ответ.
+    Текст может отсутствовать в локальном Redis.
+    """
+    if text is not None:
+        return text.format(code=reg_code)
+    return f'Ваш одноразовый код для входа: {reg_code}'
