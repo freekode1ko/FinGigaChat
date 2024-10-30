@@ -34,6 +34,7 @@ export const CustomChart = ({
   theme: Theme
 }) => {
   const getOpenCloseColor = () => {
+    if (inputData.length < 2) return theme === 'dark' ? '#383E55' : '#E1E1EA'
     let compIndex = inputData.length - 2
     while (inputData[compIndex].date === inputData[inputData.length - 1].date) {
       compIndex -= 1;

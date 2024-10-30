@@ -1,9 +1,11 @@
 """Загрузка котировок в БД"""
 import asyncio
+import re
 import datetime
 import json
 import xml.etree.ElementTree as ET
 from collections import namedtuple
+from typing import Any
 
 from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent
@@ -11,9 +13,11 @@ from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from constants.constants import cbr_metals_parsing_list, moex_boards_names_order_list, moex_names_parsing_list, \
     yahoo_names_parsing_dict
+from constants.rules import GIGAPARSERS_RULES
 from db import crud, models
 from db.database import async_session
 from log.logger_base import logger
+from utils.common import parse_timestamp, parse_value
 
 
 async def load_cbr_quotes() -> None:
@@ -284,3 +288,112 @@ async def load_yahoo_quotes():
     except Exception as e:
         logger.error(f'Во время загрузки с yahoo произошла ошибка: {e}')
     logger.info('Закончена загрузка котировок с yahoo')
+
+
+async def load_gigaparser_quotes():
+    """Загружает данные котировок от GigaParsers."""
+    logger.info('Начата загрузка котировок от GigaParsers')
+    async with ClientSession() as req_session:
+        response = await req_session.post(
+            url='https://gigaparsers.ru/api/get_quotes',
+            ssl=False,
+            timeout=10,
+        )
+        if response.status != 200:
+            raise HTTPNoContent
+        quotes_json = await response.json(content_type='text/html')
+    sources = quotes_json.keys()
+    tasks = []
+    for source in sources:
+        data = quotes_json.get(source)
+        tasks.append(process_gigaparser_source(source, data))
+    await asyncio.gather(*tasks)
+    logger.info('Закончена загрузка котировок от GigaParsers')
+
+
+async def process_gigaparser_source(
+    source: str,
+    data: dict[str, Any],
+) -> None:
+    """Общая функция обработки данных для разных источников."""
+    async with async_session() as session:
+        last_update = datetime.datetime.now()
+        rules = GIGAPARSERS_RULES.get(source)
+        if not rules:
+            logger.error(f'Нет правил для источника: {source}')
+            return
+        insert_quotes = []
+        for quote, quote_data in data.items():
+            mapping = None
+            match = None
+            # Поиск нужного правила для котировки по регулярке
+            # e.g. для обработки "Energy_Crude Oil USD/Bbl"
+            for rule in rules:
+                pattern = re.compile(rule['pattern'])
+                match = pattern.match(quote)
+                if match:
+                    mapping = rule
+                    break
+            if not mapping or not match:
+                logger.warning(
+                    f'Правило не найдено для {quote} от {source}'
+                )
+                continue
+            try:
+                # Получаем нужные значения по правилам
+                section_name = mapping['get_section_name'](match)
+                section_params = mapping.get('section_params', {})
+                value_fields = mapping.get('value_fields', ['value'])
+                field_mapping = mapping.get('field_mapping', {})
+                quote_name = match.group('quote')
+
+                # Получаем секцию и котировку из БД
+                # Создаем, если не существует
+                section = await crud.get_or_load_quote_section_by_name(
+                    session,
+                    section_name,
+                    params=section_params,
+                    autocommit=False,
+                )
+                quote = await crud.get_or_load_quote_by_name(
+                    session,
+                    quote_name,
+                    section_id=section.id,
+                    insert_content={
+                        'source': 'https://gigaparsers.ru/api/get_quotes',
+                        'last_update': last_update,
+                    },
+                    autocommit=False,
+                )
+                for timestamp, values in quote_data.items():
+                    if isinstance(values, dict):
+                        db_quote = {
+                            'quote_id': quote.id,
+                            'date': parse_timestamp(timestamp),
+                        }
+                        for field in value_fields:
+                            target_field = field_mapping.get(field)
+                            value = values.get(field)
+                            if value is None:
+                                continue
+                            db_quote[target_field] = parse_value(value)
+                            if 'value' not in db_quote:
+                                db_quote['value'] = db_quote.get('close', 0)  # temp
+                    # Каждой временной метке не всегда соответствует несколько значений
+                    # e.g. "1724112000": "3.35%" в tradingeconomics/Loan Prime Rate 1Y_Consensus
+                    else:
+                        db_quote = {
+                            'quote_id': quote.id,
+                            'date': parse_timestamp(timestamp),
+                            'value': parse_value(values),
+                        }
+                    insert_quotes.append(db_quote)
+            except Exception as e:
+                logger.exception(f'Ошибка во время обработки {quote}: {e}')
+                continue
+        await crud.custom_insert_or_update_to_postgres(
+            session,
+            models.QuotesValues,
+            insert_quotes,
+            constraint='uq_quote_and_date',
+        )

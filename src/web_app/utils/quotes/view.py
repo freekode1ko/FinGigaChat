@@ -12,7 +12,7 @@ async def get_quote_day_day_param(quote: models.Quotes, session: AsyncSession) -
         .limit(2)
     )
     quote_data = stmt.scalars().fetchall()
-    if not quote_data:
+    if not quote_data or len(quote_data) < 2:  # мб вернуть 'N/A' или null
         return 0
     return (quote_data[0].value - quote_data[1].value) / quote_data[1].value * 100
 

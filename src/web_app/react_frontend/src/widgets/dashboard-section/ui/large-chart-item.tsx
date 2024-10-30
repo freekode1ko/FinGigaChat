@@ -34,8 +34,8 @@ const LargeChartItem = ({ item }: LargeChartItemProps) => {
     return (
       <QuoteCard
         name={item.name}
-        value={0}
-        change={0}
+        value={item.value}
+        params={[]}
         type={item.view_type}
         ticker={item.ticker}
       />
@@ -45,7 +45,7 @@ const LargeChartItem = ({ item }: LargeChartItemProps) => {
     <QuoteCard
       name={item.name}
       value={item.value}
-      change={item.params[0].value}
+      params={item.params}
       type={item.view_type}
       ticker={item.ticker}
       onCardClick={() =>

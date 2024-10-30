@@ -15,7 +15,7 @@ const TextItem = ({ item }: TextItemProps) => {
     <QuoteCard
       name={item.name}
       value={item.value}
-      change={item.params[0].value}
+      params={item.params}
       type={item.view_type}
       ticker={item.ticker}
       onCardClick={() =>

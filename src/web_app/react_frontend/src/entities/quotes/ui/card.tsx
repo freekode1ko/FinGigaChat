@@ -2,12 +2,12 @@ import React from 'react'
 
 import { Badge, Card, CardTitle } from '@/shared/ui'
 
-import type { DashboardSubscription } from '../model'
+import type { DashboardSubscription, QuotesParams } from '../model'
 
 interface QuoteCardProps
   extends Pick<DashboardSubscription, 'name' | 'type' | 'ticker'> {
   value: number
-  change: number
+  params: Array<QuotesParams>
   onCardClick?: () => void
   graph?: React.ReactNode
   actionSlot?: React.ReactNode
@@ -27,7 +27,7 @@ export const QuoteCard = ({
   name,
   value,
   ticker,
-  change,
+  params,
   type,
   graph,
   actionSlot,
@@ -51,9 +51,11 @@ export const QuoteCard = ({
             </CardTitle>
             <div className="text-xl lg:text-2xl justify-end font-semibold flex flex-row lg:flex-col gap-2 lg:gap-0">
               <p>{value.toLocaleString('en-US')}</p>
-              <p className={getChangeColor(change)}>
-                {change.toLocaleString('en-US')}%
+              {params.length > 0 && 
+                <p className={getChangeColor(params[0].value)}>
+                {params[0].value.toLocaleString('en-US')}%
               </p>
+              }
             </div>
           </div>
           <div className="w-full lg:col-span-2">{graph}</div>
@@ -77,14 +79,16 @@ export const QuoteCard = ({
             <Badge variant="outline" className="col-span-1">
               {value.toLocaleString('en-US')}
             </Badge>
-            <Badge
-              variant={
-                change < 0 ? 'destructive' : change > 0 ? 'positive' : 'default'
-              }
-              className="col-span-1"
-            >
-              {change.toLocaleString('en-US')}%
-            </Badge>
+            {params.length > 0 && 
+                <Badge
+                  variant={
+                    params[0].value < 0 ? 'destructive' : params[0].value > 0 ? 'positive' : 'default'
+                  }
+                  className="col-span-1"
+                >
+                  {params[0].value.toLocaleString('en-US')}%
+                </Badge>
+            }
           </div>
           {graph}
         </Card>
@@ -107,14 +111,16 @@ export const QuoteCard = ({
             <Badge variant="outline" className="col-span-1">
               {value.toLocaleString('en-US')}
             </Badge>
-            <Badge
-              variant={
-                change < 0 ? 'destructive' : change > 0 ? 'positive' : 'default'
-              }
-              className="col-span-1"
-            >
-              {change.toLocaleString('en-US')}%
-            </Badge>
+            {params.length > 0 && 
+                <Badge
+                  variant={
+                    params[0].value < 0 ? 'destructive' : params[0].value > 0 ? 'positive' : 'default'
+                  }
+                  className="col-span-1"
+                >
+                  {params[0].value.toLocaleString('en-US')}%
+                </Badge>
+            }
           </div>
         </Card>
       )
