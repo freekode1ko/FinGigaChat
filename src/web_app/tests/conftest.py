@@ -35,10 +35,11 @@ async def _db_connection():
         echo=False,
         future=True,
     )
-    async with async_engine.begin() as conn:
+    async with async_engine.connect() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    yield async_engine
+        yield conn
+        await conn.run_sync(Base.metadata.drop_all)
     await async_engine.dispose()
 
 
