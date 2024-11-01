@@ -1,4 +1,4 @@
-"""Клас для получения файла из конфига редиса"""
+"""Класс для получения файла из конфига редиса"""
 from constants.texts.features import CONFIG_CLASSES
 from db.redis.client import redis_client_sync as redis_client
 from log.bot_logger import logger
