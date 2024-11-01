@@ -39,16 +39,16 @@ def reformat_data(data: dict[str: Any]) -> dict[str: Any]:
     return data
 
 
-def add_watermark_cli(
+async def add_watermark_cli(
         input_pdf: str | Path,
         output_pdf: str | Path,
         watermark: str,
-        font_type: str = 'Helvetica',  # FIXME: достать константы из редиса
-        font_size: int = 20,  # FIXME: достать константы из редиса
-        rotation: int = 45,  # FIXME: достать константы из редиса
-        lines_count: int = 3,  # FIXME: достать константы из редиса
-        word_in_line_count: int = 3,  # FIXME: достать константы из редиса
-        opacity: float = 0.3,  # FIXME: достать константы из редиса
+        font_type: str,
+        font_size: int,
+        rotation: int,
+        lines_count: int,
+        word_in_line_count: int,
+        opacity: float,
 ) -> None:
     """
     Добавить вотермарку к pdf файлу.
@@ -60,7 +60,7 @@ def add_watermark_cli(
     :param watermark:               Текст вотермарки
     :param font_type:               Шрифт текста
     :param font_size:               Размера шрифта
-    :param rotation: Угол наклона текста
+    :param rotation:                Угол наклона текста
     :param lines_count:             Кол-во строк на странице с вотермаркой
     :param word_in_line_count:      Кол-во повторений слова в строке
     :param opacity:                 Прозрачность текста

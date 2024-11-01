@@ -18,7 +18,7 @@ const SubscriptionsPage = () => {
   if (initialData) {
     return (
       <>
-        <div className="p-4">
+        <div className="pt-10 pb-4">
           <h1 className="text-xl font-bold mb-4">Меню подписок</h1>
           <SubscriptionsWidget subscriptionList={[initialData]} />
         </div>

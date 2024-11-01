@@ -10,13 +10,13 @@ const MeetingsPage = () => {
   const { data, isFetching } = useGetMeetingsQuery({ userId: user!.id })
 
   return (
-    <>
+    <div className='pt-10 pb-4'>
       <div className="flex justify-between py-2">
         <TypographyH2>Встречи</TypographyH2>
         <AddMeetingButton />
       </div>
       <MeetingsList meetings={data} showSkeleton={isFetching} />
-    </>
+    </div>
   )
 }
 

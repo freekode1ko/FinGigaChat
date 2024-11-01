@@ -9,9 +9,9 @@ import {
   NewsPage,
   NotesPage,
   QuoteDetailsPage,
-  QuotesPage,
   SubscriptionsPage,
 } from '@/pages/ui'
+import { WelcomePage } from '@/pages/ui/welcome'
 
 import { baseLayout, emptyLayout } from './layouts/base'
 import { ProtectedWrapper } from './router-guard'
@@ -23,8 +23,20 @@ export const appRouter = () =>
       errorElement: <div>error</div>,
       children: [
         {
+          path: '/',
+          element: <Navigate to='/news' />
+        },
+        {
+          path: '/quotes',
+          element: <Navigate to='/news' />
+        },
+        {
           path: '/login',
           element: <AuthPage />,
+        },
+        {
+          path: '/welcome',
+          element: <WelcomePage />
         },
       ],
     },
@@ -32,12 +44,6 @@ export const appRouter = () =>
       element: baseLayout,
       errorElement: <div>error</div>,
       children: [
-        // FIXME: в корне что-то будет, не редирект
-        {
-          path: '/',
-          element: <Navigate to='/news' />
-        },
-        // FIXME
         {
           path: '/news',
           element: <NewsPage />,
@@ -45,22 +51,30 @@ export const appRouter = () =>
         {
           path: '/subscriptions',
           element: (
-            <ProtectedWrapper showHomeButton>
+            <ProtectedWrapper>
               <SubscriptionsPage />
             </ProtectedWrapper>
           ),
         },
         {
           path: '/analytics',
-          element: <AnalyticsPage />,
+          element: (
+            <ProtectedWrapper>
+              <AnalyticsPage />
+            </ProtectedWrapper>
+          ),
           children: [
             {
               path: ':analyticId',
-              element: <AnalyticDetailsPage />,
+              element: (
+                <ProtectedWrapper>
+                  <AnalyticDetailsPage />
+                </ProtectedWrapper>
+              ),
             },
           ],
         },
-        //
+        // FIXME
         {
           path: '/dashboard',
           element: <DashboardPage />,
@@ -81,25 +95,15 @@ export const appRouter = () =>
             },
           ],
         },
-        //
-        {
-          path: '/quotes',
-          element: <QuotesPage />,
-          children: [
-            {
-              path: ':quotationId',
-              element: <QuoteDetailsPage />,
-            },
-          ],
-        },
+        // FIXME
         {
           path: '/notes',
-          element: <NotesPage />,
+          element: <ProtectedWrapper><NotesPage /></ProtectedWrapper>,
         },
         {
           path: '/meetings',
           element: (
-            <ProtectedWrapper showHomeButton>
+            <ProtectedWrapper>
               <MeetingsPage />
             </ProtectedWrapper>
           ),

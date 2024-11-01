@@ -1,10 +1,13 @@
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { useLoginMutation } from '@/entities/user'
 import {
   Button,
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -15,20 +18,23 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { loginFormSchema } from '../../model'
 
-export const AuthFormStep1 = ({
+export const EmailStep = ({
+  onEmailChange,
   onSuccessNavigate,
 }: {
+  onEmailChange: (email: string) => void
   onSuccessNavigate: () => void
 }) => {
-  const isLoading = false
-  const trigger = (values: z.infer<typeof loginFormSchema>) => {
-    console.log(values)
-    /*
-    1. Отправить запрос
-    2. Дождаться ответ
-    3. Если 2хх - вызвать navigate на подтверждение кодом
-    */
-    onSuccessNavigate()
+  const [login, {isLoading}] = useLoginMutation()
+  const trigger = async (values: z.infer<typeof loginFormSchema>) => {
+    onEmailChange(values.email)
+    try {
+      await login(values).unwrap()
+      toast.success('Мы отправили вам на почту код для входа в систему')
+      onSuccessNavigate()
+    } catch {
+      toast.error('Проверьте корректность введенной почты и попробуйте еще раз')
+    }
   }
 
   const form = useForm<z.infer<typeof loginFormSchema>>({
@@ -52,6 +58,7 @@ export const AuthFormStep1 = ({
               <FormControl>
                 <Input placeholder="me@sberbank.ru" {...field} type="email" />
               </FormControl>
+              <FormDescription>Если вы входите впервые, то сначала вам необходимо зарегистрироваться в боте</FormDescription>
               <FormMessage />
             </FormItem>
           )}

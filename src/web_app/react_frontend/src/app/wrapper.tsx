@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import Cookies from 'js-cookie'
+import React, { useEffect } from 'react'
 
 import { Logo } from '@/features/logo'
-import { selectUserData, setUser } from '@/entities/user'
+import { setUser, unsetUser, useLazyGetCurrentUserQuery, useValidateTelegramDataMutation } from '@/entities/user'
 import {
   useAppDispatch,
-  useAppSelector,
   useInitData,
   useWebApp,
 } from '@/shared/lib'
@@ -12,33 +12,42 @@ import { Paragraph } from '@/shared/ui'
 
 const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
   const dispatch = useAppDispatch()
-  const user = useAppSelector(selectUserData)
+  const [getUser, {isLoading: userLoading}] = useLazyGetCurrentUserQuery()
+  const [validateTelegram, {isLoading: userValidating}] = useValidateTelegramDataMutation()
+  const auth = Cookies.get('auth')
   const tg = useWebApp()
-  const [initData] = useInitData()
-  const [isReady, setIsReady] = useState<boolean>(false)
+  const [initData, initDataString] = useInitData()
 
   useEffect(() => {
-    if (!user && tg && initData && initData.user) {
-      dispatch(
-        setUser({
-          id: initData.user.id,
-          first_name: initData.user.first_name,
-          last_name: initData.user.last_name,
-          auth_date: initData.auth_date,
-          hash: initData.hash,
-        })
-      )
+    if (auth) {
+      getUser().unwrap()
+      .then(user => {
+        dispatch(setUser(user))
+      })
+      .catch(() => {
+        dispatch(unsetUser())
+      })
+    } else if (tg && initData && initData.user) {
       tg.expand()
       tg.ready()
-    } else {
-      console.warn(
-        'Приложение запущено не в Telegram: некоторые функции недоступны'
-      )
+      validateTelegram({
+        hash: initData.hash,
+        auth_date: initData.auth_date,
+        id: initData.user!.id,
+        data: initDataString || '',
+      })
+      .unwrap()
+      .then(() => {
+        dispatch(setUser({ id: initData.user!.id }))
+      })
+      .catch(() => {
+        dispatch(unsetUser())
+      })
     }
-    setIsReady(true)
-  }, [tg, initData, dispatch, user])
 
-  if (!isReady)
+  }, [auth, tg, initData, initDataString, getUser, validateTelegram, dispatch])
+
+  if (userLoading || userValidating)
     return (
       <div className="h-screen flex items-center justify-center text-dark-blue dark:text-white bg-white dark:bg-dark-blue">
         <div className="mx-auto w-full text-center transition animate-pulse">

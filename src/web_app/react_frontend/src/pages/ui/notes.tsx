@@ -28,7 +28,7 @@ const NotesPage = () => {
   ] as Array<Note>
 
   return (
-    <div className="space-y-2">
+    <div className="pt-10 pb-4 space-y-2">
       <TypographyH2>Заметки</TypographyH2>
       <AddNoteButton />
       <NotesList notes={data} showSkeleton={isFetching} />

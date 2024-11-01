@@ -12,14 +12,14 @@ const NewsPage = () => {
   })
 
   return (
-    <>
+    <div className='pt-10 pb-4'>
       <NewsList
         news={data?.news}
         showSkeleton={isFetching}
         showSendReportButton
       />
       <ShowMoreButton ref={triggerRef} />
-    </>
+    </div>
   )
 }
 

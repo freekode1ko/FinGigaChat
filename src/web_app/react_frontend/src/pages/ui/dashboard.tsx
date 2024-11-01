@@ -1,9 +1,8 @@
 import { useEffect } from 'react'
-import { Outlet, useParams } from 'react-router-dom'
+import { Link, Outlet, useParams } from 'react-router-dom'
 
 import { ManageDashboardButton } from '@/widgets/dashboard/management'
 import { DashboardSection } from '@/widgets/dashboard-section'
-import { TelegramAuthButton } from '@/features/user'
 import { ChartSkeleton } from '@/entities/charts'
 import {
   setSubscriptions,
@@ -12,7 +11,7 @@ import {
 } from '@/entities/quotes'
 import { selectUserData } from '@/entities/user'
 import { useAppDispatch, useAppSelector } from '@/shared/lib'
-import { Paragraph, TypographyH2 } from '@/shared/ui'
+import { Button, Paragraph, TypographyH2 } from '@/shared/ui'
 import { skipToken } from '@reduxjs/toolkit/query'
 
 const DashboardPage = () => {
@@ -39,11 +38,13 @@ const DashboardPage = () => {
   return (
     <>
       {!user && (
-        <div className="pt-10 flex justify-center">
-          <TelegramAuthButton />
+        <div className="pt-10 pb-4 flex justify-center">
+          <Button asChild>
+            <Link to='/login'>Войти</Link>
+          </Button>
         </div>
       )}
-      <div className="flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
+      <div className="pt-10 pb-4 flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
         <TypographyH2>
           Дашборд {userId && `пользователя ${userId}`}
         </TypographyH2>
