@@ -1,6 +1,6 @@
 """Тесты для аутентификации"""
 
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 import pytest
 from httpx import AsyncClient
@@ -21,11 +21,14 @@ async def test_login_success(_async_client: AsyncClient, mock_redis_client, mock
         patch('api.v1.auth.router.redis_client', mock_redis_client),
         patch('api.v1.auth.router.is_new_user_email', return_value=False),
         patch('api.v1.auth.router.random.randint', return_value=int(MOCK_REG_CODE)),
+        patch('api.v1.auth.router.texts_manager.get', new_callable=AsyncMock) as mock_texts_manager,
         patch('api.v1.auth.router.SmtpSend.send_msg', mock_smtp_send.send_msg)
     ):
+        mock_texts_manager.return_value = '{code}'
         response = await _async_client.post('/api/v1/auth/login', json={'email': email})
         assert response.status_code == 200
         assert response.text == '"ok"'
+        assert mock_texts_manager.called, 'Текст письма не был получен из TextsManager'
         assert mock_redis_client.setex.called, 'Код не установлен в Redis'
         assert mock_smtp_send.send_msg.called, 'Код не отправлен на почту'
 

@@ -21,7 +21,7 @@ def env_setup(monkeypatch):
     monkeypatch.setenv("PSQL_ENGINE", DATABASE_TEST_URL)
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def event_loop(request) -> Generator:
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop

@@ -10,13 +10,13 @@ import config
 from api.security import get_token, set_auth_cookie
 from api.v1.common_schemas import Error
 from constants import constants
+from constants.texts import texts_manager
 from db.database import get_async_session
 from db.user import is_new_user_email, get_user_id_by_email, get_user_by_id
 from db.redis import redis_client
 from utils.jwt import create_jwt_token, read_jwt_token
 from utils.telegram import validate_telegram_data
 from utils.email_send import SmtpSend
-from utils.utils import format_reg_code
 
 from .schemas import AuthData, AuthConfirmation, TelegramData, UserData
 
@@ -48,10 +48,10 @@ async def login(data: AuthData, session: AsyncSession = Depends(get_async_sessio
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Пожалуйста, сначала зарегистрируйтесь в боте'
         )
-    reg_code = str(random.randint(constants.REGISTRATION_CODE_MIN, constants.REGISTRATION_CODE_MAX))
+    reg_code = str(random.randint(constants.AUTH_CODE_MIN, constants.AUTH_CODE_MAX))
     await redis_client.setex(
         f"reg_code:{data.email}",
-        constants.REGISTRATION_CODE_TTL,
+        constants.AUTH_CODE_TTL,
         reg_code
     )
     async with SmtpSend(
@@ -60,12 +60,12 @@ async def login(data: AuthData, session: AsyncSession = Depends(get_async_sessio
         config.MAIL_SMTP_SERVER,
         config.MAIL_SMTP_PORT
     ) as smtp_email:
+        message = await texts_manager.get('AUTH_EMAIL_TEXT')
         await smtp_email.send_msg(
             config.MAIL_RU_LOGIN,
             data.email,
             constants.AUTH_MAIL_TITLE,
-            # FIXME: в идеале нужно добавить текст для авторизации в Redis
-            format_reg_code(reg_code, await redis_client.get('settings_REGISTRATION_EMAIL_TEXT')),
+            message.format(code=reg_code),
         )
     return "ok"
 
