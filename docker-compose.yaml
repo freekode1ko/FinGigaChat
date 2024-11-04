@@ -23,7 +23,9 @@ services:
 
     article:
         build:
-            context: ./src/article
+            context: ./src/projects/article
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: article_container
         environment:
@@ -45,7 +47,9 @@ services:
 
     article_online:
         build:
-            context: ./src/article_online
+            context: ./src/projects/article_online
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: article_online_container
         environment:
@@ -80,7 +84,9 @@ services:
 
     bot:
         build:
-            context: ./src/bot
+            context: ./src/projects/bot
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: bot_container
         environment:
@@ -99,7 +105,9 @@ services:
 
     web-app:
         build:
-            context: ./src/web_app
+            context: ./src/projects/web_app
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: web_app_container
         environment:
@@ -120,7 +128,9 @@ services:
 
     bert_client_relevance:
         build:
-            context: ./src/bert_relevance
+            context: ./src/projects/bert_relevance
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: bert_client_relevance_container
         environment:
@@ -140,7 +150,9 @@ services:
 
     bert_commodity_relevance:
         build:
-            context: ./src/bert_relevance
+            context: ./src/projects/bert_relevance
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: bert_commodity_relevance_container
         environment:
@@ -160,7 +172,9 @@ services:
 
     web_retriever:
         build:
-            context: ./src/web_retriever
+            context: ./src/projects/web_retriever
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: web_retriever_container
         environment:
@@ -178,7 +192,9 @@ services:
 
     quotes:
         build:
-            context: ./src/quotes
+            context: ./src/projects/quotes
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: quotes_container
         environment:
@@ -200,7 +216,9 @@ services:
 
     research:
         build:
-            context: ./src/research
+            context: ./src/projects/research
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: research_container
         environment:
@@ -221,7 +239,9 @@ services:
 
     users_statistics:
         build:
-            context: ./src/users_statistics
+            context: ./src/projects/users_statistics
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: users_statistics_container
         environment:
@@ -258,7 +278,9 @@ services:
 
     parser_monitoring:
         build:
-            context: ./src/parser_monitoring
+            context: ./src/projects/parser_monitoring
+            additional_contexts:
+                root_dir: ./
         container_name: parser_monitoring_container
         environment:
             - TZ=Europe/Moscow

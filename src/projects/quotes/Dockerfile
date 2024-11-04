@@ -13,6 +13,7 @@ RUN poetry install
 
 # Copy project files
 COPY . /code
+COPY --from=root_dir .env /code/
 
 # Run for tests
 CMD poetry run python main.py

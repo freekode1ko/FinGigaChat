@@ -13,3 +13,4 @@ COPY ./pyproject.toml /code/pyproject.toml
 RUN poetry install
 
 COPY . /code
+COPY --from=root_dir .env /code/
