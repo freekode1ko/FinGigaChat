@@ -1,32 +1,26 @@
-FROM node:18 AS frontend-build
+# Сборка фронтенда
+FROM node:18-alpine AS frontend-build
+WORKDIR /code/frontend
+COPY ./react_frontend/package.json ./react_frontend/package-lock.json ./
+RUN npm install
+COPY ./react_frontend .
+RUN npm run build
 
+# Установка зависимостей для бэкенда
+FROM python:3.10-slim AS backend-build
 WORKDIR /code
-
-COPY .env /code/.env
-COPY ./react_frontend/package.json ./react_frontend/package-lock.json /code/react_frontend/
-
-RUN cd /code/react_frontend && npm install
-
-COPY ./react_frontend /code/react_frontend
-RUN cd /code/react_frontend && npm run build
-
-
-FROM python:3.10
-
-WORKDIR /code
-
-# install packages
-COPY ./pyproject.toml /code/pyproject.toml
-RUN pip install poetry
+COPY ./pyproject.toml .
+RUN pip install --no-cache-dir poetry
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
     POETRY_VIRTUALENVS_CREATE=1
-RUN poetry install
+RUN poetry install --no-root --only main
 
-RUN pip install pdf-watermark
-
-COPY --from=frontend-build /code/react_frontend/dist/index.html /code/frontend/templates/index.html
-COPY --from=frontend-build /code/react_frontend/dist/static/js/main.js /code/frontend/static/js/main.js
-COPY --from=frontend-build /code/react_frontend/dist/static/css/main.css /code/frontend/static/css/main.css
-
-COPY . /code
+# Сборка финального образа
+FROM python:3.10-slim AS final
+WORKDIR /code
+COPY --from=frontend-build /code/frontend/dist/index.html /code/frontend/templates/index.html
+COPY --from=frontend-build /code/frontend/dist/static /code/frontend/static
+COPY --from=backend-build /code/.venv /code/.venv
+COPY . .
+ENV PATH="/code/.venv/bin:$PATH"
