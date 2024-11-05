@@ -19,11 +19,11 @@ services:
             - ./db_files/db-data/:/var/lib/postgresql/data/
               #    - ./db_files/backup.sql:/docker-entrypoint-initdb.d/init.sql
         healthcheck:
-            test: ["CMD", "pg_isready -U ${POSTGRES_USER} -p ${DB_PORT} -h 127.0.0.1"]
-            start_period: 10s
-            interval: 10s
-            timeout: 3s
-            retries: 2
+            test: ["CMD", "pg_isready -U ${DB_USER} -p ${DB_PORT} -h 127.0.0.1"]
+            start_period: 2s
+            interval: 3s
+#            timeout: 3s
+#            retries: 2
         restart: always
 
 
@@ -54,263 +54,263 @@ services:
                 condition: service_healthy
         command: alembic upgrade head
         container_name: alembic
-#
-#    bot:
-#        build:
-#            context: ./src/projects/bot
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: bot_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
-#        depends_on:
-#            alembic:
-#                condition: service_completed_successfully
-#            redis:
-#                condition: service_started
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#        restart: always
-#
-#    article:
-#        build:
-#            context: ./src/projects/article
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: article_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: poetry run python main.py
-#        depends_on:
-#            - bot
-#            - bert_client_relevance
-#            - bert_commodity_relevance
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#        restart: always
-#
-#
-#    article_online:
-#        build:
-#            context: ./src/projects/article_online
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: article_online_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: poetry run python main.py
-#        depends_on:
-#            - bot
-#            - bert_client_relevance
-#            - bert_commodity_relevance
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#        restart: always
-#
-#
-#    web-app:
-#        build:
-#            context: ./src/projects/web_app
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: web_app_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        ports:
-#            - "443:443"
-#        command: bash -c "poetry run uvicorn --ssl-keyfile data/certs/privkey.pem --ssl-certfile data/certs/fullchain.pem app:app --host 0.0.0.0 --port 443"
-#        depends_on:
-#            - bot
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#        restart: always
-#
-#
-#    bert_client_relevance:
-#        build:
-#            context: ./src/projects/bert_relevance
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: bert_client_relevance_container
-#        environment:
-#            - TZ=Europe/Moscow
-#            - LOG_FILE=bert_client_relevance
-#            - MODEL_PATH=hellcatAI/ruRoberta_client_relevance_classification_quant
-#        env_file:
-#            - .env
-#        ports:
-#            - "444:444"
-#        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 444"
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#        restart: always
-#
-#
-#    bert_commodity_relevance:
-#        build:
-#            context: ./src/projects/bert_relevance
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: bert_commodity_relevance_container
-#        environment:
-#            - TZ=Europe/Moscow
-#            - LOG_FILE=bert_commodity_relevance
-#            - MODEL_PATH=hellcatAI/ruRoberta_commodity_relevance_classification_quant
-#        env_file:
-#            - .env
-#        ports:
-#            - "446:446"
-#        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 446"
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#        restart: always
-#
-#
-#    web_retriever:
-#        build:
-#            context: ./src/projects/web_retriever
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: web_retriever_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        ports:
-#            - ${WEB_RETRIEVER_PORT}:${WEB_RETRIEVER_PORT}
-#        command: poetry run python main.py
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#        restart: always
-#
-#
-#    quotes:
-#        build:
-#            context: ./src/projects/quotes
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: quotes_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: poetry run python main.py
-#        depends_on:
-#            - bot
-#            - selenium_firefox
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#            - /var/run/docker.sock:/var/run/docker.sock
-#        restart: always
-#
-#
-#    research:
-#        build:
-#            context: ./src/projects/research
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: research_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: poetry run python main.py
-#        depends_on:
-#            - bot
-#            - selenium_firefox
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#        restart: always
-#
-#
-#    users_statistics:
-#        build:
-#            context: ./src/projects/users_statistics
-#            additional_contexts:
-#                root_dir: ./
-#            dockerfile: Dockerfile
-#        container_name: users_statistics_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: poetry run python main.py
-#        depends_on:
-#            - bot
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#        restart: always
-#
-#
-#    selenium_firefox:
-#        image: selenium/standalone-firefox:latest
-#        container_name: selenium_container
-#        shm_size: 2gb
-#        ports:
-#            - "4444:4444"
-#            - "7900:7900"
-#        environment:
-#            - HUB_HOST=hub
-#            - HUB_PORT=4444
-#            - NODE_MAX_INSTANCES=10
-#            - NODE_MAX_SESSION=10
-#            - SE_NODE_MAX_SESSIONS=10
-#            - JAVA_OPTS=-XX:ActiveProcessorCount=10
-#        restart: always
-#
-#
-#    parser_monitoring:
-#        build:
-#            context: ./src/projects/parser_monitoring
-#            additional_contexts:
-#                root_dir: ./
-#        container_name: parser_monitoring_container
-#        environment:
-#            - TZ=Europe/Moscow
-#        env_file:
-#            - .env
-#        command: poetry run python main.py
-#        depends_on:
-#            - bot
-#        volumes:
-#            - ./logs:/code/logs
-#            - ./data:/code/data
-#            - ./sources:/code/sources/
-#        restart: always
+
+    bot:
+        build:
+            context: ./src/projects/bot
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: bot_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
+        depends_on:
+            alembic:
+                condition: service_completed_successfully
+            redis:
+                condition: service_started
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+    article:
+        build:
+            context: ./src/projects/article
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: article_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+            - bert_client_relevance
+            - bert_commodity_relevance
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    article_online:
+        build:
+            context: ./src/projects/article_online
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: article_online_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+            - bert_client_relevance
+            - bert_commodity_relevance
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    web-app:
+        build:
+            context: ./src/projects/web_app
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: web_app_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - "443:443"
+        command: bash -c "poetry run uvicorn --ssl-keyfile data/certs/privkey.pem --ssl-certfile data/certs/fullchain.pem app:app --host 0.0.0.0 --port 443"
+        depends_on:
+            - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
+    bert_client_relevance:
+        build:
+            context: ./src/projects/bert_relevance
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: bert_client_relevance_container
+        environment:
+            - TZ=Europe/Moscow
+            - LOG_FILE=bert_client_relevance
+            - MODEL_PATH=hellcatAI/ruRoberta_client_relevance_classification_quant
+        env_file:
+            - .env
+        ports:
+            - "444:444"
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 444"
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
+    bert_commodity_relevance:
+        build:
+            context: ./src/projects/bert_relevance
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: bert_commodity_relevance_container
+        environment:
+            - TZ=Europe/Moscow
+            - LOG_FILE=bert_commodity_relevance
+            - MODEL_PATH=hellcatAI/ruRoberta_commodity_relevance_classification_quant
+        env_file:
+            - .env
+        ports:
+            - "446:446"
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 446"
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
+    web_retriever:
+        build:
+            context: ./src/projects/web_retriever
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: web_retriever_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - ${WEB_RETRIEVER_PORT}:${WEB_RETRIEVER_PORT}
+        command: poetry run python main.py
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
+    quotes:
+        build:
+            context: ./src/projects/quotes
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: quotes_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+            - selenium_firefox
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: always
+
+
+    research:
+        build:
+            context: ./src/projects/research
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: research_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+            - selenium_firefox
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    users_statistics:
+        build:
+            context: ./src/projects/users_statistics
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: users_statistics_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    selenium_firefox:
+        image: selenium/standalone-firefox:latest
+        container_name: selenium_container
+        shm_size: 2gb
+        ports:
+            - "4444:4444"
+            - "7900:7900"
+        environment:
+            - HUB_HOST=hub
+            - HUB_PORT=4444
+            - NODE_MAX_INSTANCES=10
+            - NODE_MAX_SESSION=10
+            - SE_NODE_MAX_SESSIONS=10
+            - JAVA_OPTS=-XX:ActiveProcessorCount=10
+        restart: always
+
+
+    parser_monitoring:
+        build:
+            context: ./src/projects/parser_monitoring
+            additional_contexts:
+                root_dir: ./
+        container_name: parser_monitoring_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
 
 volumes:
   redis_data:
