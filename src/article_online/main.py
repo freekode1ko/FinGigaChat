@@ -12,6 +12,7 @@ from configs.config import BASE_GIGAPARSER_URL
 from log import sentry
 from log.logger_base import selector_logger
 from module.article_process import ArticleProcess
+from module.utils import add_links_to_queue
 
 MAX_NEWS_BATCH_SIZE = 1000
 MINUTE = 60
@@ -127,6 +128,8 @@ def regular_func() -> tuple[str, list, list]:
                     ap_obj_online.make_text_sum()
                     ap_obj_online.remove_html_tags()
                     tg_links = ap_obj_online.save_tg_tables()
+                else:
+                    logger.info('Телеграмм новостей в батче нет')
 
                 print('Окончание обработки новостей с помощью моделей')
                 logger.info('Окончание обработки новостей с помощью моделей')
@@ -167,31 +170,6 @@ def post_ids(ids: str) -> None:
         logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
 
 
-def post_new_links(subject_links: list, tg_links: list) -> None:
-    """
-    Отправить ссылки на сохраненные новости в RAG по новостям.
-
-    :param subject_links: Ссылки на новости по клиентам/коммодам.
-    :param tg_links:      Ссылки на новости из Telegram (по индустриям и общим каналам).
-    """
-    logger.debug('Отправка ссылок сохраненных новостей на сервер')
-    links_dict = {
-        'subject_links': subject_links,  # ссылки на новости по клиентам и коммодам
-        'tg_links': tg_links,  # ссылки на новости из тг каналов
-    }
-    try:
-        response = try_post_n_times(
-            config.POST_TO_SERVICE_ATTEMPTS,
-            url=config.QABANKER_STORE_UPDATE_URL,
-            json=links_dict,
-            timeout=config.POST_TO_SERVICE_TIMEOUT,
-        )
-        logger.info(response.json()['message'])
-    except Exception as e:
-        print(f'Ошибка при отправке ссылок новостей в QABanker: {e}')
-        logger.error('Ошибка при отправке ссылок новостей в QABanker:: %s', e)
-
-
 if __name__ == '__main__':
     sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
     warnings.filterwarnings('ignore')
@@ -210,7 +188,7 @@ if __name__ == '__main__':
             gotten_ids, new_subject_links, new_tg_links = regular_func()
             post_ids(gotten_ids)  # отправка giga parsers полученных айди
             if not config.DEBUG:
-                post_new_links(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
+                add_links_to_queue(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
             work_time = time.time() - start_time
@@ -223,6 +201,6 @@ if __name__ == '__main__':
                 print('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
     except KeyboardInterrupt:
         pass
-    except Exception as e:
-        logger.error(e)
-        print(e)
+    except Exception as expn:
+        logger.error(expn)
+        print(expn)
