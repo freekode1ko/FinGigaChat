@@ -74,7 +74,7 @@ const ManageDashboardButton = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="secondary" size="icon">
           <Settings />
         </Button>
       </DialogTrigger>
@@ -90,7 +90,7 @@ const ManageDashboardButton = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <div className="flex flex-col gap-4 py-4 h-[360px] overflow-y-auto">
+        <div className="flex flex-col gap-4 py-2 h-[360px] overflow-y-auto">
           <VariableSizeList
             ref={listRef}
             height={360}

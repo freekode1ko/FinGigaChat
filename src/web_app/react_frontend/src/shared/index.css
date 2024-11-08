@@ -3,17 +3,97 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 217.78, 15.08%, 64.9%;
+
+        --muted: 220.65, 13.19%, 46.08%;
+        --muted-foreground: 217.78, 15.08%, 64.9%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 47.4% 11.2%;
+
+        --border: 216.92, 16.05%, 84.12%;
+        --input: 216.92, 16.05%, 84.12%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 216, 24%, 96%;
+
+        --primary: 173.23, 82.61%, 31.57%;
+        --primary-foreground: 210 40% 98%;
+
+        --secondary: 210, 20%, 98.04%;
+        --secondary-foreground: 216.92, 16.05%, 84.12%;
+
+        --accent: 173.23, 82.61%, 31.57%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+
+        --destructive: 348.68, 100%, 44.71%;
+        --destructive-foreground: 210 40% 98%;
+
+        --ring: 173.23, 82.61%, 31.57%;
+        --text: 214.29, 32.56%, 16.86%;
+
+        --radius: 0.5rem;
+    }
+  
+    .dark {
+        --background: 217.5, 28.57%, 5.49%;
+        --foreground: 215.63, 18.39%, 34.12%;
+
+        --muted: 217.78, 15.08%, 64.9%;
+        --muted-foreground: 215.63, 18.39%, 34.12%;
+
+        --accent: 173.23, 82.61%, 31.57%;
+        --accent-foreground: 210 40% 98%;
+
+        --popover: 224 71% 4%;
+        --popover-foreground: 215 20.2% 65.1%;
+
+        --border: 217.5, 23.53%, 26.67%;
+        --input: 217.5, 23.53%, 26.67%;
+
+        --card: 224 71% 4%;
+        --card-foreground: 220, 43%, 11%;
+
+        --primary: 173.23, 82.61%, 31.57%;
+        --primary-foreground: 222.2 47.4% 1.2%;
+
+        --secondary: 220, 42.86%, 10.98%;
+        --secondary-foreground: 217.5, 23.53%, 26.67%; 
+
+        --destructive: 348.67, 100%, 54.31%;
+        --destructive-foreground: 210 40% 98%;
+
+        --ring: 173.23, 82.61%, 31.57%;
+        --text: 216.92, 16.05%, 84.12%;
+
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-feature-settings: "rlig" 1, "calt" 1;
+    }
+}
+
+@layer base {
     ::-webkit-scrollbar {
-        width: 0.4rem;
-        height: 0.4rem;
+        width: 8px;
+        height: 64px;
     }
 
     ::-webkit-scrollbar-track {
-        @apply bg-white dark:bg-dark-blue;
+        @apply bg-background;
     }
 
     ::-webkit-scrollbar-thumb {
-        @apply bg-secondary-200 dark:bg-secondary-600;
+        @apply bg-border;
         border-radius: 100vh;
     }
 }

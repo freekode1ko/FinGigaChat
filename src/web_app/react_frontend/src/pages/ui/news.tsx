@@ -12,7 +12,7 @@ const NewsPage = () => {
   })
 
   return (
-    <div className='pt-10 pb-4'>
+    <div className='mx-auto lg:max-w-screen-sm pt-5 pb-2'>
       <NewsList
         news={data?.news}
         showSkeleton={isFetching}

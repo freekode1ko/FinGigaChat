@@ -65,6 +65,7 @@ export { Label } from './label'
 export { Layout } from './layout'
 export { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from './otp'
 export { ShowMoreButton } from './pagination'
+export { Progress } from './progress'
 export {
   Select,
   SelectContent,

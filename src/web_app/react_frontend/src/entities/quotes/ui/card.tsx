@@ -38,7 +38,7 @@ export const QuoteCard = ({
       return (
         <Card className="flex flex-col items-center p-2 gap-2 lg:grid lg:grid-cols-3 relative shadow-none">
           {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-white dark:bg-dark-blue rounded-md">
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
               {actionSlot}
             </div>
           )}
@@ -63,7 +63,7 @@ export const QuoteCard = ({
       return (
         <Card className="relative p-2 shadow-none">
           {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-white dark:bg-dark-blue rounded-md">
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
               {actionSlot}
             </div>
           )}
@@ -93,7 +93,7 @@ export const QuoteCard = ({
       return (
         <Card className="relative p-2 shadow-none">
           {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-white dark:bg-dark-blue rounded-md">
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
               {actionSlot}
             </div>
           )}

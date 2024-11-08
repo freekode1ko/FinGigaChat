@@ -1,13 +1,19 @@
+import { NavigationList } from '@/widgets/navigation'
 import { Logo } from '@/features/logo'
 import { ThemeSwitcher } from '@/features/theme-switcher'
 
+/*
+  Компонент шапки веб-страницы.
+  Отображается на устройствах со средним экраном и шире.
+*/
 export const Header = () => {
   return (
-    <header className="sticky top-0 w-full flex flex-row-reverse justify-between items-center shadow-md shadow-black/5 dark:bg-dark-blue bg-white backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-dark-blue/60 z-40 py-2 px-4 gap-4">
-      <div className="absolute left-1/2 transform -translate-x-1/2">
-        <Logo navigateOnClick />
+    <header className="hidden sticky top-0 w-full border-b border-border md:flex justify-between items-center bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 px-4 h-16">
+      <Logo navigateOnClick />
+      <div>
+        <NavigationList />
       </div>
-      <ThemeSwitcher />
+      <ThemeSwitcher hideText />
     </header>
   )
 }

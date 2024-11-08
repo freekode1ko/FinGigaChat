@@ -1,9 +1,8 @@
-import { Info } from 'lucide-react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 
 import { selectUserIsAuthenticated } from '@/entities/user'
 import { useAppSelector } from '@/shared/lib'
-import { Button, Paragraph, TypographyH2 } from '@/shared/ui'
+import { SITE_MAP } from '@/shared/model'
 
 interface ProtectionWrapperInterface extends React.PropsWithChildren {
   redirectHome?: boolean
@@ -16,26 +15,10 @@ const ProtectedWrapper = ({
   const isAuthenticated = useAppSelector(selectUserIsAuthenticated)
 
   if (!isAuthenticated && redirectHome) {
-    return <Navigate to="/" />
+    return <Navigate to={SITE_MAP.news} />
   }
   if (!isAuthenticated) {
-    return (
-      <div className="flex flex-col gap-8 py-10">
-        <div className="flex gap-2">
-          <Info className="h-8 w-8" />
-          <TypographyH2>Данный раздел недоступен</TypographyH2>
-        </div>
-        <div className="flex flex-col gap-4">
-          <Paragraph>
-            Пожалуйста, войдите через Telegram, чтобы получить доступ к этому
-            разделу
-          </Paragraph>
-          <Button asChild>
-            <Link to="/">На главную</Link>
-          </Button>
-        </div>
-      </div>
-    )
+    return <Navigate to={SITE_MAP.login} />
   }
   return children
 }

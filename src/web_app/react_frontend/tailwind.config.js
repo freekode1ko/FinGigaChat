@@ -5,33 +5,46 @@ export default {
   theme: {
     extend: {
       colors: {
+        'dark-blue': '#000115',
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        text: 'hsl(var(--text))',
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#b9e6fe',
-          300: '#7cd3fd',
-          400: '#36befa',
-          500: '#0ca6eb',
-          600: '#0087cc',
-          700: '#0169a3',
-          800: '#065986',
-          900: '#0b4a6f',
-          950: '#072f4a',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          50: '#f6f9f9',
-          100: '#ecf0f1',
-          200: '#d6dfe1',
-          300: '#b2c4c7',
-          400: '#88a4a8',
-          500: '#6a898d',
-          600: '#557074',
-          700: '#455b5f',
-          800: '#3c4d50',
-          900: '#354245',
-          950: '#232c2e',
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
-        'dark-blue': '#000115',
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+      },
+      borderRadius: {
+        lg: `var(--radius)`,
+        md: `calc(var(--radius) - 2px)`,
+        sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
         'caret-blink': {
