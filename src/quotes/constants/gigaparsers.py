@@ -1,18 +1,17 @@
-"""
-Набор правил для парсинга котировок от GigaParsers.
+# API URL
+GIGAPARSERS_API = 'https://gigaparsers.ru/api/get_quotes'
 
-Правила для каждой секции:
-    pattern (regexp): Для поиска нужного правила по регулярному выражению
-    get_section_name (callable): Название секции (по названию котировки)
-    section_params (dict[str, str]): Параметры секции
-    value_fields (list[str] | None): Поля с полезной нагрузкой (доходность, цена и т.д.)
-    field_mapping (dict[str, str] | None): Маппинг значений от источника на нашу БД
-"""
 
+# Правила для каждой секции:
+#     pattern (regexp): Для поиска нужного правила по регулярному выражению
+#     get_section_name (callable): Название секции (по названию котировки)
+#     section_params (dict[str, str]): Параметры секции
+#     value_fields (list[str] | None): Поля с полезной нагрузкой (доходность, цена и т.д.)
+#     field_mapping (dict[str, str] | None): Маппинг значений от источника на нашу БД
 GIGAPARSERS_RULES = {
     'cbr': [
         {
-            'pattern': r'^(?P<quote>Инфляция %\, м\/м|Ключевая ставка ЦБ|RUONIA)$',
+            'pattern': r'^(?P<quote>Инфляция|Ключевая ставка ЦБ|RUONIA)$',
             'get_section_name': lambda m: 'Макроэкономика (ЦБ)',
             'section_params': {'_value': 'get_quote_last'},
             'value_fields': ['value'],
@@ -98,23 +97,13 @@ GIGAPARSERS_RULES = {
                 'Last': 'value',
             },
         },
-        {
-            'pattern': r'^(?P<category>.+?)_(?P<quote>.+)$',
-            'get_section_name': lambda m: 'Прочее (TradingEconomics)',
-            'section_params': {'_value': 'get_quote_last'},
-            'value_fields': None,
-            'field_mapping': None,
-        },
-    ],
-    'bloomberg': [
-        # Тут хардкод, логики нет
-        # Сейчас приходит всего 1 котировка и больше (вроде) не планируется
-        {
-            'pattern': r'^(?P<quote>LMCADS03:COM:USD)$',
-            'get_section_name': lambda m: 'Металлы (Bloomberg)',
-            'section_params': {'_value': 'get_quote_last'},
-            'value_fields': None,
-            'field_mapping': None,
-        },
+        # Пока здесь приходят битые данные
+        # {
+        #     'pattern': r'^(?P<category>Loan Prime Rate 1Y)_(?P<quote>Actual|Consensus|Previous|TEForecast)$',
+        #     'get_section_name': lambda m: 'Loan Prime Rate 1Y (TradingEconomics)',
+        #     'section_params': {'_value': 'get_quote_last'},
+        #     'value_fields': None,
+        #     'field_mapping': None,
+        # },
     ],
 }

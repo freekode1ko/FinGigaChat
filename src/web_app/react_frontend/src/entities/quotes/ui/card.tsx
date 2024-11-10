@@ -50,7 +50,7 @@ export const QuoteCard = ({
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <div className="text-xl lg:text-2xl justify-end font-semibold flex flex-row lg:flex-col gap-2 lg:gap-0">
-              <p>{value.toLocaleString('en-US')}</p>
+              <p>{value ? value.toLocaleString('en-US') : '0'}</p>
               {params.length > 0 && 
                 <p className={getChangeColor(params[0].value)}>
                 {params[0].value.toLocaleString('en-US')}%
@@ -77,7 +77,7 @@ export const QuoteCard = ({
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <Badge variant="outline" className="col-span-1">
-              {value.toLocaleString('en-US')}
+              {value ? value.toLocaleString('en-US') : '0'}
             </Badge>
             {params.length > 0 && 
                 <Badge
@@ -109,7 +109,7 @@ export const QuoteCard = ({
               {name} {ticker && `(${ticker})`}
             </CardTitle>
             <Badge variant="outline" className="col-span-1">
-              {value.toLocaleString('en-US')}
+              {value ? value.toLocaleString('en-US') : '0'}
             </Badge>
             {params.length > 0 && 
                 <Badge
