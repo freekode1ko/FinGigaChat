@@ -12,8 +12,8 @@ const Step = React.forwardRef<HTMLDivElement, StepProps>(
       <div
         className={cn(
           active
-            ? 'bg-primary-800 dark:bg-primary-400'
-            : 'bg-secondary-100 dark:bg-secondary-600',
+            ? 'bg-primary'
+            : 'bg-secondary',
           'mx-auto my-4 h-2 w-full rounded-full',
           className
         )}

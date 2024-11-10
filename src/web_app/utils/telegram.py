@@ -8,6 +8,9 @@ from api.v1.auth.schemas import TelegramData
 from constants.constants import TELEGRAM_DATA_VALIDITY_PERIOD
 
 
+TELEGRAM_DATA_SOURCE = 'WebAppData'
+
+
 def validate_telegram_data(data: TelegramData) -> bool:
     """
     Функция для проверки валидности данных пользователя
@@ -29,6 +32,6 @@ def validate_telegram_data(data: TelegramData) -> bool:
     data_check_arr.sort()
     data_check_string = '\n'.join(data_check_arr)
 
-    secret_key = hmac.new('WebAppData'.encode(), BOT_API_TOKEN.encode(), hashlib.sha256).digest()
+    secret_key = hmac.new(TELEGRAM_DATA_SOURCE.encode(), BOT_API_TOKEN.encode(), hashlib.sha256).digest()
     hmac_string = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     return hmac_string == check_hash

@@ -1,20 +1,15 @@
-import ssl
-from pathlib import Path
-
 from contextlib import asynccontextmanager
-import aiohttp
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 import config
 import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
-from constants import constants
+from constants import constants, texts
 from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
@@ -23,6 +18,7 @@ logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await texts.texts_manager.init()
     await utils.add_notify_job(logger)
     utils.scheduler.start()
     yield

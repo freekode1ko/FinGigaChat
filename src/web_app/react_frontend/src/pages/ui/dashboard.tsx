@@ -1,5 +1,6 @@
+import { CircleHelp, CircleX } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, Outlet, useParams } from 'react-router-dom'
+import { Outlet, useParams } from 'react-router-dom'
 
 import { ManageDashboardButton } from '@/widgets/dashboard/management'
 import { DashboardSection } from '@/widgets/dashboard-section'
@@ -11,7 +12,7 @@ import {
 } from '@/entities/quotes'
 import { selectUserData } from '@/entities/user'
 import { useAppDispatch, useAppSelector } from '@/shared/lib'
-import { Button, Paragraph, TypographyH2 } from '@/shared/ui'
+import { Paragraph, TypographyH2 } from '@/shared/ui'
 import { skipToken } from '@reduxjs/toolkit/query'
 
 const DashboardPage = () => {
@@ -37,20 +38,13 @@ const DashboardPage = () => {
 
   return (
     <>
-      {!user && (
-        <div className="pt-10 pb-4 flex justify-center">
-          <Button asChild>
-            <Link to='/login'>Войти</Link>
-          </Button>
-        </div>
-      )}
-      <div className="pt-10 pb-4 flex justify-between items-center gap-4 lg:justify-end lg:flex-row-reverse mb-4">
+      <div className="py-2 px-4 border-b border-border flex justify-between items-center gap-4 h-16">
         <TypographyH2>
-          Дашборд {userId && `пользователя ${userId}`}
+          {userId ? `Дашборд пользователя ${userId}` : 'Мой дашборд'}
         </TypographyH2>
         {!userId && user && <ManageDashboardButton />}
       </div>
-      <div className="gap-8 pt-6 columns-1 lg:columns-2 xl:columns-3 lg:pt-0">
+      <div className="flex flex-col gap-4 items-center justify-center pt-6 lg:pt-0">
         <>
           {isLoading &&
             Array.from({ length: 20 }).map((_, idx) => (
@@ -58,8 +52,22 @@ const DashboardPage = () => {
                 <ChartSkeleton />
               </div>
             ))}
-          {initialContent?.sections.length == 0 && (
-            <Paragraph>Данный дашборд пуст или не существует.</Paragraph>
+          {(!user || initialContent?.sections.length == 0) && (
+            <div className='pt-10 text-center'>
+              {!user ?
+                <>
+                <CircleX className='h-10 w-10 mx-auto mb-2' />
+                <TypographyH2>Доступ запрещен</TypographyH2>
+                <Paragraph className='text-muted-foreground mt-2'>Авторизуйтесь на сайте, чтобы создать свой дашборд</Paragraph>
+                </>
+              :
+                <>
+                <CircleHelp className='h-10 w-10 mx-auto mb-2' />
+                <TypographyH2>Здесь ничего нет</TypographyH2>
+                <Paragraph className='text-muted-foreground mt-2'>Данный дашборд пуст или не существует</Paragraph>
+                </>
+              }
+            </div>
           )}
           {initialContent?.sections.map((section) => (
             <DashboardSection key={section.section_name} section={section} />

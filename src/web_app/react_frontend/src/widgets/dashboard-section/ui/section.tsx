@@ -13,7 +13,7 @@ const DashboardSection = ({ section }: DashboardSectionProps) => {
   }
   return (
     <div className="w-full space-y-2 mb-8 break-inside-avoid-column">
-      <div className="py-2 z-50 sticky top-0 bg-white dark:bg-dark-blue">
+      <div className="py-2 z-50 sticky top-0 bg-background">
         <TypographyH2>{section.section_name}</TypographyH2>
       </div>
       <div className="grid grid-cols-1 gap-4">

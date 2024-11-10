@@ -8,12 +8,13 @@ import {
   MeetingsPage,
   NewsPage,
   NotesPage,
+  ProfilePage,
   QuoteDetailsPage,
   SubscriptionsPage,
 } from '@/pages/ui'
 import { WelcomePage } from '@/pages/ui/welcome'
 
-import { baseLayout, emptyLayout } from './layouts/base'
+import { baseLayout, emptyLayout } from './layouts'
 import { ProtectedWrapper } from './router-guard'
 
 export const appRouter = () =>
@@ -105,6 +106,14 @@ export const appRouter = () =>
           element: (
             <ProtectedWrapper>
               <MeetingsPage />
+            </ProtectedWrapper>
+          ),
+        },
+        {
+          path: '/profile',
+          element: (
+            <ProtectedWrapper>
+              <ProfilePage />
             </ProtectedWrapper>
           ),
         },
