@@ -189,7 +189,7 @@ if __name__ == '__main__':
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
             post_ids(gotten_ids)  # отправка giga parsers полученных айди
-            update_parsing_status(new_subject_links, new_tg_links)
+            update_saving_status(new_subject_links, new_tg_links)
             add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
