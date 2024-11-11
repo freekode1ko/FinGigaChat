@@ -14,7 +14,7 @@ from db.models import SourceGroup, ParserSource
 
 # revision identifiers, used by Alembic.
 revision: str = '94be44f54cf9'
-down_revision: Union[str, None] = '784715f9100c'
+down_revision: Union[str, None] = 'b6ec26f13742'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

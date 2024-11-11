@@ -174,6 +174,8 @@ class SourceGroup(Base):
     id = Column(Integer, primary_key=True,)
     name = Column(String(64), nullable=False)
     name_latin = Column(String(64), nullable=False)
+    period_cron = Column(Text, comment='Cron выражение периодичности парсинга данных')
+    alert_timedelta = Column(Integer, comment='Количество секунд, после которых должен отправляться алерт, если парсер не обновился')
 
     parser_source = relationship('ParserSource', back_populates='source_group')
 
