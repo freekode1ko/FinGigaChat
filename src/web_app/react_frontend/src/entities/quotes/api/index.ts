@@ -16,13 +16,6 @@ interface DashboardSubscriptionsResponse {
 
 export const quotesApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getPopularQuotes: build.query<QuotesResponse, void>({
-      query: () => ({
-        url: `${API_ENDPOINTS.popularQuotes}/`,
-        method: 'GET',
-      }),
-      keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
-    }),
     getDashboardQuotes: build.query<QuotesResponse, void>({
       query: () => ({
         url: `${API_ENDPOINTS.dashboardQuotes}/`,
@@ -95,16 +88,16 @@ export const quotesApi = baseApi.injectEndpoints({
       },
     }),
     putDashboardSubscriptionsOnMain: build.mutation<
-    string,
-    { userId: number; body: Array<DashboardSubscriptionSection> }
-  >({
-    query: ({ userId, body }) => ({
-      url: `${API_ENDPOINTS.dashboardQuotes}/${userId}/subscriptions`,
-      method: 'PUT',
-      body: { subscription_sections: body },
+      string,
+      { userId: number; body: Array<DashboardSubscriptionSection> }
+    >({
+      query: ({ userId, body }) => ({
+        url: `${API_ENDPOINTS.dashboardQuotes}/${userId}/subscriptions`,
+        method: 'PUT',
+        body: { subscription_sections: body },
+      }),
+      invalidatesTags: [API_TAGS.dashboardQuotes],
     }),
-    invalidatesTags: [API_TAGS.dashboardQuotes],
-  }),
     getDashboardData: build.query<
       { id: number; data: Array<FinancialData> },
       { quoteId: number; startDate: string }
@@ -119,13 +112,12 @@ export const quotesApi = baseApi.injectEndpoints({
         url: `${API_ENDPOINTS.dashboardQuotes}/${userId}`,
         method: 'GET',
       }),
-      providesTags: [API_TAGS.dashboardQuotes]
+      providesTags: [API_TAGS.dashboardQuotes],
     }),
   }),
 })
 
 export const {
-  useGetPopularQuotesQuery,
   useGetDashboardQuotesQuery,
   useGetDashboardSubscriptionsQuery,
   usePutDashboardSubscriptionsMutation,

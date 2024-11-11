@@ -230,6 +230,7 @@ async def get_dashboard(
             models.UsersQuotesSubscriptions.user_id == user_id,
             models.Quotes.id.in_(quote_ids_with_data)
         )
+        .order_by(models.QuotesSections.name)
     )
     quotes_and_sections_subs = stmt.mappings().fetchall()
 
@@ -284,6 +285,7 @@ async def get_user_subscriptions(session: AsyncSession, user_id: int, ) -> Dashb
         .select_from(models.Quotes)
         .join(models.QuotesSections)
         .filter(models.Quotes.id.in_(quote_ids_with_data))
+        .order_by(models.QuotesSections.name)
     )
     quotes_and_sections = stmt.mappings().fetchall()
 

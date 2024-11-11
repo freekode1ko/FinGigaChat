@@ -17,9 +17,9 @@ const getChangeColor = (change: number): string => {
   if (change > 0) {
     return 'text-green-600 dark:text-green-500'
   } else if (change < 0) {
-    return 'text-red-600 dark:text-red-500'
+    return 'text-destructive'
   } else {
-    return 'text-gray-600 dark:text-gray-500'
+    return 'text-secondary'
   }
 }
 
@@ -34,15 +34,54 @@ export const QuoteCard = ({
   onCardClick,
 }: QuoteCardProps) => {
   switch (type) {
-    case 2:
+    case 1:
       return (
-        <Card className="flex flex-col items-center p-2 gap-2 lg:grid lg:grid-cols-3 relative shadow-none">
+        <Card className="bg-secondary border border-border relative p-2 shadow-none hover:bg-background">
           {actionSlot && (
             <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
               {actionSlot}
             </div>
           )}
-          <div className="grid grid-cols-2 w-full items-center lg:items-start lg:gap-4 lg:flex lg:flex-col lg:col-span-1">
+          <div className="flex items-center gap-4 p-1 lg:p-2">
+            <div className='flex flex-col flex-[2] min-w-0'>
+              <CardTitle
+                className="text-md cursor-pointer"
+                onClick={onCardClick}
+              >
+                {ticker ? ticker : name}
+              </CardTitle>
+              {ticker && <p className='text-muted-foreground'>{name}</p>}
+            </div>
+            {
+              graph && <div className='flex-[3] min-w-0'>{graph}</div>
+            }
+            <div className='flex flex-col items-end flex-none gap-1'>
+              <p className="text-lg font-medium">
+                {value ? value.toLocaleString('en-US') : '0'}
+              </p>
+              {params.length > 0 && 
+                <Badge
+                  variant={
+                    params[0].value < 0 ? 'destructive' : params[0].value > 0 ? 'positive' : 'default'
+                  }
+                >
+                  {params[0].value.toLocaleString('en-US')}%
+                </Badge>
+              }
+            </div>
+          </div>
+        </Card>
+      )
+  
+    default:
+      return (
+        <Card className="flex flex-col items-center p-2 gap-2 lg:grid lg:grid-cols-3 relative shadow-none bg-secondary border border-border hover:bg-background">
+          {actionSlot && (
+            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
+              {actionSlot}
+            </div>
+          )}
+          <div className="grid grid-cols-2 w-full items-center lg:items-start lg:gap-4 lg:flex lg:flex-col lg:justify-between lg:col-span-1 h-full">
             <CardTitle
               className="text-lg col-span-1 cursor-pointer"
               onClick={onCardClick}
@@ -59,69 +98,6 @@ export const QuoteCard = ({
             </div>
           </div>
           <div className="w-full lg:col-span-2">{graph}</div>
-        </Card>
-      )
-    case 3:
-      return (
-        <Card className="relative p-2 shadow-none">
-          {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
-              {actionSlot}
-            </div>
-          )}
-          <div className="grid grid-cols-4 items-center gap-2 p-1 lg:p-2">
-            <CardTitle
-              className="text-lg col-span-2 cursor-pointer"
-              onClick={onCardClick}
-            >
-              {name} {ticker && `(${ticker})`}
-            </CardTitle>
-            <Badge variant="outline" className="col-span-1">
-              {value ? value.toLocaleString('en-US') : '0'}
-            </Badge>
-            {params.length > 0 && 
-                <Badge
-                  variant={
-                    params[0].value < 0 ? 'destructive' : params[0].value > 0 ? 'positive' : 'default'
-                  }
-                  className="col-span-1"
-                >
-                  {params[0].value.toLocaleString('en-US')}%
-                </Badge>
-            }
-          </div>
-          {graph}
-        </Card>
-      )
-    default:
-      return (
-        <Card className="relative p-2 shadow-none">
-          {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
-              {actionSlot}
-            </div>
-          )}
-          <div className="grid grid-cols-4 items-center gap-2 p-1 lg:p-2">
-            <CardTitle
-              className="text-md col-span-2 cursor-pointer"
-              onClick={onCardClick}
-            >
-              {name} {ticker && `(${ticker})`}
-            </CardTitle>
-            <Badge variant="outline" className="col-span-1">
-              {value ? value.toLocaleString('en-US') : '0'}
-            </Badge>
-            {params.length > 0 && 
-                <Badge
-                  variant={
-                    params[0].value < 0 ? 'destructive' : params[0].value > 0 ? 'positive' : 'default'
-                  }
-                  className="col-span-1"
-                >
-                  {params[0].value.toLocaleString('en-US')}%
-                </Badge>
-            }
-          </div>
         </Card>
       )
   }

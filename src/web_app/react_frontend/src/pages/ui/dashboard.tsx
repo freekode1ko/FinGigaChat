@@ -44,7 +44,7 @@ const DashboardPage = () => {
         </TypographyH2>
         {!userId && user && <ManageDashboardButton />}
       </div>
-      <div className="flex flex-col gap-4 items-center justify-center pt-6 lg:pt-0">
+      <div className="flex flex-col gap-4 items-center justify-center pt-6 lg:pt-0 px-2 md:px-4">
         <>
           {isLoading &&
             Array.from({ length: 20 }).map((_, idx) => (

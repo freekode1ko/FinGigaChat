@@ -12,11 +12,11 @@ const DashboardSection = ({ section }: DashboardSectionProps) => {
     return null
   }
   return (
-    <div className="w-full space-y-2 mb-8 break-inside-avoid-column">
-      <div className="py-2 z-50 sticky top-0 bg-background">
+    <div className="w-full pb-8">
+      <div className="pt-2 pb-4">
         <TypographyH2>{section.section_name}</TypographyH2>
       </div>
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {section.data.map((item) => (
           <DashboardItem key={item.quote_id} item={item} />
         ))}

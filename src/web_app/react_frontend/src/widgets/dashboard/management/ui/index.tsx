@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react'
+import { Pencil, Search } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { VariableSizeList } from 'react-window'
 
@@ -75,7 +75,7 @@ const ManageDashboardButton = () => {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="secondary" size="icon">
-          <Settings />
+          <Pencil />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
@@ -85,11 +85,17 @@ const ManageDashboardButton = () => {
             Выберите, какие котировки отображать на дашборде
           </DialogDescription>
         </DialogHeader>
-        <Input
-          placeholder="Поиск по котировкам..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+        <div className='relative'>
+          <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <Search />
+          </span>
+          <Input
+            placeholder="Поиск по котировкам..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
         <div className="flex flex-col gap-4 py-2 h-[360px] overflow-y-auto">
           <VariableSizeList
             ref={listRef}
