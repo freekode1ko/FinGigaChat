@@ -13,6 +13,7 @@ from log import sentry
 from log.logger_base import selector_logger
 from module.article_process import ArticleProcess
 from module.utils import add_links_to_queue
+from module.monitoring import update_parsing_status, update_saving_status
 
 MAX_NEWS_BATCH_SIZE = 1000
 MINUTE = 60
@@ -103,6 +104,7 @@ def regular_func() -> tuple[str, list, list]:
             if not df_article.empty:
                 print('Старт получения новостей из тг-каналов из общего списка новостей')
                 all_tg_articles_df = ap_obj_online.get_tg_articles(df_article)
+                update_parsing_status(len(df_article), len(all_tg_articles_df))
 
                 logger.info('Старт обработки новостей с помощью моделей')
                 print('Старт обработки новостей с помощью моделей')
@@ -187,6 +189,7 @@ if __name__ == '__main__':
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
             post_ids(gotten_ids)  # отправка giga parsers полученных айди
+            update_parsing_status(new_subject_links, new_tg_links)
             add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)

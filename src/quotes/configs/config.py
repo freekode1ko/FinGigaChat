@@ -61,7 +61,7 @@ COLLECT_PERIOD = '15m'
 # timeout для http(s) запросов
 REQUEST_TIMEOUT = 90
 
-GIGAPARSERS_QUOTES = 'http://gigaparsers.ru/inner_api/get_quotes'
+GIGAPARSERS_QUOTES = 'https://gigaparsers.ru/api/get_quotes'
 
 # SELENIUM DRIVER PARAMS
 SELENIUM_COMMAND_EXECUTOR = 'http://selenium_firefox:4444/wd/hub'

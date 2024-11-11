@@ -384,6 +384,7 @@ class ParserSource(Base):
     source_group_id = Column(ForeignKey('source_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     last_update_datetime = Column(DateTime)
     previous_update_datetime = Column(DateTime)
+    last_save_datetime = Column(DateTime)
     params = Column(JSON)
     before_link = Column(Text, nullable=True, server_default='')
 
