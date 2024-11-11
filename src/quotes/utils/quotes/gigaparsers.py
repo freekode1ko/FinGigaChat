@@ -1,20 +1,20 @@
-import re
+"""Модуль для обработки котировок от GigaParsers"""
 import datetime
+import re
 from dataclasses import dataclass
 from typing import Any
 
+from constants.gigaparsers import GIGAPARSERS_API, GIGAPARSERS_RULES
 from db import crud, models
 from db.database import async_session
-from utils.common import parse_timestamp, parse_value
-from constants.gigaparsers import GIGAPARSERS_RULES, GIGAPARSERS_API
 from log.logger_base import logger
+from utils.common import parse_timestamp, parse_value
 
 
 @dataclass
 class QuoteRule:
-    """
-    Класс, представляющий набор значений по правилам для котировок от GigaParsers.
-    """
+    """Класс, представляющий набор значений по правилам для котировок от GigaParsers"""
+
     section_name: str
     section_params: dict[str, Any]
     value_fields: list[str]
@@ -23,7 +23,8 @@ class QuoteRule:
 
 
 def _get_quote_rule(source: str, quote: str) -> QuoteRule | None:
-    """
+    """Поиск правила для котировки.
+
     Ищет правило для данной котировки по источнику.
     Возвращает объект QuoteRule.
 
@@ -53,8 +54,7 @@ def _get_quote_rule(source: str, quote: str) -> QuoteRule | None:
 
 
 async def _process_quote_by_quote_rule(session, *, quote_data, quote_rule) -> list[dict[str, Any]]:
-    """
-    Функция для обработки котировки по заданному правилу.
+    """Функция для обработки котировки по заданному правилу.
 
     :param AsyncSession session: Сессия SQLAlchemy
     :param dict[str, Any] quote_data: Данные по котировке от GigaParsers
@@ -110,7 +110,7 @@ async def process_gigaparser_source(
 ) -> None:
     """
     Общая функция обработки данных для разных источников.
-    
+
     :param str source: Источник котировки
     :param dict[str, Any] data: Данные по источнику от GigaParsers
     """

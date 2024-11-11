@@ -1,5 +1,5 @@
 """Функциия для работы с БД"""
-from typing import Union, Any
+from typing import Any, Union
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert as insert_pg
@@ -41,7 +41,7 @@ async def get_or_load_quote_section_by_name(
         name: str,
         params: dict[str, str] | None,
         autocommit: bool = True,
-    ) -> models.QuotesSections:
+) -> models.QuotesSections:
     """Получить QuotesSection по имени или создать ее"""
     if not params:
         params = {}
@@ -70,7 +70,7 @@ async def get_or_load_quote_by_name(
         section_id: int,
         insert_content: dict[str, Any] | None = None,
         autocommit: bool = True,
-    ) -> models.Quotes:
+) -> models.Quotes:
     """Получить Quotes по имени или создать ее"""
     if not insert_content:
         insert_content = {}

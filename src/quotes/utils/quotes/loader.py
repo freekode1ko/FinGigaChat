@@ -15,7 +15,6 @@ from constants.gigaparsers import GIGAPARSERS_API
 from db import crud, models
 from db.database import async_session
 from log.logger_base import logger
-
 from .gigaparsers import process_gigaparser_source
 
 

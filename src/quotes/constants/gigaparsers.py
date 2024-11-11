@@ -1,3 +1,4 @@
+"""Константы для работы с котировками от GigaParsers"""
 # API URL
 GIGAPARSERS_API = 'https://gigaparsers.ru/api/get_quotes'
 
