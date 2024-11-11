@@ -187,8 +187,7 @@ if __name__ == '__main__':
 
             gotten_ids, new_subject_links, new_tg_links = regular_func()
             post_ids(gotten_ids)  # отправка giga parsers полученных айди
-            if not config.DEBUG:
-                add_links_to_queue(new_subject_links, new_tg_links)  # отправка qa banker ссылок сохраненных новостей
+            add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
 
             now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
             work_time = time.time() - start_time
