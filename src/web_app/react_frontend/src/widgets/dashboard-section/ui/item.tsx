@@ -1,7 +1,7 @@
 import { useInView } from 'react-intersection-observer'
 import { useNavigate } from 'react-router-dom'
 
-import { DashboardSubscriptionUpdateMenu } from '@/features/dashboard/update'
+import { DashboardSubscriptionActions } from '@/features/dashboard/update'
 import { ChartSkeleton, CustomChart, mapFinancialData } from '@/entities/charts'
 import { QuoteCard, type Quotes,useGetDashboardDataQuery } from '@/entities/quotes'
 import { selectAppTheme } from '@/entities/theme'
@@ -10,12 +10,13 @@ import { SITE_MAP } from '@/shared/model'
 
 interface DashboardItemProps {
   item: Quotes
+  allowEdit: boolean
 }
 
 /*
   Компонент карточки с котировкой для дашборда.
 */
-const _DashboardItem = ({item}: DashboardItemProps) => {
+const _DashboardItem = ({item, allowEdit}: DashboardItemProps) => {
   const theme = useAppSelector(selectAppTheme)
   const navigate = useNavigate()
   const { data, isLoading } = useGetDashboardDataQuery({
@@ -41,6 +42,13 @@ const _DashboardItem = ({item}: DashboardItemProps) => {
         onCardClick={() =>
           navigate(`${SITE_MAP.dashboard}/quote/${item.quote_id}`)
         }
+        actionSlot={
+          <DashboardSubscriptionActions
+            quoteId={item.quote_id}
+            viewType={item.view_type}
+            show={allowEdit}
+          />
+        }
       />
     )
 
@@ -62,12 +70,10 @@ const _DashboardItem = ({item}: DashboardItemProps) => {
         />
       }
       actionSlot={
-        <DashboardSubscriptionUpdateMenu
+        <DashboardSubscriptionActions
           quoteId={item.quote_id}
-          isActive={true}
           viewType={item.view_type}
-          instantUpdate={true}
-          display="dropdown"
+          show={allowEdit}
         />
       }
     />
@@ -82,14 +88,14 @@ const _DashboardItem = ({item}: DashboardItemProps) => {
   дашборда, оно будет подгружаться динамически, когда пользователь доскроллит до
   нужного места.
 */
-const DashboardItemWrapper = ({ item }: DashboardItemProps) => {
+const DashboardItemWrapper = (props: DashboardItemProps) => {
   const { ref, inView } = useInView({
     triggerOnce: true,
     rootMargin: '100px',
   })
   return (
     <div ref={ref}>
-      {inView && <_DashboardItem item={item} />}
+      {inView && <_DashboardItem {...props} />}
     </div>
   )
 }

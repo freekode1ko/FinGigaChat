@@ -370,7 +370,7 @@ async def get_graph_data(
         id=quote_id,
         data=[
             GraphData(
-                date=quote.date.date(),
+                date=quote.date,
                 value=quote.value,
                 open=quote.open,
                 close=quote.close,

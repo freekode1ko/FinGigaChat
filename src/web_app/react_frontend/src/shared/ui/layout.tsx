@@ -10,7 +10,7 @@ const Layout = ({ headerSlot, bottomMenuSlot }: LayoutProps) => {
   return (
     <div className="flex flex-col justify-start min-h-screen scroll-smooth bg-background text-text">
       {headerSlot}
-      <div className="flex-1 w-full mx-auto xl:max-w-none">
+      <div className="flex-1 w-full">
         <Outlet />
       </div>
       {bottomMenuSlot}

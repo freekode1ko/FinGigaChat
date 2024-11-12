@@ -14,7 +14,7 @@ GIGAPARSERS_RULES = {
         {
             'pattern': r'^(?P<quote>Инфляция|Ключевая ставка ЦБ|RUONIA)$',
             'get_section_name': lambda m: 'Макроэкономика (ЦБ)',
-            'section_params': {'_value': 'get_quote_last'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['value'],
             'field_mapping': {
                 'value': 'value',
@@ -25,7 +25,7 @@ GIGAPARSERS_RULES = {
         {
             'pattern': r'^(?P<quote>.+\s(?:\d+-летние|годовые))$',
             'get_section_name': lambda m: 'Облигации (Investing)',
-            'section_params': {'_value': 'get_quote_last'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['Доходность'],
             'field_mapping': {
                 'Доходность': 'value',
@@ -34,7 +34,7 @@ GIGAPARSERS_RULES = {
         {
             'pattern': r'^INVESTING:(?P<quote>[A-Z]{3}/[A-Z]{3}):[A-Z]{3}$',
             'get_section_name': lambda m: 'Валютные пары (Investing)',
-            'section_params': {'_value': 'get_quote_last', '%день': 'get_quote_day_day_param'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['C', 'O', 'H', 'L'],
             'field_mapping': {
                 'C': 'close',
@@ -46,7 +46,7 @@ GIGAPARSERS_RULES = {
         {
             'pattern': r'^INVESTING:(?P<quote>.+):USD$',
             'get_section_name': lambda m: 'Сырьевые товары (Investing)',
-            'section_params': {'_value': 'get_quote_last', '%день': 'get_quote_day_day_param'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['C', 'O', 'H', 'L'],
             'field_mapping': {
                 'C': 'close',
@@ -60,7 +60,7 @@ GIGAPARSERS_RULES = {
         {
             'pattern': r'^SGX:(?P<quote>.+):USD$',
             'get_section_name': lambda m: 'Фьючерсы (SGX)',
-            'section_params': {'_value': 'get_quote_last', '%день': 'get_quote_day_day_param'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['C', 'O', 'H', 'L', 'V'],
             'field_mapping': {
                 'C': 'close',
@@ -83,7 +83,7 @@ GIGAPARSERS_RULES = {
                 'Electricity': 'Электроэнергетика (TradingEconomics)',
                 'Livestock': 'Животноводство (TradingEconomics)',
             }[m.group('category')],
-            'section_params': {'_value': 'get_quote_last', '%день': 'get_quote_day_day_param'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['Price'],
             'field_mapping': {
                 'Price': 'value',
@@ -92,7 +92,7 @@ GIGAPARSERS_RULES = {
         {
             'pattern': r'^Country_(?P<quote>.+)$',
             'get_section_name': lambda m: 'Макроэкономика (TradingEconomics)',
-            'section_params': {'_value': 'get_quote_last'},
+            'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['Last'],
             'field_mapping': {
                 'Last': 'value',
@@ -102,7 +102,7 @@ GIGAPARSERS_RULES = {
         # {
         #     'pattern': r'^(?P<category>Loan Prime Rate 1Y)_(?P<quote>Actual|Consensus|Previous|TEForecast)$',
         #     'get_section_name': lambda m: 'Loan Prime Rate 1Y (TradingEconomics)',
-        #     'section_params': {'_value': 'get_quote_last'},
+        #     'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
         #     'value_fields': None,
         #     'field_mapping': None,
         # },

@@ -13,6 +13,7 @@ export const API_TAGS = {
   meetings: 'MEETINGS',
   notes: 'NOTES',
   dashboard: 'DASHBOARD',
+  dashboardSubscriptions: 'DASHBOARD_SUBSCRIPTIONS',
   dashboardQuotes: 'DASHBOARD_QUOTES',
 }
 

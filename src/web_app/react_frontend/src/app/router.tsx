@@ -1,8 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import {
-  AnalyticDetailsPage,
-  AnalyticsPage,
+  // AnalyticDetailsPage,
+  // AnalyticsPage,
   AuthPage,
   DashboardPage,
   MeetingsPage,
@@ -10,12 +10,13 @@ import {
   NotesPage,
   ProfilePage,
   QuoteDetailsPage,
-  SubscriptionsPage,
+  // SubscriptionsPage,
 } from '@/pages/ui'
 import { WelcomePage } from '@/pages/ui/welcome'
+import { SITE_MAP } from '@/shared/model'
 
 import { baseLayout, emptyLayout } from './layouts'
-import { ProtectedWrapper } from './router-guard'
+import { AuthGuard, DevelopGuard } from './router-guard'
 
 export const appRouter = () =>
   createBrowserRouter([
@@ -32,7 +33,7 @@ export const appRouter = () =>
           element: <Navigate to='/news' />
         },
         {
-          path: '/login',
+          path: SITE_MAP.login,
           element: <AuthPage />,
         },
         {
@@ -46,38 +47,26 @@ export const appRouter = () =>
       errorElement: <div>error</div>,
       children: [
         {
-          path: '/news',
+          path: SITE_MAP.news,
           element: <NewsPage />,
         },
         {
-          path: '/subscriptions',
-          element: (
-            <ProtectedWrapper>
-              <SubscriptionsPage />
-            </ProtectedWrapper>
-          ),
+          path: SITE_MAP.subscriptions,
+          element: <DevelopGuard />,
         },
         {
-          path: '/analytics',
-          element: (
-            <ProtectedWrapper>
-              <AnalyticsPage />
-            </ProtectedWrapper>
-          ),
+          path: SITE_MAP.analytics,
+          element: <DevelopGuard />,
           children: [
             {
               path: ':analyticId',
-              element: (
-                <ProtectedWrapper>
-                  <AnalyticDetailsPage />
-                </ProtectedWrapper>
-              ),
+              element: <DevelopGuard />,
             },
           ],
         },
         // FIXME
         {
-          path: '/dashboard',
+          path: SITE_MAP.dashboard,
           element: <DashboardPage />,
           children: [
             {
@@ -87,7 +76,7 @@ export const appRouter = () =>
           ],
         },
         {
-          path: '/dashboard/:userId',
+          path: SITE_MAP.dashboard + '/:userId',
           element: <DashboardPage />,
           children: [
             {
@@ -98,23 +87,23 @@ export const appRouter = () =>
         },
         // FIXME
         {
-          path: '/notes',
-          element: <ProtectedWrapper><NotesPage /></ProtectedWrapper>,
+          path: SITE_MAP.notes,
+          element: <AuthGuard><NotesPage /></AuthGuard>,
         },
         {
-          path: '/meetings',
+          path: SITE_MAP.meetings,
           element: (
-            <ProtectedWrapper>
+            <AuthGuard>
               <MeetingsPage />
-            </ProtectedWrapper>
+            </AuthGuard>
           ),
         },
         {
-          path: '/profile',
+          path: SITE_MAP.profile,
           element: (
-            <ProtectedWrapper>
+            <AuthGuard>
               <ProfilePage />
-            </ProtectedWrapper>
+            </AuthGuard>
           ),
         },
       ],

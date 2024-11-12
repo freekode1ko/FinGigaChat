@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from constants.gigaparsers import GIGAPARSERS_API, GIGAPARSERS_RULES
 from db import crud, models
 from db.database import async_session
@@ -53,7 +55,11 @@ def _get_quote_rule(source: str, quote: str) -> QuoteRule | None:
     return None
 
 
-async def _process_quote_by_quote_rule(session, *, quote_data, quote_rule) -> list[dict[str, Any]]:
+async def _process_quote_by_quote_rule(
+        session: AsyncSession,
+        quote_data: dict[str, Any],
+        quote_rule: QuoteRule,
+) -> list[dict[str, Any]]:
     """Функция для обработки котировки по заданному правилу.
 
     :param AsyncSession session: Сессия SQLAlchemy
@@ -92,8 +98,9 @@ async def _process_quote_by_quote_rule(session, *, quote_data, quote_rule) -> li
                 if value is None:
                     continue
                 quote_to_insert[target_field] = parse_value(value)
+                # Иногда в данных нет value, тогда на место value пробуем подставить close
                 if 'value' not in quote_to_insert:
-                    quote_to_insert['value'] = quote_to_insert.get('close', 0)  # temp
+                    quote_to_insert['value'] = quote_to_insert.get('close', 0)
         else:
             quote_to_insert = {
                 'quote_id': db_quote.id,

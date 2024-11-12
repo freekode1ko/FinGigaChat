@@ -4,7 +4,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import models
 
 
+async def get_quote_delta_param(quote: models.Quotes, session: AsyncSession) -> float | None:
+    """Получение изменения в % к последнему значению.
+    Это необходимо, когда данные обновляются с непонятной периодичностью (например, бонды).
+    """
+    stmt = await session.execute(
+        sa.select(models.QuotesValues)
+        .filter_by(quote_id=quote.id)
+        .order_by(models.QuotesValues.date.desc())
+        .limit(2)
+    )
+    quote_data = stmt.scalars().fetchall()
+    if not quote_data or len(quote_data) < 2:  # мб вернуть 'N/A' или null
+        return 0
+    return (quote_data[0].value - quote_data[1].value) / quote_data[1].value * 100
+
+
+# FIXME: сделать реальный d/d с проверкой времени
 async def get_quote_day_day_param(quote: models.Quotes, session: AsyncSession) -> float | None:
+    """Получение изменения в % за день"""
     stmt = await session.execute(
         sa.select(models.QuotesValues)
         .filter_by(quote_id=quote.id)
@@ -18,6 +36,7 @@ async def get_quote_day_day_param(quote: models.Quotes, session: AsyncSession) -
 
 
 async def get_quote_last(quote: models.Quotes, session: AsyncSession) -> float | None:
+    """Получение последнего значения по котировке"""
     stmt = await session.execute(
         sa.select(models.QuotesValues)
         .filter_by(quote_id=quote.id)

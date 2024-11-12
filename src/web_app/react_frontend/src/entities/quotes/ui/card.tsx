@@ -37,19 +37,19 @@ export const QuoteCard = ({
     case 1:
       return (
         <Card className="bg-secondary border border-border relative p-2 shadow-none hover:bg-background">
-          {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
-              {actionSlot}
-            </div>
-          )}
           <div className="flex items-center gap-4 p-1 lg:p-2">
             <div className='flex flex-col flex-[2] min-w-0'>
-              <CardTitle
-                className="text-md cursor-pointer"
-                onClick={onCardClick}
-              >
-                {ticker ? ticker : name}
-              </CardTitle>
+              <div className='flex flex-row flex-nowrap gap-1'>
+                {actionSlot}
+                <CardTitle className="text-md cursor-pointer" onClick={onCardClick} style={{
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 2,
+                }}>
+                  {ticker ? ticker : name}
+                </CardTitle>
+              </div>
               {ticker && <p className='text-muted-foreground'>{name}</p>}
             </div>
             {
@@ -76,18 +76,21 @@ export const QuoteCard = ({
     default:
       return (
         <Card className="flex flex-col items-center p-2 gap-2 lg:grid lg:grid-cols-3 relative shadow-none bg-secondary border border-border hover:bg-background">
-          {actionSlot && (
-            <div className="absolute top-2 right-2 z-50 opacity-25 hover:opacity-100 p-2 bg-background rounded-md">
-              {actionSlot}
-            </div>
-          )}
           <div className="grid grid-cols-2 w-full items-center lg:items-start lg:gap-4 lg:flex lg:flex-col lg:justify-between lg:col-span-1 h-full">
-            <CardTitle
-              className="text-lg col-span-1 cursor-pointer"
-              onClick={onCardClick}
-            >
-              {name} {ticker && `(${ticker})`}
-            </CardTitle>
+            <div className='flex flex-col col-span-1'>
+              <div className='flex flex-row flex-nowrap gap-1'>
+                {actionSlot}
+                <CardTitle className="text-md cursor-pointer" onClick={onCardClick} style={{
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 2,
+                }}>
+                  {ticker ? ticker : name}
+                </CardTitle>
+              </div>
+              {ticker && <p className='text-muted-foreground'>{name}</p>}
+            </div>
             <div className="text-xl lg:text-2xl justify-end font-semibold flex flex-row lg:flex-col gap-2 lg:gap-0">
               <p>{value ? value.toLocaleString('en-US') : '0'}</p>
               {params.length > 0 && 

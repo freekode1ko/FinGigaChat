@@ -1,5 +1,3 @@
-import { toast } from 'sonner'
-
 import { baseApi } from '@/shared/api'
 import { API_ENDPOINTS, API_TAGS, KEEP_UNUSED_DATA_TEMP } from '@/shared/model'
 
@@ -32,7 +30,7 @@ export const quotesApi = baseApi.injectEndpoints({
         method: 'GET',
       }),
       keepUnusedDataFor: KEEP_UNUSED_DATA_TEMP,
-      providesTags: [API_TAGS.dashboard],
+      providesTags: [API_TAGS.dashboardSubscriptions],
     }),
     putDashboardSubscriptions: build.mutation<
       string,
@@ -43,49 +41,10 @@ export const quotesApi = baseApi.injectEndpoints({
         method: 'PUT',
         body: { subscription_sections: body },
       }),
-      invalidatesTags: [API_TAGS.dashboard],
-      async onQueryStarted({ userId, body }, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          quotesApi.util.updateQueryData(
-            'getUserDashboard',
-            { userId },
-            (draft) => {
-              body.forEach((subscriptionSection) => {
-                const quoteSection = draft.sections.find(
-                  (section) =>
-                    section.section_name === subscriptionSection.section_name
-                )
-                if (quoteSection) {
-                  subscriptionSection.subscription_items.forEach(
-                    (subscription) => {
-                      const quoteIndex = quoteSection.data.findIndex(
-                        (quote) => quote.ticker === subscription.ticker
-                      )
-                      if (quoteIndex !== -1) {
-                        const quote = quoteSection.data[quoteIndex]
-                        if (!subscription.active) {
-                          quoteSection.data.splice(quoteIndex, 1)
-                        } else {
-                          if (quote.view_type !== subscription.type) {
-                            quote.view_type = subscription.type
-                          }
-                        }
-                      }
-                    }
-                  )
-                }
-              })
-            }
-          )
-        )
-        try {
-          await queryFulfilled
-          toast.success('Подписки успешно обновлены!')
-        } catch {
-          patchResult.undo()
-          toast.error('Мы не смогли обновить подписки. Попробуйте позже.')
-        }
-      },
+      invalidatesTags: [
+        API_TAGS.dashboardSubscriptions,
+        API_TAGS.dashboardQuotes,
+      ],
     }),
     putDashboardSubscriptionsOnMain: build.mutation<
       string,
@@ -96,7 +55,10 @@ export const quotesApi = baseApi.injectEndpoints({
         method: 'PUT',
         body: { subscription_sections: body },
       }),
-      invalidatesTags: [API_TAGS.dashboardQuotes],
+      invalidatesTags: [
+        API_TAGS.dashboardSubscriptions,
+        API_TAGS.dashboardQuotes,
+      ],
     }),
     getDashboardData: build.query<
       { id: number; data: Array<FinancialData> },
@@ -112,6 +74,15 @@ export const quotesApi = baseApi.injectEndpoints({
         url: `${API_ENDPOINTS.dashboardQuotes}/${userId}`,
         method: 'GET',
       }),
+      transformResponse: (response: QuotesResponse) => {
+        // порядок секций с бэка не гарантируется
+        return {
+          ...response,
+          sections: response.sections.sort((a, b) =>
+            a.section_name.localeCompare(b.section_name)
+          ),
+        }
+      },
       providesTags: [API_TAGS.dashboardQuotes],
     }),
   }),
