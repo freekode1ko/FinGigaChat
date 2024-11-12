@@ -3,7 +3,6 @@ import { AddNoteButton } from '@/features/notes'
 import { type Note, useGetNotesQuery } from '@/entities/notes'
 import { selectUserData } from '@/entities/user'
 import { useAppSelector } from '@/shared/lib'
-import { TypographyH2 } from '@/shared/ui'
 import { skipToken } from '@reduxjs/toolkit/query'
 
 const NotesPage = () => {
@@ -28,8 +27,7 @@ const NotesPage = () => {
   ] as Array<Note>
 
   return (
-    <div className="pt-10 pb-4 space-y-2">
-      <TypographyH2>Заметки</TypographyH2>
+    <div className="mx-auto lg:max-w-screen-sm pt-5 pb-2 space-y-2">
       <AddNoteButton />
       <NotesList notes={data} showSkeleton={isFetching} />
     </div>

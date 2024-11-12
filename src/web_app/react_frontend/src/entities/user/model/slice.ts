@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
+import { usersApi } from '../api'
 import { User } from './types'
 
 type UserSliceState = {
@@ -24,6 +25,15 @@ export const userSlice = createSlice({
       state.isAuthenticated = false
       state.user = null
     },
+  },
+  extraReducers: (builder) => {
+    builder.addMatcher(
+      usersApi.endpoints.getCurrentUser.matchFulfilled,
+      (state, { payload }) => {
+        state.isAuthenticated = true
+        state.user = payload
+      }
+    )
   },
 })
 

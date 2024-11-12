@@ -62,13 +62,16 @@ const QuoteDetailsPage = () => {
           <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto">
             <div className="max-h-[300px]">
               {finData ? (
-                <CustomChart
-                  inputData={mapFinancialData([...finData.data].reverse())}
-                  size="large"
-                  height={300}
-                  theme={theme}
-                />
-              ) : (
+                finData.data?.length > 2 ? (
+                  <CustomChart
+                    inputData={mapFinancialData([...finData.data].reverse())}
+                    size="large"
+                    height={300}
+                    theme={theme}
+                  />
+                ) : (
+                  <p className='text-muted-foreground text-center'>График по этому инструменту сейчас недоступен</p>
+                )) : (
                 <ChartSkeleton />
               )}
             </div>

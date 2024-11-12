@@ -34,6 +34,7 @@ export const CustomChart = ({
   theme: Theme
 }) => {
   const getOpenCloseColor = () => {
+    if (inputData.length < 2) return theme === 'dark' ? '#383E55' : '#E1E1EA'
     let compIndex = inputData.length - 2
     while (inputData[compIndex].date === inputData[inputData.length - 1].date) {
       compIndex -= 1;
@@ -76,8 +77,8 @@ export const CustomChart = ({
     height: observableHeight,
   } = useResizeObserver(
     size === 'small'
-      ? { initialHeight: height || 150, initialWidth: width || 200 }
-      : { initialHeight: height || 250, initialWidth: width || 400 }
+      ? { initialHeight: height || 60, initialWidth: width || 200 }
+      : { initialHeight: height || 150, initialWidth: width || 450 }
   )
   const timeDisplayFormat = timeFormat('%d.%m.%Y')
 
@@ -94,7 +95,10 @@ export const CustomChart = ({
           ratio={1.0}
           width={observableWidth}
           seriesName={`Chart ${resetCount}`}
-          margin={{ left: 0, right: 48, top: 0, bottom: 24 }}
+          margin={size == 'small' ?
+            { left: 0, right: 0, top: 0, bottom: 0 } 
+            : { left: 0, right: 46, top: 0, bottom: 24 }
+          }
           data={data}
           xScale={xScale}
           xAccessor={xAccessor}

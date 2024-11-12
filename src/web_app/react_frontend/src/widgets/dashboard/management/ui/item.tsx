@@ -3,6 +3,7 @@ import {
   DashboardSubscription,
   type FlattenedDashboardItem,
 } from '@/entities/quotes'
+import { cn } from '@/shared/lib'
 
 interface ManageItemProps {
   index: number
@@ -26,7 +27,7 @@ export const ItemRow = ({ index, data, style }: ManageItemProps) => {
         className="flex items-center justify-between py-2 gap-2 border-b"
         style={style}
       >
-        <span className={`ml-2 ${!quote.active ? 'opacity-50' : ''}`}>
+        <span className={cn('ml-2', !quote.active && 'opacity-50')}>
           {quote.name}
         </span>
         <DashboardSubscriptionUpdateMenu
