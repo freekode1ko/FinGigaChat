@@ -4,6 +4,8 @@ import json
 import time
 import warnings
 
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.blocking import BlockingScheduler
 import pandas as pd
 import requests
 
@@ -16,8 +18,6 @@ from module.utils import add_links_to_queue
 from module.monitoring import update_parsing_status, update_saving_status
 
 MAX_NEWS_BATCH_SIZE = 1000
-MINUTE = 60
-MINUTES_TO_SLEEP = 20
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
@@ -172,37 +172,40 @@ def post_ids(ids: str) -> None:
         logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
 
 
-if __name__ == '__main__':
-    sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
-    warnings.filterwarnings('ignore')
-    # инициализируем логгер
-    logger = selector_logger(config.log_file)
+def main():
     try:
-        # запускаем периодическое получение/обработку новостей
-        ap_obj_online = ArticleProcess(logger)
-        while True:
-            start_time = time.time()
-            now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
-            start_msg = f'Запуск pipeline с новостями в {now_str}'
-            logger.info(start_msg)
-            print(start_msg)
+        start_time = time.time()
+        now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
+        start_msg = f'Запуск pipeline с новостями в {now_str}'
+        logger.info(start_msg)
+        print(start_msg)
 
-            gotten_ids, new_subject_links, new_tg_links = regular_func()
-            post_ids(gotten_ids)  # отправка giga parsers полученных айди
-            update_saving_status(new_subject_links, new_tg_links)
-            add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
+        gotten_ids, new_subject_links, new_tg_links = regular_func()
+        post_ids(gotten_ids)  # отправка giga parsers полученных айди
+        update_saving_status(new_subject_links, new_tg_links)
+        add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
 
-            now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
-            work_time = time.time() - start_time
-            end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
-            print(end_msg + '\nОжидайте\n')
-            logger.info(end_msg)
-            for i in range(MINUTES_TO_SLEEP):
-                time.sleep(MINUTE)
-                logger.debug('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
-                print('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
-    except KeyboardInterrupt:
-        pass
+        now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
+        work_time = time.time() - start_time
+        end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
+        print(end_msg + '\nОжидайте\n')
+        logger.info(end_msg)
     except Exception as expn:
         logger.error(expn)
         print(expn)
+
+
+if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
+    warnings.filterwarnings('ignore')
+
+    logger = selector_logger(config.log_file)
+    ap_obj_online = ArticleProcess(logger)
+
+    scheduler = BlockingScheduler()
+    trigger = CronTrigger(minute='0,10,20,40')
+    scheduler.add_job(main, trigger=trigger)
+    try:
+        scheduler.start()
+    except KeyboardInterrupt:
+        scheduler.shutdown()
