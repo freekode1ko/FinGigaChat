@@ -17,6 +17,14 @@ PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
+SOURCE_SYSTEM = f'AI-helper ({_env_value})'
+MONITORING_API_USER = 'admin@gmail.com'
+MONITORING_API_PASSWORD: str = env.str('MONITORING_API_PASSWORD')
+MONITORING_API_URL: str = str(env.str('MONITORING_API_URL', default='')) + '/api/v1'
+MONITORING_API_LOGIN_URL: str = MONITORING_API_URL + '/auth/login'
+MONITORING_API_SYSTEM_URL = f'{MONITORING_API_URL}/source_systems/{SOURCE_SYSTEM}'
+MONITORING_API_PARSER_URL = f'{MONITORING_API_SYSTEM_URL}/parsers'
+
 
 def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8') -> list | dict | str:
     """
@@ -29,11 +37,7 @@ def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8')
     return json.loads((STATIC_ASSETS_PATH / file_name).read_text(encoding=encoding))
 
 
-api_key: str = env.str('MONITORING_API_KEY', default='')
-monitoring_api_url: str = str(env.str('MONITORING_API_URL', default='')) + '/{}'
 psql_engine: str = env.str('PSQL_ENGINE', default='')
-
-source_system = f'AI-helper ({_env_value})'
 
 log_file = 'parser_monitoring'
 LOG_LEVEL_DEBUG = 10
@@ -42,8 +46,6 @@ LOG_LEVEL_WARNING = 30
 LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
-
-update_parser_statuses_url = 'api/v1/monitoring/update-monitoring-data'
 
 SEND_STATUSES_EVERY_MINUTES = 5
 PENDING_SLEEP_TIME = 60
