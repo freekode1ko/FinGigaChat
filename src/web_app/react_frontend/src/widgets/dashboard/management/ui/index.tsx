@@ -76,7 +76,7 @@ const ManageDashboardButton = () => {
 
   const getItemSize = (index: number) => {
     const item = flattenedContent[index]
-    return item.type === 'section' ? 44 : 60
+    return item.type === 'section' ? 44 : 56
   }
 
   return (
@@ -98,7 +98,7 @@ const ManageDashboardButton = () => {
             <Search />
           </span>
           <Input
-            placeholder="Поиск по котировкам..."
+            placeholder="Поиск по инструментам и секциям..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12"
