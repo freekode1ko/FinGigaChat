@@ -1,2 +1,2 @@
-export { AuthFormStep1 } from './step1'
-export { AuthFormStep2 } from './step2'
+export { EmailStep } from './step1'
+export { ConfirmationCodeStep } from './step2'

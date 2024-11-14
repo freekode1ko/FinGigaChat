@@ -72,7 +72,7 @@ class DashboardSubscriptions(BaseModel):
 class GraphData(BaseModel):
     """Данные для графиков за день"""
 
-    date: datetime.date
+    date: datetime.datetime
     value: Optional[float] = None
     open: Optional[float] = None
     close: Optional[float] = None

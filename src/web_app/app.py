@@ -1,20 +1,15 @@
-import ssl
-from pathlib import Path
-
 from contextlib import asynccontextmanager
-import aiohttp
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 import config
 import utils
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
-from constants import constants
+from constants import constants, texts
 from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
@@ -23,6 +18,7 @@ logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await texts.texts_manager.init()
     await utils.add_notify_job(logger)
     utils.scheduler.start()
     yield
@@ -86,9 +82,9 @@ async def create_meeting(
     await utils.add_notify_job(logger=logger, meeting=data)
 
     user_email = await get_user_email(user_id=user_id)
-    with (utils.SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.MAIL_SMTP_SERVER, config.MAIL_SMTP_PORT)
+    async with (utils.SmtpSend(config.MAIL_RU_LOGIN, config.MAIL_RU_PASSWORD, config.MAIL_SMTP_SERVER, config.MAIL_SMTP_PORT)
           as smtp_email):
-        smtp_email.send_meeting(user_email, data)
+        await smtp_email.send_meeting(user_email, data)
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'

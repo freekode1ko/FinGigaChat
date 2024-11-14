@@ -1,10 +1,3 @@
-export {
-  favoriteQuotesSlice,
-  selectFavoriteQuotesList,
-  selectIsFavoriteQuotesShown,
-  toggleFavoriteQuotes,
-  updateFavoriteQuotesList,
-} from './__slice'
 export { TRADINGVIEW_QUOTES } from './constants'
 export {
   dashboardSubscriptionsSlice,
@@ -17,6 +10,7 @@ export type {
   FinancialData,
   FlattenedDashboardItem,
   Quotes,
+  QuotesParams,
   QuotesSection,
   TradingViewSymbol,
 } from './types'

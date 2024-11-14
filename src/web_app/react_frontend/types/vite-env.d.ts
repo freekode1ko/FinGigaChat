@@ -1,5 +1,3 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_DEBUG: string
-}
+declare const __BOT_NAME__: string

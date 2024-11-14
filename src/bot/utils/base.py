@@ -28,12 +28,13 @@ from log.bot_logger import user_logger
 from log.logger_base import Logger
 
 
-async def bot_send_msg(bot: Bot,
-                       user_id: int | str,
-                       msg: str,
-                       delimiter: str = '\n\n',
-                       prefix: str = '',
-                       protect_content: bool = texts_manager.PROTECT_CONTENT) -> list[types.Message]:
+async def bot_send_msg(
+        bot: Bot,
+        user_id: int | str,
+        msg: str,
+        delimiter: str = '\n\n',
+        prefix: str = '',
+) -> list[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
 
@@ -42,7 +43,6 @@ async def bot_send_msg(bot: Bot,
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
-    :param protect_content: Защищать ли сообщения от скринов и перессылки
     return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
@@ -66,7 +66,7 @@ async def bot_send_msg(bot: Bot,
             text=batch,
             parse_mode='HTML',
             disable_web_page_preview=True,
-            protect_content=protect_content,
+            protect_content=texts_manager.PROTECT_CONTENT,
         )
         messages.append(msg)
     return messages
@@ -177,7 +177,6 @@ async def __sent_photo_and_msg(
     month: list[list] = None,
     title: str | None = '',
     source: str = '',
-    protect_content: bool = texts_manager.PROTECT_CONTENT,
 ) -> None:
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
@@ -188,7 +187,6 @@ async def __sent_photo_and_msg(
     :param month: Месячный отчет в формате текста
     :param title: Подпись к фотокарточке
     :param source: Не используется на данный момент
-    :param protect_content: Булевое значение отвечающее за защиту от копирования сообщения и его текста/фотокарточки
     return None
     """
     batch_size = 3500
@@ -203,7 +201,12 @@ async def __sent_photo_and_msg(
             day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
             await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
     if photo:
-        await message.answer_photo(photo, caption=title, parse_mode='HTML', protect_content=protect_content)
+        await message.answer_photo(
+            photo,
+            caption=title,
+            parse_mode='HTML',
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
 
 
 def __replacer(data: str) -> str:

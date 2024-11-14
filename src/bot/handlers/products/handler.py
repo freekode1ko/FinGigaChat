@@ -172,7 +172,7 @@ async def get_product_documents(callback_query: types.CallbackQuery, product: mo
     match product.send_documents_format_type:
         case enums.FormatType.group_files:
             pdf_files = [Path(i.file_path) for i in documents]
-            if not await send_pdf(callback_query, pdf_files, msg_text):
+            if not await send_pdf(callback_query, pdf_files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
                 msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
                 await callback_query.message.answer(msg_text, parse_mode='HTML')
             else:

@@ -33,10 +33,22 @@ export const CustomChart = ({
   width?: number
   theme: Theme
 }) => {
+  const getOpenCloseColor = () => {
+    if (inputData.length < 2) return theme === 'dark' ? '#383E55' : '#E1E1EA'
+    let compIndex = inputData.length - 2
+    while (inputData[compIndex].date === inputData[inputData.length - 1].date) {
+      compIndex -= 1;
+    }
+    if (!inputData[compIndex]) return theme === 'dark' ? '#383E55' : '#E1E1EA';
+    return inputData[inputData.length - 1].value > inputData[compIndex].value ? "#26A69A" : "#EF5350";
+  };
+
+  const openCloseColor = getOpenCloseColor();
+
   const axisStyles = {
     strokeStyle: theme === 'dark' ? '#383E55' : '#E1E1EA',
     strokeWidth: 2,
-    tickLabelFill: theme === 'dark' ? '#9EAAC7' : '#F4F6F9',
+    tickLabelFill: theme === 'dark' ? '#9EAAC7' : '#000115',
     tickStrokeStyle: theme === 'dark' ? '#383E55' : '#E1E1EA',
     gridLinesStrokeStyle:
       theme === 'dark' ? 'rgba(56, 62, 85, 0.5)' : 'rgba(245, 245, 234, 0.5)',
@@ -65,8 +77,8 @@ export const CustomChart = ({
     height: observableHeight,
   } = useResizeObserver(
     size === 'small'
-      ? { initialHeight: height || 150, initialWidth: width || 200 }
-      : { initialHeight: height || 250, initialWidth: width || 400 }
+      ? { initialHeight: height || 60, initialWidth: width || 200 }
+      : { initialHeight: height || 150, initialWidth: width || 450 }
   )
   const timeDisplayFormat = timeFormat('%d.%m.%Y')
 
@@ -80,10 +92,13 @@ export const CustomChart = ({
       {observableWidth && observableHeight && (
         <ChartCanvas
           height={observableHeight}
-          ratio={1.2}
+          ratio={1.0}
           width={observableWidth}
           seriesName={`Chart ${resetCount}`}
-          margin={{ left: 0, right: 48, top: 0, bottom: 24 }}
+          margin={size == 'small' ?
+            { left: 0, right: 0, top: 0, bottom: 0 } 
+            : { left: 0, right: 46, top: 0, bottom: 24 }
+          }
           data={data}
           xScale={xScale}
           xAccessor={xAccessor}
@@ -98,23 +113,14 @@ export const CustomChart = ({
               d.value + d.value * 0.02,
             ]}
           >
-            {size === 'large' && (
-              <>
-                <EdgeIndicator
-                  itemType="last"
-                  rectWidth={48}
-                  fill="#7f7f7f"
-                  lineStroke="#7f7f7f"
-                  displayFormat={format('.2f')}
-                  yAccessor={(d) => d.value}
-                />
-                <ZoomButtons
-                  onReset={() => setResetCount(resetCount + 1)}
-                  {...zoomButtonStyles}
-                />
-              </>
-            )}
-            <LineSeries yAccessor={(d) => d.value} />
+            <LineSeries
+              strokeStyle={openCloseColor}
+              strokeWidth={2}
+              hoverStrokeWidth={3}
+              highlightOnHover
+              hoverTolerance={50}
+              yAccessor={(d) => d.value}
+            />
             <XAxis {...axisStyles} showGridLines={size === 'large'} />
             <MouseCoordinateX
               displayFormat={timeDisplayFormat}
@@ -126,13 +132,29 @@ export const CustomChart = ({
               {...coordinateStyles}
             />
             <Label
-              fillStyle="#7f7f7f"
+              fillStyle="rgb(127,127,127,0.5)"
               fontSize={size === 'large' ? 16 : 12}
               fontWeight="bold"
               text="BRIEF"
               y={observableHeight / 2}
               x={observableWidth / 2}
             />
+            {size === 'large' && (
+              <>
+                <EdgeIndicator
+                  itemType="last"
+                  rectWidth={48}
+                  fill={openCloseColor}
+                  lineStroke={openCloseColor}
+                  displayFormat={format('.2f')}
+                  yAccessor={(d) => d.value}
+                />
+                <ZoomButtons
+                  onReset={() => setResetCount(resetCount + 1)}
+                  {...zoomButtonStyles}
+                />
+              </>
+            )}
           </Chart>
           <CrossHairCursor {...crossHairStyles} />
         </ChartCanvas>

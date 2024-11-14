@@ -5,9 +5,11 @@ from api.v1.quotation.router import router as quotation_router
 from api.v1.analytics.router import router as analytics_router
 from api.v1.subscriptions.router import router as subscriptions_router
 from api.v1.meetings.router import router as meetings_router
+from api.v1.auth.router import router as auth_router
 
 router = APIRouter()
 
+router.include_router(auth_router, prefix='/auth')
 router.include_router(news_router, prefix='/news')
 router.include_router(quotation_router, prefix='/quotation')
 router.include_router(analytics_router, prefix='/analytics')

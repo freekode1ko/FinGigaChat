@@ -8,9 +8,7 @@ interface LogoProps {
 
 const Logo = () => {
   return (
-    <div className="inline-flex items-center">
-      <TypographyH2 className="uppercase">Brief</TypographyH2>
-    </div>
+    <TypographyH2 className="uppercase">Brief</TypographyH2>
   )
 }
 

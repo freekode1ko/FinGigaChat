@@ -193,3 +193,11 @@ class FeatureType(str, Enum):
     admin = 'admin'
 
     rag_research = 'rag_research'
+    web_retriever = 'web_retriever'
+
+
+class LinksType(str, Enum):
+    """Тип ссылки."""
+
+    subject_link = 'subject_link'  # ссылка на новость, содержащая новость об объекте (клиенте, коммоде и тд)
+    tg_link = 'tg_link'  # ссылка на новость из тг-каналов, не относящаяся ни к чему (отрасли)

@@ -8,9 +8,9 @@ type LayoutProps = {
 
 const Layout = ({ headerSlot, bottomMenuSlot }: LayoutProps) => {
   return (
-    <div className="flex flex-col justify-start min-h-screen scroll-smooth bg-white text-dark-blue dark:bg-dark-blue dark:text-white">
+    <div className="flex flex-col justify-start min-h-screen scroll-smooth bg-background text-text">
       {headerSlot}
-      <div className="flex-1 w-full p-4 max-w-3xl mx-auto pt-10 xl:p-16 xl:max-w-none">
+      <div className="flex-1 w-full">
         <Outlet />
       </div>
       {bottomMenuSlot}

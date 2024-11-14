@@ -158,6 +158,24 @@ services:
         restart: always
 
 
+    web_retriever:
+        build:
+            context: ./src/web_retriever
+            dockerfile: Dockerfile
+        container_name: web_retriever_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        ports:
+            - ${WEB_RETRIEVER_PORT}:${WEB_RETRIEVER_PORT}
+        command: poetry run python main.py
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+        restart: always
+
+
     quotes:
         build:
             context: ./src/quotes

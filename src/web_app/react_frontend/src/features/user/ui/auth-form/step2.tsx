@@ -1,6 +1,9 @@
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import { z } from 'zod'
 
+import { setUser, useLazyGetCurrentUserQuery, useVerifyCodeMutation } from '@/entities/user'
+import { useAppDispatch } from '@/shared/lib'
 import {
   Button,
   Form,
@@ -18,26 +21,31 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { confirmationFormSchema } from '../../model'
 
-export const AuthFormStep2 = ({
+export const ConfirmationCodeStep = ({
+  forEmail,
   onSuccessNavigate,
 }: {
+  forEmail: string
   onSuccessNavigate: () => void
 }) => {
-  const isLoading = false
-  const trigger = (values: z.infer<typeof confirmationFormSchema>) => {
-    console.log(values)
-    /*
-    1. Отправить запрос
-    2. Дождаться ответ
-    3. Если 2хх - вызвать navigate на дашборд
-    */
-    onSuccessNavigate()
+  const dispatch = useAppDispatch()
+  const [getUser, {isLoading: userLoading}] = useLazyGetCurrentUserQuery()
+  const [verifyCode, {isLoading}] = useVerifyCodeMutation()
+  const trigger = async (values: z.infer<typeof confirmationFormSchema>) => {
+    try {
+      await verifyCode({...values, email: forEmail}).unwrap()
+      const user = await getUser().unwrap()
+      dispatch(setUser(user))
+      onSuccessNavigate()
+    } catch {
+      toast.error(`Некорректный код`)
+    }
   }
 
   const form = useForm<z.infer<typeof confirmationFormSchema>>({
     resolver: zodResolver(confirmationFormSchema),
-    defaultValues: { code: '' },
-    disabled: isLoading,
+    defaultValues: { reg_code: '' },
+    disabled: isLoading || userLoading,
   })
 
   return (
@@ -48,7 +56,7 @@ export const AuthFormStep2 = ({
       >
         <FormField
           control={form.control}
-          name="code"
+          name="reg_code"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Одноразовый пароль</FormLabel>
@@ -62,15 +70,14 @@ export const AuthFormStep2 = ({
                 </InputOTP>
               </FormControl>
               <FormDescription>
-                Пожалуйста, введите одноразовый пароль, который вы получили на
-                указанную почту.
+                Пожалуйста, введите одноразовый пароль, который вы получили по почте.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isLoading} className="w-full">
-          {isLoading ? 'Проверяем данные...' : 'Подтвердить'}
+        <Button type="submit" disabled={isLoading || userLoading} className="w-full">
+          {(isLoading || userLoading) ? 'Проверяем данные...' : 'Подтвердить'}
         </Button>
       </form>
     </Form>

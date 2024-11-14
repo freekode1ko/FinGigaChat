@@ -7,7 +7,7 @@ const Skeleton = ({
   return (
     <div
       className={cn(
-        'animate-pulse rounded-lg bg-secondary-300 dark:bg-secondary-800',
+        'animate-pulse rounded-lg bg-secondary',
         className
       )}
       {...props}

@@ -54,6 +54,8 @@ redis_host: str = env.str('REDIS_HOST', default='localhost')
 redis_port: int = env.int('REDIS_PORT', default=6379)
 redis_password: str = env.str('REDIS_PASSWORD', default='')
 
+WEB_RETRIEVER_PORT = env.int('WEB_RETRIEVER_PORT', default=447)
+
 DOMAIN_NAME: str = env.str('DOMAIN_NAME', default='localhost')
 
 match DOMAIN_NAME:
@@ -81,6 +83,7 @@ giga_model = 'GigaChat-Pro'
 # url к rag-сервисам
 BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'
 BASE_QA_RESEARCH_URL = 'http://193.124.47.175:8000'
+BASE_QA_WEB_URL = f'http://web_retriever_container:{WEB_RETRIEVER_PORT}'
 BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
 POST_TO_SERVICE_TIMEOUT = 90
 

@@ -1,20 +1,22 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import {
-  AnalyticDetailsPage,
-  AnalyticsPage,
+  // AnalyticDetailsPage,
+  // AnalyticsPage,
   AuthPage,
   DashboardPage,
   MeetingsPage,
   NewsPage,
   NotesPage,
+  ProfilePage,
   QuoteDetailsPage,
-  QuotesPage,
-  SubscriptionsPage,
+  // SubscriptionsPage,
 } from '@/pages/ui'
+import { WelcomePage } from '@/pages/ui/welcome'
+import { SITE_MAP } from '@/shared/model'
 
-import { baseLayout, emptyLayout } from './layouts/base'
-import { ProtectedWrapper } from './router-guard'
+import { baseLayout, emptyLayout } from './layouts'
+import { AuthGuard, DevelopGuard } from './router-guard'
 
 export const appRouter = () =>
   createBrowserRouter([
@@ -23,8 +25,20 @@ export const appRouter = () =>
       errorElement: <div>error</div>,
       children: [
         {
-          path: '/login',
+          path: '/',
+          element: <Navigate to='/news' />
+        },
+        {
+          path: '/quotes',
+          element: <Navigate to='/news' />
+        },
+        {
+          path: SITE_MAP.login,
           element: <AuthPage />,
+        },
+        {
+          path: '/welcome',
+          element: <WelcomePage />
         },
       ],
     },
@@ -32,37 +46,27 @@ export const appRouter = () =>
       element: baseLayout,
       errorElement: <div>error</div>,
       children: [
-        // FIXME: в корне что-то будет, не редирект
         {
-          path: '/',
-          element: <Navigate to='/news' />
-        },
-        // FIXME
-        {
-          path: '/news',
+          path: SITE_MAP.news,
           element: <NewsPage />,
         },
         {
-          path: '/subscriptions',
-          element: (
-            <ProtectedWrapper showHomeButton>
-              <SubscriptionsPage />
-            </ProtectedWrapper>
-          ),
+          path: SITE_MAP.subscriptions,
+          element: <DevelopGuard />,
         },
         {
-          path: '/analytics',
-          element: <AnalyticsPage />,
+          path: SITE_MAP.analytics,
+          element: <DevelopGuard />,
           children: [
             {
               path: ':analyticId',
-              element: <AnalyticDetailsPage />,
+              element: <DevelopGuard />,
             },
           ],
         },
-        //
+        // FIXME
         {
-          path: '/dashboard',
+          path: SITE_MAP.dashboard,
           element: <DashboardPage />,
           children: [
             {
@@ -72,7 +76,7 @@ export const appRouter = () =>
           ],
         },
         {
-          path: '/dashboard/:userId',
+          path: SITE_MAP.dashboard + '/:userId',
           element: <DashboardPage />,
           children: [
             {
@@ -81,27 +85,25 @@ export const appRouter = () =>
             },
           ],
         },
-        //
+        // FIXME
         {
-          path: '/quotes',
-          element: <QuotesPage />,
-          children: [
-            {
-              path: ':quotationId',
-              element: <QuoteDetailsPage />,
-            },
-          ],
+          path: SITE_MAP.notes,
+          element: <AuthGuard><NotesPage /></AuthGuard>,
         },
         {
-          path: '/notes',
-          element: <NotesPage />,
-        },
-        {
-          path: '/meetings',
+          path: SITE_MAP.meetings,
           element: (
-            <ProtectedWrapper showHomeButton>
+            <AuthGuard>
               <MeetingsPage />
-            </ProtectedWrapper>
+            </AuthGuard>
+          ),
+        },
+        {
+          path: SITE_MAP.profile,
+          element: (
+            <AuthGuard>
+              <ProfilePage />
+            </AuthGuard>
           ),
         },
       ],

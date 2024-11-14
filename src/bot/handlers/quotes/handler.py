@@ -175,7 +175,6 @@ async def exchange_info_command(message: types.Message) -> None:
         photo,
         day,
         month,
-        protect_content=texts_manager.PROTECT_CONTENT,
         title=sample_of_img_title.format(title, data_source, curdatetime),
     )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
@@ -380,7 +379,6 @@ async def bonds_info_command(message: types.Message) -> None:
         photo,
         day,
         month,
-        protect_content=texts_manager.PROTECT_CONTENT,
         title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
     )
 
@@ -450,7 +448,7 @@ async def economy_info_command(message: types.Message) -> None:
     data_source = 'ЦБ стран мира'
     curdatetime = utils.base.read_curdatetime()
     await utils.base.__sent_photo_and_msg(
-        message, photo, day, month, protect_content=texts_manager.PROTECT_CONTENT,
+        message, photo, day, month,
         title=sample_of_img_title.format(title, data_source, curdatetime)
     )
 

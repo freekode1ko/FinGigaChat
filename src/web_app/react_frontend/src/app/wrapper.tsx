@@ -1,53 +1,21 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 
 import { Logo } from '@/features/logo'
-import { selectUserData, setUser } from '@/entities/user'
-import {
-  useAppDispatch,
-  useAppSelector,
-  useInitData,
-  useWebApp,
-} from '@/shared/lib'
-import { Paragraph } from '@/shared/ui'
+import { useInitializeUser } from '@/entities/user'
+import { AutoProgress } from '@/shared/kit'
 
 const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
-  const dispatch = useAppDispatch()
-  const user = useAppSelector(selectUserData)
-  const tg = useWebApp()
-  const [initData] = useInitData()
-  const [isReady, setIsReady] = useState<boolean>(false)
-
-  useEffect(() => {
-    if (!user && tg && initData && initData.user) {
-      dispatch(
-        setUser({
-          id: initData.user.id,
-          first_name: initData.user.first_name,
-          last_name: initData.user.last_name,
-          auth_date: initData.auth_date,
-          hash: initData.hash,
-        })
-      )
-      tg.expand()
-      tg.ready()
-    } else {
-      console.warn(
-        'Приложение запущено не в Telegram: некоторые функции недоступны'
-      )
-    }
-    setIsReady(true)
-  }, [tg, initData, dispatch, user])
-
-  if (!isReady)
+  const isInitializing = useInitializeUser()
+  if (isInitializing)
     return (
-      <div className="h-screen flex items-center justify-center text-dark-blue dark:text-white bg-white dark:bg-dark-blue">
-        <div className="mx-auto w-full text-center transition animate-pulse">
+      <div className="h-screen w-full flex items-center justify-center text-text bg-background">
+        <div className="mx-auto w-full text-center md:max-w-xs px-8 space-y-4">
           <Logo />
-          <Paragraph>Загружаем приложение</Paragraph>
+          <AutoProgress />
         </div>
       </div>
     )
-  return <>{children}</>
+  return children
 }
 
 export { InitializationWrapper }

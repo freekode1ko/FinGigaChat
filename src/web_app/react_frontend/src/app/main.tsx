@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <InitializationWrapper>
         <RouterProvider router={appRouter()} />
-        <Toaster />
+        <Toaster position="bottom-center" />
       </InitializationWrapper>
     </ThemeProvider>
   </ReduxProvider>

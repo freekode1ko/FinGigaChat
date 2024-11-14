@@ -1,4 +1,4 @@
-"""Клас для получения файла из конфига редиса"""
+"""Класс для получения файла из конфига редиса"""
 from constants.texts.features import CONFIG_CLASSES
 from db.redis.client import redis_client_sync as redis_client
 from log.bot_logger import logger
@@ -26,7 +26,7 @@ class TextsManager:
 
     def __getattr__(self, item):
         """Получение атрибута из редиса"""
-        value = redis_client.get(f'{self.PATTERN}_{item}')
+        value = redis_client.get(f'{self.PATTERN}{item}')
         if value is not None:
             return value
         for config in self.__configs:

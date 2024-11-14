@@ -5,7 +5,7 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from email import encoders
-import smtplib
+import aiosmtplib
 
 
 class SmtpSend:
@@ -21,15 +21,16 @@ class SmtpSend:
         self.host = host
         self.port = port
 
-    def __enter__(self):
-        self.server = smtplib.SMTP_SSL(self.host, self.port)
-        self.server.login(self.login, self.password)
+    async def __aenter__(self):
+        self.server = aiosmtplib.SMTP(hostname=self.host, port=self.port, use_tls=True)
+        await self.server.connect()
+        await self.server.login(self.login, self.password)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.server.close()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.server.quit()
 
-    def send_msg(self, sender: str, recipient: str, subject: str, message: str):
+    async def send_msg(self, sender: str, recipient: str, subject: str, message: str):
         """
         Отправка письма через SMTP
 
@@ -45,9 +46,9 @@ class SmtpSend:
 
         msg.attach(MIMEText(message, 'plain'))
         mail = msg.as_string()
-        self.server.sendmail(sender, recipient, mail)
+        await self.server.sendmail(sender, recipient, mail)
 
-    def send_meeting(self, user_email: str, data: dict) -> None:
+    async def send_meeting(self, user_email: str, data: dict) -> None:
         """
         Отправка встречи пользователю.
 
@@ -111,4 +112,4 @@ class SmtpSend:
         if self.server is None:
             raise ConnectionError('Сервер не определен')
 
-        self.server.sendmail(self.EMAIL_FROM, email_to, msg.as_string())
+        await self.server.sendmail(self.EMAIL_FROM, email_to, msg.as_string())

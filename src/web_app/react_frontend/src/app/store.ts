@@ -1,7 +1,4 @@
-import {
-  dashboardSubscriptionsSlice,
-  favoriteQuotesSlice,
-} from '@/entities/quotes'
+import { dashboardSubscriptionsSlice } from '@/entities/quotes'
 import { manageSubscriptionsSlice } from '@/entities/subscriptions'
 import { themeSlice } from '@/entities/theme'
 import { userSlice } from '@/entities/user'
@@ -10,7 +7,7 @@ import { loadFromLocalStorage, saveToLocalStorage } from '@/shared/lib/redux'
 import { configureStore } from '@reduxjs/toolkit'
 
 const preloadedState = {
-  [favoriteQuotesSlice.name]: loadFromLocalStorage(favoriteQuotesSlice.name),
+  [themeSlice.name]: loadFromLocalStorage(themeSlice.name),
 }
 
 export const store = configureStore({
@@ -20,7 +17,6 @@ export const store = configureStore({
     [userSlice.name]: userSlice.reducer,
     [themeSlice.name]: themeSlice.reducer,
     [manageSubscriptionsSlice.name]: manageSubscriptionsSlice.reducer,
-    [favoriteQuotesSlice.name]: favoriteQuotesSlice.reducer,
     [dashboardSubscriptionsSlice.name]: dashboardSubscriptionsSlice.reducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -29,10 +25,7 @@ export const store = configureStore({
 })
 
 store.subscribe(() => {
-  saveToLocalStorage(
-    favoriteQuotesSlice.name,
-    store.getState()[favoriteQuotesSlice.name]
-  )
+  saveToLocalStorage(themeSlice.name, store.getState()[themeSlice.name])
 })
 
 export type RootState = ReturnType<typeof store.getState>

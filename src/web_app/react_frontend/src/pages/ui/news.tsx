@@ -12,14 +12,14 @@ const NewsPage = () => {
   })
 
   return (
-    <>
+    <div className='mx-auto lg:max-w-screen-sm pt-5 pb-2'>
       <NewsList
         news={data?.news}
         showSkeleton={isFetching}
         showSendReportButton
       />
       <ShowMoreButton ref={triggerRef} />
-    </>
+    </div>
   )
 }
 

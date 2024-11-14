@@ -1,4 +1,4 @@
-interface QuotesParams {
+export interface QuotesParams {
   readonly name: string
   readonly value: number
 }
