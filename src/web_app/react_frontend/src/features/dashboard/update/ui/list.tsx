@@ -1,22 +1,19 @@
-import { ArrowDown, Eye, EyeOff, Grid2X2, ListIcon, Square } from 'lucide-react'
-import { toast } from 'sonner'
+import { RectangleHorizontal, Square } from 'lucide-react'
+import { useId } from 'react'
 
 import {
   updateSubscription,
-  usePutDashboardSubscriptionsMutation,
 } from '@/entities/quotes'
-import { selectDashboardSubscriptions } from '@/entities/quotes/model/slice'
-import { selectUserData } from '@/entities/user'
-import { useAppDispatch, useAppSelector } from '@/shared/lib'
+import { cn, useAppDispatch } from '@/shared/lib'
 import {
   Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
+  Checkbox,
+  Label,
 } from '@/shared/ui'
 
 interface DashboardSubscriptionUpdateMenuProps {
   quoteId: number
+  quoteName: string
   isActive: boolean
   viewType: number
   instantUpdate?: boolean
@@ -25,90 +22,50 @@ interface DashboardSubscriptionUpdateMenuProps {
 
 const DashboardSubscriptionUpdateMenu = ({
   quoteId,
+  quoteName,
   isActive,
   viewType,
-  instantUpdate,
-  display = 'row',
 }: DashboardSubscriptionUpdateMenuProps) => {
   const dispatch = useAppDispatch()
-  const subscriptions = useAppSelector(selectDashboardSubscriptions)
-  const user = useAppSelector(selectUserData)
-  const [trigger] = usePutDashboardSubscriptionsMutation()
+  const hintId = useId()
 
-  const handleClick = async (
+  const handleClick = (
     itemId: number,
     changes: Partial<{ active: boolean; type: number }>
-  ) => {
-    // FIXME
-    const updatedSubscriptions = subscriptions.map((section) => ({
-      ...section,
-      subscription_items: section.subscription_items.map((sub) =>
-        sub.id === itemId ? { ...sub, ...changes } : sub
-      ),
-    }))
-    //
+  ) => dispatch(updateSubscription({ itemId, changes }))
 
-    dispatch(updateSubscription({ itemId, changes }))
-    if (instantUpdate && user) {
-      toast.promise(
-        trigger({ userId: user.id, body: updatedSubscriptions }).unwrap(),
-        {
-          loading: 'Изменения сохраняются...',
-          success: 'Изменения сохранены!',
-          error: 'Мы не смогли сохранить изменения. Попробуйте позже.',
-        }
-      )
-    }
-  }
-
-  const renderButtons = () => (
-    <div className="flex space-x-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => handleClick(quoteId, { active: !isActive })}
-      >
-        {isActive ? (
-          <Eye className="w-5 h-5" />
-        ) : (
-          <EyeOff className="w-5 h-5" />
-        )}
-      </Button>
-      <Button
-        variant={viewType === 1 ? 'secondary' : 'ghost'}
-        size="icon"
-        disabled={!isActive}
-        onClick={() => handleClick(quoteId, { type: 1 })}
-      >
-        <ListIcon className="w-5 h-5" />
-      </Button>
-      <Button
-        variant={viewType === 2 ? 'secondary' : 'ghost'}
-        size="icon"
-        disabled={!isActive}
-        onClick={() => handleClick(quoteId, { type: 2 })}
-      >
-        <Grid2X2 className="w-5 h-5" />
-      </Button>
-      <Button
-        variant={viewType === 3 ? 'secondary' : 'ghost'}
-        size="icon"
-        disabled={!isActive}
-        onClick={() => handleClick(quoteId, { type: 3 })}
-      >
-        <Square className="w-5 h-5" />
-      </Button>
-    </div>
-  )
-
-  if (display === 'row') return renderButtons()
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger>
-        <ArrowDown className="h-4 w-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>{renderButtons()}</DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center justify-between gap-2 py-2">
+      <div className='flex flex-row flex-[2] items-center gap-2'>
+        <Checkbox id={hintId} checked={isActive} onCheckedChange={() => handleClick(quoteId, { active: !isActive })} />
+        <Label htmlFor={hintId} className={cn('ml-2', !isActive && 'opacity-50')} style={{
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitBoxOrient: 'vertical',
+            WebkitLineClamp: 2,
+          }}>
+            {quoteName}
+        </Label>
+      </div>
+      <div className='flex flex-row flex-1 items-center justify-end gap-2'>
+        <Button
+          variant={viewType === 1 ? 'secondary' : 'ghost'}
+          size="icon"
+          disabled={!isActive}
+          onClick={() => handleClick(quoteId, { type: 1 })}
+        >
+          <RectangleHorizontal className="w-5 h-5" />
+        </Button>
+        <Button
+          variant={viewType !== 1 ? 'secondary' : 'ghost'}
+          size="icon"
+          disabled={!isActive}
+          onClick={() => handleClick(quoteId, { type: 2 })}
+        >
+          <Square className="w-5 h-5" />
+        </Button>
+      </div>
+    </div>
   )
 }
 

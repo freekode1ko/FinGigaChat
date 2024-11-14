@@ -11,18 +11,23 @@ export const useDashboardSearch = (
     query: string
   ): Array<DashboardSubscriptionSection> => {
     if (!query) return content
-
     const lowerCaseQuery = query.toLowerCase()
-
     return content
-      .map((section) => ({
-        ...section,
-        subscription_items: section.subscription_items.filter(
+      .map((section) => {
+        const sectionMatches = section.section_name
+          .toLowerCase()
+          .includes(lowerCaseQuery)
+        if (sectionMatches) return section
+        const filteredItems = section.subscription_items.filter(
           (item) =>
             item.name.toLowerCase().includes(lowerCaseQuery) ||
             (item.ticker && item.ticker.toLowerCase().includes(lowerCaseQuery))
-        ),
-      }))
+        )
+        return {
+          ...section,
+          subscription_items: filteredItems,
+        }
+      })
       .filter((section) => section.subscription_items.length > 0)
   }
 

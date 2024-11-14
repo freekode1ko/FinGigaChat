@@ -1,9 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { NewsList } from '@/widgets/news-list'
-import { CopyPageLinkButton } from '@/features/copy-page-link'
+// import { NewsList } from '@/widgets/news-list'
 import { ChartSkeleton, CustomChart, mapFinancialData } from '@/entities/charts'
-import { useGetNewsQuery } from '@/entities/news'
+// import { useGetNewsQuery } from '@/entities/news'
 import {
   useGetDashboardDataQuery,
   useGetDashboardSubscriptionsQuery,
@@ -39,7 +38,7 @@ const QuoteDetailsPage = () => {
     quoteId: parseInt(quotationId),
     startDate: '01.01.2024',
   })
-  const { data, isLoading } = useGetNewsQuery()
+  // const { data, isLoading } = useGetNewsQuery()
 
   const currentQuote = subData?.subscription_sections
     .flatMap((section) => section.subscription_items)
@@ -59,23 +58,20 @@ const QuoteDetailsPage = () => {
               <Skeleton className="w-1/4 h-7" />
             )}
           </DialogHeader>
-          <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto">
-            <div className="max-h-[300px]">
-              {finData ? (
-                finData.data?.length > 2 ? (
-                  <CustomChart
-                    inputData={mapFinancialData([...finData.data].reverse())}
-                    size="large"
-                    height={300}
-                    theme={theme}
-                  />
-                ) : (
-                  <p className='text-muted-foreground text-center'>График по этому инструменту сейчас недоступен</p>
-                )) : (
-                <ChartSkeleton />
-              )}
-            </div>
-            <NewsList news={data?.news} showSkeleton={isLoading} />
+          <div className="relative h-[300px]">
+            {finData ? (
+              finData.data?.length > 2 ? (
+                <CustomChart
+                  inputData={mapFinancialData([...finData.data].reverse())}
+                  size="large"
+                  height={300}
+                  theme={theme}
+                />
+              ) : (
+                <p className='text-muted-foreground text-center m-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>График по этому инструменту сейчас недоступен</p>
+              )) : (
+              <ChartSkeleton />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -84,7 +80,7 @@ const QuoteDetailsPage = () => {
 
   return (
     <Drawer open onOpenChange={() => navigate(-1)}>
-      <DrawerContent className="h-[90vh]">
+      <DrawerContent className="h-[370px]">
         <div className="mx-auto w-full pt-6 text-text-color overflow-y-auto">
           <DrawerHeader>
             {currentQuote ? (
@@ -96,22 +92,21 @@ const QuoteDetailsPage = () => {
               <Skeleton className="w-1/4 h-7" />
             )}
           </DrawerHeader>
-          <div className="max-h-[220px]">
-            {finData ? (
-              <CustomChart
-                inputData={mapFinancialData([...finData.data].reverse())}
-                size="large"
-                height={220}
-                theme={theme}
-              />
-            ) : (
+          <div className="relative h-[220px]">
+          {finData ? (
+              finData.data?.length > 2 ? (
+                <CustomChart
+                  inputData={mapFinancialData([...finData.data].reverse())}
+                  size="large"
+                  height={220}
+                  theme={theme}
+                />
+              ) : (
+                <p className='text-muted-foreground text-center m-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>График по этому инструменту сейчас недоступен</p>
+              )) : (
               <ChartSkeleton />
             )}
           </div>
-          <div className="p-2 flex-shrink-0 text-center">
-            <CopyPageLinkButton />
-          </div>
-          <NewsList news={data?.news} showSkeleton={isLoading} />
         </div>
       </DrawerContent>
     </Drawer>
