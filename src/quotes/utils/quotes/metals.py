@@ -1,6 +1,6 @@
 """Модуль для получения и обработки данных по металлам (сырью/комодам)."""
-import re
 import datetime as dt
+import re
 from typing import Any
 
 import pandas as pd

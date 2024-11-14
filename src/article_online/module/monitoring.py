@@ -1,7 +1,8 @@
+"""Модуль с методами по обновлению дат парсинга и сохранения новостей."""
 from sqlalchemy import text
 
-from db import database
 from configs.config import SUBJECT_ARTICLES, TG_ARTICLES
+from db import database
 
 
 def update_get_datetime(name: str) -> None:

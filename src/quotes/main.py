@@ -4,8 +4,8 @@ import multiprocessing
 import time
 import warnings
 
-from apscheduler.triggers.cron import CronTrigger
 from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from configs import config
 from log import sentry

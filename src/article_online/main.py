@@ -4,18 +4,18 @@ import json
 import time
 import warnings
 
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.schedulers.blocking import BlockingScheduler
 import pandas as pd
 import requests
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from configs import config
 from configs.config import BASE_GIGAPARSER_URL
 from log import sentry
 from log.logger_base import selector_logger
 from module.article_process import ArticleProcess
-from module.utils import add_links_to_queue
 from module.monitoring import update_parsing_status, update_saving_status
+from module.utils import add_links_to_queue
 
 MAX_NEWS_BATCH_SIZE = 1000
 
@@ -173,6 +173,7 @@ def post_ids(ids: str) -> None:
 
 
 def main():
+    """Запуск функции по обновлению новостей, сохранение результатов."""
     try:
         start_time = time.time()
         now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
