@@ -13,12 +13,12 @@ def get_parser_data_for_create() -> pd.DataFrame:
     logger.info('Получение данных по парсерам для создания в системе мониторинга')
     query = (
         "SELECT p.id as name, CONCAT(p.name, ', url: ', p.source) as description, sg.period_cron, sg.alert_timedelta "
-        "FROM parser_source p JOIN source_group sg ON p.source_group_id = sg.id"  # noqa:Q000
+        "FROM parser_source p JOIN source_group sg ON p.source_group_id = sg.id"
     )
     df_parsers = pd.read_sql(query, con=database.engine)
-    df_parsers = pd.concat([df_parsers, get_saving_data_for_create()], ignore_index=True).replace({pd.NaT: None})
-    logger.info('Данные получены')
-    return df_parsers
+    df_parsers = pd.concat([df_parsers, get_saving_data_for_create()], ignore_index=True)
+    logger.info('Данные получены по last_update_datetime')
+    return df_parsers.replace({pd.NaT: None})
 
 
 def get_parser_data_for_update() -> pd.DataFrame:
@@ -26,9 +26,9 @@ def get_parser_data_for_update() -> pd.DataFrame:
     logger.info('Получение данных по парсерам для обновления времени парсинга в системе мониторинга')
     query = 'SELECT id as name, last_update_datetime FROM parser_source'
     df_parsers = pd.read_sql(query, con=database.engine)
-    df_parsers = pd.concat([df_parsers, get_saving_data_for_update()], ignore_index=True).replace({pd.NaT: None})
-    logger.info('Данные получены')
-    return df_parsers
+    df_parsers = pd.concat([df_parsers, get_saving_data_for_update()], ignore_index=True)
+    logger.info('Данные получены по last_update_datetime')
+    return df_parsers.replace({pd.NaT: None})
 
 
 def get_saving_data_for_create() -> pd.DataFrame:
@@ -41,7 +41,7 @@ def get_saving_data_for_create() -> pd.DataFrame:
         "where last_save_datetime is not Null"
     )
     df_parsers = pd.read_sql(query, con=database.engine)
-    logger.info('Данные получены')
+    logger.info('Данные получены по last_save_datetime')
     return df_parsers
 
 
@@ -53,5 +53,5 @@ def get_saving_data_for_update() -> pd.DataFrame:
         "from parser_source where last_save_datetime is not Null"
     )
     df_parsers = pd.read_sql(query, con=database.engine)
-    logger.info('Данные получены')
+    logger.info('Данные получены по last_save_datetime')
     return df_parsers
