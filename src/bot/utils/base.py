@@ -532,7 +532,7 @@ async def send_full_copy_of_message(callback_query: types.CallbackQuery) -> type
 
 
 async def send_pdf(
-        callback_query: types.CallbackQuery,
+        callback_query: types.CallbackQuery | types.Message,
         pdf_files: list[Path],
         caption: str,
         protect_content: bool = texts_manager.PROTECT_CONTENT,
@@ -549,19 +549,25 @@ async def send_pdf(
     :param protect_content: Защищает отправляемый контент от перессылки и сохранения
     return: Если были отправлены файлы, то True, иначе False
     """
+
+    if isinstance(callback_query, types.CallbackQuery):
+        message = callback_query.message
+    else:
+        message = callback_query
+
     pdf_files = [f for f in pdf_files if f.exists()]
     if not pdf_files:
         return False
 
-    await callback_query.message.answer(caption, parse_mode='HTML', protect_content=protect_content)
+    await message.answer(caption, parse_mode='HTML', protect_content=protect_content)
 
     for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
         media_group = MediaGroupBuilder()
         for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
             media_group.add_document(media=types.FSInputFile(fpath))
 
-        await callback_query.message.bot.send_chat_action(callback_query.message.chat.id, 'upload_document')
-        await callback_query.message.answer_media_group(media_group.build(), protect_content=protect_content)
+        await message.bot.send_chat_action(message.chat.id, 'upload_document')
+        await message.answer_media_group(media_group.build(), protect_content=protect_content)
 
     return True
 

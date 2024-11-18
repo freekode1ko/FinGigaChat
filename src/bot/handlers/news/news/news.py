@@ -25,9 +25,8 @@ from handlers.analytics import analytics_sell_side
 from handlers.clients.callback_data_factories import ClientsMenuData, ClientsMenusEnum
 from handlers.clients.keyboards import get_client_menu_kb, get_stakeholder_menu_kb
 from handlers.clients.utils import get_menu_msg_by_sh_type, get_show_msg_by_sh_type, is_client_in_message
-from handlers.commodity.keyboards import get_menu_kb as get_commodity_menu_kb
-from handlers.commodity.utils import send_or_get_commodity_quotes_message
 from handlers.news.handler import router
+from handlers.commodity.utils import is_commodity_in_message
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
@@ -35,6 +34,7 @@ from module.article_process import ArticleProcess
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.base import bot_send_msg, send_or_edit
 from utils.decorators import has_access_to_feature
+from utils.function_calling.tools import find_and_run_tool_function
 from utils.handler_utils import audio_to_text
 
 
@@ -381,6 +381,10 @@ async def process_user_message(
     else:
         user_msg = message.text
 
+    if await find_and_run_tool_function(user_msg, message):
+        return
+
+
     if (
             await is_client_in_message(message, user_msg) or
             await is_stakeholder_in_message(message, user_msg, state, session) or
@@ -455,41 +459,6 @@ async def is_stakeholder_in_message(
     await state.update_data(stakeholder_id=sh_ids[0])
 
     return True
-
-
-@has_access_to_feature(feature=enums.FeatureType.news, is_need_answer=False)
-async def is_commodity_in_message(
-        message: types.Message,
-        user_msg: str,
-        send_message_if_commodity_in_message: bool = True,
-        fuzzy_score: int = 95,
-) -> bool:
-    """
-    Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
-
-    :param message: Сообщение от пользователя.
-    :param user_msg: Сообщение пользователя
-    :param send_message_if_commodity_in_message: нужно ли отправлять в сообщении
-    :param fuzzy_score: Величина в процентах совпадение с референтными именами стейкхолдеров.
-    :return: Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
-    """
-    commodity_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
-        user_msg.replace(texts_manager.COMMODITY_ADDITIONAL_INFO, ''),
-        subject_types=[models.CommodityAlternative, ],
-        score=fuzzy_score
-    )
-    commodities = await commodity_db.get_by_ids(commodity_ids[:1])
-
-    if len(commodities) >= 1:
-        if send_message_if_commodity_in_message:
-            commodity_id = commodity_ids[0]
-            commodity_name = commodities['name'].iloc[0]
-            await send_or_get_commodity_quotes_message(message, commodity_id)
-            keyboard = get_commodity_menu_kb(commodity_id)
-            msg_text = texts_manager.COMMODITY_CHOOSE_SECTION.format(name=commodity_name.capitalize())
-            await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
-        return True
-    return False
 
 
 @router.callback_query(ClientsMenuData.filter(F.menu == ClientsMenusEnum.choose_stakeholder_clients))

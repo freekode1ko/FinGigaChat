@@ -1,0 +1,45 @@
+"""Функции для запуска function calling"""
+from aiogram import types
+from langchain_gigachat.chat_models import GigaChat
+from langgraph.prebuilt import create_react_agent
+
+from configs import config
+from utils.function_calling.tool_functions import tools_functions
+
+
+async def find_and_run_tool_function(message_text: str, message: types.Message) -> bool:
+    """Функция вызывающая реализующая функционал function calling
+
+    :param message_text: Текст по которому будет вызываться функция
+    :param message:      Объект сообщения из aiogram, для взаимодействия с пользователем
+
+    :return:             Вызвалась ли функция
+    """
+    giga = GigaChat(
+        verbose=True, credentials=config.giga_credentials,
+        scope=config.giga_scope,
+        model=config.giga_model,
+        verify_ssl_certs=False,
+        profanity_check=False,
+        temperature=0.00001
+    )
+
+    langgraph_agent_executor = create_react_agent(
+        giga, tools_functions,
+    )
+    conf = {"configurable": {"message": message}}
+
+    try:
+        res = await langgraph_agent_executor.ainvoke(
+            {"messages": [("user", message_text)]},
+            conf,
+        )
+        # Функция завершилась с ошибкой
+        if res['messages'][2].status == 'error':
+            return False
+        # Проверка есть ли вызов функции в ответе от модели
+        return 'function_call' in res['messages'][1].additional_kwargs
+
+    except Exception as e:
+        # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
+        return False
