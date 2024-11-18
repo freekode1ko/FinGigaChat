@@ -1,3 +1,5 @@
+"""Тулза для показа информации при запросе пользователя о помощи"""
+
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from langchain_core.runnables import RunnableConfig
@@ -23,6 +25,6 @@ async def get_help_function(runnable_config: RunnableConfig) -> str:
     )
 
     await runnable_config.message.answer(
-        "Описание бота",
+        'Описание бота',
         reply_markup=keyboard.as_markup()
     )

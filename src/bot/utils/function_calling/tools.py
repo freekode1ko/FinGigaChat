@@ -5,6 +5,7 @@ from langgraph.prebuilt import create_react_agent
 
 from configs import config
 from utils.function_calling.tool_functions import tools_functions
+from utils.function_calling.tool_functions.utils import LanggraphConfig
 
 
 async def find_and_run_tool_function(message_text: str, message: types.Message) -> bool:
@@ -27,12 +28,14 @@ async def find_and_run_tool_function(message_text: str, message: types.Message) 
     langgraph_agent_executor = create_react_agent(
         giga, tools_functions,
     )
-    conf = {"configurable": {"message": message}}
+    conf = LanggraphConfig(
+        message=message
+    )
 
     try:
         res = await langgraph_agent_executor.ainvoke(
-            {"messages": [("user", message_text)]},
-            conf,
+            {'messages': [('user', message_text)]},
+            conf.config_to_langgraph_format(),
         )
         # Функция завершилась с ошибкой
         if res['messages'][2].status == 'error':
@@ -40,6 +43,6 @@ async def find_and_run_tool_function(message_text: str, message: types.Message) 
         # Проверка есть ли вызов функции в ответе от модели
         return 'function_call' in res['messages'][1].additional_kwargs
 
-    except Exception as e:
+    except Exception:
         # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
         return False

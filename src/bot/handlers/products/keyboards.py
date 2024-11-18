@@ -47,11 +47,11 @@ def get_sub_menu_kb(
             utils.base.unwrap_callback_data(callback_data.back_menu)
             if callback_data.root_id == callback_data.product_id
             else callbacks.ProductsMenuData(
-                    menu=callbacks.ProductsMenusEnum.group_products,
-                    product_id=product.parent_id,
-                    root_id=callback_data.root_id,
-                    back_menu=callback_data.back_menu,
-                ).pack()
+                menu=callbacks.ProductsMenusEnum.group_products,
+                product_id=product.parent_id,
+                root_id=callback_data.root_id,
+                back_menu=callback_data.back_menu,
+            ).pack()
         )
 
         keyboard.row(types.InlineKeyboardButton(

@@ -130,7 +130,11 @@ async def get_group_products(
 
         if isinstance(callback_query, types.Message) and resend:
             parent = await product_db.get(product_info.parent.id)
-            await message.answer(parent.description, reply_markup=keyboards.get_sub_menu_kb(parent.children, parent, callback_data), parse_mode='HTML')
+            await message.answer(
+                parent.description,
+                reply_markup=keyboards.get_sub_menu_kb(parent.children, parent, callback_data),
+                parse_mode='HTML',
+            )
     else:
         keyboard = keyboards.get_sub_menu_kb(sub_products, product_info, callback_data)
         msg_text = product_info.description

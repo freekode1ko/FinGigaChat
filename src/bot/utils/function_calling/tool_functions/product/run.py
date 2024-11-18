@@ -1,7 +1,6 @@
 """Тулза по продуктам"""
 
 import sqlalchemy as sa
-from aiogram import types
 from fuzzywuzzy import process
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
@@ -13,6 +12,7 @@ from handlers.products import get_group_products
 from handlers.products.handler import main_menu
 from utils.function_calling.tool_functions.product.utils import get_root_id
 from utils.function_calling.tool_functions.utils import parse_runnable_config
+
 
 @tool
 async def get_product_list(name: str | None, runnable_config: RunnableConfig) -> str:
@@ -53,7 +53,7 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
     Аккредитивы (Аккредитив – это финансовый инструмент, который помогает обезопасить сделку между покупателем и продавцом.)
     Hot offers, (Hot offers)
     Аккредитивы по поручению ЮЛ (Аккредитив – это обязательство банка, выпущенное им по поручению клиента (покупателя ЮЛ))
-    Аккредитивы по поручению ФЛ (Аккредитив – это финансовый инструмент, который помогает обезопасить сделку между покупателем и продавцом.)
+    Аккредитивы по поручению ФЛ (Аккредитив – инструмент, который помогает обезопасить сделку между покупателем и продавцом.)
     Непокрытые (Акрредитв ЮЛ)
     Покрытые (Аккредитив ЮЛ)
     Voice2X (Voice2X: Голос управляет процессами)
@@ -90,4 +90,4 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
         )
         await get_group_products(runnable_config.message, callback_query, next(filter(lambda x: x.name == matches[0][0], products)).id)
     else:
-       raise Exception
+        raise Exception

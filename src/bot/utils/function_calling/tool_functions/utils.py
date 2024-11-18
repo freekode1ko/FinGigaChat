@@ -1,3 +1,5 @@
+"""Вспомогательный функции и классы для работы function calling"""
+
 import dataclasses
 from typing import Any
 
@@ -11,7 +13,7 @@ class LanggraphConfig:
 
     def config_to_langgraph_format(self) -> dict[str, dict[str, Any]]:
         """Превращает конфиг из класса в словарь для langgraph"""
-        return {"configurable": self.__dict__}
+        return {'configurable': self.__dict__}
 
 
 def parse_runnable_config(config: RunnableConfig) -> LanggraphConfig:

@@ -25,8 +25,8 @@ from handlers.analytics import analytics_sell_side
 from handlers.clients.callback_data_factories import ClientsMenuData, ClientsMenusEnum
 from handlers.clients.keyboards import get_client_menu_kb, get_stakeholder_menu_kb
 from handlers.clients.utils import get_menu_msg_by_sh_type, get_show_msg_by_sh_type, is_client_in_message
-from handlers.news.handler import router
 from handlers.commodity.utils import is_commodity_in_message
+from handlers.news.handler import router
 from keyboards.news import callbacks
 from log.bot_logger import logger, user_logger
 from module import data_transformer as dt
@@ -383,7 +383,6 @@ async def process_user_message(
 
     if await find_and_run_tool_function(user_msg, message):
         return
-
 
     if (
             await is_client_in_message(message, user_msg) or

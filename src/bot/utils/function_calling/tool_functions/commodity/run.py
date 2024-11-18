@@ -1,6 +1,5 @@
-from xml.dom import NotFoundErr
+"""Тулза для выдачи котировок по сырьевым товарам"""
 
-from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
@@ -20,4 +19,4 @@ async def get_commodity_quote(name: str | None, runnable_config: RunnableConfig)
     runnable_config = parse_runnable_config(runnable_config)
 
     if not await is_commodity_in_message(runnable_config.message, name):
-        raise NotFoundErr
+        raise Exception
