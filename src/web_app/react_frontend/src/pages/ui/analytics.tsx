@@ -8,7 +8,7 @@ const AnalyticsPage = () => {
   if (data) {
     return (
       <>
-        <div className="py-4">
+        <div className="mx-auto lg:max-w-screen-sm pt-5 pb-2">
           <h1 className="text-xl font-bold mb-4">{data.title}</h1>
           <AnalyticsAccordion menuItems={data.nearest_menu} />
         </div>

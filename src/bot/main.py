@@ -181,7 +181,7 @@ async def main():
         await sessions.RagQaBankerClient().close()
         await sessions.RagStateSupportClient().close()
         await sessions.RagQaResearchClient().close()
-        await sessions.RagWebClient.close()
+        await sessions.RagWebClient().close()
 
 
 if __name__ == '__main__':

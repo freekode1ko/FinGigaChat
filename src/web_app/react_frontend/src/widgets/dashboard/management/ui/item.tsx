@@ -21,19 +21,12 @@ export const ItemRow = ({ index, data, style }: ManageItemProps) => {
   } else if (item.type === 'item') {
     const quote = item.item as DashboardSubscription
     return (
-      <div
-        key={quote.id}
-        className="flex items-center justify-between py-2 gap-2 border-b"
-        style={style}
-      >
-        <span className={`ml-2 ${!quote.active ? 'opacity-50' : ''}`}>
-          {quote.name}
-        </span>
+      <div className='border-b border-border h-[56px]' style={style}>
         <DashboardSubscriptionUpdateMenu
           quoteId={quote.id}
+          quoteName={quote.name}
           isActive={quote.active}
           viewType={quote.type}
-          instantUpdate={false}
         />
       </div>
     )

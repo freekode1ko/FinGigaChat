@@ -5,8 +5,6 @@ import type { User } from '../model'
 
 interface TelegramData {
   id: TelegramWebApps.WebAppUser['id']
-  hash: TelegramWebApps.WebAppInitData['hash']
-  auth_date: TelegramWebApps.WebAppInitData['auth_date']
   data: string
 }
 
@@ -18,7 +16,7 @@ interface VerifyCodeInteface extends LoginInterface {
   reg_code: string
 }
 
-const usersApi = baseApi.injectEndpoints({
+export const usersApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     getCurrentUser: build.query<User, void>({
       query: () => ({

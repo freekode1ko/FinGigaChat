@@ -1,1 +1,4 @@
-export { DashboardSubscriptionUpdateMenu } from './ui'
+export {
+  DashboardSubscriptionActions,
+  DashboardSubscriptionUpdateMenu,
+} from './ui'

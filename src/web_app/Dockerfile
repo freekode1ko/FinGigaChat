@@ -2,7 +2,6 @@ FROM node:18 AS frontend-build
 
 WORKDIR /code
 
-COPY .env /code/.env
 COPY ./react_frontend/package.json ./react_frontend/package-lock.json /code/react_frontend/
 
 RUN cd /code/react_frontend && npm install

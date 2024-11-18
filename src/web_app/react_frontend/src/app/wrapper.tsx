@@ -1,62 +1,21 @@
-import Cookies from 'js-cookie'
-import React, { useEffect } from 'react'
+import React from 'react'
 
 import { Logo } from '@/features/logo'
-import { setUser, unsetUser, useLazyGetCurrentUserQuery, useValidateTelegramDataMutation } from '@/entities/user'
-import {
-  useAppDispatch,
-  useInitData,
-  useWebApp,
-} from '@/shared/lib'
-import { Paragraph } from '@/shared/ui'
+import { useInitializeUser } from '@/entities/user'
+import { AutoProgress } from '@/shared/kit'
 
 const InitializationWrapper = ({ children }: React.PropsWithChildren) => {
-  const dispatch = useAppDispatch()
-  const [getUser, {isLoading: userLoading}] = useLazyGetCurrentUserQuery()
-  const [validateTelegram, {isLoading: userValidating}] = useValidateTelegramDataMutation()
-  const auth = Cookies.get('auth')
-  const tg = useWebApp()
-  const [initData, initDataString] = useInitData()
-
-  useEffect(() => {
-    if (auth) {
-      getUser().unwrap()
-      .then(user => {
-        dispatch(setUser(user))
-      })
-      .catch(() => {
-        dispatch(unsetUser())
-      })
-    } else if (tg && initData && initData.user) {
-      tg.expand()
-      tg.ready()
-      validateTelegram({
-        hash: initData.hash,
-        auth_date: initData.auth_date,
-        id: initData.user!.id,
-        data: initDataString || '',
-      })
-      .unwrap()
-      .then(() => {
-        dispatch(setUser({ id: initData.user!.id }))
-      })
-      .catch(() => {
-        dispatch(unsetUser())
-      })
-    }
-
-  }, [auth, tg, initData, initDataString, getUser, validateTelegram, dispatch])
-
-  if (userLoading || userValidating)
+  const isInitializing = useInitializeUser()
+  if (isInitializing)
     return (
-      <div className="h-screen flex items-center justify-center text-dark-blue dark:text-white bg-white dark:bg-dark-blue">
-        <div className="mx-auto w-full text-center transition animate-pulse">
+      <div className="h-screen w-full flex items-center justify-center text-text bg-background">
+        <div className="mx-auto w-full text-center md:max-w-xs px-8 space-y-4">
           <Logo />
-          <Paragraph>Загружаем приложение</Paragraph>
+          <AutoProgress />
         </div>
       </div>
     )
-  return <>{children}</>
+  return children
 }
 
 export { InitializationWrapper }

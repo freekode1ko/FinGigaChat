@@ -3,7 +3,6 @@ export {
   useGetDashboardDataQuery,
   useGetDashboardQuotesQuery,
   useGetDashboardSubscriptionsQuery,
-  useGetPopularQuotesQuery,
   useGetUserDashboardQuery,
   usePutDashboardSubscriptionsMutation,
 } from './api'

@@ -10,6 +10,7 @@ export type {
   FinancialData,
   FlattenedDashboardItem,
   Quotes,
+  QuotesParams,
   QuotesSection,
   TradingViewSymbol,
 } from './types'
