@@ -58,11 +58,11 @@ async def load_cbr_quotes() -> None:
                     'last_update': last_update,
                     'update_func': update_func,
                 }
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
-                    constraint='uq_quote_name_and_section',
+                    uq_constraint=['name', 'quotes_section_id'],
                 )
         except Exception as e:
             logger.error(f'Во время загрузки котировок по cbr произошла ошибка: {e}')
@@ -97,11 +97,11 @@ async def load_cbr_metals() -> None:
                     'update_func': update_func,
                 }
 
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
-                    constraint='uq_quote_name_and_section',
+                    uq_constraint=['name', 'quotes_section_id'],
                 )
         except Exception as e:
             logger.error(f'Во время загрузки металлов с cbr произошла ошибка: {e}')
@@ -164,11 +164,11 @@ async def load_moex_quotes():
                     'update_func': update_func,
                 }
 
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
-                    constraint='uq_quote_name_and_section',
+                    uq_constraint=['name', 'quotes_section_id'],
                 )
         except Exception as e:
             logger.error(f'Во время загрузки с moex произошла ошибка: {e}')
@@ -252,11 +252,11 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
                     'volume': volume,
                 })
 
-            await crud.custom_insert_or_update_to_postgres(
+            await crud.custom_upsert(
                 session,
                 model=models.QuotesValues,
                 values=values,
-                constraint='uq_quote_and_date',
+                uq_constraint=['name', 'quotes_section_id'],
             )
     except Exception as e:
         logger.error(f'Во время загрузки котировки {ticker} c yahoo произошла ошибка: {e}')

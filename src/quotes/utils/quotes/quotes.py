@@ -14,7 +14,7 @@ async def load_quotes():
 
 async def update_quote_data():
     """Обновляет данные о котировках из конфига, перед запуском приложения"""
-    for func in (update_all_cbr, update_all_moex, load_yahoo_quotes, update_cbr_metals, load_gigaparser_quotes):
+    for func in (update_all_cbr, update_all_moex, load_yahoo_quotes, update_cbr_metals, load_gigaparser_quotes,):
         for _ in range(5):
             try:
                 await func()
