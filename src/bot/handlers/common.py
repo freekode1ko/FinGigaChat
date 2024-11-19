@@ -47,8 +47,6 @@ class Form(StatesGroup):
 class HelpButton(CallbackData, prefix='help_button'):
     """CallbackData для показа кнопки /help"""
 
-    pass
-
 
 router = Router()
 
