@@ -106,7 +106,9 @@ async def get_group_products(
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
     :param product_id: Айди Product, если вызов функции из Function Calling
     """
-    chat_id, user_msg = callback_query.chat.id, callback_query.text if isinstance(callback_query, types.Message) else callback_query.message.chat.id, callback_query.data
+    chat_id, user_msg = (callback_query.chat.id, callback_query.text
+                         if isinstance(callback_query, types.Message)
+                         else callback_query.message.chat.id, callback_query.data)
     full_name = callback_query.from_user.full_name
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
