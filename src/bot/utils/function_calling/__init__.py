@@ -1,1 +1,1 @@
-"""Fuction calling module"""
+"""Function calling module"""

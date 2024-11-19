@@ -4,11 +4,14 @@ from langchain_gigachat.chat_models import GigaChat
 from langgraph.prebuilt import create_react_agent
 
 from configs import config
+from constants.enums import FeatureType
+from utils.decorators import has_access_to_feature
 from utils.function_calling.tool_functions import tools_functions
 from utils.function_calling.tool_functions.utils import LanggraphConfig
 
 
-async def find_and_run_tool_function(message_text: str, message: types.Message) -> bool:
+@has_access_to_feature(feature=FeatureType.admin, is_need_answer=False)
+async def find_and_run_tool_function(message: types.Message, message_text: str) -> bool:
     """Функция вызывающая реализующая функционал function calling
 
     :param message_text: Текст по которому будет вызываться функция

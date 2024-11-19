@@ -549,7 +549,6 @@ async def send_pdf(
     :param protect_content: Защищает отправляемый контент от перессылки и сохранения
     return: Если были отправлены файлы, то True, иначе False
     """
-
     if isinstance(callback_query, types.CallbackQuery):
         message = callback_query.message
     else:

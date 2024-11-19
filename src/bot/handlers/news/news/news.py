@@ -381,7 +381,7 @@ async def process_user_message(
     else:
         user_msg = message.text
 
-    if await find_and_run_tool_function(user_msg, message):
+    if await find_and_run_tool_function(message, user_msg):
         return
 
     if (

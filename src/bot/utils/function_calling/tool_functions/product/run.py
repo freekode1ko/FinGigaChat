@@ -67,7 +67,6 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
     return:
         (str): Строка с доступными разделами.
     """
-
     runnable_config = parse_runnable_config(runnable_config)
 
     async with async_session() as session:

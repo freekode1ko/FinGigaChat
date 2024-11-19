@@ -9,6 +9,8 @@ from langchain_core.runnables import RunnableConfig
 
 @dataclasses.dataclass
 class LanggraphConfig:
+    """Клас для хранения конфига langchain"""
+
     message: types.Message
 
     def config_to_langgraph_format(self) -> dict[str, dict[str, Any]]:
@@ -17,6 +19,7 @@ class LanggraphConfig:
 
 
 def parse_runnable_config(config: RunnableConfig) -> LanggraphConfig:
+    """Превращает RunnableConfig, который получают тузлы, в dataclass"""
     return LanggraphConfig(
         **{
             k: v
