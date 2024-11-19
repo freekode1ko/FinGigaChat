@@ -28,12 +28,8 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
         temperature=0.00001
     )
 
-    langgraph_agent_executor = create_react_agent(
-        giga, tools_functions,
-    )
-    conf = LanggraphConfig(
-        message=message
-    )
+    langgraph_agent_executor = create_react_agent(giga, tools_functions)
+    conf = LanggraphConfig(message=message)
 
     try:
         res = await langgraph_agent_executor.ainvoke(

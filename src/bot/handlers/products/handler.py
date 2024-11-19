@@ -106,9 +106,8 @@ async def get_group_products(
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
     :param product_id: Айди Product, если вызов функции из Function Calling
     """
-    chat_id = callback_query.chat.id if isinstance(callback_query, types.Message) else callback_query.message.chat.id
+    chat_id, user_msg = callback_query.chat.id, callback_query.text if isinstance(callback_query, types.Message) else callback_query.message.chat.id, callback_query.data
     full_name = callback_query.from_user.full_name
-    user_msg = callback_query.text if isinstance(callback_query, types.Message) else callback_query.data
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
     if isinstance(callback_query, types.Message) and product_id:
@@ -181,7 +180,7 @@ async def get_product_documents(
         callback_query: types.CallbackQuery | types.Message,
         product: models.Product,
         resend_message: bool
-) -> None:
+) -> bool:
     """
     Получение продуктовых предложений
 
@@ -190,6 +189,7 @@ async def get_product_documents(
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param product: содержит информацию о продукте, формате выдачи предложений
     :param resend_message: Переотправлять ли сообщение повторно
+    :return: Отправлены ли были документы
     """
     documents = list(product.documents)
 

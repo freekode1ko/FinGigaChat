@@ -82,11 +82,11 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
             await main_menu(runnable_config.message)
             return
 
-        callback_query = callbacks.ProductsMenuData(
+        callback_data = callbacks.ProductsMenuData(
             menu=callbacks.ProductsMenusEnum.group_products,
             product_id=product.id,
             root_id=get_root_id(product, products)
         )
-        await get_group_products(runnable_config.message, callback_query, next(filter(lambda x: x.name == matches[0][0], products)).id)
+        await get_group_products(runnable_config.message, callback_data, next(filter(lambda x: x.name == matches[0][0], products)).id)
     else:
         raise Exception
