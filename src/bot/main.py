@@ -140,7 +140,7 @@ async def main():
     warnings.filterwarnings('ignore')
 
     # проверка соответствия между названиями фичей в коде и в базе данных (ролевая модель)
-    # await check_relevance_features()
+    await check_relevance_features()
 
     # запускам рассылки
     print('Инициализация бота')
