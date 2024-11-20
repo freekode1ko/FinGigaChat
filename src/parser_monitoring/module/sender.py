@@ -7,11 +7,8 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fi
 from configs import config
 from constants.enums import RequestType
 from log.logger_base import logger
+from module.auth import get_access_token
 from schemas.parser import ParserCreate, ParserUpdateLastUpdateTime
-
-
-class AuthorizationError(Exception):
-    """Ошибка аутентификации"""
 
 
 class ParserCreationError(Exception):
@@ -34,6 +31,11 @@ class SendToMonitoring:
             'accept': '*/*',
         }
 
+    def _handle_authorization_error(self, method: RequestType, url: str, json_data: dict | list, **kwargs):
+        """Обновление токена."""
+        self.headers['Authorization'] = f'Bearer {get_access_token()}'
+        return requests.request(method=method, url=url, headers=self.headers, json=json_data, **kwargs)
+
     @retry(
         stop=stop_after_attempt(config.POST_TO_SERVICE_ATTEMPTS),
         wait=wait_fixed(10),
@@ -42,7 +44,10 @@ class SendToMonitoring:
     def send_request(self, method: RequestType, url: str, json_data: dict | list, **kwargs):
         """Отправка запроса."""
         logger.info('Отправка запроса')
-        return requests.request(method=method, url=url, headers=self.headers, json=json_data, **kwargs)
+        r = requests.request(method=method, url=url, headers=self.headers, json=json_data, **kwargs)
+        if r.status_code == 401:
+            r = self._handle_authorization_error(method, url, json_data, **kwargs)
+        return r
 
     def update_parser(self, parser_name: str, json_data: dict, **kwargs):
         """Парсер уже существует, отправка запроса на обновление"""
@@ -68,9 +73,6 @@ class SendToMonitoring:
             match r.status_code:
                 case 201:
                     logger.info(f'Парсер "{parser.name}" создан')
-                case 401:
-                    logger.error(r.text)
-                    raise AuthorizationError(r.text)
                 case 409:
                     logger.info(f'Парсер "{parser.name}" уже существует, отправка запроса на обновление')
                     self.update_parser(parser.name, json_data, **kwargs)
@@ -86,7 +88,7 @@ class SendToMonitoring:
         """
         logger.info('Отправка данных по обновлению дат парсинга на сервис мониторинг: %s', data)
         r = self.send_request(
-            method=RequestType.update, url=f'{config.MONITORING_API_PARSER_URL}',
+            method=RequestType.update, url=config.MONITORING_API_PARSER_URL,
             json_data=[parser.model_dump(mode='json') for parser in data], **kwargs,
         )
         logger.info('Данные отправлены: ответ %s', r)

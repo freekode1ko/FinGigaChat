@@ -6,6 +6,10 @@ from configs.config import MONITORING_API_LOGIN_URL, MONITORING_API_PASSWORD, MO
 from log.logger_base import logger
 
 
+class AuthorizationError(Exception):
+    """Ошибка аутентификации"""
+
+
 def get_access_token() -> str:
     """Получение токена доступа к мониторингу."""
     logger.info('Получение токена доступа')
@@ -17,6 +21,7 @@ def get_access_token() -> str:
         if r.status_code == 200:
             logger.info(f'Токен для пользователя {MONITORING_API_USER} получен')
             return r.json()['access_token']
-    except (exceptions.RequestException, exceptions.ConnectionError) as e:
+        raise AuthorizationError(f'Проблемы с получением токена, ответ: {r.status_code} {r.text}')
+    except Exception as e:
         logger.error(f'Ошибка при получении токена {e}')
         raise
