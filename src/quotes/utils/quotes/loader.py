@@ -62,7 +62,7 @@ async def load_cbr_quotes() -> None:
                     session,
                     model=models.Quotes,
                     values=values,
-                    uq_constraint=['name', 'quotes_section_id'],
+                    constraint='uq_quote_name_and_section',
                 )
         except Exception as e:
             logger.error(f'Во время загрузки котировок по cbr произошла ошибка: {e}')
@@ -101,7 +101,7 @@ async def load_cbr_metals() -> None:
                     session,
                     model=models.Quotes,
                     values=values,
-                    uq_constraint=['name', 'quotes_section_id'],
+                    constraint='uq_quote_name_and_section',
                 )
         except Exception as e:
             logger.error(f'Во время загрузки металлов с cbr произошла ошибка: {e}')
@@ -168,7 +168,7 @@ async def load_moex_quotes():
                     session,
                     model=models.Quotes,
                     values=values,
-                    uq_constraint=['name', 'quotes_section_id'],
+                    constraint='uq_quote_name_and_section',
                 )
         except Exception as e:
             logger.error(f'Во время загрузки с moex произошла ошибка: {e}')
@@ -256,7 +256,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
                 session,
                 model=models.QuotesValues,
                 values=values,
-                uq_constraint=['name', 'quotes_section_id'],
+                constraint='uq_quote_and_date',
             )
     except Exception as e:
         logger.error(f'Во время загрузки котировки {ticker} c yahoo произошла ошибка: {e}')

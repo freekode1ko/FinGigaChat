@@ -143,5 +143,5 @@ async def process_gigaparser_source(
             session,
             models.QuotesValues,
             insert_quotes,
-            uq_constraint=['quote_id', 'date'],
+            constraint='uq_quote_and_date',
         )

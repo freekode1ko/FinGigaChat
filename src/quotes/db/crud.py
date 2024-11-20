@@ -1,4 +1,4 @@
-"""Функциия для работы с БД"""
+"""Функция для работы с БД"""
 from typing import Any, Union
 
 import sqlalchemy as sa
@@ -15,7 +15,7 @@ async def custom_upsert(
         session: AsyncSession,
         model: DeclarativeBase,
         values: dict | list[dict],
-        uq_constraint: list[str],
+        constraint: str,
         autocommit: bool = True,
 ) -> None:
     """
@@ -24,9 +24,16 @@ async def custom_upsert(
     :param AsyncSession session: Сессия SQLAlchemy
     :param DeclarativeBase model: Модель SQLAlchemy,
     :param dict | list[dict] values: Значения для вставки или обновления
-    :param list[str] uq_constraint: Уникальные ключи
+    :param str constraint: Название ограничения
     :param bool autocommit: Коммит изменений В БД в конце выполнения функции
     """
+    sqla_constraint = next(
+        (c for c in model.__table__.constraints if c.name == constraint),
+        None
+    )
+    if sqla_constraint is None:
+        raise ValueError(f'Ограничение {constraint} в {model} не найдено')
+
     if not values:
         return
     if not isinstance(values, list):
@@ -35,7 +42,7 @@ async def custom_upsert(
     for value in values:
         where_stmt = sa.and_(*[
             getattr(model, key) == value[key]
-            for key in uq_constraint
+            for key in (col.name for col in sqla_constraint.columns)
         ])
         update_stmt = sa.update(model).where(where_stmt).values(**value)
         result = await session.execute(update_stmt)

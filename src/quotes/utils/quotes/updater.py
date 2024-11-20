@@ -41,7 +41,7 @@ async def update_cbr_quote(quote: models.Quotes):
             session=session,
             model=models.QuotesValues,
             values=values,
-            uq_constraint=['quote_id', 'date'],
+            constraint='uq_quote_and_date',
         )
 
 
@@ -108,7 +108,7 @@ async def update_moex_quotes(quote: models.Quotes):
             session=session,
             model=models.QuotesValues,
             values=values,
-            uq_constraint=['quote_id', 'date'],
+            constraint='uq_quote_and_date',
         )
 
 
@@ -174,7 +174,7 @@ async def update_cbr_metals():
                 session=session,
                 model=models.QuotesValues,
                 values=values,
-                uq_constraint=['quote_id', 'date'],
+                constraint='uq_quote_and_date',
             )
     except Exception as e:
         logger.error(f'Во время обновления металлов с cbr произошла ошибка: {e}')
