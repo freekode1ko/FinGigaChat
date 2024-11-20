@@ -204,7 +204,7 @@ if __name__ == '__main__':
     ap_obj_online = ArticleProcess(logger)
 
     scheduler = BlockingScheduler()
-    trigger = CronTrigger(minute='0,10,20,40')
+    trigger = CronTrigger(minute='0,20,40')
     scheduler.add_job(main, trigger=trigger)
     try:
         scheduler.start()
