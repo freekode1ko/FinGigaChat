@@ -48,7 +48,7 @@ class Article(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
                 maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    link = Column(Text, nullable=False, comment='Ссылка на новость')
+    link = Column(Text, nullable=False, unique=True, comment='Ссылка на новость')
     date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
     text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
     title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
@@ -934,3 +934,15 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
+
+
+class ArticleOnlinePendingLinksQueue(Base):
+    __tablename__ = 'article_online_pending_links_queue'
+    __table_args__ = {'comment': 'Таблица, содержащая недавно сохраненные ссылки, для их обработки QABanker'}
+
+    id = Column(Integer, primary_key=True)
+    type_of_link = Column(Enum(enums.LinksType), nullable=False, comment='Тип ссылки')
+    link = Column(
+        Text, ForeignKey('article.link', ondelete='CASCADE', onupdate='CASCADE'),
+        unique=True, nullable=False, comment='Ссылка на новость'
+    )

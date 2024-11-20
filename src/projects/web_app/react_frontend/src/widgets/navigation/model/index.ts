@@ -1,1 +1,1 @@
-export { type MenuItem, menuItems } from './items'
+export { type MenuItem, menuItems, profileItems } from './items'

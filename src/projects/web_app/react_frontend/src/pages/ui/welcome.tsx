@@ -25,15 +25,19 @@ const WelcomePage = () => {
     }
   }
 
+  const handleSkip = () => {
+      localStorage.setItem('onboarding', 'true')
+      navigate('/news')
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-4">
-      <div className="flex w-full justify-center space-x-2">
+    <div className="flex flex-col items-center justify-center h-screen">
+      <div className="flex w-full justify-center space-x-2 px-2">
         <Step active={step > 0} />
         <Step active={step > 1} />
         <Step active={step > 2} />
       </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
         {step === 1 && (
           <SliderContent title='Дашборд'>
             Создавайте свой персональный дашборд, настройте его под свои задачи и следите за интересующими вас котировками!
@@ -50,10 +54,14 @@ const WelcomePage = () => {
           </SliderContent>
         )}
       </div>
-
-      <Button size='lg' className='w-full' onClick={handleNextStep}>
-        {step < 3 ? 'Далее' : 'В приложение!'}
-      </Button>
+      <div className='w-full text-center space-y-1'>
+        <Button size='sm' variant='ghost' className='text-muted text-xs' onClick={handleSkip}>
+          Пропустить
+        </Button>
+        <Button size='lg' className='w-full rounded-none' onClick={handleNextStep}>
+          {step < 3 ? 'Далее' : 'В приложение!'}
+        </Button>
+      </div>
     </div>
   )
 }

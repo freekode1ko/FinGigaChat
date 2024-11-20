@@ -6,18 +6,15 @@ import { Slot } from '@radix-ui/react-slot'
 import { cn } from '../lib'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+  'inline-flex items-center justify-center gap-2 rounded-md whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
   {
     variants: {
       variant: {
-        default: 'bg-primary-800 dark:bg-primary-400 text-white',
-        secondary: 'bg-secondary-300 dark:bg-secondary-800 text-white',
-        destructive:
-          'bg-red-200 dark:bg-red-500 hover:bg-red-200/90 dark:hover:bg-red-500/90',
-        outline:
-          'border text-dark-blue dark:text-white border-dark-blue dark:border-white transparent hover:bg-secondary-100 dark:hover:bg-secondary-600',
-        ghost:
-          'text-dark-blue dark:text-white transparent hover:bg-secondary-100 dark:hover:bg-secondary-600',
+        default: 'bg-primary text-white hover:opacity-90',
+        secondary: 'bg-secondary hover:bg-background border border-border',
+        destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
+        outline: 'border border-border transparent hover:bg-secondary',
+        ghost: 'transparent hover:bg-secondary',
       },
       size: {
         default: 'h-10 px-4 py-2',

@@ -6,13 +6,14 @@ export const API_ENDPOINTS = {
   analytics: 'analytics',
   subscriptions: 'subscriptions',
   notes: 'notes',
-  auth: 'auth'
+  auth: 'auth',
 }
 
 export const API_TAGS = {
   meetings: 'MEETINGS',
   notes: 'NOTES',
   dashboard: 'DASHBOARD',
+  dashboardSubscriptions: 'DASHBOARD_SUBSCRIPTIONS',
   dashboardQuotes: 'DASHBOARD_QUOTES',
 }
 
@@ -24,8 +25,11 @@ export const SITE_MAP = {
   analytics: '/analytics',
   subscriptions: '/subscriptions',
   notes: '/notes',
+  profile: '/profile',
+  login: '/login',
 }
 
+export const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'
 export const PAGE_SIZE = 10
 export const KEEP_UNUSED_DATA_TEMP = 120
 export const KEEP_UNUSED_DATA_INF = Infinity
