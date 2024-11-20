@@ -1,6 +1,5 @@
 """Аутентификация в сервисе мониторинга"""
 import requests
-from requests import exceptions
 
 from configs.config import MONITORING_API_LOGIN_URL, MONITORING_API_PASSWORD, MONITORING_API_USER
 from log.logger_base import logger
