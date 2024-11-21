@@ -40,7 +40,7 @@ export const CustomChart = ({
       compIndex -= 1;
     }
     if (!inputData[compIndex]) return theme === 'dark' ? '#383E55' : '#E1E1EA';
-    return inputData[inputData.length - 1].value > inputData[compIndex].value ? "#26A69A" : "#EF5350";
+    return inputData[inputData.length - 1].value >= inputData[compIndex].value ? "#26A69A" : "#EF5350";
   };
 
   const openCloseColor = getOpenCloseColor();

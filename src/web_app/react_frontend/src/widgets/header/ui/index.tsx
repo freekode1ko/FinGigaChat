@@ -8,7 +8,7 @@ import { ThemeSwitcher } from '@/features/theme-switcher'
 */
 export const Header = () => {
   return (
-    <header className="hidden sticky top-0 w-full border-b border-border md:flex justify-between items-center bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 px-4 h-16">
+    <header className="hidden w-full border-b border-border md:flex justify-between items-center bg-background px-4 h-16">
       <Logo navigateOnClick />
       <div>
         <NavigationList />
