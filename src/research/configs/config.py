@@ -40,14 +40,12 @@ SENTRY_POLYANALIST_PARSER_DSN: str = env.str('SENTRY_POLYANALIST_PARSER_DSN', de
 SENTRY_NEWS_PARSER_DSN: str = env.str('SENTRY_NEWS_PARSER_DSN', default='')
 SENTRY_FORCE_LOCAL: bool = env.bool('SENTRY_FORCE_LOCAL', default=False)
 
-api_token: str = env.str('BOT_API_TOKEN', default='')
 DB_USER: str = env.str('DB_USER', default='postgres')
 DB_PASS: str = env.str('DB_PASS', default='password')
 DB_HOST: str = env.str('DB_HOST', default='127.0.0.1')
 DB_PORT: str = env.str('DB_PORT', default='5432')
 DB_NAME: str = env.str('DB_NAME', default='postgres')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
-giga_credentials: str = env.str('GIGA_CREDENTIALS', default='')
 
 log_file = 'research'
 LOG_LEVEL_DEBUG = 10
@@ -67,8 +65,8 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
-api_key_gpt = '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'
-research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
+RESEARCH_LOGIN: str = env.str('RESEARCH_LOGIN')
+RESEARCH_PASSWORD: str = env.str('RESEARCH_PASSWORD')
 CIB_JSESSIONID = '1111akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'
 CIB_LOGIN = '616e6e656b7261736f76407362657262616e6b2e7275'
 CIB_PASSWORD = '336e52672b5048666739497856336549336d6c5069513d3d'
@@ -95,63 +93,13 @@ RESEARCH_GETTING_TIMES_LIST = [
     '20:00',
 ]
 
-QUOTES_PROCESSING_PROC_NUM = 2
-
-CLIENT_NAME_PATH = 'data/name/client_name.csv'
-COMMODITY_NAME_PATH = 'data/name/commodity_name.csv'
-CLIENT_ALTERNATIVE_NAME_PATH = 'data/name/client_with_alternative_names.xlsx'
-COMMODITY_ALTERNATIVE_NAME_PATH = 'data/name/commodity_with_alternative_names.xlsx'
-CLIENT_ALTERNATIVE_NAME_PATH_FOR_UPDATE = 'data/name/client_alternative.csv'
-TELEGRAM_CHANNELS_DATA_PATH = pathlib.Path('sources') / 'tables' / 'tg_channels.xlsx'
-QUOTES_SOURCES_PATH = pathlib.Path('sources') / 'ТЗ.xlsx'
-RESEARCH_SOURCES_PATH = pathlib.Path('sources') / 'tables' / 'research_source.xlsx'
-
-BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
-NEWS_LIMIT = 5
-USER_SUBSCRIPTIONS_LIMIT = 70
-PAGE_ELEMENTS_COUNT = 10
-
-STATISTICS_PATH = 'statistics'
-BOT_USAGE_STAT_FILE_NAME = 'bot_usage_statistics.xlsx'
-USERS_DATA_FILE_NAME = 'users_catalog.xlsx'
-NUM_DAYS_FOR_WHICH_STATS_COLLECT = 7
 STATS_COLLECTOR_SLEEP_TIME = 60
-
-
-POST_TO_GIGAPARSER_TIMEOUT = 1200
-POST_TO_SERVICE_TIMEOUT = 90
 POST_TO_SERVICE_ATTEMPTS = 3
-POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10
-CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 
-BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
-
 INVERT_DATETIME_FORMAT = '%H:%M %d.%m.%Y'
 
-mail_username = 'ai-helper@mail.ru'
-mail_password = 'ExamKejCpmcpr8kM5emw'
-mail_imap_server = 'imap.mail.ru'
-summarization_prompt = (
-    'Ты - суммаризатор новостной ленты.'
-    'На вход тебе будут подаваться новости.'
-    'Твоя задача - суммаризировать новость.'
-    ''
-    'Формат ответа:'
-    '- суммаризация не должна быть слишком длинной;'
-    '- тезисы должны быть лаконичными;'
-    '- основная мысль не должна искажаться;'
-    '- любые факты, которых не было в оригинальной статье, недопустимы;'
-    '- нельзя использовать вводные слова, только текст суммаризации.'
-    ''
-    'ВАЖНО! Игнорировать формат ответа нельзя! Все условия должны соответствовать формату ответа!'
-    ''
-    '________________'
-    'Твой ответ:'
-)
-
 industry_reviews: dict[str, str] = read_asset_from_json('industry_reviews.json')
-dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 industry_base_url = (
     'https://research.sberbank-cib.com/group/guest/'

@@ -46,8 +46,8 @@ class ResearchParser:
     def __init__(self, driver: WebDriver, logger: Logger.logger) -> None:
         """Инициализация парсера портала CIB Research"""
         home_page = config.research_base_url[:-1]  # 'https://research.sberbank-cib.com'
-        login = config.research_cred[0]
-        password = config.research_cred[1]
+        login = config.RESEARCH_LOGIN
+        password = config.RESEARCH_PASSWORD
 
         self._logger = logger
         self.driver = driver
@@ -473,8 +473,8 @@ class ResearchAPIParser:
         """Инициализация парсера страниц с портала CIB Research"""
         self._logger = logger
 
-        login = config.research_cred[0]
-        password = config.research_cred[1]
+        login = config.RESEARCH_LOGIN
+        password = config.RESEARCH_PASSWORD
         self.auth = (login, password)
 
         self.REPEAT_TRIES = config.REPEAT_TRIES
