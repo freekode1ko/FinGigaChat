@@ -3,295 +3,13 @@ import asyncio
 import datetime
 import time
 import warnings
-from typing import Optional
 
-import pandas as pd
 import schedule
-from selenium.webdriver.remote.webdriver import WebDriver
 
 from configs import config
-from db.database import engine
 from log import sentry
 from log.logger_base import Logger, selector_logger
-from module import crawler
-from parsers.cib import ResearchAPIParser, ResearchParser
-from parsers.exceptions import ResearchError
-from utils.selenium_utils import get_driver
-
-
-class ResearchesGetter:
-    """Класс сборщик отчетов"""
-
-    def __init__(self, logger: Logger.logger) -> None:
-        """Инициализация сборщика отчетов"""
-        self.logger = logger
-        self.parser_obj = crawler.Parser(self.logger)
-        self.list_of_companies = config.list_of_companies
-
-        self.__driver: Optional[WebDriver] = None
-        self.authed_user: Optional[ResearchParser] = None
-
-    def set_driver(self, driver: WebDriver) -> None:
-        """Задание атрибута driver"""
-        self.__driver = driver
-
-    @property
-    def driver(self) -> WebDriver:
-        """Получение атрибута driver"""
-        return self.__driver
-
-    def init_research_parser(self) -> ResearchParser:
-        """Инициализация парсера отчетов"""
-        try:
-            self.authed_user = ResearchParser(self.__driver, self.logger)
-        except Exception as e:
-            error_msg = 'Не удалось авторизоваться на Sberbank CIB Research: %s'
-            self.logger.error(error_msg, e)
-            raise ResearchError(error_msg % e)
-        return self.authed_user
-
-    def reinit_research_parser(self) -> ResearchParser:
-        """Переинициализация парсера отчетов в случае падения селениума"""
-        self.__driver.quit()
-        self.__driver = get_driver(logger=self.logger)
-        return self.init_research_parser()
-
-    def parse_economy_block(self, economy: str) -> tuple[pd.DataFrame | None, list[tuple] | None, list[tuple] | None]:
-        """Спарсить блок экономических показателей"""
-        try:
-            key_eco_table = self.authed_user.get_key_econ_ind_table()
-        except Exception as e:
-            self.logger.error('При сборе ключевых показателей компании произошла ошибка: %s', e)
-            self.reinit_research_parser()
-            key_eco_table = None
-
-        try:
-            eco_day = self.authed_user.get_reviews(url_part=economy, tab='Ежедневные', title='Экономика - Sberbank CIB')
-        except Exception as e:
-            self.logger.error('При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Ежедневные" произошла ошибка: %s', e)
-            self.reinit_research_parser()
-            eco_day = None
-
-        try:
-            eco_month = self.authed_user.get_reviews(
-                url_part=economy,
-                tab='Все',
-                title='Экономика - Sberbank CIB',
-                name_of_review='Экономика России. Ежемесячный обзор',
-            )
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
-                'name_of_review="Экономика России. Ежемесячный обзор" произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            eco_month = None
-        return key_eco_table, eco_day, eco_month
-
-    def parse_bonds_block(self, money: str) -> tuple[list[tuple] | None, list[tuple] | None]:
-        """Спарсить блок котировок"""
-        try:
-            bonds_day = self.authed_user.get_reviews(
-                url_part=money,
-                tab='Ежедневные',
-                title='FX &amp; Ставки - Sberbank CIB',
-                name_of_review='Валютный рынок и процентные ставки',
-                type_of_review='bonds',
-                count_of_review=2,
-            )
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
-                'name_of_review="Валютный рынок и процентные ставки", '
-                'type_of_review="bonds", '
-                'count_of_review=2 произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            bonds_day = None
-
-        try:
-            bonds_month = self.authed_user.get_reviews(
-                url_part=money,
-                tab='Все',
-                title='FX &amp; Ставки - Sberbank CIB',
-                name_of_review='Обзор рынка процентных ставок',
-            )
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Все",'
-                'name_of_review="Обзор рынка процентных ставок" произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            bonds_month = None
-        return bonds_day, bonds_month
-
-    def parse_exchange_block(self, economy: str, money: str) -> tuple[list[tuple] | None, list[tuple] | None, list[tuple] | None]:
-        """Спарсить блок по курсам валют"""
-        try:
-            exchange_day = self.authed_user.get_reviews(
-                url_part=money,
-                tab='Ежедневные',
-                title='FX &amp; Ставки - Sberbank CIB',
-                name_of_review='Валютный рынок и процентные ставки',
-                type_of_review='exchange',
-                count_of_review=2,
-            )
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "FX &amp; Ставки - Sberbank CIB" во вкладке "Ежедневные", '
-                'name_of_review="Валютный рынок и процентные ставки", '
-                'type_of_review="exchange",'
-                'count_of_review=2 произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            exchange_day = None
-
-        try:
-            exchange_month_uan = self.authed_user.get_reviews(
-                url_part=economy, tab='Все', title='Экономика - Sberbank CIB', name_of_review='Ежемесячный обзор по юаню'
-            )
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все",'
-                'name_of_review="Ежемесячный обзор по юаню" произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            exchange_month_uan = None
-
-        try:
-            exchange_month_soft = self.authed_user.get_reviews(
-                url_part=economy,
-                tab='Все',
-                title='Экономика - Sberbank CIB',
-                name_of_review='Ежемесячный обзор по мягким валютам'
-            )
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "Экономика - Sberbank CIB" во вкладке "Все", '
-                'name_of_review="Ежемесячный обзор по мягким валютам" произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            exchange_month_soft = None
-
-        return exchange_day, exchange_month_uan, exchange_month_soft
-
-    def parse_commodity_block(self, comm: str) -> list[tuple] | None:
-        """Спарсить блок commodity"""
-        try:
-            commodity_day = self.authed_user.get_reviews(
-                url_part=comm,
-                tab='Ежедневные',
-                title='Сырьевые товары - Sberbank CIB',
-                name_of_review='Сырьевые рынки',
-                type_of_review='commodity',
-            )
-            self.logger.info('Блок по сырью собран')
-        except Exception as e:
-            self.logger.error(
-                'При сборе отчетов по "Сырьевые товары - Sberbank CIB" во вкладке "Ежедневные", '
-                'name_of_review="Сырьевые рынки", '
-                'type_of_review="commodity" произошла ошибка: %s',
-                e,
-            )
-            self.reinit_research_parser()
-            commodity_day = None
-        return commodity_day
-
-    def collect_research(self) -> tuple[Optional[dict], Optional[pd.DataFrame],]:
-        """
-        Collect all type of reviews from CIB Research
-
-        And get page html with fin data about companies from CIB Research
-
-        :return: dict with data reviews, dict with html page
-        """
-        self.logger.info('Начало сборки с research')
-        economy, money, comm = 'econ', 'money', 'comm'
-
-        self.init_research_parser()
-
-        # economy
-        key_eco_table, eco_day, eco_month = self.parse_economy_block(economy)
-        self.logger.info('Блок по экономике собран')
-
-        # bonds
-        bonds_day, bonds_month = self.parse_bonds_block(money)
-        self.logger.info('Блок по ставкам собран')
-
-        # exchange
-        exchange_day, exchange_month_uan, exchange_month_soft = self.parse_exchange_block(economy, money)
-        exchange_month = exchange_month_uan + exchange_month_soft
-        self.logger.info('Блок по курсам валют собран')
-
-        # commodity
-        commodity_day = self.parse_commodity_block(comm)
-        self.logger.info('Блок по commodity собран')
-
-        reviews = {
-            'Economy day': eco_day,
-            'Economy month': eco_month,
-            'Bonds day': bonds_day,
-            'Bonds month': bonds_month,
-            'Exchange day': exchange_day,
-            'Exchange month': exchange_month,
-            'Commodity day': commodity_day,
-        }
-
-        self.authed_user.get_industry_reviews()
-        self.__driver = self.authed_user.driver
-        self.logger.info('Страница с отчетами по направлениям собрана')
-
-        return reviews, key_eco_table
-
-    def save_reviews(self, reviews_to_save: dict[str, list[tuple]]) -> None:
-        """
-        Save all reviews into the database.
-
-        :param reviews_to_save: dict of list of the reviews
-        """
-        # TODO: мб сделать одну таблицу для обзоров ?
-
-        table_name_for_review = {
-            'Economy day': 'report_eco_day',
-            'Economy month': 'report_eco_mon',
-            'Bonds day': 'report_bon_day',
-            'Bonds month': 'report_bon_mon',
-            'Exchange day': 'report_exc_day',
-            'Exchange month': 'report_exc_mon',
-            'Commodity day': 'report_met_day',
-        }
-
-        for review_name, table_name in table_name_for_review.items():
-            reviews_list = reviews_to_save.get(review_name)
-
-            if reviews_list is not None:
-                pd.DataFrame(reviews_list).to_sql(table_name, if_exists='replace', index=False, con=engine)
-                self.logger.info(f'Таблица {table_name} записана: {reviews_list}')
-            else:
-                self.logger.warning(f'Таблица {table_name} не обновлена: {reviews_list}')
-
-        self.logger.info('Все собранные отчеты с research записаны')
-
-    def save_key_eco_table(self, key_eco_table: Optional[pd.DataFrame]) -> None:
-        """Сохранение таблицы с ключевыми экономическими показателями"""
-        if key_eco_table is not None:
-            key_eco_table.to_sql('key_eco', if_exists='replace', index=False, con=engine)
-            self.logger.info('Таблица key_eco записана')
-        else:
-            self.logger.warning('Таблица key_eco не обновлена')
-
-    def save_date_of_last_build(self) -> None:
-        """Сохранение даты последней сборки данных"""
-        cur_time = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
-        cur_time_in_box = pd.DataFrame([[cur_time]], columns=['date_time'])
-        cur_time_in_box.to_sql('date_of_last_build', if_exists='replace', index=False, con=engine)
-        self.logger.info('Таблица date_of_last_build записана')
+from parsers.cib import ResearchAPIParser
 
 
 def get_next_collect_datetime(next_research_getting_time: str) -> datetime.datetime:
@@ -336,41 +54,6 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
     :param logger: логгер
     """
     start_tm = time.time()
-
-    logger.info('Инициализация сборщика researches')
-    runner = ResearchesGetter(logger)
-    logger.info('Загрузка прокси')
-    runner.parser_obj.get_proxy_addresses()
-
-    try:
-        driver = get_driver(logger)
-    except Exception as e:
-        logger.error('Ошибка при подключении к контейнеру selenium: %s', e)
-        driver = None
-
-    runner.set_driver(driver)
-
-    if driver:
-        try:
-            logger.info('Начало сборки отчетов с research')
-            reviews_dict, key_eco_table = runner.collect_research()
-            logger.info('Сохранение собранных данных')
-            runner.save_key_eco_table(key_eco_table)
-            runner.save_reviews(reviews_dict)
-        except Exception as e:
-            logger.error('Ошибка при сборке отчетов с Research: %s', e)
-
-        try:
-            runner.driver.quit()
-        except Exception as e:
-            # предполагается, что такая ошибка возникает, если в процессе сбора данных у нас сдох селениум,
-            # тогда вылетает MaxRetryError
-            logger.error('Ошибка во время закрытия подключения к selenium: %s', e)
-
-    logger.info('Запись даты и времени последней успешной сборки researches и графиков')
-    runner.save_date_of_last_build()
-
-    # Запуск парсинга CIB через условный апиай
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -398,29 +81,26 @@ def run_researches_getter(next_research_getting_time: str, logger: Logger.logger
 
 
 def main():
-    """
-    Сборщик researches
-
-    Сборка происходит каждый день в '08:00', '10:00', '12:00', '14:00', '16:00', '18:00'
-    Время сборки указано в списке в config.RESEARCH_GETTING_TIMES_LIST
-    """
+    """Сборщик отчетов с портала CIB Research, время сборки в config.RESEARCH_GETTING_TIMES_LIST."""
     sentry.init_sentry(dsn=config.SENTRY_RESEARCH_PARSER_DSN)
 
     warnings.filterwarnings('ignore')
-    # логгер для сохранения действий программы + пользователей
     logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
-    res_get_times_len = len(config.RESEARCH_GETTING_TIMES_LIST)
 
+    res_get_times_len = len(config.RESEARCH_GETTING_TIMES_LIST)
     if config.DEBUG:
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(0 + 1) % res_get_times_len]
         run_researches_getter(next_collect_time, logger)
 
     run_researches_getter('12:00', logger)
-    # сборка происходит каждый день в
     for index, collect_time in enumerate(config.RESEARCH_GETTING_TIMES_LIST):
         next_collect_time = config.RESEARCH_GETTING_TIMES_LIST[(index + 1) % res_get_times_len]
 
-        schedule.every().day.at(collect_time).do(run_researches_getter, next_research_getting_time=next_collect_time, logger=logger)
+        schedule.every().day.at(collect_time).do(
+            run_researches_getter,
+            next_research_getting_time=next_collect_time,
+            logger=logger
+        )
 
     while True:
         schedule.run_pending()
