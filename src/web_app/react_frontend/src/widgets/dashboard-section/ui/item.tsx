@@ -6,7 +6,7 @@ import { ChartSkeleton, CustomChart, mapFinancialData } from '@/entities/charts'
 import { QuoteCard, type Quotes,useGetDashboardDataQuery } from '@/entities/quotes'
 import { selectAppTheme } from '@/entities/theme'
 import { cn, useAppSelector } from '@/shared/lib'
-import { SITE_MAP } from '@/shared/model'
+import { GRAPH_POLLING_INTERVAL, SITE_MAP } from '@/shared/model'
 
 interface DashboardItemProps {
   item: Quotes
@@ -22,6 +22,9 @@ const _DashboardItem = ({item, allowEdit}: DashboardItemProps) => {
   const { data, isLoading } = useGetDashboardDataQuery({
     quoteId: item.quote_id,
     startDate: '01.01.2024', // пока хардкодом забираем данные с начала 2024 года
+  }, {
+    pollingInterval: GRAPH_POLLING_INTERVAL,
+    skipPollingIfUnfocused: true,
   })
 
   if (isLoading)
