@@ -1,8 +1,7 @@
-"""Функциия для работы с БД"""
+"""Функция для работы с БД"""
 from typing import Any, Union
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql.schema import ColumnCollectionConstraint, Index
@@ -12,26 +11,44 @@ from db import models
 ConstraintType = Union[str, ColumnCollectionConstraint, Index, None]
 
 
-async def custom_insert_or_update_to_postgres(
+async def custom_upsert(
         session: AsyncSession,
         model: DeclarativeBase,
         values: dict | list[dict],
-        constraint: ConstraintType,
+        constraint: str,
         autocommit: bool = True,
 ) -> None:
-    """Вставка или обновление в постгрес"""
+    """
+    Вставка или обновление в БД, если запись уже существует.
+
+    :param AsyncSession session: Сессия SQLAlchemy
+    :param DeclarativeBase model: Модель SQLAlchemy,
+    :param dict | list[dict] values: Значения для вставки или обновления
+    :param str constraint: Название ограничения
+    :param bool autocommit: Коммит изменений В БД в конце выполнения функции
+    """
+    sqla_constraint = next(
+        (c for c in model.__table__.constraints if c.name == constraint),
+        None
+    )
+    if sqla_constraint is None:
+        raise ValueError(f'Ограничение {constraint} в {model} не найдено')
+
     if not values:
         return
     if not isinstance(values, list):
         values = [values]
 
     for value in values:
-        insert_stmt = insert_pg(model).values(value)
-        upsert_stmt = insert_stmt.on_conflict_do_update(
-            constraint=constraint,
-            set_={c.key: c for c in insert_stmt.excluded}
-        )
-        await session.execute(upsert_stmt)
+        where_stmt = sa.and_(*[
+            getattr(model, key) == value[key]
+            for key in (col.name for col in sqla_constraint.columns)
+        ])
+        update_stmt = sa.update(model).where(where_stmt).values(**value)
+        result = await session.execute(update_stmt)
+        if result.rowcount == 0:
+            insert_stmt = sa.insert(model).values(**value)
+            await session.execute(insert_stmt)
     if autocommit:
         await session.commit()
 

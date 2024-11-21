@@ -8,6 +8,7 @@ import {
   MeetingsPage,
   NewsPage,
   NotesPage,
+  PopularDashboardPage,
   ProfilePage,
   QuoteDetailsPage,
   // SubscriptionsPage,
@@ -61,6 +62,16 @@ export const appRouter = () =>
             {
               path: ':analyticId',
               element: <DevelopGuard />,
+            },
+          ],
+        },
+        {
+          path: SITE_MAP.dashboard + '/popular',
+          element: <PopularDashboardPage />,
+          children: [
+            {
+              path: 'quote/:quotationId',
+              element: <QuoteDetailsPage />,
             },
           ],
         },

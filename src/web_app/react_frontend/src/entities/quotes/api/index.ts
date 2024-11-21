@@ -85,6 +85,12 @@ export const quotesApi = baseApi.injectEndpoints({
       },
       providesTags: [API_TAGS.dashboardQuotes],
     }),
+    getPopularDashboard: build.query<QuotesResponse, void>({
+      query: () => ({
+        url: `${API_ENDPOINTS.popularQuotes}`,
+        method: 'GET',
+      }),
+    }),
   }),
 })
 
@@ -94,4 +100,5 @@ export const {
   usePutDashboardSubscriptionsMutation,
   useGetDashboardDataQuery,
   useGetUserDashboardQuery,
+  useGetPopularDashboardQuery,
 } = quotesApi
