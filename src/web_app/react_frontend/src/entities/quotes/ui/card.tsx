@@ -19,7 +19,7 @@ const getChangeColor = (change: number): string => {
   } else if (change < 0) {
     return 'text-destructive'
   } else {
-    return 'text-secondary'
+    return 'text-text'
   }
 }
 

@@ -34,3 +34,4 @@ export const PAGE_SIZE = 10
 export const KEEP_UNUSED_DATA_TEMP = 120
 export const KEEP_UNUSED_DATA_INF = Infinity
 export const DEV_API_URL = 'http://localhost:8000/api/v1'
+export const GRAPH_POLLING_INTERVAL = 15 * 60 * 1000
