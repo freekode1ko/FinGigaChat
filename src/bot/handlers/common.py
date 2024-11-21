@@ -14,6 +14,7 @@ import re
 from aiogram import F, Router, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
+from aiogram.filters.callback_data import CallbackData
 from aiogram.filters.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types.web_app_info import WebAppInfo
@@ -43,12 +44,20 @@ class Form(StatesGroup):
     continue_user_reg = State()
 
 
+class HelpButton(CallbackData, prefix='help_button'):
+    """CallbackData для показа кнопки /help"""
+
+
 router = Router()
 
 
+@router.callback_query(HelpButton.filter())
 @router.message(Command('start', 'help'))
-async def help_handler(message: types.Message, state: FSMContext, user_msg: str | None = None) -> None:
+async def help_handler(message: types.Message | types.CallbackQuery, state: FSMContext, user_msg: str | None = None) -> None:
     """Вывод приветственного окна, с описанием бота и лицами для связи."""
+    if isinstance(message, types.CallbackQuery):
+        message = message.message
+
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
     if is_user_email_exist(chat_id):
         to_pin = await message.answer(texts_manager.HELP_TEXT, protect_content=texts_manager.PROTECT_CONTENT)

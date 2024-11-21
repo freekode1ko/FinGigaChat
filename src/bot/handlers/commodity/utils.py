@@ -4,10 +4,17 @@ from aiogram import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs.config import PATH_TO_COMMODITY_REPORTS
+from constants import enums
 from constants.enums import SubjectType
+from constants.texts.texts_manager import texts_manager
+from db import models
+from db.api.commodity import commodity_db
 from db.models import Commodity, CommodityResearch, RelationCommodityCommodityResearch
+from handlers.commodity.keyboards import get_menu_kb as get_commodity_menu_kb
 from log.bot_logger import logger
 from module.article_process import ArticleProcess
+from module.fuzzy_search import FuzzyAlternativeNames
+from utils.decorators import has_access_to_feature
 
 
 async def send_or_get_commodity_quotes_message(
@@ -83,3 +90,38 @@ async def send_anal_report(
             continue
 
         await message.answer(message_text, parse_mode='HTML')
+
+
+@has_access_to_feature(feature=enums.FeatureType.news, is_need_answer=False)
+async def is_commodity_in_message(
+        message: types.Message,
+        user_msg: str,
+        send_message_if_commodity_in_message: bool = True,
+        fuzzy_score: int = 95,
+) -> bool:
+    """
+    Является ли введенное сообщение стейкхолдером, и если да, вывод меню стейкхолдера или новостей.
+
+    :param message: Сообщение от пользователя.
+    :param user_msg: Сообщение пользователя
+    :param send_message_if_commodity_in_message: нужно ли отправлять в сообщении
+    :param fuzzy_score: Величина в процентах совпадение с референтными именами стейкхолдеров.
+    :return: Булевое значение о том что совпадает ли сообщение с именем стейкхолдера.
+    """
+    commodity_ids = await FuzzyAlternativeNames().find_subjects_id_by_name(
+        user_msg.replace(texts_manager.COMMODITY_ADDITIONAL_INFO, ''),
+        subject_types=[models.CommodityAlternative, ],
+        score=fuzzy_score
+    )
+    commodities = await commodity_db.get_by_ids(commodity_ids[:1])
+
+    if len(commodities) >= 1:
+        if send_message_if_commodity_in_message:
+            commodity_id = commodity_ids[0]
+            commodity_name = commodities['name'].iloc[0]
+            await send_or_get_commodity_quotes_message(message, commodity_id)
+            keyboard = get_commodity_menu_kb(commodity_id)
+            msg_text = texts_manager.COMMODITY_CHOOSE_SECTION.format(name=commodity_name.capitalize())
+            await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+        return True
+    return False

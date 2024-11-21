@@ -95,40 +95,62 @@ async def main_menu_command(message: types.Message) -> None:
     F.menu == callbacks.ProductsMenusEnum.group_products,
 ))
 async def get_group_products(
-        callback_query: types.CallbackQuery,
+        tg_obj: types.CallbackQuery | types.Message,
         callback_data: callbacks.ProductsMenuData,
+        product_id: int | None = None,
 ) -> None:
     """
     Получение меню продукты
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
+    :param product_id: Айди Product, если вызов функции из Function Calling
     """
-    chat_id = callback_query.message.chat.id
-    user_msg = callback_data.pack()
-    from_user = callback_query.from_user
-    full_name = f"{from_user.first_name} {from_user.last_name or ''}"
+    chat_id, user_msg = (tg_obj.chat.id, tg_obj.text
+                         if isinstance(tg_obj, types.Message)
+                         else tg_obj.message.chat.id, callback_data.pack())
+    full_name = tg_obj.from_user.full_name
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    product_info = await product_db.get(callback_data.product_id)
+    if isinstance(tg_obj, types.Message) and product_id:
+        message = tg_obj
+        product_id = product_id
+    else:  # isinstance(callback_query, types.CallbackQuery) and not product_id:
+        message = tg_obj.message
+        product_id = callback_data.product_id
+
+    product_info = await product_db.get(product_id)
     sub_products = product_info.children
 
     if not sub_products:
-        await get_product_documents(callback_query, product_info)
+        resend = await get_product_documents(
+            tg_obj,
+            product_info,
+            resend_message=isinstance(tg_obj, types.CallbackQuery)
+        )
+
+        if isinstance(tg_obj, types.Message) and resend:
+            parent = await product_db.get(product_info.parent.id)
+            await message.answer(
+                parent.description,
+                reply_markup=keyboards.get_sub_menu_kb(parent.children, parent, callback_data),
+                parse_mode='HTML',
+            )
     else:
         keyboard = keyboards.get_sub_menu_kb(sub_products, product_info, callback_data)
         msg_text = product_info.description
         if product_info.documents and (fpath := configs.config.PROJECT_DIR / product_info.documents[0].file_path).exists():
-            await callback_query.message.answer_document(
+            await message.answer_document(
                 document=types.FSInputFile(fpath),
                 caption=msg_text,
                 parse_mode='HTML',
                 reply_markup=keyboard,
             )
         else:
-            await callback_query.message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+            await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
 
         try:
-            await callback_query.message.delete()
+            await message.delete()
         except aiogram.exceptions.TelegramBadRequest:
             pass
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
@@ -156,7 +178,11 @@ async def get_product_documents_callback(callback_query: types.CallbackQuery, ca
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
-async def get_product_documents(callback_query: types.CallbackQuery, product: models.Product) -> None:
+async def get_product_documents(
+        callback_query: types.CallbackQuery | types.Message,
+        product: models.Product,
+        resend_message: bool
+) -> bool:
     """
     Получение продуктовых предложений
 
@@ -164,24 +190,33 @@ async def get_product_documents(callback_query: types.CallbackQuery, product: mo
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param product: содержит информацию о продукте, формате выдачи предложений
+    :param resend_message: Переотправлять ли сообщение повторно
+    :return: Отправлены ли были документы
     """
     documents = list(product.documents)
 
     msg_text = product.description
 
+    if isinstance(callback_query, types.CallbackQuery):
+        message = callback_query.message
+    else:
+        message = callback_query
+
     match product.send_documents_format_type:
         case enums.FormatType.group_files:
             pdf_files = [Path(i.file_path) for i in documents]
-            if not await send_pdf(callback_query, pdf_files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
+            if not await send_pdf(message, pdf_files, msg_text, protect_content=texts_manager.PROTECT_CONTENT):
                 msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
-                await callback_query.message.answer(msg_text, parse_mode='HTML')
+                await message.answer(msg_text, parse_mode='HTML')
             else:
-                await send_full_copy_of_message(callback_query)
+                if resend_message:
+                    await send_full_copy_of_message(callback_query)
+                return True
         case enums.FormatType.individual_messages:
             if not documents:
                 msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
 
-            await callback_query.message.answer(msg_text, parse_mode='HTML')
+            await message.answer(msg_text, parse_mode='HTML')
 
             for document in documents:
                 document_msg_text = ''
@@ -191,11 +226,14 @@ async def get_product_documents(callback_query: types.CallbackQuery, product: mo
                     document_msg_text += document.description
 
                 if document_msg_text:
-                    await callback_query.message.answer(document_msg_text, parse_mode='HTML')
+                    await message.answer(document_msg_text, parse_mode='HTML')
 
                 if os.path.exists(document.file_path):
-                    await callback_query.message.bot.send_chat_action(callback_query.message.chat.id, 'upload_document')
-                    await callback_query.message.answer_document(types.FSInputFile(document.file_path))
+                    await message.bot.send_chat_action(message.chat.id, 'upload_document')
+                    await message.answer_document(types.FSInputFile(document.file_path))
 
             if documents:
-                await send_full_copy_of_message(callback_query)
+                if resend_message:
+                    await send_full_copy_of_message(callback_query)
+                return True
+    return False
