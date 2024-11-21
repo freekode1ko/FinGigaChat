@@ -95,7 +95,7 @@ async def main_menu_command(message: types.Message) -> None:
     F.menu == callbacks.ProductsMenusEnum.group_products,
 ))
 async def get_group_products(
-        callback_query: types.CallbackQuery | types.Message,
+        tg_obj: types.CallbackQuery | types.Message,
         callback_data: callbacks.ProductsMenuData,
         product_id: int | None = None,
 ) -> None:
@@ -106,17 +106,17 @@ async def get_group_products(
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
     :param product_id: Айди Product, если вызов функции из Function Calling
     """
-    chat_id, user_msg = (callback_query.chat.id, callback_query.text
-                         if isinstance(callback_query, types.Message)
-                         else callback_query.message.chat.id, callback_data.pack())
-    full_name = callback_query.from_user.full_name
+    chat_id, user_msg = (tg_obj.chat.id, tg_obj.text
+                         if isinstance(tg_obj, types.Message)
+                         else tg_obj.message.chat.id, callback_data.pack())
+    full_name = tg_obj.from_user.full_name
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
-    if isinstance(callback_query, types.Message) and product_id:
-        message = callback_query
+    if isinstance(tg_obj, types.Message) and product_id:
+        message = tg_obj
         product_id = product_id
     else:  # isinstance(callback_query, types.CallbackQuery) and not product_id:
-        message = callback_query.message
+        message = tg_obj.message
         product_id = callback_data.product_id
 
     product_info = await product_db.get(product_id)
@@ -124,12 +124,12 @@ async def get_group_products(
 
     if not sub_products:
         resend = await get_product_documents(
-            callback_query,
+            tg_obj,
             product_info,
-            resend_message=isinstance(callback_query, types.CallbackQuery)
+            resend_message=isinstance(tg_obj, types.CallbackQuery)
         )
 
-        if isinstance(callback_query, types.Message) and resend:
+        if isinstance(tg_obj, types.Message) and resend:
             parent = await product_db.get(product_info.parent.id)
             await message.answer(
                 parent.description,
