@@ -39,11 +39,6 @@ class ResearchAPIParser:
     def __init__(self, logger: Logger.logger) -> None:
         """Инициализация парсера страниц с портала CIB Research"""
         self._logger = logger
-
-        login = config.RESEARCH_LOGIN
-        password = config.RESEARCH_PASSWORD
-        self.auth = (login, password)
-
         self.REPEAT_TRIES = config.REPEAT_TRIES
         self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
         self.month_dict = config.MONTH_NAMES_DICT

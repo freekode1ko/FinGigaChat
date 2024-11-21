@@ -47,6 +47,11 @@ DB_PORT: str = env.str('DB_PORT', default='5432')
 DB_NAME: str = env.str('DB_NAME', default='postgres')
 psql_engine: str = env.str('PSQL_ENGINE', default='')
 
+CIB_JSESSIONID: str = env.str('CIB_JSESSIONID', default='')
+CIB_LOGIN: str = env.str('CIB_LOGIN', default='')
+CIB_PASSWORD: str = env.str('CIB_PASSWORD', default='')
+CIB_ID: str = env.str('CIB_ID', default='')
+
 log_file = 'research'
 LOG_LEVEL_DEBUG = 10
 LOG_LEVEL_INFO = 20
@@ -55,22 +60,9 @@ LOG_LEVEL_ERROR = 40
 LOG_LEVEL_CRITICAL = 50
 log_lvl = LOG_LEVEL_DEBUG  # 10 -> DEBUG, 20 -> INFO, 30 -> WARNING, 40 -> ERROR, 50 -> CRITICAL
 
-user_agents: list[str] = read_asset_from_json(file_name='user_agents.json')
-
-list_of_companies: list[list] = read_asset_from_json('companies_list.json')
-
-giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth'
-giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
-giga_scope = 'GIGACHAT_API_CORP'
-giga_model = 'GigaChat-Pro'
-
 research_base_url = 'https://research.sberbank-cib.com/'
-RESEARCH_LOGIN: str = env.str('RESEARCH_LOGIN')
-RESEARCH_PASSWORD: str = env.str('RESEARCH_PASSWORD')
-CIB_JSESSIONID = '1111akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'
-CIB_LOGIN = '616e6e656b7261736f76407362657262616e6b2e7275'
-CIB_PASSWORD = '336e52672b5048666739497856336549336d6c5069513d3d'
-CIB_ID = '6c4b30425771657531317076614c375744757a5078413d3d'
+user_agents: list[str] = read_asset_from_json(file_name='user_agents.json')
+list_of_companies: list[list] = read_asset_from_json('companies_list.json')
 
 RESEARCH_GETTING_TIMES_LIST = [
     '08:00',
