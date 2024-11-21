@@ -532,7 +532,7 @@ async def send_full_copy_of_message(callback_query: types.CallbackQuery) -> type
 
 
 async def send_pdf(
-        callback_query: types.CallbackQuery | types.Message,
+        tg_obj: types.CallbackQuery | types.Message,
         pdf_files: list[Path],
         caption: str,
         protect_content: bool = texts_manager.PROTECT_CONTENT,
@@ -543,16 +543,16 @@ async def send_pdf(
     Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
 
     Если файлов нет, то return False и ничего не отправляет
-    :param callback_query: Объект, содержащий информацию о пользователе и сообщении
+    :param tg_obj: Объект, содержащий информацию о пользователе и сообщении
     :param pdf_files: Список файлов для отправки пользователю
     :param caption: Текст сообщения, которое отправляется перед отправкой файлов (если файлы есть)
     :param protect_content: Защищает отправляемый контент от перессылки и сохранения
     return: Если были отправлены файлы, то True, иначе False
     """
-    if isinstance(callback_query, types.CallbackQuery):
-        message = callback_query.message
+    if isinstance(tg_obj, types.CallbackQuery):
+        message = tg_obj.message
     else:
-        message = callback_query
+        message = tg_obj
 
     pdf_files = [f for f in pdf_files if f.exists()]
     if not pdf_files:

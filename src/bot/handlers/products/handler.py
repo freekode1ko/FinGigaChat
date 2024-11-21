@@ -108,7 +108,7 @@ async def get_group_products(
     """
     chat_id, user_msg = (callback_query.chat.id, callback_query.text
                          if isinstance(callback_query, types.Message)
-                         else callback_query.message.chat.id, callback_query.data)
+                         else callback_query.message.chat.id, callback_data.pack())
     full_name = callback_query.from_user.full_name
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
