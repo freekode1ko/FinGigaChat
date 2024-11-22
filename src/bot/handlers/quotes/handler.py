@@ -186,13 +186,8 @@ async def exchange_info_command(message: types.Message) -> None:
         reverse=True,
     )
     curdatetime = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
-    await utils.base.__sent_photo_and_msg(
-        message,
-        photo,
-        day,
-        month,
-        title=sample_of_img_title.format(title, data_source, curdatetime),
-    )
+    await utils.base.__sent_photo_and_msg(message, photo, [day,],
+                                          title=sample_of_img_title.format(title, data_source, curdatetime))
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
 
@@ -280,7 +275,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def metal_info_command(message: types.Message) -> None:
     """Вывод в чат информации по котировкам связанной с сырьем (комодами)."""
-    def process_text(content: str) -> str:
+    def format_text(content: str) -> str:
         """Оставляем абзацы до строчки с UpperCase."""
         new_text_rows = []
         for row in content.split('\n\n'):
@@ -308,31 +303,19 @@ async def metal_info_command(message: types.Message) -> None:
         res = await session.execute(query)
         commodities = res.fetchall()
 
-    report = [
-        [
-            report_orm.header,
-            process_text(report_orm.text),
-            format_date_to_cib_format(report_orm.publication_date)
-        ],
-    ]
+    report = [report_orm.header, format_text(report_orm.text), format_date_to_cib_format(report_orm.publication_date)]
 
     number_columns = list(callback_prefixes.COMMODITY_MARKS.values())
     materials_df = pd.DataFrame(commodities, columns=['Сырье', 'Ед. изм.', *number_columns])
     materials_df[number_columns] = materials_df[number_columns].applymap(format_cell_in_commodity_df)
     materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(lambda x: x + '%' if x else '-')
 
-    transformer = dt.Transformer()
-    transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
-
-    png_path = PATH_TO_SOURCES / 'img' / 'metal_table.png'
-    photo = types.FSInputFile(png_path)
-    title = 'Сырьевые товары'
-    data_source = 'LME, Bloomberg, investing.com'
+    png_path = dt.Transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
     await utils.base.__sent_photo_and_msg(
         message,
-        photo,
-        report,
-        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
+        photo=types.FSInputFile(png_path),
+        reports=[report,],
+        title=sample_of_img_title.format('Сырьевые товары', 'LME, Bloomberg, investing.com', utils.base.read_curdatetime())
     )
 
 
@@ -404,13 +387,7 @@ async def bonds_info_command(message: types.Message) -> None:
     month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
     title = 'Доходность ОФЗ'
     data_source = 'investing.com'
-    await utils.base.__sent_photo_and_msg(
-        message,
-        photo,
-        day,
-        month,
-        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
-    )
+    await utils.base.__sent_photo_and_msg(message, photo, [day], title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()))
 
 
 @router.callback_query(callbacks.Eco.filter())
@@ -434,11 +411,22 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def economy_info_command(message: types.Message) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
+    """Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)"""
+    reports = []
+    async with async_session() as session:
+        for data in RESEARCH_REPORTS['rates']:
+            stmt_eco = (
+                CIB_REPORT_STMT
+                .where(ResearchSection.name == data['section_name'])
+                .where(ResearchType.name == data['type_name'])
+                .filter(data['condition'])
+                .order_by(Research.publication_date.desc())
+                .limit(1)
+            )
+            res = await session.execute(stmt_eco)
+            report: Research = res.scalar_one_or_none()
+            reports.append([report.header, report.text, format_date_to_cib_format(report.publication_date)])
 
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
     world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
     rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
     rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -467,19 +455,14 @@ async def economy_info_command(message: types.Message) -> None:
     world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
     for num, country in enumerate(world_bet['Страна'].values):
         world_bet.Страна[world_bet.Страна == country] = countries[country]
-    transformer = dt.Transformer()
-    png_path = PATH_TO_SOURCES / 'img' / 'world_bet_table.png'
-    world_bet = world_bet.round(2)
-    transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2)
-    photo = types.FSInputFile(png_path)
-    day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
-    month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
-    title = 'Ключевые ставки ЦБ мира'
-    data_source = 'ЦБ стран мира'
+
+    png_path = dt.Transformer.render_mpl_table(world_bet.round(2), 'world_bet', header_columns=0, col_width=2.2)
     curdatetime = utils.base.read_curdatetime()
     await utils.base.__sent_photo_and_msg(
-        message, photo, day, month,
-        title=sample_of_img_title.format(title, data_source, curdatetime)
+        message,
+        photo=types.FSInputFile(png_path),
+        reports=reports,
+        title=sample_of_img_title.format('Ключевые ставки ЦБ мира', 'ЦБ стран мира', curdatetime)
     )
 
     month_dict = {
@@ -499,14 +482,11 @@ async def economy_info_command(message: types.Message) -> None:
     for num, date in enumerate(rus_infl['Дата'].values):
         cell = str(date).split('.')
         rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
-    transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2)
-    png_path = PATH_TO_SOURCES / 'img' / 'rus_infl_table.png'
-    photo = types.FSInputFile(png_path)
-    title = 'Инфляция в России'
-    data_source = 'ЦБ РФ'
+
+    png_path = dt.Transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2)
     await message.answer_photo(
-        photo,
-        caption=sample_of_img_title.format(title, data_source, curdatetime),
+        photo=types.FSInputFile(png_path),
+        caption=sample_of_img_title.format('Инфляция в России', 'ЦБ РФ', curdatetime),
         parse_mode='HTML',
         protect_content=texts_manager.PROTECT_CONTENT,
     )

@@ -1,4 +1,5 @@
 """Файл с константами для quotes"""
+from db.models import Research
 
 MENU = 'quotes_menu'
 END_MENU = 'end_quotes_menu'
@@ -68,12 +69,13 @@ RESEARCH_REPORTS = {
     'rates': [
         {
             'section_name': 'Экономика РФ',
-            'type_name': 'Экономика РФ'
+            'type_name': 'Экономика РФ',
+            'condition': Research.header.ilike('%экономика россии. ежемесячный обзор%')
         },
         {
             'section_name': 'Экономика РФ',
             'type_name': 'Экономика РФ',
-            'condition': "header not ilike '%ежемесячный%'",
+            'condition': Research.header.notilike('%ежемесячный%'),
         },
     ],
     'comm':
