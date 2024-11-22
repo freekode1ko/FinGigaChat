@@ -145,7 +145,6 @@ async def exchange_info_command(message: types.Message) -> None:
 
     :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     """
-    # Получаем курсы и преобразуем в таблицу
     exc_data = await exc_db.get_all()
     df = pd.DataFrame([
         [i.name, i.value, i.display_order, i.exc_type.name, i.exc_type.display_order]
@@ -154,11 +153,9 @@ async def exchange_info_command(message: types.Message) -> None:
 
     header_color = '#E2EFDA'
     default_color = '#ffffff'
-    row_colors = []
-    text_props = []
     cells_counter = 1
-    data = []
     last_exc_type = ''
+    row_colors, text_props, data = [], [], []
     for _, row in df.sort_values(['exc_type_display_order', 'display_order']).iterrows():
         if last_exc_type != row['exc_type_name']:
             last_exc_type = row['exc_type_name']
@@ -177,12 +174,9 @@ async def exchange_info_command(message: types.Message) -> None:
         row_colors.append(default_color)
         cells_counter += 1
 
-    df = pd.DataFrame(data, columns=['Валютная пара', 'Значение'])
-    png_name = 'exc'
-    transformer = dt.Transformer()
-    png_path = transformer.draw_table(
-        df,
-        png_name,
+    png_path = dt.Transformer.draw_table(
+        data=pd.DataFrame(data, columns=['Валютная пара', 'Значение']),
+        png_name='exc',
         col_width=3,
         header_color=header_color,
         row_colors=row_colors,
@@ -191,18 +185,38 @@ async def exchange_info_command(message: types.Message) -> None:
         text_props=text_props,
     )
 
-    day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
-    month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
-    photo = types.FSInputFile(png_path)
-    title = 'Курсы валют'
-    data_source = 'investing.com, ru.tradingview.com, www.finam.ru, www.cbr.ru'
     exc_data.sort(
         key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min,
         reverse=True,
     )
     curdatetime = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
-    await utils.base.__sent_photo_and_msg(message, photo, [day,],
-                                          title=sample_of_img_title.format(title, data_source, curdatetime))
+    reports = []
+    async with async_session() as session:
+        for data in RESEARCH_REPORTS['fx']:
+            stmt_bonds = (
+                CIB_REPORT_STMT
+                .where(ResearchSection.name == data['section_name'])
+                .where(ResearchType.name == data['type_name'])
+                .order_by(Research.publication_date.desc())
+                .limit(data.get('count', 1))
+            )
+            res = await session.execute(stmt_bonds)
+            reports_: list[Research] = res.scalars().all()
+            [
+                reports.append(
+                    [
+                        r.header,
+                        format_bonds_text(r.text, **data['format_text']) if data.get('format_text') else r.text,
+                        format_date_to_cib_format(r.publication_date)
+                    ]
+                ) for r in reports_
+            ]
+    await utils.base.__sent_photo_and_msg(
+        message,
+        photo=types.FSInputFile(png_path),
+        reports=reports,
+        title=sample_of_img_title.format('Курсы валют', 'investing.com, ru.tradingview.com, www.finam.ru, www.cbr.ru', curdatetime)
+    )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
 

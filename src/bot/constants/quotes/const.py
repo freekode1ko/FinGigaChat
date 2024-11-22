@@ -52,7 +52,8 @@ RESEARCH_REPORTS = {
         {
             'section_name': 'Валютный рынок и процентные ставки',
             'type_name': 'Ежедневные обзоры',
-            'count': 2
+            'count': 2,
+            'format_text': {'start': 'Валютный рынок', 'end': 'Процентные ставки'}
         },
     ],
     'fi-ofz': [
