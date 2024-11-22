@@ -68,11 +68,11 @@ giga_model = 'GigaChat-Pro'
 
 research_base_url = 'https://research.sberbank-cib.com/'
 api_key_gpt = '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'
-research_cred = ('annekrasov@sberbank.ru', 'GfhjkmGfhjkm1')
-CIB_JSESSIONID = '1111akluq5tW31lGeafcXgItwuXYr_HUSdctex4U.pvlsa-respo0001'
-CIB_LOGIN = '616e6e656b7261736f76407362657262616e6b2e7275'
-CIB_PASSWORD = '336e52672b5048666739497856336549336d6c5069513d3d'
-CIB_ID = '6c4b30425771657531317076614c375744757a5078413d3d'
+research_cred = ('brief@sberbank.ru', 'GfhjkmGfhjkm1')
+CIB_JSESSIONID='bjAh3KIHKTHBkBXpxdo8p3nMY7Ta4ujwU1yrPUPG.pvlsa-respo0001'
+CIB_LOGIN='6272696566407362657262616e6b2e7275'
+CIB_PASSWORD='336e52672b5048666739497856336549336d6c5069513d3d'
+CIB_ID='64397a4d74644d4c7358456841486b4c613549514c513d3d'
 
 RESEARCH_GETTING_TIMES_LIST = [
     '08:00',
