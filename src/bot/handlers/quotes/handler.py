@@ -8,17 +8,17 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
-from sqlalchemy import text, select
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from configs import config
 from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
-from constants.quotes.const import RESEARCH_REPORTS, MONTH_NAMES_DICT
 from constants.texts import texts_manager
 from db.api.exc import exc_db
-from db.database import engine, async_session
-from db.models import Research, ResearchSection, ResearchType, ResearchResearchType
+from db.database import engine
+from handlers.quotes.research_utils import get_part_from_start_to_end, get_reports_for_quotes, get_until_upper_case
 from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
@@ -26,36 +26,6 @@ from utils import decorators, weekly_pulse
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
-
-
-CIB_REPORT_STMT = (
-    select(Research)
-    .join(ResearchResearchType, ResearchResearchType.research_id == Research.id)
-    .join(ResearchType)
-    .join(ResearchSection)
-)
-
-
-def format_bonds_text(content, start, end=None) -> str:
-    """
-    Get necessary part of the money review.
-
-    :param content:   rows of text of money review
-    :param start:       word to start with
-    :param end:         word to end with
-    :return:            part of text
-    """
-    pattern = rf'{start}(.*?)$' if end is None else rf'{start}(.*?)(?=\s*{end})'
-    match = re.search(pattern, content, flags=re.DOTALL)
-    if not match:
-        raise
-    return match.group(0)
-
-
-def format_date_to_cib_format(date_obj: datetime) -> str:
-    """Форматирование даты в формат CIB Research."""
-    formatted_date = f"{date_obj.day} {MONTH_NAMES_DICT[date_obj.month]}., '{str(date_obj.year)[2:]}"
-    return formatted_date
 
 
 @router.callback_query(F.data.startswith(callback_prefixes.END_MENU))
@@ -120,36 +90,38 @@ async def main_menu_command(message: types.Message) -> None:
 
 
 @router.callback_query(callbacks.FX.filter())
-async def exchange_info(callback_query: types.CallbackQuery, callback_data: callbacks.FX) -> None:
+async def exchange_info(callback_query: types.CallbackQuery, callback_data: callbacks.FX, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с валютой и их курсом
 
     Отправляет копию меню в конце, если были отправлены данные
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_data:  Содержит дополнительную информацию
+    :param session:        Сессия с бд
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await exchange_info_command(callback_query.message)
+    await exchange_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def exchange_info_command(message: types.Message) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с валютой и их курсом
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
+async def exchange_info_command(message: types.Message, session: AsyncSession) -> None:
+    """Вывод в чат информации по котировкам связанной с валютой и их курсом"""
     exc_data = await exc_db.get_all()
     df = pd.DataFrame([
         [i.name, i.value, i.display_order, i.exc_type.name, i.exc_type.display_order]
         for i in exc_data
     ], columns=['name', 'value', 'display_order', 'exc_type_name', 'exc_type_display_order'])
+    exc_data.sort(
+        key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min,
+        reverse=True,
+    )
+    curr_date = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
 
     header_color = '#E2EFDA'
     default_color = '#ffffff'
@@ -163,8 +135,6 @@ async def exchange_info_command(message: types.Message) -> None:
             row_colors.append(header_color)
             text_props.append((cells_counter, 0, dict(fontstyle='italic', fontweight='bold')))
             cells_counter += 1
-
-        # Добавляем пробелы между тысячами
         try:
             row['value'] = f'{float(row["value"]):_}'.replace('_', ' ')
         except ValueError:
@@ -185,37 +155,11 @@ async def exchange_info_command(message: types.Message) -> None:
         text_props=text_props,
     )
 
-    exc_data.sort(
-        key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min,
-        reverse=True,
-    )
-    curdatetime = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
-    reports = []
-    async with async_session() as session:
-        for data in RESEARCH_REPORTS['fx']:
-            stmt_bonds = (
-                CIB_REPORT_STMT
-                .where(ResearchSection.name == data['section_name'])
-                .where(ResearchType.name == data['type_name'])
-                .order_by(Research.publication_date.desc())
-                .limit(data.get('count', 1))
-            )
-            res = await session.execute(stmt_bonds)
-            reports_: list[Research] = res.scalars().all()
-            [
-                reports.append(
-                    [
-                        r.header,
-                        format_bonds_text(r.text, **data['format_text']) if data.get('format_text') else r.text,
-                        format_date_to_cib_format(r.publication_date)
-                    ]
-                ) for r in reports_
-            ]
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=reports,
-        title=sample_of_img_title.format('Курсы валют', 'investing.com, ru.tradingview.com, www.finam.ru, www.cbr.ru', curdatetime)
+        reports=await get_reports_for_quotes(session, report_key='fx', format_func=get_part_from_start_to_end),
+        title=sample_of_img_title.format('Курсы валют', 'investing.com, ru.tradingview.com, finam.ru, cbr.ru', curr_date)
     )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
@@ -283,57 +227,35 @@ def format_cell_in_commodity_df(value: str | float | None) -> str | None:
 
 
 @router.callback_query(callbacks.Commodities.filter())
-async def metal_info(callback_query: types.CallbackQuery, callback_data: callbacks.Commodities) -> None:
+async def metal_info(callback_query: types.CallbackQuery, callback_data: callbacks.Commodities, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
     Отправляет копию меню в конце, если были отправлены данные
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await metal_info_command(callback_query.message)
+    await metal_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def metal_info_command(message: types.Message) -> None:
+async def metal_info_command(message: types.Message, session: AsyncSession) -> None:
     """Вывод в чат информации по котировкам связанной с сырьем (комодами)."""
-    def format_text(content: str) -> str:
-        """Оставляем абзацы до строчки с UpperCase."""
-        new_text_rows = []
-        for row in content.split('\n\n'):
-            if row.isupper():
-                break
-            new_text_rows.append(row)
-        return '\n\n'.join(new_text_rows)
-
-    stmt_comm = (
-        CIB_REPORT_STMT
-        .where(ResearchSection.name == RESEARCH_REPORTS['comm']['section_name'])
-        .where(ResearchType.name == RESEARCH_REPORTS['comm']['type_name'])
-        .order_by(Research.publication_date.desc())
-        .limit(1)
-    )
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
         'JOIN relation_commodity_metals rcm ON rcm.name_from_source=metals."Metals" '
         f'WHERE sub_name IN {callback_prefixes.COMMODITY_TABLE_ELEMENTS} ORDER BY sub_name'
     )
-
-    async with async_session() as session:
-        res = await session.execute(stmt_comm)
-        report_orm: Research = res.scalar_one_or_none()
-        res = await session.execute(query)
-        commodities = res.fetchall()
-
-    report = [report_orm.header, format_text(report_orm.text), format_date_to_cib_format(report_orm.publication_date)]
-
+    res = await session.execute(query)
+    commodities = res.fetchall()
     number_columns = list(callback_prefixes.COMMODITY_MARKS.values())
     materials_df = pd.DataFrame(commodities, columns=['Сырье', 'Ед. изм.', *number_columns])
     materials_df[number_columns] = materials_df[number_columns].applymap(format_cell_in_commodity_df)
@@ -343,7 +265,7 @@ async def metal_info_command(message: types.Message) -> None:
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=[report,],
+        reports=await get_reports_for_quotes(session, 'comm', get_until_upper_case),
         title=sample_of_img_title.format('Сырьевые товары', 'LME, Bloomberg, investing.com', utils.base.read_curdatetime())
     )
 
@@ -358,47 +280,45 @@ async def not_realized_function(callback_query: types.CallbackQuery) -> None:
 
 
 @router.callback_query(callbacks.GetFIItemData.filter())
-async def get_fi_item_data(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData) -> None:
+async def get_fi_item_data(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData, session: AsyncSession) -> None:
     """
-    Данные по фин показателю
+    Данные по фин показателю.
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     _type = callback_data.type
 
     match _type:
         case enums.FIGroupType.bonds.value:
-            await bonds_info(callback_query, callback_data)
+            await bonds_info(callback_query, callback_data, session)
         case _:
             await not_realized_function(callback_query)
 
 
-async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData) -> None:
+async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с облигациями
 
     Отправляет копию меню в конце, если были отправлены данные
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await bonds_info_command(callback_query.message)
+    await bonds_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def bonds_info_command(message: types.Message) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с облигациями
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
+async def bonds_info_command(message: types.Message, session: AsyncSession) -> None:
+    """Вывод в чат информации по котировкам связанной с облигациями"""
     columns = ['Название', 'Доходность', 'Изм, %']
     bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
     bonds = bonds[columns].dropna(axis=0)
@@ -409,73 +329,37 @@ async def bonds_info_command(message: types.Message) -> None:
         bond_ru['Cрок до погашения'].values[num] = years[num]
     png_path = dt.Transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
 
-    reports = []
-    async with async_session() as session:
-        for data in RESEARCH_REPORTS['fi-ofz']:
-            stmt_bonds = (
-                CIB_REPORT_STMT
-                .where(ResearchSection.name == data['section_name'])
-                .where(ResearchType.name == data['type_name'])
-                .order_by(Research.publication_date.desc())
-                .limit(data.get('count', 1))
-            )
-            res = await session.execute(stmt_bonds)
-            reports_: list[Research] = res.scalars().all()
-            [
-                reports.append(
-                    [
-                        r.header,
-                        format_bonds_text(r.text, **data['format_text']) if data.get('format_text') else r.text,
-                        format_date_to_cib_format(r.publication_date)
-                    ]
-                ) for r in reports_
-            ]
-
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=reports,
+        reports=await get_reports_for_quotes(session, report_key='fi-ofz', format_func=get_part_from_start_to_end),
         title=sample_of_img_title.format('Доходность ОФЗ', 'investing.com', utils.base.read_curdatetime())
     )
 
 
 @router.callback_query(callbacks.Eco.filter())
-async def economy_info(callback_query: types.CallbackQuery, callback_data: callbacks.Eco) -> None:
+async def economy_info(callback_query: types.CallbackQuery, callback_data: callbacks.Eco, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
 
     Отправляет копию меню в конце, если были отправлены данные
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await economy_info_command(callback_query.message)
+    await economy_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def economy_info_command(message: types.Message) -> None:
+async def economy_info_command(message: types.Message, session: AsyncSession) -> None:
     """Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)"""
-    reports = []
-    async with async_session() as session:
-        for data in RESEARCH_REPORTS['rates']:
-            stmt_eco = (
-                CIB_REPORT_STMT
-                .where(ResearchSection.name == data['section_name'])
-                .where(ResearchType.name == data['type_name'])
-                .filter(data['condition'])
-                .order_by(Research.publication_date.desc())
-                .limit(1)
-            )
-            res = await session.execute(stmt_eco)
-            report: Research = res.scalar_one_or_none()
-            reports.append([report.header, report.text, format_date_to_cib_format(report.publication_date)])
-
     world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
     rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
     rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -510,7 +394,7 @@ async def economy_info_command(message: types.Message) -> None:
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=reports,
+        reports=await get_reports_for_quotes(session, report_key='rates'),
         title=sample_of_img_title.format('Ключевые ставки ЦБ мира', 'ЦБ стран мира', curdatetime)
     )
 

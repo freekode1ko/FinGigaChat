@@ -6,18 +6,17 @@
 выгружать отчеты по типу отчета
 """
 import datetime
-from typing import Optional
+from typing import Any, Optional, Sequence
 
 import pandas as pd
 import sqlalchemy as sa
 
-from db import models
 from db.api.base_crud import BaseCRUD
-from db.models import ResearchResearchType
+from db.models import Research, ResearchResearchType, ResearchSection, ResearchType
 from log.bot_logger import logger
 
 
-class ResearchCRUD(BaseCRUD[models.Research]):
+class ResearchCRUD(BaseCRUD[Research]):
     """Класс, который создает объекты для взаимодействия с таблицей models.Research"""
 
     async def get_new_researches(self) -> pd.DataFrame:
@@ -104,5 +103,28 @@ class ResearchCRUD(BaseCRUD[models.Research]):
         async with self._async_session_maker() as session:
             return await session.scalar(sa.select(self._table.id).where(self._table.report_id == report_id))
 
+    async def get_report_by_parameters(self, session, data: dict[str, Any]) -> Sequence[Research]:
+        """
+        Получение отчетов с помощью словаря с параметрами.
 
-research_db = ResearchCRUD(models.Research, models.Research.publication_date.desc(), logger)
+        :param session: Асинхронная сессия с бд.
+        :param data:    Данные с параметрами запроса в бд.
+        :return:        Последовательность отчетов.
+        """
+        stmt = (
+            sa.select(self._table)
+            .join(ResearchResearchType, ResearchResearchType.research_id == self._table.id)
+            .join(ResearchType)
+            .join(ResearchSection)
+            .where(ResearchSection.name == data['section_name'])
+            .where(ResearchType.name == data['type_name'])
+            .filter(data.get('condition', True))
+            .order_by(self._table.publication_date.desc())
+            .limit(data.get('count', 1))
+        )
+        res = await session.execute(stmt)
+        reports_ = res.scalars().all()
+        return reports_
+
+
+research_db = ResearchCRUD(Research, Research.publication_date.desc(), logger)

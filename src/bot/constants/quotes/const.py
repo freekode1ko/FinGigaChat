@@ -53,7 +53,8 @@ RESEARCH_REPORTS = {
             'section_name': 'Валютный рынок и процентные ставки',
             'type_name': 'Ежедневные обзоры',
             'count': 2,
-            'format_text': {'start': 'Валютный рынок', 'end': 'Процентные ставки'}
+            'format': True,
+            'format_args': {'start': 'Валютный рынок', 'end': 'Процентные ставки'}
         },
     ],
     'fi-ofz': [
@@ -65,7 +66,8 @@ RESEARCH_REPORTS = {
             'section_name': 'Валютный рынок и процентные ставки',
             'type_name': 'Ежедневные обзоры',
             'count': 2,
-            'format_text': {'start': 'Процентные ставки'}
+            'format': True,
+            'format_args': {'start': 'Процентные ставки'}
         },
     ],
     'rates': [
@@ -80,25 +82,11 @@ RESEARCH_REPORTS = {
             'condition': Research.header.notilike('%ежемесячный%'),
         },
     ],
-    'comm':
+    'comm': [
         {
             'section_name': 'Сырьевые товары',
-            'type_name': 'Сырьевые товары'
-        }
-}
-
-
-MONTH_NAMES_DICT = {
-    1: 'янв',
-    2: 'фев',
-    3: 'мар',
-    4: 'апр',
-    5: 'мая',
-    6: 'июн',
-    7: 'июл',
-    8: 'авг',
-    9: 'сен',
-    10: 'окт',
-    11: 'нояб',
-    12: 'дек'
+            'type_name': 'Сырьевые товары',
+            'format': True
+        },
+    ]
 }
