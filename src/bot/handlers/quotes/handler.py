@@ -12,7 +12,6 @@ from sqlalchemy import text, select
 
 import utils.base
 from configs import config
-from configs.config import PATH_TO_SOURCES
 from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
 from constants.quotes.const import RESEARCH_REPORTS, MONTH_NAMES_DICT
@@ -35,6 +34,22 @@ CIB_REPORT_STMT = (
     .join(ResearchType)
     .join(ResearchSection)
 )
+
+
+def format_bonds_text(content, start, end=None) -> str:
+    """
+    Get necessary part of the money review.
+
+    :param content:   rows of text of money review
+    :param start:       word to start with
+    :param end:         word to end with
+    :return:            part of text
+    """
+    pattern = rf'{start}(.*?)$' if end is None else rf'{start}(.*?)(?=\s*{end})'
+    match = re.search(pattern, content, flags=re.DOTALL)
+    if not match:
+        raise
+    return match.group(0)
 
 
 def format_date_to_cib_format(date_obj: datetime) -> str:
@@ -378,16 +393,36 @@ async def bonds_info_command(message: types.Message) -> None:
     years = ['1 год', '2 года', '3 года', '5 лет', '7 лет', '10 лет', '15 лет', '20 лет']
     for num, name in enumerate(bond_ru['Cрок до погашения'].values):
         bond_ru['Cрок до погашения'].values[num] = years[num]
+    png_path = dt.Transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
 
-    transformer = dt.Transformer()
-    png_path = PATH_TO_SOURCES / 'img' / 'bonds_table.png'
-    transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
-    photo = types.FSInputFile(png_path)
-    day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
-    month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
-    title = 'Доходность ОФЗ'
-    data_source = 'investing.com'
-    await utils.base.__sent_photo_and_msg(message, photo, [day], title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()))
+    reports = []
+    async with async_session() as session:
+        for data in RESEARCH_REPORTS['fi-ofz']:
+            stmt_bonds = (
+                CIB_REPORT_STMT
+                .where(ResearchSection.name == data['section_name'])
+                .where(ResearchType.name == data['type_name'])
+                .order_by(Research.publication_date.desc())
+                .limit(data.get('count', 1))
+            )
+            res = await session.execute(stmt_bonds)
+            reports_: list[Research] = res.scalars().all()
+            [
+                reports.append(
+                    [
+                        r.header,
+                        format_bonds_text(r.text, **data['format_text']) if data.get('format_text') else r.text,
+                        format_date_to_cib_format(r.publication_date)
+                    ]
+                ) for r in reports_
+            ]
+
+    await utils.base.__sent_photo_and_msg(
+        message,
+        photo=types.FSInputFile(png_path),
+        reports=reports,
+        title=sample_of_img_title.format('Доходность ОФЗ', 'investing.com', utils.base.read_curdatetime())
+    )
 
 
 @router.callback_query(callbacks.Eco.filter())
