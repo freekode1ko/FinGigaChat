@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.quotes.const import RESEARCH_REPORTS
+from constants.quotes.const import RESEARCH_REPORTS_PARAMETERS
 from db.api.research import research_db
 from log.bot_logger import logger
 
@@ -65,7 +65,7 @@ async def get_reports_for_quotes(
     :return:            Список из списков атрибутов отчетов.
     """
     reports = []
-    reports_data: list[dict[str, Any]] = RESEARCH_REPORTS[report_key]
+    reports_data: list[dict[str, Any]] = RESEARCH_REPORTS_PARAMETERS[report_key]
     for data in reports_data:
         reports_ = await research_db.get_report_by_parameters(session, data)
         for r in reports_:

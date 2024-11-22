@@ -39,7 +39,7 @@ COMMODITY_TABLE_ELEMENTS = (
     'Кокс. уголь'
 )
 
-RESEARCH_REPORTS = {
+RESEARCH_REPORTS_PARAMETERS = {
     'fx': [
         {
             'section_name': 'Валютный рынок и процентные ставки',
