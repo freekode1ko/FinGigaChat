@@ -8,16 +8,18 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
-from sqlalchemy import text
+from sqlalchemy import text, select
 
 import utils.base
 from configs import config
 from configs.config import PATH_TO_SOURCES
 from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
+from constants.quotes.const import RESEARCH_REPORTS, MONTH_NAMES_DICT
 from constants.texts import texts_manager
 from db.api.exc import exc_db
-from db.database import engine
+from db.database import engine, async_session
+from db.models import Research, ResearchSection, ResearchType, ResearchResearchType
 from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
@@ -25,6 +27,20 @@ from utils import decorators, weekly_pulse
 
 router = Router()
 router.message.middleware(ChatActionMiddleware())  # on every message for admin commands use chat action 'typing'
+
+
+CIB_REPORT_STMT = (
+    select(Research)
+    .join(ResearchResearchType, ResearchResearchType.research_id == Research.id)
+    .join(ResearchType)
+    .join(ResearchSection)
+)
+
+
+def format_date_to_cib_format(date_obj: datetime) -> str:
+    """Форматирование даты в формат CIB Research."""
+    formatted_date = f"{date_obj.day} {MONTH_NAMES_DICT[date_obj.month]}., '{str(date_obj.year)[2:]}"
+    return formatted_date
 
 
 @router.callback_query(F.data.startswith(callback_prefixes.END_MENU))
@@ -262,32 +278,46 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def metal_info_command(
-        message: types.Message,
-        with_table: bool = True,
-) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с сырьем (комодами)
+async def metal_info_command(message: types.Message) -> None:
+    """Вывод в чат информации по котировкам связанной с сырьем (комодами)."""
+    def process_text(content: str) -> str:
+        """Оставляем абзацы до строчки с UpperCase."""
+        new_text_rows = []
+        for row in content.split('\n\n'):
+            if row.isupper():
+                break
+            new_text_rows.append(row)
+        return '\n\n'.join(new_text_rows)
 
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param with_table: Отправлять ли таблицу с котировками
-    """
-    day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
-    if not with_table:
-        await utils.base.__sent_photo_and_msg(message, None, day)
-        return
-
+    stmt_comm = (
+        CIB_REPORT_STMT
+        .where(ResearchSection.name == RESEARCH_REPORTS['comm']['section_name'])
+        .where(ResearchType.name == RESEARCH_REPORTS['comm']['type_name'])
+        .order_by(Research.publication_date.desc())
+        .limit(1)
+    )
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
         'JOIN relation_commodity_metals rcm ON rcm.name_from_source=metals."Metals" '
-        'WHERE sub_name IN :sub_names ORDER BY sub_name'
+        f'WHERE sub_name IN {callback_prefixes.COMMODITY_TABLE_ELEMENTS} ORDER BY sub_name'
     )
-    with engine.connect() as conn:
-        materials = conn.execute(query.bindparams(sub_names=callback_prefixes.COMMODITY_TABLE_ELEMENTS)).fetchall()
+
+    async with async_session() as session:
+        res = await session.execute(stmt_comm)
+        report_orm: Research = res.scalar_one_or_none()
+        res = await session.execute(query)
+        commodities = res.fetchall()
+
+    report = [
+        [
+            report_orm.header,
+            process_text(report_orm.text),
+            format_date_to_cib_format(report_orm.publication_date)
+        ],
+    ]
 
     number_columns = list(callback_prefixes.COMMODITY_MARKS.values())
-    materials_df = pd.DataFrame(materials, columns=['Сырье', 'Ед. изм.', *number_columns])
-
+    materials_df = pd.DataFrame(commodities, columns=['Сырье', 'Ед. изм.', *number_columns])
     materials_df[number_columns] = materials_df[number_columns].applymap(format_cell_in_commodity_df)
     materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(lambda x: x + '%' if x else '-')
 
@@ -301,7 +331,7 @@ async def metal_info_command(
     await utils.base.__sent_photo_and_msg(
         message,
         photo,
-        day,
+        report,
         title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
     )
 
