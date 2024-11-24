@@ -838,7 +838,7 @@ class Quotes(Base):
         {'comment': 'Таблица cо списком котировок, получаемых через сторонние API', }
     )
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.BigInteger, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
     params = sa.Column(sa.JSON, comment='Параметры для запросов')
     source = sa.Column(sa.String, comment='Url для запросов')
@@ -863,8 +863,8 @@ class QuotesValues(Base):
         {'comment': 'Таблица cо списком значений для графиков'}
     )
 
-    id = sa.Column(sa.Integer, primary_key=True,)
-    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    id = sa.Column(sa.BigInteger, primary_key=True,)
+    quote_id = sa.Column(sa.BigInteger, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
 
     date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
 

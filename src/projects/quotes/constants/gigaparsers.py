@@ -1,10 +1,13 @@
 """Константы для работы с котировками от GigaParsers"""
+import re
+
+
 # API URL
 GIGAPARSERS_API = 'https://gigaparsers.ru/api/get_quotes'
 
 
 # Правила для каждой секции:
-#     pattern (regexp): Для поиска нужного правила по регулярному выражению
+#     pattern (re.Pattern): Скомпилированная регулярка для поиска нужного правила
 #     get_section_name (callable): Название секции (по названию котировки)
 #     section_params (dict[str, str]): Параметры секции
 #     value_fields (list[str] | None): Поля с полезной нагрузкой (доходность, цена и т.д.)
@@ -12,7 +15,7 @@ GIGAPARSERS_API = 'https://gigaparsers.ru/api/get_quotes'
 GIGAPARSERS_RULES = {
     'cbr': [
         {
-            'pattern': r'^(?P<quote>Инфляция|Ключевая ставка ЦБ|RUONIA)$',
+            'pattern': re.compile(r'^(?P<quote>Инфляция|Ключевая ставка ЦБ|RUONIA)$'),
             'get_section_name': lambda m: 'Макроэкономика (ЦБ)',
             'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['value'],
@@ -23,7 +26,7 @@ GIGAPARSERS_RULES = {
     ],
     'investing': [
         {
-            'pattern': r'^(?P<quote>.+\s(?:\d+-летние|годовые))$',
+            'pattern': re.compile(r'^(?P<quote>.+\s(?:\d+-летние|годовые))$'),
             'get_section_name': lambda m: 'Облигации (Investing)',
             'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['Доходность'],
@@ -32,7 +35,7 @@ GIGAPARSERS_RULES = {
             },
         },
         {
-            'pattern': r'^INVESTING:(?P<quote>[A-Z]{3}/[A-Z]{3}):[A-Z]{3}$',
+            'pattern': re.compile(r'^INVESTING:(?P<quote>[A-Z]{3}/[A-Z]{3}):[A-Z]{3}$'),
             'get_section_name': lambda m: 'Валютные пары (Investing)',
             'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['C', 'O', 'H', 'L'],
@@ -44,7 +47,7 @@ GIGAPARSERS_RULES = {
             },
         },
         {
-            'pattern': r'^INVESTING:(?P<quote>.+):USD$',
+            'pattern': re.compile(r'^INVESTING:(?P<quote>.+):USD$'),
             'get_section_name': lambda m: 'Сырьевые товары (Investing)',
             'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['C', 'O', 'H', 'L'],
@@ -58,7 +61,7 @@ GIGAPARSERS_RULES = {
     ],
     'sgx': [
         {
-            'pattern': r'^SGX:(?P<quote>.+):USD$',
+            'pattern': re.compile(r'^SGX:(?P<quote>.+):USD$'),
             'get_section_name': lambda m: 'Фьючерсы (SGX)',
             'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['C', 'O', 'H', 'L', 'V'],
@@ -73,7 +76,9 @@ GIGAPARSERS_RULES = {
     ],
     'tradingeconomics': [
         {
-            'pattern': r'^(?P<category>(Energy|Index|Metals|Agricultural|Industrial|Electricity|Livestock))_(?P<quote>.+)$',
+            'pattern': re.compile(
+                r'^(?P<category>(Energy|Index|Metals|Agricultural|Industrial|Electricity|Livestock))_(?P<quote>.+)$'
+            ),
             'get_section_name': lambda m: {
                 'Energy': 'Энергетика (TradingEconomics)',
                 'Index': 'Индексы (TradingEconomics)',
@@ -90,7 +95,7 @@ GIGAPARSERS_RULES = {
             },
         },
         {
-            'pattern': r'^Country_(?P<quote>.+)$',
+            'pattern': re.compile(r'^Country_(?P<quote>.+)$'),
             'get_section_name': lambda m: 'Макроэкономика (TradingEconomics)',
             'section_params': {'_value': 'get_quote_last', '%изм': 'get_quote_delta_param'},
             'value_fields': ['Last'],

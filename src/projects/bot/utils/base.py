@@ -532,7 +532,7 @@ async def send_full_copy_of_message(callback_query: types.CallbackQuery) -> type
 
 
 async def send_pdf(
-        callback_query: types.CallbackQuery,
+        tg_obj: types.CallbackQuery | types.Message,
         pdf_files: list[Path],
         caption: str,
         protect_content: bool = texts_manager.PROTECT_CONTENT,
@@ -543,25 +543,30 @@ async def send_pdf(
     Отправка файлов группой (если файлов больше 10, то будет несколько сообщений)
 
     Если файлов нет, то return False и ничего не отправляет
-    :param callback_query: Объект, содержащий информацию о пользователе и сообщении
+    :param tg_obj: Объект, содержащий информацию о пользователе и сообщении
     :param pdf_files: Список файлов для отправки пользователю
     :param caption: Текст сообщения, которое отправляется перед отправкой файлов (если файлы есть)
     :param protect_content: Защищает отправляемый контент от перессылки и сохранения
     return: Если были отправлены файлы, то True, иначе False
     """
+    if isinstance(tg_obj, types.CallbackQuery):
+        message = tg_obj.message
+    else:
+        message = tg_obj
+
     pdf_files = [f for f in pdf_files if f.exists()]
     if not pdf_files:
         return False
 
-    await callback_query.message.answer(caption, parse_mode='HTML', protect_content=protect_content)
+    await message.answer(caption, parse_mode='HTML', protect_content=protect_content)
 
     for i in range(0, len(pdf_files), constants.TELEGRAM_MAX_MEDIA_ITEMS):
         media_group = MediaGroupBuilder()
         for fpath in pdf_files[i: i + constants.TELEGRAM_MAX_MEDIA_ITEMS]:
             media_group.add_document(media=types.FSInputFile(fpath))
 
-        await callback_query.message.bot.send_chat_action(callback_query.message.chat.id, 'upload_document')
-        await callback_query.message.answer_media_group(media_group.build(), protect_content=protect_content)
+        await message.bot.send_chat_action(message.chat.id, 'upload_document')
+        await message.answer_media_group(media_group.build(), protect_content=protect_content)
 
     return True
 

@@ -1,6 +1,5 @@
 """Модуль для обработки котировок от GigaParsers"""
 import datetime
-import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,8 +37,7 @@ def _get_quote_rule(source: str, quote: str) -> QuoteRule | None:
     if not rules:
         return None
     for rule in rules:
-        pattern = re.compile(rule['pattern'])
-        if match := pattern.match(quote):
+        if match := rule['pattern'].match(quote):
             section_name = rule['get_section_name'](match)
             section_params = rule.get('section_params', {})
             value_fields = rule.get('value_fields', ['value'])
@@ -141,7 +139,7 @@ async def process_gigaparser_source(
             except Exception as e:
                 logger.exception(f'Ошибка во время обработки {quote}: {e}')
                 continue
-        await crud.custom_insert_or_update_to_postgres(
+        await crud.custom_upsert(
             session,
             models.QuotesValues,
             insert_quotes,

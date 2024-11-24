@@ -58,7 +58,7 @@ async def load_cbr_quotes() -> None:
                     'last_update': last_update,
                     'update_func': update_func,
                 }
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
@@ -97,7 +97,7 @@ async def load_cbr_metals() -> None:
                     'update_func': update_func,
                 }
 
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
@@ -164,7 +164,7 @@ async def load_moex_quotes():
                     'update_func': update_func,
                 }
 
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
@@ -252,7 +252,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
                     'volume': volume,
                 })
 
-            await crud.custom_insert_or_update_to_postgres(
+            await crud.custom_upsert(
                 session,
                 model=models.QuotesValues,
                 values=values,
