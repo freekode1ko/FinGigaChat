@@ -3,7 +3,7 @@ version: "3"
 
 services:
     database:
-        image: 'postgres:16'
+        image: 'postgres:latest'
         env_file:
             - .env
         command: -p ${DB_PORT}
@@ -19,11 +19,11 @@ services:
             - ./db_files/db-data/:/var/lib/postgresql/data/
               #    - ./db_files/backup.sql:/docker-entrypoint-initdb.d/init.sql
         healthcheck:
-            test: ["CMD", "pg_isready -U ${DB_USER} -p ${DB_PORT} -h 127.0.0.1"]
-            start_period: 2s
-            interval: 3s
-#            timeout: 3s
-#            retries: 2
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -p ${DB_PORT} -h 127.0.0.1"]
+            start_period: 5s
+            interval: 15s
+            timeout: 3s
+            retries: 2
         restart: always
 
 
