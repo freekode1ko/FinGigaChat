@@ -90,3 +90,8 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
         await get_group_products(runnable_config.message, callback_data, next(filter(lambda x: x.name == matches[0][0], products)).id)
     else:
         raise Exception
+
+
+@tool
+async def get_product_recomendation(text: str, config: RunnableConfig):
+    pass

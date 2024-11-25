@@ -45,3 +45,4 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
     except Exception:
         # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
         return False
+
