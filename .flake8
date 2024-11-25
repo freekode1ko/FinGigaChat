@@ -13,9 +13,9 @@ application-import-names = configs, constants, data, db, handlers, keyboards, lo
 import-order-style = smarkets
 
 per-file-ignores =
-    src/bot/db/models.py:D101
-    src/bot/configs/prompts.py:W291,E501
-    src/research/db/models.py:D101
-    src/bot/constants/texts/features/__init__.py:F403,F405
-    src/quotes/db/models.py:D101
-    src/web_app/db/models.py:D101
+    src/projects/bot/db/models.py:D101
+    src/projects/bot/configs/prompts.py:W291,E501
+    src/projects/bot/constants/texts/features/__init__.py:F403,F405
+    src/projects/research/db/models.py:D101
+    src/projects/quotes/db/models.py:D101
+    src/projects/web_app/db/models.py:D101

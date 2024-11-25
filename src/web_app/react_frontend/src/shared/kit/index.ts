@@ -1,1 +1,0 @@
-export { AutoProgress } from './progress'
