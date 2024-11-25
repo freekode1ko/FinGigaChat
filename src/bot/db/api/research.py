@@ -122,9 +122,8 @@ class ResearchCRUD(BaseCRUD[Research]):
             .order_by(self._table.publication_date.desc())
             .limit(data.get('count', 1))
         )
-        res = await session.execute(stmt)
-        reports_ = res.scalars().all()
-        return reports_
+        reports = await session.execute(stmt)
+        return reports.scalars().all()
 
 
 research_db = ResearchCRUD(Research, Research.publication_date.desc(), logger)

@@ -47,8 +47,7 @@ def get_until_upper_case(content: str) -> str:
 
 def format_date_to_cib_format(date_obj: datetime) -> str:
     """Форматирование даты в формат CIB Research."""
-    formatted_date = f"{date_obj.day} {MONTH_NAMES_DICT[date_obj.month]}., '{str(date_obj.year)[2:]}"
-    return formatted_date
+    return f"{date_obj.day} {MONTH_NAMES_DICT[date_obj.month]}., '{str(date_obj.year)[2:]}"
 
 
 async def get_reports_for_quotes(
@@ -67,8 +66,8 @@ async def get_reports_for_quotes(
     reports = []
     reports_data: list[dict[str, Any]] = RESEARCH_REPORTS_PARAMETERS[report_key]
     for data in reports_data:
-        reports_ = await research_db.get_report_by_parameters(session, data)
-        for r in reports_:
+        reports_db = await research_db.get_report_by_parameters(session, data)
+        for r in reports_db:
             reports.append(
                 [
                     r.header,
