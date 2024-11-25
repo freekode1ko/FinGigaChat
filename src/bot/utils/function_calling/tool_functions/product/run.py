@@ -101,5 +101,6 @@ async def get_product_recomendation(text: str, config: RunnableConfig):
     return:
         (str): строку с рекомендованными продуктами.
     """
+    print(f"Вызвана get_product_recomendation с параметром {text}")
     msg = "Рекомендованные продукты"
     return msg

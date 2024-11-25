@@ -12,5 +12,6 @@ async def get_news_by_name(name: str, config: RunnableConfig):
         (str): Текст с новостями по компании.
     """
     # TODO: Достать 10 новостей и сформировать суммаризированный текст по этим новостям
+    print(f"Вызвана get_news_by_name с параметром {name}")
     msg = f'Новости по: {name}. Суммаризированные новости'
     return msg

@@ -10,6 +10,6 @@ async def get_cib_reports_by_name(name: str, config: RunnableConfig):
     return:
         (str): Текст с отчетами по компании.
     """
-
+    print(f"Вызвана get_cib_reports_by_name с параметром {name}")
     msg = f'CIB отчеты по {name}. Сейчас что-то происходит'
     return msg

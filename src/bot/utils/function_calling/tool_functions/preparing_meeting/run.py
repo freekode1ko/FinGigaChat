@@ -32,31 +32,34 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
     return:
         (str): Сформированный отчет для встречи менеджера с клиентом.
     """
-
+    print(f"Вызвана функция подготовки ко встречи с параметром {client_name}")
     cnt = 1
     result = ''
-    inputs = {"input": INITIAL_QUERY.format(company_name=client_name)}
-    async for event in agent_graph.astream(inputs, config=EXECUTION_CONFIG):
-        for k, v in event.items():
-            if k != "__end__":
-                if cnt == 1:
-                    print(f"Запрос пользователя: {inputs['input']}")
-                    print("Составленный план:")
-                    print(v['plan'])
+    try:
+        inputs = {"input": INITIAL_QUERY.format(client_name=client_name)}
+        async for event in agent_graph.astream(inputs, config=EXECUTION_CONFIG):
+            for k, v in event.items():
+                if k != "__end__":
+                    if cnt == 1:
+                        print(f"Запрос пользователя: {inputs['input']}")
+                        print("Составленный план:")
+                        print(v['plan'])
+                        print()
+                    print(f'Шаг {cnt}')
+                    cnt += 1
+                    if 'plan' in v:
+                        print(v['plan'])
+                        if len(v['plan']) > 0:
+                            print(v['plan'][0])
+                    if 'past_steps' in v:
+                        if len(v['past_steps']) > 0:
+                            print(v['past_steps'][0][1])
+                    if 'response' in v:
+                        result = v['response']
+                        print(f"Итоговый ответ: {v['response']}")
                     print()
-                print(f'Шаг {cnt}')
-                cnt += 1
-                if 'plan' in v:
-                    print(v['plan'])
-                    if len(v['plan']) > 0:
-                        print(v['plan'][0])
-                if 'past_steps' in v:
-                    if len(v['past_steps']) > 0:
-                        print(v['past_steps'][0][1])
-                if 'response' in v:
-                    result = v['response']
-                    print(f"Итоговый ответ: {v['response']}")
-                print()
+    except Exception as e:
+        print(e)
     return result
 
 

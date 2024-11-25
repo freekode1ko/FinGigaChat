@@ -38,6 +38,7 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
         )
         # Функция завершилась с ошибкой
         if res['messages'][2].status == 'error':
+            print(res['messages'])
             return False
         # Проверка есть ли вызов функции в ответе от модели
         return 'function_call' in res['messages'][1].additional_kwargs
