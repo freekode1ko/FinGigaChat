@@ -2,11 +2,14 @@
 
 from langgraph.graph import StateGraph, START, END
 
-from agent import agent_executor
-from planner import planner
-from replanner import replanner
-from utils import PlanExecute, Response
+from utils.function_calling.tool_functions.preparing_meeting.utils import PlanExecute, Response
+from utils.function_calling.tool_functions.preparing_meeting.planner import create_planner
+from utils.function_calling.tool_functions.preparing_meeting.replanner import create_replanner
+from utils.function_calling.tool_functions.preparing_meeting.agent import create_agent
 
+agent_executor = create_agent()
+planner = create_planner()
+replanner = create_replanner()
 
 # TODO: глянуть на адекватность
 # TODO: переписать на русский, что не на русском
@@ -47,24 +50,22 @@ def should_end(state: PlanExecute):
         return "agent"
 
 
-workflow = StateGraph(PlanExecute)
+def create_graph_executable():
 
-workflow.add_node("planner", plan_step)
+    workflow = StateGraph(PlanExecute)
 
-workflow.add_node("agent", execute_step)
+    workflow.add_node("planner", plan_step)
+    workflow.add_node("agent", execute_step)
+    workflow.add_node("replan", replan_step)
+    workflow.add_edge(START, "planner")
+    workflow.add_edge("planner", "agent")
+    workflow.add_edge("agent", "replan")
+    workflow.add_conditional_edges(
+        "replan",
+        should_end,
+        ["agent", END],
+    )
 
-workflow.add_node("replan", replan_step)
+    app = workflow.compile()
 
-workflow.add_edge(START, "planner")
-
-workflow.add_edge("planner", "agent")
-
-workflow.add_edge("agent", "replan")
-
-workflow.add_conditional_edges(
-    "replan",
-    should_end,
-    ["agent", END],
-)
-
-app = workflow.compile()
+    return app

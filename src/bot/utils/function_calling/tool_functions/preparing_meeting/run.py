@@ -3,29 +3,36 @@
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from config import EXECUTION_CONFIG
-from graph_executable import app
+from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
+from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
+
+agent_graph = create_graph_executable()
 
 
 # TODO: разобраться, как прокидывать (и нужно ли?) треды
 # TODO: поменять для принты для дебага на нормальное логирование
 # TODO: сделать нормальное прокидывание название компании и оборачивать его в отдельный промпт
 # TODO: сделать обработку исключений
-# TODO: Вообще на тестах он как-то не всегда формирвал в последнем сообщении итоговый отчет, возможно есть смысл отдельно еще раз его формировать уже по истории сообщений от модели в процессе исполнения
+# TODO: Вообще на тестах он как-то не всегда формировал в последнем сообщении итоговый отчет, возможно есть смысл отдельно еще раз его формировать уже по истории сообщений от модели в процессе исполнения
 
 
 @tool
-async def get_preparing_for_meeting_function(runnable_config: RunnableConfig) -> str:
-    """Если пользователь просит помощи и не понимает что делать, то эта функция отправляет ему сообщение с руководством.
+async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableConfig) -> str:
+    """Функция по подготовке отчета по компании. Используй тогда, когда поступает сообщение от пользователя в виде:
+    'Помоги подготовиться ко встрече с клиентом ...'/'Подготовка ко встрече с компанией ...'/
+    'Сформируй отчет ко встрече с ...'
 
+    Args:
+        client_name (str): Название компании клиента в именительном падеже с маленькой буквы.
     return:
         (str): сообщение с руководством.
     """
+    print('Вызвана функция подготовки ко встречи')
     cnt = 1
     result = ''
     inputs = {
-        "input": "У менеджера встреча к компаниями-клиентами. Помоги ему подготовиться ко встрече и собери по ним информационную сводку, твой итоговый ответ быть именно этой информационной сводкой. Включи туда последние события по компаниям и предложи на основании этого банковские продукты применительно к этим ситациям (кредиты, лизинг и тд)"}
-    async for event in app.astream(inputs, config=EXECUTION_CONFIG):
+        "input": f"У менеджера встреча к компанией-клиентом {client_name}. Помоги ему подготовиться ко встрече и собери по ней информационную сводку, твой итоговый ответ быть именно этой информационной сводкой. Включи туда последние события по компании и предложи на основании этого банковские продукты применительно к этим ситациям (кредиты, лизинг и тд)"}
+    async for event in agent_graph.astream(inputs, config=EXECUTION_CONFIG):
         for k, v in event.items():
             if k != "__end__":
                 if cnt == 1:
