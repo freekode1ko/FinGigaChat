@@ -12,7 +12,6 @@ planner = create_planner()
 replanner = create_replanner()
 
 # TODO: глянуть на адекватность
-# TODO: переписать на русский, что не на русском
 # TODO: добавить в какую-нибудь документацию наглядный вид графа
 
 
@@ -20,8 +19,9 @@ async def execute_step(state: PlanExecute):
     plan = state["plan"]
     plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
     task = plan[0]
-    task_formatted = f"""For the following plan:
-{plan_str}\n\nYou are tasked with executing step {1}, {task}. Information obtained in the previous steps {state['past_steps']}"""
+    task_formatted = f"""Для следующего плана: {plan_str}\n\n
+                         Тебе задано выполнение шага: {1}, {task}. 
+                         Информация о проделанных тобой шагах: {state['past_steps']}"""
     agent_response = await agent_executor.ainvoke(
         {"messages": [("user", task_formatted)]}
     )

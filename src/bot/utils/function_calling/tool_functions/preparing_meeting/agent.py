@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
 from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, BASE_MODEL
-from utils.function_calling.tool_functions.preparing_meeting.prompts import BASE_PROMPT#from utils.function_calling.tool_functions.call_report.run import get_call_report
+from utils.function_calling.tool_functions.preparing_meeting.prompts import BASE_PROMPT
 
 from utils.function_calling.tool_functions.call_report.run import get_call_reports_by_name
 from utils.function_calling.tool_functions.cib_info.run import get_cib_reports_by_name

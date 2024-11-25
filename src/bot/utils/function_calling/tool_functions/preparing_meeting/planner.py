@@ -7,8 +7,6 @@ from utils.function_calling.tool_functions.preparing_meeting.config import API_K
 from utils.function_calling.tool_functions.preparing_meeting.prompts import PLANER_PROMPT
 from utils.function_calling.tool_functions.preparing_meeting.utils import Plan
 
-# TODO: переписать промпты
-
 
 def create_planner():
     planner_prompt = ChatPromptTemplate.from_messages(

@@ -3,51 +3,40 @@
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from config import EXECUTION_CONFIG
-from graph_executable import app
+
 # from utils.function_calling.tool_functions.cib_info.run import get_cib_reports_by_name
 # from utils.function_calling.tool_functions.product.run import get_product_recomendation
 # from utils.function_calling.tool_functions.rag.run import rag_news, rag_web, rag_cib
 # from utils.function_calling.tool_functions.summarization.run import get_news_by_name
 
+from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
+from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
+from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
+
+agent_graph = create_graph_executable()
+
 
 # TODO: разобраться, как прокидывать (и нужно ли?) треды
 # TODO: поменять для принты для дебага на нормальное логирование
-# TODO: сделать нормальное прокидывание название компании и оборачивать его в отдельный промпт
 # TODO: сделать обработку исключений
 # TODO: Вообще на тестах он как-то не всегда формирвал в последнем сообщении итоговый отчет, возможно есть смысл отдельно еще раз его формировать уже по истории сообщений от модели в процессе исполнения
 
 
 @tool
-async def get_preparing_for_meeting(runnable_config: RunnableConfig) -> str:
+async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableConfig) -> str:
     """Если пользователь просит помощи и не понимает что делать, то эта функция отправляет ему сообщение с руководством.
 
+    Args:
+        client_name (str): Название компании клиента в именительном падеже с маленькой буквы.
+        runnable_config (RunnableConfig): Конфиг.
     return:
-        (str): сообщение с руководством.
+        (str): Сформированный отчет для встречи менеджера с клиентом.
     """
-    name = 'Газпром'
-
-    # # Pipeline
-    # # News get_news_by_name
-    # await get_news_by_name(name, runnable_config)
-    # # CIB article get_reports_by_name
-    # await get_cib_reports_by_name(name, runnable_config)
-    # # Новостной раг
-    # await rag_news(name, runnable_config)
-    # # Веб ретривер
-    # await rag_web(name, runnable_config)
-    # # Раг ресерч
-    # await rag_cib(name, runnable_config)
-    # # Рекомендация продукта
-    # await get_product_recomendation(name, runnable_config)
-    # # CumReports
-    # await get_call_reports_by_name(name, runnable_config)
 
     cnt = 1
     result = ''
-    inputs = {
-        "input": "У менеджера встреча к компаниями-клиентами. Помоги ему подготовиться ко встрече и собери по ним информационную сводку, твой итоговый ответ быть именно этой информационной сводкой. Включи туда последние события по компаниям и предложи на основании этого банковские продукты применительно к этим ситациям (кредиты, лизинг и тд)"}
-    async for event in app.astream(inputs, config=EXECUTION_CONFIG):
+    inputs = {"input": INITIAL_QUERY.format(company_name=client_name)}
+    async for event in agent_graph.astream(inputs, config=EXECUTION_CONFIG):
         for k, v in event.items():
             if k != "__end__":
                 if cnt == 1:
@@ -68,7 +57,6 @@ async def get_preparing_for_meeting(runnable_config: RunnableConfig) -> str:
                     result = v['response']
                     print(f"Итоговый ответ: {v['response']}")
                 print()
-
     return result
 
 
