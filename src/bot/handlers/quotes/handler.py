@@ -158,7 +158,7 @@ async def exchange_info_command(message: types.Message, session: AsyncSession) -
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, report_key='fx', format_func=get_part_from_start_to_end),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.FX, format_func=get_part_from_start_to_end),
         title=sample_of_img_title.format('Курсы валют', 'investing.com, ru.tradingview.com, finam.ru, cbr.ru', curr_date)
     )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
@@ -265,7 +265,7 @@ async def metal_info_command(message: types.Message, session: AsyncSession) -> N
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, 'comm', get_until_upper_case),
+        reports=await get_reports_for_quotes(session, enums.QuotesType.COMMODITIES, get_until_upper_case),
         title=sample_of_img_title.format('Сырьевые товары', 'LME, Bloomberg, investing.com', utils.base.read_curdatetime())
     )
 
@@ -332,7 +332,7 @@ async def bonds_info_command(message: types.Message, session: AsyncSession) -> N
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, report_key='fi-ofz', format_func=get_part_from_start_to_end),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.FI, format_func=get_part_from_start_to_end),
         title=sample_of_img_title.format('Доходность ОФЗ', 'investing.com', utils.base.read_curdatetime())
     )
 
@@ -394,7 +394,7 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, report_key='rates'),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.ECO),
         title=sample_of_img_title.format('Ключевые ставки ЦБ мира', 'ЦБ стран мира', curdatetime)
     )
 

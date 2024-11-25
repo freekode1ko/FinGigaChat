@@ -2,6 +2,7 @@
 from aiogram.filters.callback_data import CallbackData
 
 from constants import quotes as callback_prefixes
+from constants.enums import QuotesType
 
 
 class QuotesMenu(CallbackData, prefix=callback_prefixes.MENU):
@@ -10,31 +11,31 @@ class QuotesMenu(CallbackData, prefix=callback_prefixes.MENU):
     pass
 
 
-class FX(CallbackData, prefix=callback_prefixes.FX):
+class FX(CallbackData, prefix=QuotesType.FX):
     """валютный рынок"""
 
     pass
 
 
-class FI(CallbackData, prefix=callback_prefixes.FI):
+class FI(CallbackData, prefix=QuotesType.FI):
     """долговой рынок"""
 
     pass
 
 
-class Equity(CallbackData, prefix=callback_prefixes.EQUITY):
+class Equity(CallbackData, prefix=QuotesType.EQUITY):
     """рынок акций"""
 
     pass
 
 
-class Commodities(CallbackData, prefix=callback_prefixes.COMMODITIES):
+class Commodities(CallbackData, prefix=QuotesType.COMMODITIES):
     """Ставки"""
 
     pass
 
 
-class Eco(CallbackData, prefix=callback_prefixes.ECO):
+class Eco(CallbackData, prefix=QuotesType.ECO):
     """товарный рынок"""
 
     pass

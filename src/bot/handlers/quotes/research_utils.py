@@ -6,7 +6,8 @@ from typing import Any, Callable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.quotes.const import RESEARCH_REPORTS_PARAMETERS
+from constants.enums import QuotesType
+from constants.quotes.const import ReportParameter, RESEARCH_REPORTS_PARAMETERS
 from db.api.research import research_db
 from log.bot_logger import logger
 
@@ -14,7 +15,7 @@ from log.bot_logger import logger
 MONTH_NAMES = (None, 'янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'нояб', 'дек')
 
 
-def get_part_from_start_to_end(content, start, end=None) -> str:
+def get_part_from_start_to_end(content: str, start: str, end: Optional[str] = None) -> str:
     """
     Вернуть текст от start выражения до end выражения.
 
@@ -49,7 +50,7 @@ def format_date_to_cib_format(date_obj: datetime) -> str:
 
 async def get_reports_for_quotes(
         session: AsyncSession,
-        report_key: str,
+        report_key: QuotesType,
         format_func: Optional[Callable] = None
 ) -> list[list[str]]:
     """
@@ -61,14 +62,15 @@ async def get_reports_for_quotes(
     :return:            Список из списков атрибутов отчетов.
     """
     reports = []
-    reports_data: list[dict[str, Any]] = RESEARCH_REPORTS_PARAMETERS[report_key]
+    reports_data: list[ReportParameter[str, Any]] = RESEARCH_REPORTS_PARAMETERS[report_key]
     for data in reports_data:
+        data = data.dict()
         reports_db = await research_db.get_report_by_parameters(session, data)
         for r in reports_db:
             reports.append(
                 [
                     r.header,
-                    format_func(r.text, **data.get('format_args', {})) if data.get('format') else r.text,
+                    format_func(r.text, **data['format_args']) if data['format'] else r.text,
                     format_date_to_cib_format(r.publication_date)
                 ]
             )
