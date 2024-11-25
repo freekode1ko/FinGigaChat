@@ -77,7 +77,7 @@ const DashboardPage = () => {
           )}
           {initialContent?.sections.map((section) => (
             <div className="w-full pb-8" key={section.section_name}>
-              <div className="py-2 sticky top-0 md:top-16 z-40 bg-background">
+              <div className="py-2 sticky top-0 z-40 bg-background">
                 <TypographyH2>{section.section_name}</TypographyH2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">

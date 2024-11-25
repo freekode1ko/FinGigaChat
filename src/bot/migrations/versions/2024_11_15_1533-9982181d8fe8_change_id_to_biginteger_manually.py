@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
-    op.drop_constraint('fk_quotes_values_quote_id', 'quotes_values', type_='foreignkey')
+    op.drop_constraint('quotes_values_quote_id_fkey', 'quotes_values', type_='foreignkey')
     op.alter_column(
         'quotes',
         'id',
@@ -42,7 +42,7 @@ def upgrade():
         existing_nullable=False,
     )
     op.create_foreign_key(
-        'fk_quotes_values_quote_id',
+        'quotes_values_quote_id_fkey',
         'quotes_values',
         'quotes',
         ['quote_id'],
@@ -51,7 +51,7 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_constraint('fk_quotes_values_quote_id', 'quotes_values', type_='foreignkey')
+    op.drop_constraint('quotes_values_quote_id_fkey', 'quotes_values', type_='foreignkey')
     op.alter_column(
         'quotes',
         'id',
@@ -74,7 +74,7 @@ def downgrade():
         existing_nullable=False,
     )
     op.create_foreign_key(
-        'fk_quotes_values_quote_id',
+        'quotes_values_quote_id_fkey',
         'quotes_values',
         'quotes',
         ['quote_id'],
