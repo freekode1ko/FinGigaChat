@@ -11,10 +11,7 @@ from db.api.research import research_db
 from log.bot_logger import logger
 
 
-MONTH_NAMES_DICT = {
-    1: 'янв', 2: 'фев', 3: 'мар', 4: 'апр', 5: 'мая', 6: 'июн',
-    7: 'июл', 8: 'авг', 9: 'сен', 10: 'окт', 11: 'нояб', 12: 'дек'
-}
+MONTH_NAMES = (None, 'янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'нояб', 'дек')
 
 
 def get_part_from_start_to_end(content, start, end=None) -> str:
@@ -47,7 +44,7 @@ def get_until_upper_case(content: str) -> str:
 
 def format_date_to_cib_format(date_obj: datetime) -> str:
     """Форматирование даты в формат CIB Research."""
-    return f"{date_obj.day} {MONTH_NAMES_DICT[date_obj.month]}., '{str(date_obj.year)[2:]}"
+    return f"{date_obj.day} {MONTH_NAMES[date_obj.month]}., '{str(date_obj.year)[2:]}"
 
 
 async def get_reports_for_quotes(
