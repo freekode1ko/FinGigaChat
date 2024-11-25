@@ -1,17 +1,113 @@
 import datetime
 import math
+import json
 
 import sqlalchemy as sa
 from dateutil.relativedelta import *
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.constants import bonds_names, commodity_pricing_names, metals_pricing_names
+from constants.texts import texts_manager
 from db import models
 from db.database import async_session
 from db.models import Exc, ExcType
 from utils.quotes import view as quotes_view
 from .schemas import SectionData, DataItem, Param, ExchangeSectionData, DashboardSubscriptions, SubscriptionSection, SubscriptionItem, \
     SizeEnum as SubscriptionSizeEnum, DashboardGraphData, GraphData
+
+
+async def get_special_dashboard(session) -> ExchangeSectionData:
+    """
+    Отдает специальный дашборд избранных инструментов с кастомными секциями.
+    Настраивается по ключу SPECIAL_DASHBOARD в Redis.
+    """
+    sections_json = await texts_manager.get('SPECIAL_DASHBOARD')
+    if not sections_json:
+        return ExchangeSectionData(sections=[])
+    sections = json.loads(sections_json)
+    quote_set = set(
+        (quote_name, section_name)
+        for quotes in sections.values()
+        for item in quotes
+        for quote_name, section_name in [item.split(":")]
+    )
+
+    query = (
+        sa.select(
+            models.Quotes.id.label('quote_id'),
+            models.Quotes.name.label('quote_name'),
+            models.Quotes.ticker.label('quote_ticker'),
+            models.QuotesSections.name.label('quote_section_name'),
+            models.QuotesValues.value.label('value'),
+            models.QuotesValues.date.label('date'),
+            sa.func.row_number().over(
+                partition_by=models.Quotes.id,
+                order_by=models.QuotesValues.date.desc()
+            ).label('row_number')
+        )
+        .join(models.QuotesSections, models.Quotes.quotes_section_id == models.QuotesSections.id)
+        .join(models.QuotesValues, models.Quotes.id == models.QuotesValues.quote_id)
+        .where(
+            sa.tuple_(
+                models.Quotes.name,
+                models.QuotesSections.name
+            ).in_(quote_set)
+        )
+    ).subquery()
+
+    stmt = (
+        sa.select(query)
+        .where(query.c.row_number <= 2)
+        .order_by(query.c.quote_id, query.c.row_number)
+    )
+    result = await session.execute(stmt)
+    rows = result.mappings().fetchall()
+
+    quotes_data = {}
+    for row in rows:
+        key = (row['quote_name'], row['quote_section_name'])
+        if key not in quotes_data:
+            quotes_data[key] = {
+                'quote_id': row['quote_id'],
+                'quote_name': row['quote_name'],
+                'quote_ticker': row['quote_ticker'],
+                'values': [],
+            }
+        quotes_data[key]['values'].append(row['value'])
+
+    sections_to_show = []
+    for custom_section_name, quotes_list in sections.items():
+        data_items = []
+        for single_quote in quotes_list:
+            quote_name, quote_section_name = single_quote.split(":")
+            key = (quote_name, quote_section_name)
+            quote_data = quotes_data.get(key)
+            if quote_data:
+                values = quote_data['values']
+                last_value = values[0] if values else None
+                previous_value = values[1] if len(values) > 1 else None
+                delta = (
+                    ((last_value - previous_value) / previous_value * 100)
+                    if previous_value else None
+                )
+                params = [Param(name="%изм", value=delta)] if delta is not None else []
+                data_item = DataItem(
+                    quote_id=quote_data['quote_id'],
+                    name=quote_data['quote_name'],
+                    ticker=quote_data['quote_ticker'],
+                    params=params,
+                    value=last_value,
+                    view_type=models.SizeEnum.GRAPH_MEDIUM,
+                )
+                data_items.append(data_item)
+        section_data = SectionData(
+            section_name=custom_section_name,
+            section_params=["_value", "%изм"],
+            data=data_items
+        )
+        sections_to_show.append(section_data)
+
+    return ExchangeSectionData(sections=sections_to_show)
 
 
 async def get_quotation_from_fx() -> list[SectionData]:
@@ -230,6 +326,7 @@ async def get_dashboard(
             models.UsersQuotesSubscriptions.user_id == user_id,
             models.Quotes.id.in_(quote_ids_with_data)
         )
+        .order_by(models.QuotesSections.name)
     )
     quotes_and_sections_subs = stmt.mappings().fetchall()
 
@@ -284,6 +381,7 @@ async def get_user_subscriptions(session: AsyncSession, user_id: int, ) -> Dashb
         .select_from(models.Quotes)
         .join(models.QuotesSections)
         .filter(models.Quotes.id.in_(quote_ids_with_data))
+        .order_by(models.QuotesSections.name)
     )
     quotes_and_sections = stmt.mappings().fetchall()
 
@@ -354,8 +452,8 @@ async def update_user_subscriptions(
 async def get_graph_data(
         session: AsyncSession,
         quote_id: int,
-        start_date: datetime.date,
-        end_date: datetime.date
+        start_date: datetime.datetime,
+        end_date: datetime.datetime
 ) -> DashboardGraphData:
     stmt = await session.execute(
         sa.select(models.QuotesValues)
@@ -368,7 +466,7 @@ async def get_graph_data(
         id=quote_id,
         data=[
             GraphData(
-                date=quote.date.date(),
+                date=quote.date,
                 value=quote.value,
                 open=quote.open,
                 close=quote.close,

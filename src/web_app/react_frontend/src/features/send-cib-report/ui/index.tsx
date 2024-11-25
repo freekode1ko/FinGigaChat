@@ -1,4 +1,5 @@
 import { CheckCheck, LoaderCircle, Send } from 'lucide-react'
+import { toast } from "sonner"
 
 import { useSendCibReportMutation } from '@/entities/news'
 import { selectUserData } from '@/entities/user'
@@ -13,11 +14,19 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   const user = useAppSelector(selectUserData)
   const [trigger, { isSuccess, isLoading }] = useSendCibReportMutation()
 
+  const handleSending = async ({userId}: {userId: number}) => {
+    try {
+      await trigger({ newsId: newsId, tgUserId: userId }).unwrap();
+    } catch {
+      toast.error('Мы не смогли отправить отчет. Попробуйте позже!')
+    }
+  }
+
   if (!user) return
 
   if (isSuccess)
     return (
-      <Button size="sm" variant="secondary" disabled>
+      <Button size="sm" variant="secondary" className='bg-accent/80 hover:bg-accent border border-accent text-text' disabled>
         <CheckCheck className="h-4 w-4" /> Отчет отправлен
       </Button>
     )
@@ -32,7 +41,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   return (
     <Button
       size="sm"
-      onClick={() => trigger({ newsId: newsId, tgUserId: user.id })}
+      onClick={() => handleSending({userId: user.id})}
     >
       <Send className="h-4 w-4" /> Отправить отчет CIB
     </Button>

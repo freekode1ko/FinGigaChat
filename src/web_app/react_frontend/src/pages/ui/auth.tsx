@@ -11,7 +11,7 @@ const AuthPage = () => {
   const [regEmail, setRegEmail] = useState<string>('') // temp
   return (
     <div className="py-8">
-      <div className="flex flex-col justify-center items-center space-y-4 mx-auto lg:max-w-screen-sm">
+      <div className="flex flex-col justify-center items-center space-y-4 mx-auto px-4 lg:max-w-screen-sm">
         <TypographyH2>Авторизация</TypographyH2>
         <div className="flex flex-nowrap w-full gap-2 mb-4">
           <Step active={step > 0} />

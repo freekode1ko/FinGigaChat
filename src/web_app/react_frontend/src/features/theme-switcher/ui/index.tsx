@@ -4,7 +4,12 @@ import { selectAppTheme, setTheme } from '@/entities/theme'
 import { useAppDispatch, useAppSelector } from '@/shared/lib'
 import { Button } from '@/shared/ui'
 
-const ThemeSwitcher = () => {
+interface ThemeSwitcherProps {
+  hideText?: boolean
+}
+
+
+const ThemeSwitcher = ({hideText}: ThemeSwitcherProps) => {
   const appTheme = useAppSelector(selectAppTheme)
   const dispatch = useAppDispatch()
 
@@ -14,9 +19,9 @@ const ThemeSwitcher = () => {
         variant="ghost"
         size="icon"
         onClick={() => dispatch(setTheme('dark'))}
-        className="w-full px-2 py-1.5 justify-start"
+        className="px-2 py-1.5 justify-start"
       >
-        <Sun /> Светлая тема
+        <Sun /> {!hideText && 'Светлая тема'}
       </Button>
     )
   return (
@@ -24,9 +29,9 @@ const ThemeSwitcher = () => {
       variant="ghost"
       size="icon"
       onClick={() => dispatch(setTheme('light'))}
-      className="w-full px-2 py-1.5 justify-start"
+      className="px-2 py-1.5 justify-start"
     >
-      <Moon /> Темная тема
+      <Moon /> {!hideText && 'Темная тема'}
     </Button>
   )
 }

@@ -11,9 +11,11 @@ from sqlalchemy.dialects.postgresql import insert as insert_pg
 
 from constants.constants import cbr_metals_parsing_list, moex_boards_names_order_list, moex_names_parsing_list, \
     yahoo_names_parsing_dict
+from constants.gigaparsers import GIGAPARSERS_API
 from db import crud, models
 from db.database import async_session
 from log.logger_base import logger
+from .gigaparsers import process_gigaparser_source
 
 
 async def load_cbr_quotes() -> None:
@@ -56,7 +58,7 @@ async def load_cbr_quotes() -> None:
                     'last_update': last_update,
                     'update_func': update_func,
                 }
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
@@ -95,7 +97,7 @@ async def load_cbr_metals() -> None:
                     'update_func': update_func,
                 }
 
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
@@ -162,7 +164,7 @@ async def load_moex_quotes():
                     'update_func': update_func,
                 }
 
-                await crud.custom_insert_or_update_to_postgres(
+                await crud.custom_upsert(
                     session,
                     model=models.Quotes,
                     values=values,
@@ -250,7 +252,7 @@ async def _load_yahoo_quote(section: models.QuotesSections, quote_name: str):
                     'volume': volume,
                 })
 
-            await crud.custom_insert_or_update_to_postgres(
+            await crud.custom_upsert(
                 session,
                 model=models.QuotesValues,
                 values=values,
@@ -284,3 +286,22 @@ async def load_yahoo_quotes():
     except Exception as e:
         logger.error(f'Во время загрузки с yahoo произошла ошибка: {e}')
     logger.info('Закончена загрузка котировок с yahoo')
+
+
+async def load_gigaparser_quotes():
+    """Загружает данные котировок от GigaParsers."""
+    logger.info('Начата загрузка котировок от GigaParsers')
+    try:
+        async with ClientSession() as req_session:
+            response = await req_session.post(
+                url=GIGAPARSERS_API,
+                ssl=False,
+                timeout=10,
+            )
+            response.raise_for_status()
+            quotes_json = await response.json(content_type='text/html')
+        sources = quotes_json.keys()
+        await asyncio.gather(*[process_gigaparser_source(source, quotes_json.get(source)) for source in sources])
+    except Exception as e:
+        logger.error(f'Во время загрузки от GigaParsers произошла ошибка: {e}')
+    logger.info('Закончена загрузка котировок от GigaParsers')
