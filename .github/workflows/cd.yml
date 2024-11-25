@@ -15,6 +15,7 @@ jobs:
       - name: Copy project to deployment directory
         run: |
           cp -r /root/actions-runner/code/FinGigaChat/FinGigaChat/* /root/deploy/FinGigaChat
+          rsync -a --delete /root/actions-runner/code/FinGigaChat/FinGigaChat/src/ /root/deploy/FinGigaChat/src/
         continue-on-error: false
 
       - name: Deploy with Docker Compose
