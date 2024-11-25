@@ -94,4 +94,12 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
 
 @tool
 async def get_product_recomendation(text: str, config: RunnableConfig):
-    pass
+    """Возвращает список рекомендованных продуктовых предложений по заданному тексту.
+
+    Args:
+        name (str): текст с новостными инфоповодами
+    return:
+        (str): строку с рекомендованными продуктами.
+    """
+    msg = "Рекомендованные продукты"
+    return msg

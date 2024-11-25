@@ -6,22 +6,27 @@ from langgraph.prebuilt import create_react_agent
 
 from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, BASE_MODEL
 from utils.function_calling.tool_functions.preparing_meeting.prompts import BASE_PROMPT#from utils.function_calling.tool_functions.call_report.run import get_call_report
-#from utils.function_calling.tool_functions.cib_info.run import get_cib_info
-#from utils.function_calling.tool_functions.rag.run import get_rag_answer
-#from utils.function_calling.tool_functions.recomendation.run import get_recomendation
-#from utils.function_calling.tool_functions.summarization.run import get_summarization
+
+from utils.function_calling.tool_functions.call_report.run import get_call_reports_by_name
+from utils.function_calling.tool_functions.cib_info.run import get_cib_reports_by_name
+from utils.function_calling.tool_functions.product.run import get_product_recomendation
+from utils.function_calling.tool_functions.rag.run import rag_news, rag_cib, rag_web
+from utils.function_calling.tool_functions.summarization.run import get_news_by_name
+
+tool_functions_prepare_for_meeting = [
+    get_call_reports_by_name,
+    get_cib_reports_by_name,
+    rag_news,
+    rag_cib,
+    rag_web,
+    get_product_recomendation,
+    get_news_by_name,
+]
 
 
 def create_agent():
     prompt = hub.pull("ih/ih-react-agent-executor")
     prompt.messages[0].prompt.template = BASE_PROMPT
-
-    tool_functions_prepare_for_meeting = []
-    # tool_functions_prepare_for_meeting = [get_summarization,
-    #                                      get_cib_info,
-    #                                      get_rag_answer,
-    #                                      get_recomendation,
-    #                                      get_call_report]
 
     llm = ChatOpenAI(model=BASE_MODEL,
                      api_key=API_KEY,
