@@ -1,0 +1,219 @@
+"""product hierarchical structure
+
+Revision ID: 0a80d96a6984
+Revises: 473e815e1353
+Create Date: 2024-06-20 10:47:58.968100
+
+"""
+from pathlib import Path
+from typing import Sequence, Union
+
+import pandas as pd
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.orm import Session
+
+from models.enums import FormatType
+from migrations.data.product_hierarchical_structure import bot_product, bot_product_group
+from migrations.models.product_hierarchical_structure import old_models, new_models
+
+# revision identifiers, used by Alembic.
+revision: str = '0a80d96a6984'
+down_revision: Union[str, None] = '8573660fb1c0'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade_get_old_product_groups(session: Session) -> pd.DataFrame:
+    """Get old product groups"""
+    data = session.execute(
+        sa.select(
+            old_models.ProductGroup.id,
+            old_models.ProductGroup.name,
+            old_models.ProductGroup.name_latin,
+            old_models.ProductGroup.description,
+            old_models.ProductGroup.display_order,
+        )).all()
+    return pd.DataFrame(data, columns=['id', 'name', 'name_latin', 'description', 'display_order'])
+
+
+def upgrade_get_old_products(session: Session) -> pd.DataFrame:
+    """Get old products"""
+    data = session.execute(
+        sa.select(
+            old_models.Product.id,
+            old_models.Product.name,
+            old_models.Product.description,
+            old_models.Product.display_order,
+            old_models.Product.group_id,
+        )).all()
+    return pd.DataFrame(data, columns=['id', 'name', 'description', 'display_order', 'group_id'])
+
+
+def upgrade_add_old_products(
+        session: Session,
+        product_groups: pd.DataFrame,
+        products: pd.DataFrame,
+) -> None:
+    """Add old products"""
+    # Добавляет коренвую категорию продуктов
+    session.add(bot_product.root_data)
+
+    groups_to_products_id_map = {}
+
+    # Добавляем все группы в качестве категорий продуктов в таблицу bot_product
+    for _, i in product_groups.iterrows():
+        new_product = dict(
+            parent_id=0,
+            name=i['name'],
+            name_latin=i['name_latin'],
+            description=i['description'],
+            display_order=i['display_order'],
+            send_documents_format_type=(FormatType.group_files.value if i['name_latin'] != 'hot_offers'
+                                        else FormatType.individual_messages.value),
+        )
+        stmt = sa.insert(new_models.Product).values(**new_product).returning(new_models.Product.id)
+        new_product['id'] = session.execute(stmt).scalar_one_or_none()
+        groups_to_products_id_map[i['id']] = new_product
+
+    # Обновляем поля продуктов
+    for _, i in products.iterrows():
+        group = groups_to_products_id_map[i['group_id']]
+        stmt = (
+            sa.update(new_models.Product)
+            .where(new_models.Product.id == i['id'])
+            .values(
+                parent_id=group['id'],
+                name_latin='',
+                send_documents_format_type=group['send_documents_format_type'],
+            )
+        )
+        session.execute(stmt)
+
+
+def upgrade_add_new_products(session: Session) -> None:
+    """Add new products"""
+    stmt = sa.insert(new_models.Product).values(**bot_product.state_support).returning(new_models.Product.id)
+    new_product_id = session.execute(stmt).scalar_one_or_none()
+
+    files = list(bot_product.STATE_SUPPORT_SOURCES.iterdir()) if bot_product.STATE_SUPPORT_SOURCES.exists() else []
+    files_objs = []
+    for file_path in files:
+        # Преобразуем в относительный путь (на случай переноса бэкапа удобнее)
+        sources_folder_index = file_path.parts.index(bot_product.config.PATH_TO_SOURCES.name)
+        file_path = Path(*file_path.parts[sources_folder_index:])
+        files_objs.append(new_models.ProductDocument(
+            file_path=str(file_path),
+            name=file_path.name,
+            description='',
+            product_id=new_product_id,
+        ))
+    session.bulk_save_objects(files_objs)
+
+
+def downgrade_get_new_products(session: Session) -> pd.DataFrame:
+    """Get old products"""
+    parent_alias = sa.orm.aliased(new_models.Product)
+    data = session.execute(
+        sa.select(
+            new_models.Product.id,
+            new_models.Product.name,
+            parent_alias.name_latin,
+            new_models.Product.description,
+            new_models.Product.display_order,
+            new_models.Product.parent_id,
+        ).join(new_models.Product.parent.of_type(parent_alias))).unique().all()
+    return pd.DataFrame(data, columns=['id', 'name', 'name_latin', 'description', 'display_order', 'parent_id'])
+
+
+def downgrade_add_product_groups(table: sa.Table) -> None:
+    """Добавить группы продуктов"""
+    op.bulk_insert(table, bot_product_group.data)
+
+
+def downgrade_delete_new_products(session: Session) -> None:
+    """Удалить новые продукты"""
+    stmt = sa.delete(old_models.Product).where(old_models.Product.name.not_in([i['name'] for i in bot_product.old_products]))
+    session.execute(stmt)
+
+
+def downgrade_update_group_id(session: Session, new_products: pd.DataFrame) -> None:
+    """Обновить group_id"""
+    for product in bot_product.old_products:
+        product_id = new_products[(new_products['name'] == product['name']) & (new_products['name_latin'] == product['name_latin'])].iloc[0]['id']
+        stmt = sa.update(old_models.Product).values(group_id=product['group_id'].scalar_subquery()).where(old_models.Product.id == int(product_id))
+        session.execute(stmt)
+
+
+def upgrade() -> None:
+    bind = op.get_bind()
+    session = Session(bind=bind)
+
+    product_groups = upgrade_get_old_product_groups(session)
+    products = upgrade_get_old_products(session)
+
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.add_column('bot_product', sa.Column('parent_id', sa.Integer(), nullable=True,
+                                           comment='ID родительского продукта, который выступает в качестве категории продуктов'))
+    op.add_column('bot_product', sa.Column('name_latin', sa.String(length=255), server_default=sa.text("''"),
+                                           nullable=True, comment='Имя eng'))
+    op.add_column('bot_product', sa.Column('send_documents_format_type', sa.Integer(),
+                                           server_default=sa.text(str(FormatType.group_files.value)), nullable=False,
+                                           comment='Формат выдачи документов'))
+    op.drop_constraint('product_name_in_group', 'bot_product', type_='unique')
+    op.drop_constraint('bot_product_group_id_fkey', 'bot_product', type_='foreignkey')
+    op.create_foreign_key('bot_product_parent_id_fkey', 'bot_product', 'bot_product', ['parent_id'], ['id'])
+    op.create_table_comment(
+        'bot_product',
+        'Справочник продуктов (кредит, GM, ...)',
+        existing_comment='Справочник категорий продуктов (кредит, GM, ...)',
+        schema=None
+    )
+    op.drop_column('bot_product', 'group_id')
+    op.drop_table('bot_product_group')
+    # ### end Alembic commands ###
+
+    upgrade_add_old_products(session, product_groups, products)
+    upgrade_add_new_products(session)
+
+
+def downgrade() -> None:
+    bind = op.get_bind()
+    session = Session(bind=bind)
+
+    new_products = downgrade_get_new_products(session)
+
+    # ### commands auto generated by Alembic - please adjust! ###
+    op.add_column('bot_product', sa.Column('group_id', sa.INTEGER(), autoincrement=False, nullable=True, comment='id группы продукта'))
+    op.create_table_comment(
+        'bot_product',
+        'Справочник категорий продуктов (кредит, GM, ...)',
+        existing_comment='Справочник продуктов (кредит, GM, ...)',
+        schema=None
+    )
+    op.drop_constraint('bot_product_parent_id_fkey', 'bot_product', type_='foreignkey')
+    op.drop_column('bot_product', 'send_documents_format_type')
+    op.drop_column('bot_product', 'name_latin')
+    op.drop_column('bot_product', 'parent_id')
+
+    table = op.create_table('bot_product_group',
+    sa.Column('id', sa.INTEGER(), autoincrement=True, nullable=False, comment='id файла в базе'),
+    sa.Column('name', sa.VARCHAR(length=255), autoincrement=False, nullable=False, comment='Имя группы'),
+    sa.Column('name_latin', sa.VARCHAR(length=255), autoincrement=False, nullable=False, comment='Имя группы eng'),
+    sa.Column('description', sa.TEXT(), server_default=sa.text("''::text"), autoincrement=False, nullable=True,
+              comment='Описание группы (текст меню тг)'),
+    sa.Column('display_order', sa.INTEGER(), server_default=sa.text('0'), autoincrement=False, nullable=False,
+              comment='Порядок отображения'),
+    sa.PrimaryKeyConstraint('id', name='bot_product_group_pkey'),
+    sa.UniqueConstraint('name', name='group_name'),
+    comment='Справочник групп продуктов (продуктовая полка, hot offers)'
+    )
+    op.create_foreign_key('bot_product_group_id_fkey', 'bot_product', 'bot_product_group', ['group_id'], ['id'],
+                          onupdate='CASCADE', ondelete='CASCADE')
+    op.create_unique_constraint('product_name_in_group', 'bot_product', ['name', 'group_id'])
+    # ### end Alembic commands ###
+    downgrade_add_product_groups(table)
+    downgrade_delete_new_products(session)
+    downgrade_update_group_id(session, new_products)
+    # ### update column ###
+    op.alter_column('bot_product', 'group_id', nullable=False)
