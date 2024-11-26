@@ -93,7 +93,7 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
 
 
 @tool
-async def get_product_recomendation(text: str, config: RunnableConfig):
+async def get_product_recommendation(text: str, config: RunnableConfig):
     """Возвращает список рекомендованных продуктовых предложений по заданному тексту.
 
     Args:

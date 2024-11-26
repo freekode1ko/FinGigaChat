@@ -1,6 +1,28 @@
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from configs import config
+from constants.enums import HTTPMethod
+from utils.sessions import RagWebClient, RagQaBankerClient, RagQaResearchClient
+
+
+async def request_to_rag_api(rag_type, query, with_metadata=False):
+    try:
+        rag = rag_type()
+        async with rag.session.request(
+                method=HTTPMethod.POST,
+                url='/api/v1/question',
+                json={
+                    'body': query if (query := query.strip())[-1] == '?' else query + '?'
+                },
+                timeout=config.POST_TO_SERVICE_TIMEOUT,
+                with_metadata=with_metadata
+        ) as rag_response:
+            return await rag_response.json()
+    except Exception as e:
+        pass
+
+
 @tool
 async def rag_news(request_text: str, config: RunnableConfig):
     """Возвращает текст с ответом из базы знаний по новостям по заданному вопросу.
@@ -10,8 +32,9 @@ async def rag_news(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    print(f"Вызвана rag_news с параметром {request_text}")
-    msg = "Ответ"
+    # rag_qa_banker
+
+    msg = await request_to_rag_api(RagQaBankerClient, request_text)
     return msg
 
 
@@ -24,8 +47,7 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    print(f"Вызвана rag_cib с параметром {request_text}")
-    msg = "Ответ из CIB"
+    msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
     return msg
 
 
@@ -38,6 +60,5 @@ async def rag_web(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    print(f"Вызвана rag_web с параметром {request_text}")
-    msg = "Ответ из интернета"
+    msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
     return msg

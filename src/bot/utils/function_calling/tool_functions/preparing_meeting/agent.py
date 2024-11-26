@@ -9,7 +9,7 @@ from utils.function_calling.tool_functions.preparing_meeting.prompts import BASE
 
 from utils.function_calling.tool_functions.call_report.run import get_call_reports_by_name
 from utils.function_calling.tool_functions.cib_info.run import get_cib_reports_by_name
-from utils.function_calling.tool_functions.product.run import get_product_recomendation
+from utils.function_calling.tool_functions.product.run import get_product_recommendation
 from utils.function_calling.tool_functions.rag.run import rag_news, rag_cib, rag_web
 from utils.function_calling.tool_functions.summarization.run import get_news_by_name
 
@@ -19,7 +19,7 @@ tool_functions_prepare_for_meeting = [
     rag_news,
     rag_cib,
     rag_web,
-    get_product_recomendation,
+    get_product_recommendation,
     get_news_by_name,
 ]
 
