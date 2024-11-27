@@ -23,6 +23,7 @@ async def request_to_rag_api(rag_type, query, with_metadata=False):
         ) as rag_response:
             return await rag_response.json()
     except Exception as e:
+        print(e)
         pass
 
 
@@ -36,7 +37,7 @@ async def rag_news(request_text: str, config: RunnableConfig):
         (str): текст ответа.
     """
     # rag_qa_banker
-
+    print(f"Вызвана функция rag_news с параметром {request_text}")
     msg = await request_to_rag_api(RagQaBankerClient, request_text)
     return msg
 
@@ -50,6 +51,7 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
+    print(f"Вызвана функция rag_cib с параметром {request_text}")
     msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
     return msg
 
@@ -63,5 +65,6 @@ async def rag_web(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
+    print(f"Вызвана функция rag_web с параметром {request_text}")
     msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
     return msg

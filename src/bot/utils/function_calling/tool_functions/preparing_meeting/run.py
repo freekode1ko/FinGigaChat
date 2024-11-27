@@ -2,10 +2,15 @@
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
+from langchain_gigachat.chat_models.gigachat import GigaChat
 
+from configs.config import giga_scope, giga_model, giga_credentials
 from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
 from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
+from utils.function_calling.tool_functions.preparing_meeting.prompts import FINAL_ANSWER_SYSTEM_PROMPT, \
+    FINAL_ANSWER_USER_PROMPT
+from utils.function_calling.tool_functions.utils import get_answer_giga
 
 agent_graph = create_graph_executable()
 
@@ -13,7 +18,6 @@ agent_graph = create_graph_executable()
 # TODO: разобраться, как прокидывать (и нужно ли?) треды
 # TODO: поменять для принты для дебага на нормальное логирование
 # TODO: сделать обработку исключений
-# TODO: Вообще на тестах он как-то не всегда формирвал в последнем сообщении итоговый отчет, возможно есть смысл отдельно еще раз его формировать уже по истории сообщений от модели в процессе исполнения
 
 
 @tool
@@ -31,6 +35,7 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
     print(f"Вызвана функция подготовки ко встречи с параметром {client_name}")
     cnt = 1
     result = ''
+    result_history = []
     try:
         inputs = {"input": INITIAL_QUERY.format(client_name=client_name)}
         async for event in agent_graph.astream(inputs, config=EXECUTION_CONFIG):
@@ -44,19 +49,37 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                     print(f'Шаг {cnt}')
                     cnt += 1
                     if 'plan' in v:
-                        print(v['plan'])
+                        # print(v['plan'])
                         if len(v['plan']) > 0:
                             print(v['plan'][0])
+                            print(f"plan: {v['plan'][0]}")
+                            result_history.append(v['plan'][0])
                     if 'past_steps' in v:
                         if len(v['past_steps']) > 0:
-                            print(v['past_steps'][0][1])
+                            print(f"past_steps: {v['past_steps'][0][1]}")
+                            result_history.append(f"Выполненный шаг: {v['past_steps'][0][1]}")
                     if 'response' in v:
                         result = v['response']
                         print(f"Итоговый ответ: {v['response']}")
                     print()
+
+        print(f"Логи действий для составления итогового ответа: {result_history}")
+        # TODO: набросал аггрегацию итогового ответа, но еще не запускал, потому что проблема с апишкой гпт
+        # TODO: так что могут быть баги/странное поведение
+        llm = GigaChat(verbose=True,
+                       credentials=giga_credentials,
+                       scope=giga_scope,
+                       model=giga_model,
+                       verify_ssl_certs=False,
+                       profanity_check=False,
+                       temperature=0.00001
+                       )
+        result = await get_answer_giga(llm,
+                                       FINAL_ANSWER_SYSTEM_PROMPT,
+                                       FINAL_ANSWER_USER_PROMPT,
+                                       '\n'.join(result_history))
+        # TODO: напечатать пользователю итоговый ответ
+        return result
     except Exception as e:
         print(e)
     return result
-
-
-
