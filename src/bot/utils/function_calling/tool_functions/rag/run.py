@@ -9,14 +9,17 @@ from utils.sessions import RagWebClient, RagQaBankerClient, RagQaResearchClient
 async def request_to_rag_api(rag_type, query, with_metadata=False):
     try:
         rag = rag_type()
+        json = {
+            'body': query if (query := query.strip())[-1] == '?' else query + '?'
+        }
+        if with_metadata:
+            json['with_metadata'] = True
+
         async with rag.session.request(
                 method=HTTPMethod.POST,
                 url='/api/v1/question',
-                json={
-                    'body': query if (query := query.strip())[-1] == '?' else query + '?'
-                },
+                json=json,
                 timeout=config.POST_TO_SERVICE_TIMEOUT,
-                with_metadata=with_metadata
         ) as rag_response:
             return await rag_response.json()
     except Exception as e:
