@@ -17,7 +17,7 @@ tool_functions_prepare_for_meeting = [
     get_call_reports_by_name,
     get_cib_reports_by_name,
     rag_news,
-    rag_cib,
+    #rag_cib,
     rag_web,
     get_product_recommendation,
     get_news_by_name,

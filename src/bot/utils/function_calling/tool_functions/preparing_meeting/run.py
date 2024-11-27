@@ -3,12 +3,6 @@
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-
-# from utils.function_calling.tool_functions.cib_info.run import get_cib_reports_by_name
-# from utils.function_calling.tool_functions.product.run import get_product_recomendation
-# from utils.function_calling.tool_functions.rag.run import rag_news, rag_web, rag_cib
-# from utils.function_calling.tool_functions.summarization.run import get_news_by_name
-
 from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
 from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
@@ -24,7 +18,9 @@ agent_graph = create_graph_executable()
 
 @tool
 async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableConfig) -> str:
-    """Если пользователь просит помощи и не понимает что делать, то эта функция отправляет ему сообщение с руководством.
+    """Если пользователь просит составить отчет по подготовке ко встречи, создает отчет и возвращает ему его.
+    Примеры того, как могут выглядеть сообщения пользователя, для которых нужно вызывать эту функцию:
+    "Составь отчет для встречи с ..." / "Сделай отчет ко встречи с ..." / "Подготовка ко встрече с ...."
 
     Args:
         client_name (str): Название компании клиента в именительном падеже с маленькой буквы.

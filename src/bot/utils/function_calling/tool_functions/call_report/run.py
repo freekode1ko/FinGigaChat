@@ -1,18 +1,15 @@
-from humanfriendly.terminal import message
+import sqlalchemy as sa
+from fuzzywuzzy import process
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from db.database import async_session
 from db import models
-
-import sqlalchemy as sa
-
+from db.database import async_session
 from utils.function_calling.tool_functions.utils import parse_runnable_config
-from fuzzywuzzy import process
 
 
 @tool
-async def get_call_reports_by_name(name: str, runnable_config: RunnableConfig):
+async def get_call_reports_by_name(name: str, runnable_config: RunnableConfig) -> str:
     """Возвращает текст с историей взаимодействия пользователя с данным клиентом.
 
     Args:
@@ -47,6 +44,4 @@ async def get_call_reports_by_name(name: str, runnable_config: RunnableConfig):
             .limit(5)
         )
         call_reports: list[str] = reports.scalars().all()
-        return call_reports
-
-
+        return '\n'.join(call_reports)

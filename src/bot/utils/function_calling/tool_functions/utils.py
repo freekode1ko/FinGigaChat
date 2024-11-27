@@ -3,6 +3,7 @@
 import dataclasses
 from typing import Any
 
+import langchain_gigachat
 from aiogram import types
 from langchain_core.runnables import RunnableConfig
 
@@ -27,3 +28,27 @@ def parse_runnable_config(config: RunnableConfig) -> LanggraphConfig:
             if k in LanggraphConfig.__dataclass_fields__ and isinstance(v, LanggraphConfig.__dataclass_fields__[k].type)
         }
     )
+
+
+async def get_answer_giga(llm: langchain_gigachat.chat_models.gigachat.GigaChat,
+                          system_prompt: str,
+                          user_prompt: str,
+                          text: str) -> str:
+    """
+    Асинхронный запрос в Гигачат.
+
+    :param llm: инстанс подключения к гигачату.
+    :param system_prompt: системный промпт задачи.
+    :param user_prompt: шаблон пользовательского сообщения.
+    :param text: текст пользовательского сообщения.
+    :return: ответ от гигачата.
+    """
+    messages = [{"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt.format(text=text)}]
+    try:
+        response = await llm.ainvoke(messages)
+        content = response.content
+        return content
+    except Exception as e:
+        print(f"Ошбика при получении ответа от Гигачата: {e}")
+        return "Ошибка при получении ответа от Гигачата"

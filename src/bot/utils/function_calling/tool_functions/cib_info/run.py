@@ -9,7 +9,7 @@ from db.database import async_session
 
 
 @tool
-async def get_cib_reports_by_name(name: str, config: RunnableConfig):
+async def get_cib_reports_by_name(name: str, config: RunnableConfig) -> str:
     """Возвращает пользователю текст с отчетами из источника "CIB аналитика" по компании по заданному названию компании.
 
     Args:
@@ -19,6 +19,7 @@ async def get_cib_reports_by_name(name: str, config: RunnableConfig):
     """
     # фин показатели
     # последний отчет
+    print(f'Вызвана функция get_cib_reports_by_name с параметром: {name}')
     async with async_session() as session:
         clients = await session.execute(
             sa.select(models.ResearchType.name, models.ResearchType.id)
@@ -29,7 +30,7 @@ async def get_cib_reports_by_name(name: str, config: RunnableConfig):
             best_match_client_name = matches[0][0]
             research_type_id = next(filter(lambda x: x[0] == best_match_client_name, clients))[1]
         else:
-            return 'По такому клиенту кол репортов нет'
+            return 'По такому клиенту нет отчетов CIB'
         reports = await session.execute(
             sa.select(models.Research.text)
             .join(models.ResearchResearchType)
@@ -39,4 +40,5 @@ async def get_cib_reports_by_name(name: str, config: RunnableConfig):
             .order_by(models.Research.publication_date)
             .limit(1)
         )
+
     return reports.scalars().all()
