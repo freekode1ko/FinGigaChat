@@ -87,11 +87,9 @@ class RAGRouter:
 
     async def get_response(self) -> str | dict[str, Any]:
         """Вызов ретривера относительно типа ретривера."""
-        if self.retriever_type == RetrieverType.state_support:
-            return await self.rag_state_support()
-        elif self.retriever_type == RetrieverType.qa_banker:
-            return await self.get_combination_response()
-        return await self._request_to_giga()
+        if self.retriever_type == RetrieverType.other:
+            return DEFAULT_RAG_ANSWER
+        return await self.get_combination_response()
 
     async def rag_qa_banker(self) -> dict[str, Any]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
