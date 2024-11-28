@@ -87,11 +87,9 @@ class RAGRouter:
 
     async def get_response(self) -> str | dict[str, Any]:
         """Вызов ретривера относительно типа ретривера."""
-        if self.retriever_type == RetrieverType.state_support:
-            return await self.rag_state_support()
-        elif self.retriever_type == RetrieverType.qa_banker:
-            return await self.get_combination_response()
-        return await self._request_to_giga()
+        if self.retriever_type == RetrieverType.other:
+            return DEFAULT_RAG_ANSWER
+        return await self.get_combination_response()
 
     async def rag_qa_banker(self) -> dict[str, Any]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
@@ -161,8 +159,9 @@ class RAGRouter:
 
     async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker_json, research_json, web_json = await \
-            asyncio.gather(self.rag_qa_banker(), self.rag_qa_research(), self.rag_web())
+        banker_json, research_json, web_json = await asyncio.gather(
+            self.rag_qa_banker(), self.rag_qa_research(), self.rag_web()
+        )
         banker, research, web = banker_json['body'], research_json['body'], web_json['body']
         logger.debug('Тексты до объединения ответов:')
         logger.debug('Ответ новостного рага:')
