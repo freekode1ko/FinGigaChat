@@ -92,9 +92,11 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                                        FINAL_ANSWER_SYSTEM_PROMPT,
                                        FINAL_ANSWER_USER_PROMPT,
                                        '\n'.join(result_history))
-        pass
+        await final_message.edit_text(text=result)
         # TODO: напечатать пользователю итоговый ответ
         return result
     except Exception as e:
+        await final_message.edit_text('Произошла ошибка: ' + result)
+        await tg_message.answer(str(e))
         print(e)
     return result
