@@ -23,10 +23,3 @@ class Environment(str, Enum):
             return cls(param.lower())
         except ValueError:
             return cls.UNKNOWN
-
-
-class RequestType(str, Enum):
-    """Тип запроса: на обновление или создание"""
-
-    create = 'post'
-    update = 'put'

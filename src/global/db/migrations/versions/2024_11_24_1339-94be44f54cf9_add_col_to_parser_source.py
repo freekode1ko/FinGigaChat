@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from db.models import SourceGroup, ParserSource
+from models.models import SourceGroup, ParserSource
 from migrations.data.monitoring_data.new_source_group import (
     article_source_group,
     CIB_RESEARCH_SOURCE_GROUP_NAME_LATIN,

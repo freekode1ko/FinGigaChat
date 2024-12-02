@@ -24,11 +24,11 @@ data = [
     {"name": "Ежемесячный обзор по мягким валютам", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": 60*60*24*40},
     {"name": "Ежемесячный обзор по юаню", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": 60*60*24*40},
     {"name": "Прогноз валютного рынка на", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": 60*60*24*31},
-    # {"name": "Прогноз итогов заседания ЦБ РФ", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": None},  # Непонятное время получения
-    # {"name": "Итоги заседания ЦБ", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": None},  # Непонятное время получения
+    {"name": "Прогноз итогов заседания ЦБ РФ", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": None},  # Непонятное время получения
+    {"name": "Итоги заседания ЦБ", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": None},  # Непонятное время получения
     {"name": "Долговые рынки сегодня", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": 60*60*38},
     {"name": "Итоги аукционов ОФЗ", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": 60*60*24*20},
-    # {"name": "Обзор выплат по", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": None},  # Непонятное время получения
+    {"name": "Обзор выплат по", "period_cron": RESEARCH_CRON_TO_PARSE, "alert_timedelta": None},  # Непонятное время получения
 
     # ARTICLE PARSERS: сбор в 3:30 утра каждую ночь, алерт спустя 4 часа
     {"name": "Полианалист", "period_cron": "30 3 * * *", "alert_timedelta": 4*60*60},

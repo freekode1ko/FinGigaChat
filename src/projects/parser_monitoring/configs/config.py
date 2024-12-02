@@ -17,13 +17,13 @@ PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
 STATIC_ASSETS_PATH = PROJECT_DIR / 'data' / 'assets'
 DEBUG: bool = env.bool('DEBUG', default=False)
 
-SOURCE_SYSTEM = f'AI-helper ({_env_value})'
-MONITORING_API_USER = 'admin@gmail.com'
-MONITORING_API_PASSWORD: str = env.str('MONITORING_API_PASSWORD')
-MONITORING_API_URL: str = str(env.str('MONITORING_API_URL', default='')) + '/api/v1'
-MONITORING_API_LOGIN_URL: str = MONITORING_API_URL + '/auth/login'
-MONITORING_API_SYSTEM_URL = f'{MONITORING_API_URL}/source_systems/{SOURCE_SYSTEM}'
-MONITORING_API_PARSER_URL = f'{MONITORING_API_SYSTEM_URL}/parsers'
+SOURCE_SYSTEM = f'AI_helper_{_env_value}'
+MONITORING_USER_LOGIN: str = env.str('MONITORING_USER_LOGIN')
+MONITORING_USER_PASSWORD: str = env.str('MONITORING_USER_PASSWORD')
+MONITORING_URL_BASE: str = str(env.str('MONITORING_URL_BASE', default='')) + '/api/v1'
+MONITORING_LOGIN_URL: str = MONITORING_URL_BASE + '/auth/login'
+MONITORING_SYSTEM_URL = f'{MONITORING_URL_BASE}/source_systems/{SOURCE_SYSTEM}'
+MONITORING_PARSER_URL = f'{MONITORING_SYSTEM_URL}/parsers'
 
 
 def read_asset_from_json(file_name: str | pathlib.Path, encoding: str = 'utf-8') -> list | dict | str:
