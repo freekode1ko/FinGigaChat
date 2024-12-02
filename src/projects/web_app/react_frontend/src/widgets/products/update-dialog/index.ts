@@ -1,1 +1,0 @@
-export { UpdateProductDialog } from './ui'

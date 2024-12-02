@@ -1,1 +1,0 @@
-export { DeleteProductDialog } from './ui'
