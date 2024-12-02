@@ -92,6 +92,6 @@ class SendToMonitoring:
             json_data=[parser.model_dump(mode='json') for parser in data], **kwargs,
         )
         if r.status_code == 200:
-            logger.info(f'Парсеры обновлены: ответ %s', r)
+            logger.info(f'Парсеры обновлены: ответ {r}')
         else:
             raise ParserUpdatingError(f'Возникла проблема при обновлении парсеров: {r.text}')

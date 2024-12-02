@@ -1,7 +1,7 @@
 """Аутентификация в сервисе мониторинга"""
 import requests
 
-from configs.config import MONITORING_LOGIN_URL, MONITORING_USER_PASSWORD, MONITORING_USER_LOGIN
+from configs.config import MONITORING_LOGIN_URL, MONITORING_USER_LOGIN, MONITORING_USER_PASSWORD
 from log.logger_base import logger
 
 
