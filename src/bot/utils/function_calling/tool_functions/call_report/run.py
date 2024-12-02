@@ -23,10 +23,12 @@ async def get_call_reports_by_name(name: str, config: RunnableConfig) -> str:
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']
     final_message = config['configurable']['final_message']
+    task_text = config['configurable']['task_text']
 
     message_text.append('-Обработка Call Report`ов\n')
+    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
 
-    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     user_id = message.from_user.id
 

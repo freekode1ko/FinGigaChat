@@ -29,10 +29,12 @@ async def get_news_by_name(name: str, config: RunnableConfig):
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']
     final_message: types.Message = config['configurable']['final_message']
+    task_text = config['configurable']['task_text']
 
     message_text.append('-Обработка новостей\n')
+    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
 
-    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
     limit = 10
     fuzzy_searcher = FuzzyAlternativeNames()
     clients_id = await fuzzy_searcher.find_subjects_id_by_name(

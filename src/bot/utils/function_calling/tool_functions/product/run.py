@@ -109,9 +109,11 @@ async def get_product_recommendation(text: str, config: RunnableConfig):
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']
     final_message = config['configurable']['final_message']
+    task_text = config['configurable']['task_text']
 
     message_text.append('-Формирования рекомендаций по продуктам\n')
+    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
 
-    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
     msg = "Рекомендованные продукты"
     return msg

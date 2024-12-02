@@ -45,10 +45,12 @@ async def rag_news(request_text: str, config: RunnableConfig):
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']
     final_message = config['configurable']['final_message']
+    task_text = config['configurable']['task_text']
 
     message_text.append('-Обработка от рага по новостям\n')
+    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
 
-    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     msg = await request_to_rag_api(RagQaBankerClient, request_text)
     return msg
@@ -69,10 +71,12 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']
     final_message = config['configurable']['final_message']
+    task_text = config['configurable']['task_text']
 
     message_text.append('-Обработка от рага по CIB\n')
+    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
 
-    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
     return msg
@@ -93,16 +97,12 @@ async def rag_web(request_text: str, config: RunnableConfig):
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']
     final_message = config['configurable']['final_message']
-
-    final_message = await bot.copy_message(
-        chat_id=final_message.chat.id,
-        from_chat_id=final_message.chat.id,
-        message_id=final_message.message_id,
-    )
+    task_text = config['configurable']['task_text']
 
     message_text.append('-Обработка от рага WEB\n')
+    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
 
-    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
     return msg
