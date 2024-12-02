@@ -33,8 +33,7 @@ class RegistrationTexts(BaseSettings):
     )
 
     REGISTRATION_NOT_WHITELIST_EMAIL: str = (
-        'Для продолжения регистрации, пожалуйста, '
-        'свяжитесь с командой проекта: @korolkov_m'
+        'Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: Brief@sberbank.ru'
     )
 
     REGISTRATION_NOT_CORPORATE_EMAIL: str = 'Указана не корпоративная почта'
