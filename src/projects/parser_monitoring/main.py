@@ -47,7 +47,7 @@ def main():
     if config.DEBUG:
         while True:
             send_to_monitoring(token)
-            time.sleep(60)
+            time.sleep(config.PENDING_SLEEP_TIME)
 
     # отправка данных по парсерам каждые config.SEND_STATUSES_EVERY_MINUTES минут
     schedule.every(config.SEND_STATUSES_EVERY_MINUTES).minutes.do(send_to_monitoring, token=token)
