@@ -14,7 +14,7 @@ class TextsManagerError(Exception):
 
 class TextsManager:
     """
-    Класс для получения констант из Redis.
+    Класс для работы с константами в Redis.
 
     Должен быть инициализирован при старте приложения с помощью вызова
     асинхронного метода init().
@@ -41,14 +41,20 @@ class TextsManager:
                 )
         self.init_called = True
 
-    async def get(self, item):
+    async def get(self, key: str):
         """Получение константы из Redis"""
         if not self.init_called:
             raise TextsManagerError('Необходимо инициализировать менеджер')
-        value = await redis_client.get(f'{self.PATTERN}{item}')
+        value = await redis_client.get(f'{self.PATTERN}{key}')
         if value is not None:
             return value
-        raise ValueError(f'Значение для "{item}" не найдено в Redis')
+        raise ValueError(f'Значение для "{key}" не найдено в Redis')
+
+    async def set(self, key: str, value: str):
+        """Получение константы из Redis"""
+        if not self.init_called:
+            raise TextsManagerError('Необходимо инициализировать менеджер')
+        value = await redis_client.set(f'{self.PATTERN}{key}', value)
 
 
 texts_manager = TextsManager()

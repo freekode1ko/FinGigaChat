@@ -948,3 +948,12 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
+
+
+class SettingsAliases(Base):
+    __tablename__ = 'settings_aliases'
+    __table_args__ = {'comment': 'Таблица с человекочитаемыми наименованиями констант из Redis'}
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255), unique=True, nullable=False, comment='Наименование константы')
+    name = Column(String(255), nullable=False, comment='Человекочитаемое наименование константы')

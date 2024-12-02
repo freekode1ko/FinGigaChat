@@ -30,6 +30,11 @@ app.mount(
     StaticFiles(directory=str(constants.PROJECT_DIR / 'frontend' / 'static')),
     name="static"
 )
+app.mount(
+    '/sources',
+    StaticFiles(directory=str(constants.PROJECT_DIR / 'sources')),
+    name='sources',
+)
 
 app.add_middleware(
     CORSMiddleware,

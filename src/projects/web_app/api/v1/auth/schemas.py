@@ -7,6 +7,9 @@ class UserData(BaseModel):
 
     user_id: int = Field(..., alias="id")
     user_email: str = Field(..., alias="email")
+    role_id: int = Field(..., alias="role")
+    username: str | None = None
+    full_name: str | None = None
 
 
 class TelegramData(BaseModel):
