@@ -19,6 +19,7 @@ async def get_call_reports_by_name(name: str, config: RunnableConfig) -> str:
     return:
         (str): суммаризованный текст предыдущих взаимодействий с пользователем.
     """
+    print(f'Вызвана функция get_call_reports_by_name с параметром {name}')
     message = config['configurable']['message']
     buttons = config['configurable']['buttons']
     message_text = config['configurable']['message_text']

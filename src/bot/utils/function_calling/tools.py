@@ -2,6 +2,7 @@
 from aiogram import types
 from langchain_gigachat.chat_models import GigaChat
 from langgraph.prebuilt import create_react_agent
+import traceback
 
 from constants.enums import FeatureType
 from utils.decorators import has_access_to_feature
@@ -43,6 +44,8 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
         # Проверка есть ли вызов функции в ответе от модели
         return 'function_call' in res['messages'][1].additional_kwargs
 
-    except Exception:
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
         # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
         return False

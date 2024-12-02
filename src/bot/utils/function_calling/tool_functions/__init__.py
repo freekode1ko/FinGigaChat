@@ -1,7 +1,7 @@
 """Function calling tools"""
 
 from utils.function_calling.tool_functions.call_report.run import get_call_reports_by_name
-from utils.function_calling.tool_functions.cib_info.run import get_cib_reports_by_name
+from utils.function_calling.tool_functions.cib_info.run import get_analytical_reports_by_name
 from utils.function_calling.tool_functions.commodity.run import get_commodity_quote
 from utils.function_calling.tool_functions.help.run import get_help_function
 from utils.function_calling.tool_functions.preparing_meeting.run import get_preparing_for_meeting

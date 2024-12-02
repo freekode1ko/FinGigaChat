@@ -4,6 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langchain_gigachat.chat_models.gigachat import GigaChat
 from langchain_openai import ChatOpenAI
+import traceback
 
 
 from configs.config import giga_scope, giga_model, giga_credentials
@@ -123,4 +124,6 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
         await final_message.edit_text('Произошла ошибка: ' + result)
         await tg_message.answer(str(e))
         print(e)
+        print(traceback.format_exc())
+
     return result
