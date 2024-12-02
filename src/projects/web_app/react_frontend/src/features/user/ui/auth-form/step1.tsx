@@ -25,7 +25,7 @@ export const EmailStep = ({
   onEmailChange: (email: string) => void
   onSuccessNavigate: () => void
 }) => {
-  const [login, {isLoading}] = useLoginMutation()
+  const [login, { isLoading }] = useLoginMutation()
   const trigger = async (values: z.infer<typeof loginFormSchema>) => {
     onEmailChange(values.email)
     try {
@@ -58,7 +58,10 @@ export const EmailStep = ({
               <FormControl>
                 <Input placeholder="me@sberbank.ru" {...field} type="email" />
               </FormControl>
-              <FormDescription>Если вы входите впервые, то сначала вам необходимо зарегистрироваться в боте</FormDescription>
+              <FormDescription>
+                Если вы входите впервые, то сначала вам необходимо
+                зарегистрироваться в боте
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

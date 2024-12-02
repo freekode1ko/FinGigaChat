@@ -19,7 +19,11 @@ const DashboardPage = () => {
   const dispatch = useAppDispatch()
   const { userId } = useParams() as { userId?: string }
   const user = useAppSelector(selectUserData)
-  const { data: initialContent, isLoading, fulfilledTimeStamp } = useGetUserDashboardQuery(
+  const {
+    data: initialContent,
+    isLoading,
+    fulfilledTimeStamp,
+  } = useGetUserDashboardQuery(
     userId
       ? { userId: parseInt(userId) }
       : user
@@ -37,16 +41,24 @@ const DashboardPage = () => {
   }, [data, dispatch])
 
   // fixme : сделать нормальную систему прав
-  const writeAccess = !!((!userId && user) || (userId && user && parseInt(userId) === user.id))
+  const writeAccess = !!(
+    (!userId && user) ||
+    (userId && user && parseInt(userId) === user.id)
+  )
 
   return (
     <>
       <div className="py-2 px-4 border-b border-border flex justify-between items-center gap-4 h-16">
-        <div className='flex flex-col'>
+        <div className="flex flex-col">
           <TypographyH2>
             {userId ? `Дашборд пользователя ${userId}` : 'Мой дашборд'}
           </TypographyH2>
-          <p className='text-muted-foreground'>Последнее обновление: {fulfilledTimeStamp ? new Date(fulfilledTimeStamp).toLocaleTimeString() : 'только что'}</p>
+          <p className="text-muted-foreground">
+            Последнее обновление:{' '}
+            {fulfilledTimeStamp
+              ? new Date(fulfilledTimeStamp).toLocaleTimeString()
+              : 'только что'}
+          </p>
         </div>
         {writeAccess && <ManageDashboardButton />}
       </div>
@@ -59,20 +71,24 @@ const DashboardPage = () => {
               </div>
             ))}
           {(!user || initialContent?.sections.length == 0) && (
-            <div className='pt-10 text-center'>
-              {!user ?
+            <div className="pt-10 text-center">
+              {!user ? (
                 <>
-                <CircleX className='h-10 w-10 mx-auto mb-2' />
-                <TypographyH2>Доступ запрещен</TypographyH2>
-                <Paragraph className='text-muted-foreground mt-2'>Авторизуйтесь на сайте, чтобы создать свой дашборд</Paragraph>
+                  <CircleX className="h-10 w-10 mx-auto mb-2" />
+                  <TypographyH2>Доступ запрещен</TypographyH2>
+                  <Paragraph className="text-muted-foreground mt-2">
+                    Авторизуйтесь на сайте, чтобы создать свой дашборд
+                  </Paragraph>
                 </>
-              :
+              ) : (
                 <>
-                <CircleHelp className='h-10 w-10 mx-auto mb-2' />
-                <TypographyH2>Здесь ничего нет</TypographyH2>
-                <Paragraph className='text-muted-foreground mt-2'>Данный дашборд пуст или не существует</Paragraph>
+                  <CircleHelp className="h-10 w-10 mx-auto mb-2" />
+                  <TypographyH2>Здесь ничего нет</TypographyH2>
+                  <Paragraph className="text-muted-foreground mt-2">
+                    Данный дашборд пуст или не существует
+                  </Paragraph>
                 </>
-              }
+              )}
             </div>
           )}
           {initialContent?.sections.map((section) => (
@@ -82,7 +98,11 @@ const DashboardPage = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                 {section.data.map((item) => (
-                  <DashboardItem key={item.quote_id} item={item} allowEdit={writeAccess} />
+                  <DashboardItem
+                    key={item.quote_id}
+                    item={item}
+                    allowEdit={writeAccess}
+                  />
                 ))}
               </div>
             </div>

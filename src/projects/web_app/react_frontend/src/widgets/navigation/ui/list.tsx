@@ -2,18 +2,16 @@ import { NavLink } from 'react-router-dom'
 
 import { cn } from '@/shared/lib'
 
-import { type MenuItem, menuItems } from '../model'
-
+import { adminItems, type MenuItem, menuItems } from '../model'
 
 const MenuItemLink = ({ item }: { item: MenuItem }) => (
   <NavLink
+    end
     to={item.path}
     className={({ isActive }) =>
       cn(
-        isActive
-          ? 'text-accent'
-          : 'text-foreground hover:text-accent',
-          'font-semibold'
+        isActive ? 'text-accent' : 'text-foreground hover:text-accent',
+        'font-semibold'
       )
     }
   >
@@ -28,12 +26,25 @@ const MenuItemLink = ({ item }: { item: MenuItem }) => (
   Компонент с навигационными кнопками для шапки.
   Представляет из себя горизонтальный список с кнопками для перехода на разные экраны.
 */
-export const NavigationList = () => {
+export const NavigationList = ({
+  dir = 'horizontal',
+  content = 'common',
+}: {
+  dir?: 'horizontal' | 'vertical'
+  content?: 'common' | 'admin'
+}) => {
   return (
-      <nav className='flex w-full items-center py-2 gap-4'>
-        {menuItems.map((item) => (
+    <nav
+      className={cn(
+        'flex items-center py-2 gap-4',
+        dir === 'vertical' && 'flex-col'
+      )}
+    >
+      {content === 'common'
+        ? menuItems.map((item) => <MenuItemLink key={item.path} item={item} />)
+        : adminItems.map((item) => (
             <MenuItemLink key={item.path} item={item} />
-        ))}
-      </nav>
+          ))}
+    </nav>
   )
 }

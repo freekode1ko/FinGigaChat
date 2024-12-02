@@ -10,7 +10,7 @@ const MeetingsPage = () => {
   const { data, isFetching } = useGetMeetingsQuery({ userId: user!.id })
 
   return (
-    <div className='mx-auto lg:max-w-screen-sm pt-5 pb-2 space-y-2'>
+    <div className="mx-auto lg:max-w-screen-sm pt-5 pb-2 space-y-2">
       <div className="py-2 px-4 border-b border-border flex justify-between items-center gap-4 h-16">
         <TypographyH2>Встречи</TypographyH2>
         <AddMeetingButton />

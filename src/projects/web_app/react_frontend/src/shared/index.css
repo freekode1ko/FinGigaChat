@@ -1,3 +1,4 @@
+/*! @import */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,7 +12,7 @@
         --muted-foreground: 217.78, 15.08%, 64.9%;
 
         --popover: 0 0% 100%;
-        --popover-foreground: 222.2 47.4% 11.2%;
+        --popover-foreground: 217.78, 15.08%, 64.9%;
 
         --border: 216.92, 16.05%, 84.12%;
         --input: 216.92, 16.05%, 84.12%;
@@ -44,14 +45,14 @@
         --muted: 217.78, 15.08%, 64.9%;
         --muted-foreground: 215.63, 18.39%, 34.12%;
 
-        --accent: 173.23, 82.61%, 31.57%;
-        --accent-foreground: 210 40% 98%;
-
-        --popover: 224 71% 4%;
-        --popover-foreground: 215 20.2% 65.1%;
+        --popover: 217.5, 28.57%, 5.49%;
+        --popover-foreground: 215.63, 18.39%, 34.12%;
 
         --border: 217.5, 23.53%, 26.67%;
         --input: 217.5, 23.53%, 26.67%;
+
+        --accent: 173.23, 82.61%, 31.57%;
+        --accent-foreground: 210 40% 98%;
 
         --card: 224 71% 4%;
         --card-foreground: 220, 43%, 11%;

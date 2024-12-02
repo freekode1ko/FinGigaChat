@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
   subscriptions: 'subscriptions',
   notes: 'notes',
   auth: 'auth',
+  products: 'products',
+  settings: 'settings',
 }
 
 export const API_TAGS = {
@@ -15,6 +17,8 @@ export const API_TAGS = {
   dashboard: 'DASHBOARD',
   dashboardSubscriptions: 'DASHBOARD_SUBSCRIPTIONS',
   dashboardQuotes: 'DASHBOARD_QUOTES',
+  settings: 'SETTINGS',
+  products: 'PRODUCTS',
 }
 
 export const SITE_MAP = {
@@ -27,6 +31,11 @@ export const SITE_MAP = {
   notes: '/notes',
   profile: '/profile',
   login: '/login',
+}
+
+export const ADMIN_MAP = {
+  home: '/admin',
+  settings: '/admin/settings',
 }
 
 export const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'

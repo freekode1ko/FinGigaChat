@@ -7,7 +7,12 @@ import { GRAPH_POLLING_INTERVAL } from '@/shared/model'
 import { TypographyH2 } from '@/shared/ui'
 
 const PopularDashboardPage = () => {
-  const { data: initialContent, isLoading, isFetching, fulfilledTimeStamp } = useGetPopularDashboardQuery(undefined, {
+  const {
+    data: initialContent,
+    isLoading,
+    isFetching,
+    fulfilledTimeStamp,
+  } = useGetPopularDashboardQuery(undefined, {
     pollingInterval: GRAPH_POLLING_INTERVAL,
     skipPollingIfUnfocused: true,
   })
@@ -15,7 +20,7 @@ const PopularDashboardPage = () => {
   return (
     <>
       <div className="py-2 px-4 border-b border-border flex justify-between items-center gap-4 h-16">
-        <div className='flex flex-col'>
+        <div className="flex flex-col">
           <TypographyH2>Избранные котировки</TypographyH2>
           <p className="text-muted-foreground">
             {isFetching
@@ -39,7 +44,11 @@ const PopularDashboardPage = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                 {section.data.map((item) => (
-                  <DashboardItem key={item.quote_id} item={item} allowEdit={false} />
+                  <DashboardItem
+                    key={item.quote_id}
+                    item={item}
+                    allowEdit={false}
+                  />
                 ))}
               </div>
             </div>

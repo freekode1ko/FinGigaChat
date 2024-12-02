@@ -2,7 +2,11 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { setUser, useLazyGetCurrentUserQuery, useVerifyCodeMutation } from '@/entities/user'
+import {
+  setUser,
+  useLazyGetCurrentUserQuery,
+  useVerifyCodeMutation,
+} from '@/entities/user'
 import { useAppDispatch } from '@/shared/lib'
 import {
   Button,
@@ -29,11 +33,11 @@ export const ConfirmationCodeStep = ({
   onSuccessNavigate: () => void
 }) => {
   const dispatch = useAppDispatch()
-  const [getUser, {isLoading: userLoading}] = useLazyGetCurrentUserQuery()
-  const [verifyCode, {isLoading}] = useVerifyCodeMutation()
+  const [getUser, { isLoading: userLoading }] = useLazyGetCurrentUserQuery()
+  const [verifyCode, { isLoading }] = useVerifyCodeMutation()
   const trigger = async (values: z.infer<typeof confirmationFormSchema>) => {
     try {
-      await verifyCode({...values, email: forEmail}).unwrap()
+      await verifyCode({ ...values, email: forEmail }).unwrap()
       const user = await getUser().unwrap()
       dispatch(setUser(user))
       onSuccessNavigate()
@@ -70,14 +74,19 @@ export const ConfirmationCodeStep = ({
                 </InputOTP>
               </FormControl>
               <FormDescription>
-                Пожалуйста, введите одноразовый пароль, который вы получили по почте.
+                Пожалуйста, введите одноразовый пароль, который вы получили по
+                почте.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={isLoading || userLoading} className="w-full">
-          {(isLoading || userLoading) ? 'Проверяем данные...' : 'Подтвердить'}
+        <Button
+          type="submit"
+          disabled={isLoading || userLoading}
+          className="w-full"
+        >
+          {isLoading || userLoading ? 'Проверяем данные...' : 'Подтвердить'}
         </Button>
       </form>
     </Form>

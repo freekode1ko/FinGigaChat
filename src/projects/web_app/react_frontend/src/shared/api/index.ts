@@ -10,6 +10,11 @@ export const baseApi = createApi({
         ? DEV_API_URL
         : `${window.location.origin}/api/v1`,
   }),
-  tagTypes: [API_TAGS.notes, API_TAGS.meetings, API_TAGS.dashboard],
+  tagTypes: [
+    API_TAGS.notes,
+    API_TAGS.meetings,
+    API_TAGS.dashboard,
+    API_TAGS.settings,
+  ],
   endpoints: () => ({}),
 })

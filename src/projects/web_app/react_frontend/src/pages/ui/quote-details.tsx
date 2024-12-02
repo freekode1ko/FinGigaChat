@@ -68,8 +68,11 @@ const QuoteDetailsPage = () => {
                   theme={theme}
                 />
               ) : (
-                <p className='text-muted-foreground text-center m-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>График по этому инструменту сейчас недоступен</p>
-              )) : (
+                <p className="text-muted-foreground text-center m-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  График по этому инструменту сейчас недоступен
+                </p>
+              )
+            ) : (
               <ChartSkeleton />
             )}
           </div>
@@ -93,7 +96,7 @@ const QuoteDetailsPage = () => {
             )}
           </DrawerHeader>
           <div className="relative h-[220px]">
-          {finData ? (
+            {finData ? (
               finData.data?.length > 2 ? (
                 <CustomChart
                   inputData={mapFinancialData([...finData.data].reverse())}
@@ -102,8 +105,11 @@ const QuoteDetailsPage = () => {
                   theme={theme}
                 />
               ) : (
-                <p className='text-muted-foreground text-center m-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>График по этому инструменту сейчас недоступен</p>
-              )) : (
+                <p className="text-muted-foreground text-center m-0 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  График по этому инструменту сейчас недоступен
+                </p>
+              )
+            ) : (
               <ChartSkeleton />
             )}
           </div>

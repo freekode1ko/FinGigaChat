@@ -1,1 +1,1 @@
-export { Header } from './ui'
+export { AdminHeader, Header } from './ui'

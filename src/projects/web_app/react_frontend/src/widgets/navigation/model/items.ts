@@ -6,10 +6,12 @@ import {
   NewspaperIcon,
   NotebookPen,
   Podcast,
+  Settings,
+  ShoppingCart,
   UserIcon,
 } from 'lucide-react'
 
-import { SITE_MAP } from '@/shared/model'
+import { ADMIN_MAP, SITE_MAP } from '@/shared/model'
 
 export interface MenuItem {
   name: string
@@ -64,5 +66,20 @@ export const profileItems: Array<MenuItem> = [
     path: SITE_MAP.notes,
     icon: NotebookPen,
     description: 'Ведите заметки, чтобы ничего не забыть',
+  },
+]
+
+export const adminItems: Array<MenuItem> = [
+  {
+    name: 'Продукты',
+    path: ADMIN_MAP.home,
+    icon: ShoppingCart,
+    description: 'Управление продуктами',
+  },
+  {
+    name: 'Настройки',
+    path: ADMIN_MAP.settings,
+    icon: Settings,
+    description: 'Управление настройками приложения',
   },
 ]

@@ -34,7 +34,8 @@ const ManageDashboardButton = () => {
   const dispatch = useAppDispatch()
   const user = useAppSelector(selectUserData)
   const subscriptions = useAppSelector(selectDashboardSubscriptions)
-  const [trigger] = quotesApi.endpoints.putDashboardSubscriptionsOnMain.useMutation()
+  const [trigger] =
+    quotesApi.endpoints.putDashboardSubscriptionsOnMain.useMutation()
   const { data } = useGetDashboardSubscriptionsQuery(
     user ? { userId: user.id } : skipToken
   )
@@ -93,8 +94,13 @@ const ManageDashboardButton = () => {
             Выберите, какие котировки отображать на дашборде
           </DialogDescription>
         </DialogHeader>
-        <div className='relative'>
-          <span className={cn(searchQuery.length > 0 ? 'text-text' : 'text-muted-foreground', "absolute inset-y-0 left-3 flex items-center pointer-events-none")}>
+        <div className="relative">
+          <span
+            className={cn(
+              searchQuery.length > 0 ? 'text-text' : 'text-muted-foreground',
+              'absolute inset-y-0 left-3 flex items-center pointer-events-none'
+            )}
+          >
             <Search />
           </span>
           <Input

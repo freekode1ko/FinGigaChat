@@ -1,1 +1,1 @@
-export { type MenuItem, menuItems, profileItems } from './items'
+export { adminItems, type MenuItem, menuItems, profileItems } from './items'

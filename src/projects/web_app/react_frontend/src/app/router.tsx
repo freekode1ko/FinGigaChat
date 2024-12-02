@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import {
+  AdminHomePage,
+  AdminSettingsPage,
   // AnalyticDetailsPage,
   // AnalyticsPage,
   AuthPage,
@@ -14,9 +16,9 @@ import {
   // SubscriptionsPage,
 } from '@/pages/ui'
 import { WelcomePage } from '@/pages/ui/welcome'
-import { SITE_MAP } from '@/shared/model'
+import { ADMIN_MAP, SITE_MAP } from '@/shared/model'
 
-import { baseLayout, emptyLayout } from './layouts'
+import { adminLayout, baseLayout, emptyLayout } from './layouts'
 import { AuthGuard, DevelopGuard } from './router-guard'
 
 export const appRouter = () =>
@@ -27,11 +29,11 @@ export const appRouter = () =>
       children: [
         {
           path: '/',
-          element: <Navigate to='/news' />
+          element: <Navigate to="/news" />,
         },
         {
           path: '/quotes',
-          element: <Navigate to='/news' />
+          element: <Navigate to="/news" />,
         },
         {
           path: SITE_MAP.login,
@@ -39,7 +41,22 @@ export const appRouter = () =>
         },
         {
           path: '/welcome',
-          element: <WelcomePage />
+          element: <WelcomePage />,
+        },
+      ],
+    },
+    {
+      element: adminLayout,
+      path: ADMIN_MAP.home,
+      errorElement: <div>error</div>,
+      children: [
+        {
+          path: '',
+          element: <AdminHomePage />,
+        },
+        {
+          path: 'settings',
+          element: <AdminSettingsPage />,
         },
       ],
     },
@@ -99,7 +116,11 @@ export const appRouter = () =>
         // FIXME
         {
           path: SITE_MAP.notes,
-          element: <AuthGuard><NotesPage /></AuthGuard>,
+          element: (
+            <AuthGuard>
+              <NotesPage />
+            </AuthGuard>
+          ),
         },
         {
           path: SITE_MAP.meetings,

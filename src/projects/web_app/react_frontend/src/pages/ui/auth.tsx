@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { ConfirmationCodeStep,EmailStep } from '@/features/user'
+import { ConfirmationCodeStep, EmailStep } from '@/features/user'
 import { SITE_MAP } from '@/shared/model'
 import { Step, TypographyH2 } from '@/shared/ui'
 
@@ -17,10 +17,12 @@ const AuthPage = () => {
           <Step active={step > 0} />
           <Step active={step > 1} />
         </div>
-        {step === 1 && <EmailStep
-          onEmailChange={setRegEmail}
-          onSuccessNavigate={() => setStep(2)} />
-        }
+        {step === 1 && (
+          <EmailStep
+            onEmailChange={setRegEmail}
+            onSuccessNavigate={() => setStep(2)}
+          />
+        )}
         {step === 2 && (
           <ConfirmationCodeStep
             forEmail={regEmail}

@@ -1,3 +1,4 @@
+export { AdminHomePage, AdminSettingsPage } from './admin'
 export { AnalyticDetailsPage } from './analytic-details'
 export { AnalyticsPage } from './analytics'
 export { AuthPage } from './auth'

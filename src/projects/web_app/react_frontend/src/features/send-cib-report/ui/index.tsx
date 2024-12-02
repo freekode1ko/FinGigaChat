@@ -1,5 +1,5 @@
 import { CheckCheck, LoaderCircle, Send } from 'lucide-react'
-import { toast } from "sonner"
+import { toast } from 'sonner'
 
 import { useSendCibReportMutation } from '@/entities/news'
 import { selectUserData } from '@/entities/user'
@@ -14,9 +14,9 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
   const user = useAppSelector(selectUserData)
   const [trigger, { isSuccess, isLoading }] = useSendCibReportMutation()
 
-  const handleSending = async ({userId}: {userId: number}) => {
+  const handleSending = async ({ userId }: { userId: number }) => {
     try {
-      await trigger({ newsId: newsId, tgUserId: userId }).unwrap();
+      await trigger({ newsId: newsId, tgUserId: userId }).unwrap()
     } catch {
       toast.error('Мы не смогли отправить отчет. Попробуйте позже!')
     }
@@ -26,7 +26,12 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
 
   if (isSuccess)
     return (
-      <Button size="sm" variant="secondary" className='bg-accent/80 hover:bg-accent border border-accent text-text' disabled>
+      <Button
+        size="sm"
+        variant="secondary"
+        className="bg-accent/80 hover:bg-accent border border-accent text-text"
+        disabled
+      >
         <CheckCheck className="h-4 w-4" /> Отчет отправлен
       </Button>
     )
@@ -39,10 +44,7 @@ const SendCIBReportButton = ({ newsId }: { newsId: string }) => {
     )
 
   return (
-    <Button
-      size="sm"
-      onClick={() => handleSending({userId: user.id})}
-    >
+    <Button size="sm" onClick={() => handleSending({ userId: user.id })}>
       <Send className="h-4 w-4" /> Отправить отчет CIB
     </Button>
   )

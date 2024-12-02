@@ -1,6 +1,6 @@
-import {useEffect,useState} from "react"
+import { useEffect, useState } from 'react'
 
-import { Progress } from "../ui"
+import { Progress } from '../ui'
 
 export const AutoProgress = () => {
   const [progress, setProgress] = useState(13)
