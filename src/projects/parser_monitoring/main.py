@@ -13,14 +13,14 @@ from module.formatter import ParserFormatter
 from module.sender import SendToMonitoring
 
 
-def send_to_monitoring(token: str, request_type: RequestType = RequestType.update) -> None:
+def send_to_monitoring(token: str, request_type: RequestType = RequestType.PUT) -> None:
     """Сборка полной статистики по использованию бота"""
     sending_obj = SendToMonitoring(token)
     match request_type:
-        case RequestType.create:
+        case RequestType.POST:
             getter_data_func = parser_source.get_parser_data_for_create
             sending_func = sending_obj.create_parsers
-        case RequestType.update:
+        case RequestType.PUT:
             getter_data_func = parser_source.get_parser_data_for_update
             sending_func = sending_obj.update_parsers_last_parsing_datetime
         case _:
@@ -42,7 +42,7 @@ def main():
     logger.info('Аутентификация в системе мониторинга')
     token = get_access_token()
     logger.info('Инициализация сервиса отправки данных по статусам парсеров')
-    send_to_monitoring(token, RequestType.create)
+    send_to_monitoring(token, RequestType.POST)
 
     if config.DEBUG:
         while True:

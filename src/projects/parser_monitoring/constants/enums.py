@@ -28,5 +28,5 @@ class Environment(str, Enum):
 class RequestType(str, Enum):
     """Тип запроса: на обновление или создание"""
 
-    create = 'post'
-    update = 'put'
+    POST = 'post'
+    PUT = 'put'

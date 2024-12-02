@@ -45,7 +45,7 @@ class ParserFormatter:
         :return:                Список из Pydantic моделей с данными из датафрейма.
         """
         logger.info('Форматирование данных')
-        model = ParserUpdateLastUpdateTime if request_type == RequestType.update else ParserCreate
+        model = ParserUpdateLastUpdateTime if request_type == RequestType.PUT else ParserCreate
         data['name'] = data['name'].astype(str)
 
         if 'last_update_datetime' in data.columns:

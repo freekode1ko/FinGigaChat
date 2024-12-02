@@ -52,7 +52,7 @@ class SendToMonitoring:
     def update_parser(self, parser_name: str, json_data: dict, **kwargs):
         """Парсер уже существует, отправка запроса на обновление"""
         r = self.send_request(
-            method=RequestType.update, url=f'{config.MONITORING_PARSER_URL}/{parser_name}',
+            method=RequestType.PUT, url=f'{config.MONITORING_PARSER_URL}/{parser_name}',
             json_data=json_data, **kwargs,
         )
         if r.status_code == 200:
@@ -66,7 +66,7 @@ class SendToMonitoring:
         for parser in parsers_data:
             json_data = parser.model_dump(mode='json', exclude_none=True)
             r = self.send_request(
-                method=RequestType.create, url=config.MONITORING_PARSER_URL,
+                method=RequestType.POST, url=config.MONITORING_PARSER_URL,
                 json_data=json_data, **kwargs,
             )
 
@@ -88,7 +88,7 @@ class SendToMonitoring:
         """
         logger.info('Отправка данных по обновлению дат парсинга на сервис мониторинг: %s', data)
         r = self.send_request(
-            method=RequestType.update, url=config.MONITORING_PARSER_URL,
+            method=RequestType.PUT, url=config.MONITORING_PARSER_URL,
             json_data=[parser.model_dump(mode='json') for parser in data], **kwargs,
         )
         if r.status_code == 200:
