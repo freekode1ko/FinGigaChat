@@ -28,4 +28,3 @@ def get_access_token() -> str:
 
     logger.info(f'Токен для пользователя {MONITORING_USER_LOGIN} получен')
     return r.json()['access_token']
-
