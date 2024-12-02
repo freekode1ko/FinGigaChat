@@ -59,5 +59,5 @@ async def get_cib_reports_by_name(name: str, config: RunnableConfig) -> str:
             .order_by(models.Research.publication_date)
             .limit(1)
         )
-
+    print(f'Окончен вызов функции get_cib_reports_by_name')
     return reports.scalars().all()

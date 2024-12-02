@@ -1,14 +1,16 @@
 """Тулза по получению отчета для подготовки ко встречи"""
 from aiogram import types
-from humanfriendly.terminal import message
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langchain_gigachat.chat_models.gigachat import GigaChat
+from langchain_openai import ChatOpenAI
+
 
 from configs.config import giga_scope, giga_model, giga_credentials
 from constants import constants
 from main import bot
 from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
+from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, BASE_MODEL
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
 from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
 from utils.function_calling.tool_functions.preparing_meeting.prompts import FINAL_ANSWER_SYSTEM_PROMPT, \
@@ -97,14 +99,19 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
 
         print(f"Логи действий для составления итогового ответа: {result_history}")
         # TODO: так что могут быть баги/странное поведение
-        llm = GigaChat(verbose=True,
-                       credentials=giga_credentials,
-                       scope=giga_scope,
-                       model=giga_model,
-                       verify_ssl_certs=False,
-                       profanity_check=False,
-                       temperature=0.00001
-                       )
+        #llm = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
+        #               verbose=True,
+        #               credentials=giga_credentials,
+        #               scope=giga_scope,
+        #               model=giga_model,
+        #               verify_ssl_certs=False,
+        #               profanity_check=False,
+        #               temperature=0.00001
+        #               )
+        llm = ChatOpenAI(model=BASE_MODEL,
+                         api_key=API_KEY,
+                         base_url=BASE_URL,
+                         temperature=0)
         result = await get_answer_giga(llm,
                                        FINAL_ANSWER_SYSTEM_PROMPT,
                                        FINAL_ANSWER_USER_PROMPT,

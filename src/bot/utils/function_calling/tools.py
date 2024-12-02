@@ -18,7 +18,8 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
 
     :return:             Вызвалась ли функция
     """
-    giga = GigaChat(verbose=True,
+    giga = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
+                    verbose=True,
                     credentials="YTQwNDJmMTUtYTY5NS00NTc3LTkxZmMtOTA4MTlkMTNjMGRiOmQxMWMyYzI1LTdlMzQtNGViNC1hYjMyLWQ0NDk5ODhiNmY1NA==",
                     scope='GIGACHAT_API_CORP',
                     model='GigaChat-Max-preview',

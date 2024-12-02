@@ -53,6 +53,7 @@ async def rag_news(request_text: str, config: RunnableConfig):
     await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     msg = await request_to_rag_api(RagQaBankerClient, request_text)
+    print(f'Окончен вызов функции rag_news')
     return msg
 
 
@@ -79,6 +80,7 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
+    print(f'Окончен вызов функции rag_cib')
     return msg
 
 
@@ -105,4 +107,5 @@ async def rag_web(request_text: str, config: RunnableConfig):
     await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
 
     msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
+    print(f'Окончен вызов функции rag_web')
     return msg

@@ -18,7 +18,8 @@ async def get_recomendation_by_contexts(text: str, config: RunnableConfig):
     """
     print(f'Вызвана функция get_recomendation_by_contexts с параметром: {text}')
 
-    llm = GigaChat(verbose=True,
+    llm = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
+                   verbose=True,
                    credentials=giga_credentials,
                    scope=giga_scope,
                    model=giga_model,
@@ -26,5 +27,6 @@ async def get_recomendation_by_contexts(text: str, config: RunnableConfig):
                    profanity_check=False,
                    temperature=0.00001
                    )
-
-    return await get_answer_giga(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, text)
+    result = await get_answer_giga(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, text)
+    print('Окончен вызов функции get_recomendation_by_contexts')
+    return result
