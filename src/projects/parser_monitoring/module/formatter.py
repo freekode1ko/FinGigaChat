@@ -52,6 +52,6 @@ class ParserFormatter:
             data = data.dropna(subset=['last_update_datetime'])
             data['last_update_datetime'] = data['last_update_datetime'].apply(lambda lud: cls._convert_datetime_to_utc_tz(lud))
 
-        res = [model(**row.to_dict()) for _, row in data.iterrows()]
+        res = [model(**row.dropna()) for _, row in data.iterrows()]
         logger.info('Данные отформатированы')
         return res

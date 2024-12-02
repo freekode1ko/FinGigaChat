@@ -34,6 +34,6 @@ data = [
     {"name": "Полианалист", "period_cron": "30 3 * * *", "alert_timedelta": 4*60*60},
 
     # ARTICLE_ONLINE PARSERS: получение новостей от GigaParsers каждые 20 минут, алерт спустя час
-    {"name": "Отраслевые новости (тг)", "period_cron": "*/20 * * * *", "alert_timedelta": 60*60},
-    {"name": "Новости по сущностям", "period_cron": "*/20 * * * *", "alert_timedelta": 60*60},
+    {"name": "Отраслевые новости (тг)", "period_cron": "*/20 9-17 * * *", "alert_timedelta": 60*60},
+    {"name": "Новости по сущностям", "period_cron": "*/20 9-17 * * *", "alert_timedelta": 60*60},
   ]
