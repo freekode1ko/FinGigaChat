@@ -2,7 +2,9 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from configs import config
+from constants import constants
 from constants.enums import HTTPMethod
+from main import bot
 from utils.sessions import RagWebClient, RagQaBankerClient, RagQaResearchClient
 
 
@@ -38,6 +40,16 @@ async def rag_news(request_text: str, config: RunnableConfig):
     """
     # rag_qa_banker
     print(f"Вызвана функция rag_news с параметром {request_text}")
+
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message = config['configurable']['final_message']
+
+    message_text.append('-Обработка от рага по новостям\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
     msg = await request_to_rag_api(RagQaBankerClient, request_text)
     return msg
 
@@ -52,6 +64,16 @@ async def rag_cib(request_text: str, config: RunnableConfig):
         (str): текст ответа.
     """
     print(f"Вызвана функция rag_cib с параметром {request_text}")
+
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message = config['configurable']['final_message']
+
+    message_text.append('-Обработка от рага по CIB\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
     msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
     return msg
 
@@ -66,5 +88,21 @@ async def rag_web(request_text: str, config: RunnableConfig):
         (str): текст ответа.
     """
     print(f"Вызвана функция rag_web с параметром {request_text}")
+
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message = config['configurable']['final_message']
+
+    final_message = await bot.copy_message(
+        chat_id=final_message.chat.id,
+        from_chat_id=final_message.chat.id,
+        message_id=final_message.message_id,
+    )
+
+    message_text.append('-Обработка от рага WEB\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
     msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
     return msg

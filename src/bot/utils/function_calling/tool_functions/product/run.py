@@ -5,11 +5,13 @@ from fuzzywuzzy import process
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from constants import constants
 from db import models
 from db.database import async_session
 from handlers.products import callbacks
 from handlers.products import get_group_products
 from handlers.products.handler import main_menu
+from main import bot
 from utils.function_calling.tool_functions.product.utils import get_root_id
 from utils.function_calling.tool_functions.utils import parse_runnable_config
 
@@ -102,5 +104,14 @@ async def get_product_recommendation(text: str, config: RunnableConfig):
         (str): строку с рекомендованными продуктами.
     """
     print(f"Вызвана get_product_recomendation с параметром {text}")
+
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message = config['configurable']['final_message']
+
+    message_text.append('-Формирования рекомендаций по продуктам\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
     msg = "Рекомендованные продукты"
     return msg

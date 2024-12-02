@@ -1,11 +1,14 @@
 import sqlalchemy as sa
+from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langchain_gigachat.chat_models.gigachat import GigaChat
 
 from configs.config import giga_chat_url, giga_scope, giga_model, giga_credentials
+from constants import constants
 from db import models
 from db.database import async_session
+from main import bot
 from module.fuzzy_search import FuzzyAlternativeNames
 from utils.function_calling.tool_functions.tool_prompts import SUMMARIZATION_SYSTEM, SUMMARIZATION_USER
 from utils.function_calling.tool_functions.utils import get_answer_giga
@@ -21,6 +24,15 @@ async def get_news_by_name(name: str, config: RunnableConfig):
         (str): Текст с новостями по компании.
     """
     print(f'Вызвана функция get_news_by_name с параметром: {name}')
+
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message: types.Message = config['configurable']['final_message']
+
+    message_text.append('-Обработка новостей\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
     limit = 10
     fuzzy_searcher = FuzzyAlternativeNames()
     clients_id = await fuzzy_searcher.find_subjects_id_by_name(
@@ -50,5 +62,5 @@ async def get_news_by_name(name: str, config: RunnableConfig):
                    profanity_check=False,
                    temperature=0.00001
                    )
-
-    return await get_answer_giga(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, '\n'.join(result))
+    text = await get_answer_giga(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, '\n'.join(result))
+    return text

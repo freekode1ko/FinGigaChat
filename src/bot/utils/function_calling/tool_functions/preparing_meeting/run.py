@@ -1,10 +1,13 @@
 """Тулза по получению отчета для подготовки ко встречи"""
-
+from aiogram import types
+from humanfriendly.terminal import message
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langchain_gigachat.chat_models.gigachat import GigaChat
 
 from configs.config import giga_scope, giga_model, giga_credentials
+from constants import constants
+from main import bot
 from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
 from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
@@ -36,9 +39,21 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
     cnt = 1
     result = ''
     result_history = []
+    tg_message: types.Message = runnable_config['configurable']['message']
+    message_text = '-Начало формирования отчета\n'
+
+    final_message = await tg_message.answer(message_text + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
+    config = EXECUTION_CONFIG['configurable'] = {
+        "message": tg_message,
+        'buttons': [],
+        'message_text': [message_text,],
+        'final_message': final_message,
+    }
+
     try:
         inputs = {"input": INITIAL_QUERY.format(client_name=client_name)}
-        async for event in agent_graph.astream(inputs, config=EXECUTION_CONFIG):
+        async for event in agent_graph.astream(inputs, config=config):
             for k, v in event.items():
                 if k != "__end__":
                     if cnt == 1:
@@ -64,7 +79,6 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                     print()
 
         print(f"Логи действий для составления итогового ответа: {result_history}")
-        # TODO: набросал аггрегацию итогового ответа, но еще не запускал, потому что проблема с апишкой гпт
         # TODO: так что могут быть баги/странное поведение
         llm = GigaChat(verbose=True,
                        credentials=giga_credentials,
@@ -78,6 +92,7 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                                        FINAL_ANSWER_SYSTEM_PROMPT,
                                        FINAL_ANSWER_USER_PROMPT,
                                        '\n'.join(result_history))
+        pass
         # TODO: напечатать пользователю итоговый ответ
         return result
     except Exception as e:

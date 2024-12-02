@@ -16,6 +16,7 @@ DELETE_CROSS = '❌'
 NEXT_PAGE = '➡'
 PREV_PAGE = '⬅'
 STOP = '⛔'
+LOADING_EMOJI_HTML = '<tg-emoji emoji-id="5215484787325676090">🕐</tg-emoji>'
 
 CANCEL_CALLBACK = 'cancel'
 

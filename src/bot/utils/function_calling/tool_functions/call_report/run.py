@@ -3,13 +3,15 @@ from fuzzywuzzy import process
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from constants import constants
 from db import models
 from db.database import async_session
+from main import bot
 from utils.function_calling.tool_functions.utils import parse_runnable_config
 
 
 @tool
-async def get_call_reports_by_name(name: str, runnable_config: RunnableConfig) -> str:
+async def get_call_reports_by_name(name: str, config: RunnableConfig) -> str:
     """Возвращает текст с историей взаимодействия пользователя с данным клиентом.
 
     Args:
@@ -17,8 +19,16 @@ async def get_call_reports_by_name(name: str, runnable_config: RunnableConfig) -
     return:
         (str): суммаризованный текст предыдущих взаимодействий с пользователем.
     """
-    runnable_config = parse_runnable_config(runnable_config)
-    user_id = runnable_config.message.from_user.id
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message = config['configurable']['final_message']
+
+    message_text.append('-Обработка Call Report`ов\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
+    user_id = message.from_user.id
 
     async with async_session() as session:
         # Список клиентов

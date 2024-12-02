@@ -3,7 +3,6 @@ from aiogram import types
 from langchain_gigachat.chat_models import GigaChat
 from langgraph.prebuilt import create_react_agent
 
-from configs import config
 from constants.enums import FeatureType
 from utils.decorators import has_access_to_feature
 from utils.function_calling.tool_functions import tools_functions
@@ -19,14 +18,14 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
 
     :return:             Вызвалась ли функция
     """
-    giga = GigaChat(
-        verbose=True, credentials=config.giga_credentials,
-        scope=config.giga_scope,
-        model=config.giga_model,
-        verify_ssl_certs=False,
-        profanity_check=False,
-        temperature=0.00001
-    )
+    giga = GigaChat(verbose=True,
+                    credentials="YTQwNDJmMTUtYTY5NS00NTc3LTkxZmMtOTA4MTlkMTNjMGRiOmQxMWMyYzI1LTdlMzQtNGViNC1hYjMyLWQ0NDk5ODhiNmY1NA==",
+                    scope='GIGACHAT_API_CORP',
+                    model='GigaChat-Max-preview',
+                    verify_ssl_certs=False,
+                    profanity_check=False,
+                    temperature=0.00001
+                    )
 
     langgraph_agent_executor = create_react_agent(giga, tools_functions)
     conf = LanggraphConfig(message=message)
@@ -46,4 +45,3 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
     except Exception:
         # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
         return False
-

@@ -9,4 +9,6 @@ API_KEY = env.str('OPENAI_API_KEY', default='')
 BASE_URL = 'https://api.vsegpt.ru/v1'
 BASE_MODEL = 'openai/gpt-4o'
 
-EXECUTION_CONFIG = {"recursion_limit": 50}
+EXECUTION_CONFIG = {
+    "recursion_limit": 50,
+}

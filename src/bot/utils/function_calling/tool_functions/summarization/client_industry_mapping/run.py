@@ -12,4 +12,12 @@ async def get_industry_by_client_name(text: str, config: RunnableConfig) -> str:
     return:
         (str): Отрасль клиента
     """
-    return ''
+    match text:
+        case 'Алроса':
+            return 'Сырьевые товары'
+        case 'Норникель':
+            return 'Металлургия'
+        case 'Газпром':
+            return 'Нефть и газ'
+        case _:
+            return 'Отрасль не найдена'

@@ -2,10 +2,13 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 import sqlalchemy as sa
+
+from constants import constants
 from db import models
 from fuzzywuzzy import process
 
 from db.database import async_session
+from main import bot
 
 
 @tool
@@ -20,6 +23,19 @@ async def get_cib_reports_by_name(name: str, config: RunnableConfig) -> str:
     # фин показатели
     # последний отчет
     print(f'Вызвана функция get_cib_reports_by_name с параметром: {name}')
+
+    message = config['configurable']['message']
+    buttons = config['configurable']['buttons']
+    message_text = config['configurable']['message_text']
+    final_message = config['configurable']['final_message']
+
+    message_text.append('-Обработка отчетов с CIB\n')
+
+    await final_message.edit_text(''.join(message_text) + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
+    await final_message.edit_text(final_message.text[:-1] + message_text + f'{constants.LOADING_EMOJI_HTML}', parse_mode='HTML')
+
+
     async with async_session() as session:
         clients = await session.execute(
             sa.select(models.ResearchType.name, models.ResearchType.id)

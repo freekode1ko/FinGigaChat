@@ -140,8 +140,7 @@ async def main():
     warnings.filterwarnings('ignore')
 
     # проверка соответствия между названиями фичей в коде и в базе данных (ролевая модель)
-    await check_relevance_features()
-
+    # await check_relevance_features() # FIXME
     # запускам рассылки
     print('Инициализация бота')
     loop = asyncio.get_event_loop()
