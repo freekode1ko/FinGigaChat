@@ -34,42 +34,42 @@ jobs:
       fail-fast: false
       matrix:
         service:
-          - service_path: 'src/article'
+          - service_path: 'src/projects/article'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/article_online'
+          - service_path: 'src/projects/article_online'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/bot'
+          - service_path: 'src/projects/bot'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/parser_monitoring'
+          - service_path: 'src/projects/parser_monitoring'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/quotes'
+          - service_path: 'src/projects/quotes'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/research'
+          - service_path: 'src/projects/research'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/users_statistics'
+          - service_path: 'src/projects/users_statistics'
             with_flake: true
             with_pylint: false
             with_tests: false
 
-          - service_path: 'src/web_app'
+          - service_path: 'src/projects/web_app'
             with_flake: false
             with_pylint: false
             with_tests: false

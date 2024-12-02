@@ -18,51 +18,14 @@ services:
         volumes:
             - ./db_files/db-data/:/var/lib/postgresql/data/
               #    - ./db_files/backup.sql:/docker-entrypoint-initdb.d/init.sql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -p ${DB_PORT} -h 127.0.0.1"]
+            start_period: 5s
+            interval: 15s
+            timeout: 3s
+            retries: 2
         restart: always
 
-
-    article:
-        build:
-            context: ./src/article
-            dockerfile: Dockerfile
-        container_name: article_container
-        environment:
-            - TZ=Europe/Moscow
-        env_file:
-            - .env
-        command: poetry run python main.py
-        depends_on:
-            - database
-            - bot
-            - bert_client_relevance
-            - bert_commodity_relevance
-        volumes:
-            - ./logs:/code/logs
-            - ./data:/code/data
-            - ./sources:/code/sources/
-        restart: always
-
-
-    article_online:
-        build:
-            context: ./src/article_online
-            dockerfile: Dockerfile
-        container_name: article_online_container
-        environment:
-            - TZ=Europe/Moscow
-        env_file:
-            - .env
-        command: poetry run python main.py
-        depends_on:
-            - database
-            - bot
-            - bert_client_relevance
-            - bert_commodity_relevance
-        volumes:
-            - ./logs:/code/logs
-            - ./data:/code/data
-            - ./sources:/code/sources/
-        restart: always
 
     redis:
         image: "redis:latest"
@@ -78,28 +41,94 @@ services:
             - redis_data:/redis_data
         restart: always
 
+    alembic:
+        build:
+            context: ./build/alembic
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        env_file:
+            - .env
+        depends_on:
+            database:
+                condition: service_healthy
+        command: alembic upgrade head
+        container_name: alembic
+
     bot:
         build:
-            context: ./src/bot
+            context: ./src/projects/bot
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: bot_container
         environment:
             - TZ=Europe/Moscow
         env_file:
             - .env
-        command: bash -c "poetry run alembic upgrade head && poetry run python main.py"
+        command: bash -c "poetry run python main.py"
         depends_on:
-            - database
-            - redis
+            alembic:
+                condition: service_completed_successfully
+            redis:
+                condition: service_started
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
             - ./sources:/code/sources/
         restart: always
 
+    article:
+        build:
+            context: ./src/projects/article
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: article_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+            - bert_client_relevance
+            - bert_commodity_relevance
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
+    article_online:
+        build:
+            context: ./src/projects/article_online
+            additional_contexts:
+                root_dir: ./
+            dockerfile: Dockerfile
+        container_name: article_online_container
+        environment:
+            - TZ=Europe/Moscow
+        env_file:
+            - .env
+        command: poetry run python main.py
+        depends_on:
+            - bot
+            - bert_client_relevance
+            - bert_commodity_relevance
+        volumes:
+            - ./logs:/code/logs
+            - ./data:/code/data
+            - ./sources:/code/sources/
+        restart: always
+
+
     web-app:
         build:
-            context: ./src/web_app
+            context: ./src/projects/web_app
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: web_app_container
         environment:
@@ -110,7 +139,6 @@ services:
             - "443:443"
         command: bash -c "poetry run uvicorn --ssl-keyfile data/certs/privkey.pem --ssl-certfile data/certs/fullchain.pem app:app --host 0.0.0.0 --port 443"
         depends_on:
-            - database
             - bot
         volumes:
             - ./logs:/code/logs
@@ -120,7 +148,9 @@ services:
 
     bert_client_relevance:
         build:
-            context: ./src/bert_relevance
+            context: ./src/projects/bert_relevance
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: bert_client_relevance_container
         environment:
@@ -140,7 +170,9 @@ services:
 
     bert_commodity_relevance:
         build:
-            context: ./src/bert_relevance
+            context: ./src/projects/bert_relevance
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: bert_commodity_relevance_container
         environment:
@@ -160,7 +192,9 @@ services:
 
     web_retriever:
         build:
-            context: ./src/web_retriever
+            context: ./src/projects/web_retriever
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: web_retriever_container
         environment:
@@ -178,7 +212,9 @@ services:
 
     quotes:
         build:
-            context: ./src/quotes
+            context: ./src/projects/quotes
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: quotes_container
         environment:
@@ -187,7 +223,6 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
-            - database
             - bot
             - selenium_firefox
         volumes:
@@ -200,7 +235,9 @@ services:
 
     research:
         build:
-            context: ./src/research
+            context: ./src/projects/research
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: research_container
         environment:
@@ -209,7 +246,6 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
-            - database
             - bot
             - selenium_firefox
         volumes:
@@ -221,7 +257,9 @@ services:
 
     users_statistics:
         build:
-            context: ./src/users_statistics
+            context: ./src/projects/users_statistics
+            additional_contexts:
+                root_dir: ./
             dockerfile: Dockerfile
         container_name: users_statistics_container
         environment:
@@ -230,7 +268,6 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
-            - database
             - bot
         volumes:
             - ./logs:/code/logs
@@ -258,7 +295,9 @@ services:
 
     parser_monitoring:
         build:
-            context: ./src/parser_monitoring
+            context: ./src/projects/parser_monitoring
+            additional_contexts:
+                root_dir: ./
         container_name: parser_monitoring_container
         environment:
             - TZ=Europe/Moscow
@@ -266,7 +305,6 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
-            - database
             - bot
         volumes:
             - ./logs:/code/logs
