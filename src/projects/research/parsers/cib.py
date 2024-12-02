@@ -785,7 +785,7 @@ class ResearchAPIParser:
                 self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
                 new_reports.append(data)
 
-        if len(new_reports):
+        if new_reports:
             parser_source.update_get_datetime_by_source(params['url'], params.get('parser_source_id'))
         return new_reports
 
@@ -973,5 +973,5 @@ class ResearchAPIParser:
         df_parts['money_table'] = df_parts['money_table'].apply(json.dumps)
         # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
         await self.save_fin_summary(df_parts)
-        [parser_source.update_get_datetime_by_source(source=url) for url in urls]
+        parser_source.update_get_datetime_by_sources(urls)
         self._logger.info('Таблица financial_indicators записана')

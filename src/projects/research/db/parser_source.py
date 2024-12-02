@@ -108,3 +108,19 @@ def update_get_datetime_by_source(source: str, id_: int = 0) -> None:
     with database.engine.connect() as conn:
         conn.execute(query)
         conn.commit()
+
+
+def update_get_datetime_by_sources(sources: list[str]) -> None:
+    """
+    Обновляет время сбора данных с источника по ссылке на источник, для нескольких источников.
+
+    :param sources:  Ссылки на источники собираемых данных.
+    """
+    query = sa.update(ParserSource).values(
+        previous_update_datetime=ParserSource.last_update_datetime,
+        last_update_datetime=datetime.datetime.now()
+    ).where(ParserSource.source.in_(sources))
+
+    with database.engine.connect() as conn:
+        conn.execute(query)
+        conn.commit()
