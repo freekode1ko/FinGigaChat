@@ -1,7 +1,7 @@
 """Файл с константами для quotes"""
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from constants.enums import QuotesType
 from db.models import Research
@@ -45,7 +45,7 @@ class ReportParameter(BaseModel):
     type_name: str
     count: Optional[int] = 1
     format: Optional[bool] = False
-    format_args: Optional[dict] = {}
+    format_args: Optional[dict] = Field(default_factory=dict)
     condition: Optional[Any] = True
 
 
