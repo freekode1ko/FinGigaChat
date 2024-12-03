@@ -629,11 +629,11 @@ def deduplicate(logger: Logger.logger,
     return df
 
 
-def get_gigachat_filtering_list(names: str | float, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
+def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
     """
     Фильтрует новости по клиентам и комодам с помощью Gigachat.
 
-    :param names:       Строка из имен клиентов или комодов полученных с помощью регулярки.
+    :param names:       Список из имен клиентов или комодов полученных с помощью регулярки.
     :param text_sum:    Суммаризованный текст новости.
     :param giga_chat:   Gigachat.
     :param name_type:   client or commodity.
@@ -644,7 +644,7 @@ def get_gigachat_filtering_list(names: str | float, text_sum: str, giga_chat: Gi
         return ''
     result = []
     giga_answer = ''
-    for name in names.split(';'):
+    for name in names:
         if str(name):
             if name_type == 'client':
                 system_prompt = prompts.CLIENT_SYSTEM_PROMPT

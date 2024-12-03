@@ -46,3 +46,6 @@ POST_TO_SERVICE_ATTEMPTS = 3
 POST_TO_SERVICE_SLEEP_AFTER_ERROR = 10
 
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'
+
+SUBJECT_ARTICLES = 'Новости по сущностям'
+TG_ARTICLES = 'Отраслевые новости (тг)'
