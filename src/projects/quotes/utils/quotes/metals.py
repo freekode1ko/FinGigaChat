@@ -1,4 +1,5 @@
 """Модуль для получения и обработки данных по металлам (сырью/комодам)."""
+import datetime as dt
 import re
 from typing import Any
 
@@ -42,7 +43,7 @@ class MetalsGetter(QuotesGetter):
         return copper_source
 
     @staticmethod
-    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, Any]:
+    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, dt.datetime]:
         """
         Получение цены товара (меди) от GigaParsers.
 
@@ -52,9 +53,9 @@ class MetalsGetter(QuotesGetter):
         """
         response = session.post(config.GIGAPARSERS_QUOTES)
         response.raise_for_status()
-        data = response.json()['quotes'][0]
-        price, update_date = data.strip().split(',')
-        return name, price, None, update_date
+        data: dict[str, float] = response.json()['bloomberg']['LMCADS03:COM:USD']
+        update_date, price = next(iter(data.items()))
+        return name, price, None, dt.datetime.fromtimestamp(int(update_date))
 
     @staticmethod
     def filter(table_row: list) -> bool:

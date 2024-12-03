@@ -531,6 +531,7 @@ class ResearchAPIParser:
             all_sources = await session.execute(
                 sa.select(
                     ResearchType.id.label('research_type_id'),
+                    ParserSource.id.label('parser_source_id'),
                     ParserSource.source.label('url'),
                     ParserSource.params,
                     ParserSource.alt_names,
@@ -610,7 +611,7 @@ class ResearchAPIParser:
                 session.add(research)
                 await session.commit()
 
-            session.add(
+            session.add(  # TODO: это не должно быть внутри if research is None
                 ResearchResearchType(
                     research_id=research.id,
                     research_type_id=research_type.id
@@ -684,7 +685,7 @@ class ResearchAPIParser:
             'filepath': file_path,
             'header': header,
             'text': report_text,
-            'parse_datetime': datetime.datetime.utcnow(),
+            'parse_datetime': datetime.datetime.now(),
             'publication_date': date,
             'report_id': report_id,
         }
@@ -707,7 +708,10 @@ class ResearchAPIParser:
         :param check_existing: Делать ли проверку на то, что report_id есть в БД
         :returns: list[dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]]
         """
-        self._logger.info('CIB: Начат парсинг страницы %s', params['url'])
+        self._logger.info(
+            f'CIB: Начат парсинг страницы {params["url"]} '
+            f'c psrser_source.id {params.get("parser_source_id", "undefined")}'
+        )
         for i in range(self.REPEAT_TRIES):
             if params['before_link']:
                 # Тут нужно запрашивать отчеты по порядку
@@ -742,8 +746,8 @@ class ResearchAPIParser:
                     status_code = req.status
                 except Exception as e:
                     self._logger.error(
-                        f'Во время запроса отчетов со страницы {params["url"]} и id:{params["research_type_id"]} произошла ошибка: %s',
-                        e
+                        f'Во время запроса отчетов со страницы {params["url"]} '
+                        f'и id:{params["research_type_id"]} произошла ошибка: {e}',
                     )
                     continue
             if status_code == 200 and len(content) > self.content_len:
@@ -780,6 +784,9 @@ class ResearchAPIParser:
                 data = await self.parse_reports_by_id(element_with_id, session, params, **kwargs)
                 self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
                 new_reports.append(data)
+
+        if new_reports:
+            parser_source.update_get_datetime_by_source(params['url'], params.get('parser_source_id'))
         return new_reports
 
     async def parse_weekly_pulse(self, session) -> None:
@@ -929,6 +936,7 @@ class ResearchAPIParser:
         tf = data_transformer.Transformer(self._logger)
         df_parts = pd.DataFrame(columns=metadata_df.columns)
 
+        urls = []
         async with ClientSession() as session:
             for sector_id in sectors_id:
                 self._logger.info(f'Обработка сектора {sector_id} для поиска фин. показателей')
@@ -947,7 +955,7 @@ class ResearchAPIParser:
                         content = await sector_page.text()
                         part = tf.process_fin_summary_table(content, company_id, sector_df)
                         df_parts = pd.concat([part, df_parts], ignore_index=True)
-                        parser_source.update_get_datetime_by_source(source=url)
+                        urls.append(url)
                     except HTTPNoContent as e:
                         self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                     except Exception as e:
@@ -965,4 +973,5 @@ class ResearchAPIParser:
         df_parts['money_table'] = df_parts['money_table'].apply(json.dumps)
         # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
         await self.save_fin_summary(df_parts)
+        parser_source.update_get_datetime_by_sources(urls)
         self._logger.info('Таблица financial_indicators записана')

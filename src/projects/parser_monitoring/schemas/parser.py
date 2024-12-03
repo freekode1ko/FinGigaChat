@@ -1,26 +1,44 @@
-"""Модель статуса парсера"""
-from datetime import datetime
-from enum import Enum
+"""Описание pydantic моделей для взаимодействия с сервисом мониторинга."""
+from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel, Field, NaiveDatetime
+from pydantic import BaseModel, ConfigDict, Field, NaiveDatetime
 
 
-class Statuses(str, Enum):
-    """Виды статусов парсеров"""
+class ParserBase(BaseModel):
+    """Базовая модель парсера."""
 
-    ok = 'В порядке'
-    error = 'Не отвечает'
-    unspecified = 'Информация отсутствует'
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str | int = Field(description='Имя парсера или его id')
+    description: Optional[str] = Field(default=None, description='Описание парсера')
+    is_critical: bool = Field(default=False, description='Флаг, что данные с парсера критично важны для системы источника')
+    period_cron: str = Field(description='Выражение crona')
+    alert_timedelta: Optional[int] = Field(default=None, description='Дельта, после которой отправляется уведомление, секунды')
 
 
-class ParserStatusSend(BaseModel):
-    """Модель статуса парсера при его отправке в сервис мониторинга"""
+class ParserCreate(ParserBase):
+    """Модель для создания парсера."""
 
-    param_value: str = Field(description='Наимпнование парсера (хост или иное)')
-    status: Optional[Statuses] = Field(default=Statuses.unspecified, description='Статус парсера от команды GigaParser')
-    parser_type: str = Field(description='Тип котировки')
-    last_update_datetime: Optional[NaiveDatetime] = Field(default_factory=datetime.now,
-                                                          description='Время последнего обновления (в UTC)')
-    previous_update_datetime: Optional[NaiveDatetime] = Field(default=None,
-                                                              description='Время предыдущего обновления (в UTC)')
+
+class ParserUpdate(ParserBase):
+    """Модель для обновления парсера."""
+
+    name: Optional[str | int] = None
+    description: Optional[str] = None
+    source_system_name: Optional[str] = None
+    is_critical: Optional[bool] = None
+    period_cron: Optional[str] = None
+    alert_timedelta: Optional[int] = None
+    last_update_datetime: Optional[NaiveDatetime] = Field(
+        examples=[datetime.now(tz=timezone.utc).replace(tzinfo=None),],
+        default=None,
+        description='Дата и время последнего обновления'
+    )
+
+
+class ParserUpdateLastUpdateTime(BaseModel):
+    """Модель для обновления даты последнего парсинга парсера."""
+
+    name: str | int
+    last_update_datetime: NaiveDatetime = Field(examples=[datetime.now(tz=timezone.utc).replace(tzinfo=None)])
