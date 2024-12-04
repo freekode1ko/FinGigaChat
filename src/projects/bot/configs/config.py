@@ -91,6 +91,9 @@ POST_TO_SERVICE_TIMEOUT = 90
 research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
 api_key_gpt = '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'
+OPENAI_API_KEY = env.str("OPENAI_API_KEY")
+BASE_GPT_MODEL = 'openai/gpt-4o'
+BASE_GPT_URL = 'https://api.vsegpt.ru/v1'
 
 # Константы для отображения новостей в тг
 TOP_NEWS_COUNT = 3  # кол-во новостей из топ источников

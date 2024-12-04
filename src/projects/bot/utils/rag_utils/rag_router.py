@@ -18,6 +18,7 @@ from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.base import is_has_access_to_feature
 from utils.rag_utils.rag_format import extract_summarization
+from utils.rag_utils.rag_format_llm import get_format_llm
 from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
@@ -172,7 +173,7 @@ class RAGRouter:
         logger.debug(f'{research}')
         banker = extract_summarization(banker, web)
         logger.debug(f'{banker}')
-        response = self.format_combination_answer(banker, research)
+        response = await self.format_combination_answer(banker, research)
         metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
         return {'body': response, 'metadata': metadata}
 
@@ -205,7 +206,7 @@ class RAGRouter:
             metadata.pop('reports_data')
         return metadata
 
-    def format_combination_answer(self, banker: str, research: str) -> str:
+    async def format_combination_answer(self, banker: str, research: str) -> str:
         """
         Форматирование, комбинация ответов от рага по новостям и рага рисерч.
 
@@ -221,4 +222,7 @@ class RAGRouter:
             response += banker
         if research not in self.RAG_BAD_ANSWERS:
             response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
+
+        response = await get_format_llm(response)
+
         return response.strip() or DEFAULT_RAG_ANSWER
