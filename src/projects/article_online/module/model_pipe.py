@@ -747,3 +747,25 @@ def gigachat_filtering(logger: Logger.logger, df: pd.DataFrame) -> pd.DataFrame:
     )
     logger.debug('Окончена фильтрация новостей с GigaChat')
     return df
+
+
+def apply_filter_tg(df: pd.DataFrame, logger: Logger.logger, threshold=0.5) -> pd.DataFrame:
+    """
+    Применяет модели релевантности по клиентам и комодам для тг новостей.
+
+    :param df: датафрейм с новостями
+    :param logger: логгер.
+    :param threshold: порог для отнесения новости к релевантной.
+    :return: датафрейм с новостями с удаленными нерелевантными.
+    """
+    logger.debug("Старт фильтрации новостей по тг")
+    df['client_conf'] = df.apply(lambda x:
+                                 get_prediction_bert_client_relevance(x['text'], x['text'], logger)[1], axis=1)
+    logger.debug("Закончена обработка моделью релевантности по клиентам")
+    df['commodity_conf'] = df.apply(lambda x:
+                                    get_prediction_bert_commodity_relevance(x['text'], x['text'], logger)[1], axis=1)
+    logger.debug("Закончена обработка моделью релевантности по commodity")
+    df['relevant'] = df.apply(lambda x: max(x['client_conf'], x['commodity_conf']) > threshold, axis=1)
+    df = df[df['relevant'] == 1].drop(columns=['client_conf', 'commodity_conf', 'relevant']).reset_index(drop=True)
+    logger.debug("Закончена фильтрация новостей по тг")
+    return df

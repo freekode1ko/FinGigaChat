@@ -124,6 +124,8 @@ def regular_func() -> tuple[str, list, list]:
                 # сохраняем все тг новости без фильтраций
                 saved_tg_df = ap_obj_online.get_tg_articles(ap_obj_online.df_article)
                 df_article = ap_obj_online.update_tg_articles(saved_tg_df, all_tg_articles_df)
+                # фильтруем новости тг
+                df_article = ap_obj_online.filter_tg_news(df_article)
 
                 if not df_article.empty:
                     ap_obj_online.df_article = df_article

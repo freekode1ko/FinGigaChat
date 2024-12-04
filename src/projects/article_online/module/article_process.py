@@ -16,6 +16,7 @@ from module.model_pipe import (
     deduplicate,
     gigachat_filtering,
     model_func_online,
+    apply_filter_tg
 )
 
 
@@ -316,3 +317,12 @@ class ArticleProcess:
             conn.commit()
 
         return article['link'].values.tolist()
+
+    def filter_tg_news(self, df_article: pd.DataFrame) -> pd.DataFrame:
+        """
+        Фильтруем тг новости моделями релевантности. Возвращает исходный датафрейм без нерелевантных новостей
+
+        :param df_article: Датафрейм с тг новостями.
+        :return: Датафрейм с удаленными нерелевантными новостями.
+        """
+        return apply_filter_tg(df_article, self._logger)
