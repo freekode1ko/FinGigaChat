@@ -321,8 +321,9 @@ async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncS
     # обновление кнопки на одну не работающую
     button = [types.InlineKeyboardButton(text=txt, callback_data='none')]
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=[button, ])
-    await callback_query.message.edit_text(text=callback_query.message.text, reply_markup=keyboard,
-                                           disable_web_page_preview=True, parse_mode='HTML')
+    await callback_query.message.edit_reply_markup(
+        text=callback_query.message.message_id, reply_markup=keyboard, disable_web_page_preview=True, parse_mode='HTML'
+    )
 
     # добавим в бд обратную связь от пользователя
     await update_user_reaction(session, callback_query.message.chat.id, callback_query.message.message_id, reaction)
@@ -365,8 +366,8 @@ async def get_full_version_of_research(
     kb = get_few_full_research_kb(kb, reports_data)
 
     try:
-        await callback_query.message.edit_text(
-            text=callback_query.message.text, reply_markup=kb, disable_web_page_preview=True, parse_mode='HTML'
+        await callback_query.message.edit_reply_markup(
+            text=callback_query.message.message_id, reply_markup=kb, disable_web_page_preview=True, parse_mode='HTML'
         )
     except TelegramBadRequest:
         pass
