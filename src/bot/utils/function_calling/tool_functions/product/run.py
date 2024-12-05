@@ -10,7 +10,7 @@ from db.database import async_session
 from handlers.products import callbacks
 from handlers.products import get_group_products
 from handlers.products.handler import main_menu
-from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_RAG_WEB
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_PRODUCT_RECOMMENDATION
 from utils.function_calling.tool_functions.product.utils import get_root_id
 from utils.function_calling.tool_functions.utils import parse_runnable_config, send_status_message_for_agent
 
@@ -104,7 +104,7 @@ async def get_product_recommendation(text: str, config: RunnableConfig):
     """
     print(f"Вызвана get_product_recomendation с параметром {text}")
 
-    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_WEB)
+    await send_status_message_for_agent(config, MESSAGE_RUN_PRODUCT_RECOMMENDATION)
 
     msg = "Рекомендованные продукты"
     return msg

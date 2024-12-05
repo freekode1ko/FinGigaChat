@@ -96,9 +96,11 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                                        FINAL_ANSWER_USER_PROMPT,
                                        '\n'.join(result_history))
         await final_message.edit_text(text=result)
-        for menu in buttons:
-            await tg_message.answer(menu['message'], reply_markup=menu['keyboard'])
-
+        try:
+            for menu in buttons:
+                await tg_message.answer(menu['message'], reply_markup=menu['keyboard'], parse_mode='HTML')
+        except:
+            pass
         # TODO: напечатать пользователю итоговый ответ
         return result
     except Exception as e:
