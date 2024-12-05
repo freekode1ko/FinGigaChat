@@ -7,7 +7,8 @@ from constants import constants
 from db import models
 from db.database import async_session
 from main import bot
-from utils.function_calling.tool_functions.utils import parse_runnable_config
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_CALL_REPORTS
+from utils.function_calling.tool_functions.utils import parse_runnable_config, send_status_message_for_agent
 
 
 @tool
@@ -20,17 +21,10 @@ async def get_call_reports_by_name(name: str, config: RunnableConfig) -> str:
         (str): суммаризованный текст предыдущих взаимодействий с пользователем.
     """
     print(f'Вызвана функция get_call_reports_by_name с параметром {name}')
+
+    await send_status_message_for_agent(config, MESSAGE_RUN_CALL_REPORTS)
+
     message = config['configurable']['message']
-    buttons = config['configurable']['buttons']
-    message_text = config['configurable']['message_text']
-    final_message = config['configurable']['final_message']
-    task_text = config['configurable']['task_text']
-
-    message_text.append('-Обработка Call Report`ов\n')
-    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
-
-    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
-
     user_id = message.from_user.id
 
     async with async_session() as session:

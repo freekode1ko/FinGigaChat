@@ -32,6 +32,7 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
                 'message_text': config['configurable']['message_text'],
                 'final_message': config['configurable']['final_message'],
                 'task_text': task,
+                'tasks_left': len(plan)
             }
         }
     )

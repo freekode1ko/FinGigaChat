@@ -4,14 +4,16 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langchain_gigachat.chat_models.gigachat import GigaChat
 
-from configs.config import giga_chat_url, giga_scope, giga_model, giga_credentials
-from constants import constants
+from configs.config import giga_scope, giga_model, giga_credentials
+from constants.texts import texts_manager
 from db import models
+from db.api.client import get_research_type_id_by_name
 from db.database import async_session
-from main import bot
+from handlers.clients import keyboards
 from module.fuzzy_search import FuzzyAlternativeNames
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_NEWS
 from utils.function_calling.tool_functions.tool_prompts import SUMMARIZATION_SYSTEM, SUMMARIZATION_USER
-from utils.function_calling.tool_functions.utils import get_answer_giga
+from utils.function_calling.tool_functions.utils import get_answer_giga, send_status_message_for_agent
 
 
 @tool
@@ -25,16 +27,8 @@ async def get_news_by_name(name: str, config: RunnableConfig):
     """
     print(f'Вызвана функция get_news_by_name с параметром: {name}')
 
-    message = config['configurable']['message']
-    buttons = config['configurable']['buttons']
-    message_text = config['configurable']['message_text']
-    final_message: types.Message = config['configurable']['final_message']
-    task_text = config['configurable']['task_text']
+    await send_status_message_for_agent(config, MESSAGE_RUN_NEWS)
 
-    message_text.append('-Обработка новостей\n')
-    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
-
-    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
     limit = 10
     fuzzy_searcher = FuzzyAlternativeNames()
     clients_id = await fuzzy_searcher.find_subjects_id_by_name(
@@ -43,7 +37,24 @@ async def get_news_by_name(name: str, config: RunnableConfig):
         score=95,
     )
     if clients_id:
-        client_id = clients_id[0]
+        client_id = clients_id[0]  # больше одного клиента найтись скорее всего не может, если большой процент совпадения стоит
+        try:
+
+            buttons = config['configurable']['buttons']
+            buttons.append(
+                {
+                    'keyboard': keyboards.get_client_menu_kb(
+                        client_id,
+                        current_page=0,
+                        research_type_id=await get_research_type_id_by_name(name),
+                        with_back_button=False,
+                    ),
+                    'message': texts_manager.CLIENT_CHOOSE_SECTION.format(name=name.capitalize())
+                }
+            )
+            print('Добавлено меню в новостях')
+        except Exception as e:
+            print('Не добавлено меню в новостях ;(')
     else:
         return 'Ничего не найдено'
     async with async_session() as session:
@@ -67,4 +78,5 @@ async def get_news_by_name(name: str, config: RunnableConfig):
                    )
     text = await get_answer_giga(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, '\n'.join(result))
     print(f'Закончен вызов функции get_news_by_name')
+
     return text

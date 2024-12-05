@@ -5,6 +5,9 @@ from configs import config
 from constants import constants
 from constants.enums import HTTPMethod
 from main import bot
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_RAG_NEWS, MESSAGE_RUN_RAG_WEB, \
+    MESSAGE_RUN_RAG_WEB, MESSAGE_RUN_RAG_CIB
+from utils.function_calling.tool_functions.utils import send_status_message_for_agent
 from utils.sessions import RagWebClient, RagQaBankerClient, RagQaResearchClient
 
 
@@ -41,16 +44,7 @@ async def rag_news(request_text: str, config: RunnableConfig):
     # rag_qa_banker
     print(f"Вызвана функция rag_news с параметром {request_text}")
 
-    message = config['configurable']['message']
-    buttons = config['configurable']['buttons']
-    message_text = config['configurable']['message_text']
-    final_message = config['configurable']['final_message']
-    task_text = config['configurable']['task_text']
-
-    message_text.append('-Обработка от рага по новостям\n')
-    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
-
-    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
+    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_NEWS)
 
     msg = await request_to_rag_api(RagQaBankerClient, request_text)
     print(f'Окончен вызов функции rag_news')
@@ -68,16 +62,7 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     """
     print(f"Вызвана функция rag_cib с параметром {request_text}")
 
-    message = config['configurable']['message']
-    buttons = config['configurable']['buttons']
-    message_text = config['configurable']['message_text']
-    final_message = config['configurable']['final_message']
-    task_text = config['configurable']['task_text']
-
-    message_text.append('-Обработка от рага по CIB\n')
-    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
-
-    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
+    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_CIB)
 
     msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
     print(f'Окончен вызов функции rag_cib')
@@ -95,16 +80,7 @@ async def rag_web(request_text: str, config: RunnableConfig):
     """
     print(f"Вызвана функция rag_web с параметром {request_text}")
 
-    message = config['configurable']['message']
-    buttons = config['configurable']['buttons']
-    message_text = config['configurable']['message_text']
-    final_message = config['configurable']['final_message']
-    task_text = config['configurable']['task_text']
-
-    message_text.append('-Обработка от рага WEB\n')
-    message_text.append(f'<blockquote expandable>{task_text}</blockquote>\n\n')
-
-    await final_message.edit_text(''.join(message_text) + f'\n...', parse_mode='HTML')
+    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_WEB)
 
     msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
     print(f'Окончен вызов функции rag_web')

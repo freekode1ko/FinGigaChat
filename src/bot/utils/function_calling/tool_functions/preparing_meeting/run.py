@@ -2,15 +2,10 @@
 from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
-from langchain_gigachat.chat_models.gigachat import GigaChat
 from langchain_openai import ChatOpenAI
 import traceback
 
-
-from configs.config import giga_scope, giga_model, giga_credentials
-from constants import constants
-from main import bot
-from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG
+from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG, MESSAGE_AGENT_START
 from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, BASE_MODEL
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
 from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
@@ -43,30 +38,13 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
     result = ''
     result_history = []
     tg_message: types.Message = runnable_config['configurable']['message']
-    message_text = '-Начало формирования отчета\n\n'
 
-    # text = """
-    # <b>bold</b>, <strong>bold</strong>
-    # <i>italic</i>, <em>italic</em>
-    # <u>underline</u>, <ins>underline</ins>
-    # <s>strikethrough</s>, <strike>strikethrough</strike>, <del>strikethrough</del>
-    # <span class="tg-spoiler">spoiler</span>, <tg-spoiler>spoiler</tg-spoiler>
-    # <b>bold <i>italic bold <s>italic bold strikethrough <span class="tg-spoiler">italic bold strikethrough spoiler</span></s> <u>underline italic bold</u></i> bold</b>
-    # <a href="http://www.example.com/">inline URL</a>
-    # <a href="tg://user?id=123456789">inline mention of a user</a>
-    # <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>
-    # <code>inline fixed-width code</code>
-    # <pre>pre-formatted fixed-width code block</pre>
-    # <pre><code class="language-python">pre-formatted fixed-width code block written in the Python programming language</code></pre>
-    # <blockquote>Block quotation started\nBlock quotation continued\nThe last line of the block quotation</blockquote>
-    # <blockquote expandable>Expandable block quotation started\nExpandable block quotation continued\nExpandable block quotation continued\nHidden by default part of the block quotation started\nExpandable block quotation continued\nThe last line of the block quotation</blockquote>
-    # """
-    # final_message = await tg_message.answer(text, parse_mode='HTML')
-    final_message = await tg_message.answer(message_text + f'\n...', parse_mode='HTML')
-
+    message_text = MESSAGE_AGENT_START
+    final_message = await tg_message.answer(message_text + f'...', parse_mode='HTML')
+    buttons = []
     config = EXECUTION_CONFIG['configurable'] = {
         "message": tg_message,
-        'buttons': [],
+        'buttons': buttons,
         'message_text': [message_text,],
         'final_message': final_message,
     }
@@ -118,6 +96,9 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                                        FINAL_ANSWER_USER_PROMPT,
                                        '\n'.join(result_history))
         await final_message.edit_text(text=result)
+        for menu in buttons:
+            await tg_message.answer(menu['message'], reply_markup=menu['keyboard'])
+
         # TODO: напечатать пользователю итоговый ответ
         return result
     except Exception as e:
