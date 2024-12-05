@@ -110,6 +110,7 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                 if first:
                     await final_message.edit_text(text=batch, parse_mode='HTML')
                     first = False
+                    continue
                 await tg_message.answer(text=batch, parse_mode='HTML')
 
         except Exception as e:
