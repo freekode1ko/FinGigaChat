@@ -14,5 +14,6 @@ def create_replanner():
     replanner = replanner_prompt | ChatOpenAI(model=BASE_MODEL,
                                               api_key=API_KEY,
                                               base_url=BASE_URL,
+                                              max_tokens=100000,
                                               temperature=0).with_structured_output(Act)
     return replanner

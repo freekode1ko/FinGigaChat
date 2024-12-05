@@ -90,6 +90,7 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
         llm = ChatOpenAI(model=BASE_MODEL,
                          api_key=API_KEY,
                          base_url=BASE_URL,
+                         max_tokens=100000,
                          temperature=0)
         result = await get_answer_giga(llm,
                                        FINAL_ANSWER_SYSTEM_PROMPT,

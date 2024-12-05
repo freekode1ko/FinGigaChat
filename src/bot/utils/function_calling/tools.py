@@ -19,11 +19,10 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
 
     :return:             Вызвалась ли функция
     """
-    giga = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
-                    verbose=True,
+    giga = GigaChat(verbose=True,
                     credentials="YTQwNDJmMTUtYTY5NS00NTc3LTkxZmMtOTA4MTlkMTNjMGRiOmQxMWMyYzI1LTdlMzQtNGViNC1hYjMyLWQ0NDk5ODhiNmY1NA==",
                     scope='GIGACHAT_API_CORP',
-                    model='GigaChat-Max-preview',
+                    model='GigaChat-Pro',
                     verify_ssl_certs=False,
                     profanity_check=False,
                     temperature=0.00001
@@ -38,13 +37,20 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
             conf.config_to_langgraph_format(),
         )
         # Функция завершилась с ошибкой
-        if res['messages'][2].status == 'error':
+        try:
+            if res['messages'][2].status == 'error':
+                print(res['messages'])
+                return False
+        except Exception as e:
+            print(e)
+            print('Сломался парсинг ответа, надо смотреть руками: ')
             print(res['messages'])
             return False
         # Проверка есть ли вызов функции в ответе от модели
         return 'function_call' in res['messages'][1].additional_kwargs
 
     except Exception as e:
+        print()
         print(e)
         print(traceback.format_exc())
         # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
