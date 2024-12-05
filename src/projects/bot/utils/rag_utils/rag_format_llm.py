@@ -9,6 +9,7 @@ from configs.prompts import RESTYLE_PROMPT_SYSTEM, RESTYLE_PROMPT_USER
 gpt = ChatOpenAI(model=BASE_GPT_MODEL,
                  api_key=OPENAI_API_KEY,
                  base_url=BASE_GPT_URL,
+                 max_tokens=100000,
                  temperature=0)
 
 giga = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
