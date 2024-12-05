@@ -108,9 +108,9 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
             print(batches)
             for batch in batches:
                 if first:
-                    await final_message.edit_text(text=batch, parse_mode='Markdown')
+                    await final_message.edit_text(text=batch, parse_mode='HTML')
                     first = False
-                await tg_message.answer(text=batch, parse_mode='Markdown')
+                await tg_message.answer(text=batch, parse_mode='HTML')
 
         except Exception as e:
             print('Не смогло отправить финальное сообщение')
