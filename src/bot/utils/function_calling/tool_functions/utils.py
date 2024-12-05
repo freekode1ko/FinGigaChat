@@ -73,4 +73,5 @@ async def send_status_message_for_agent(
 
         await final_message.edit_text(''.join(message_text) + f'🦿Осталось <b>{tasks_left}</b> шагов...', parse_mode='HTML')
     except Exception as e:
+
         pass

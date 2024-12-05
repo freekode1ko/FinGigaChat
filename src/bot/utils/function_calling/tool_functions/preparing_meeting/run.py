@@ -5,6 +5,9 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 import traceback
 
+from zmq.backend import first
+
+from utils.base import slit_message
 from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG, MESSAGE_AGENT_START
 from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, BASE_MODEL
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
@@ -96,7 +99,24 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
                                        FINAL_ANSWER_SYSTEM_PROMPT,
                                        FINAL_ANSWER_USER_PROMPT,
                                        '\n'.join(result_history))
-        await final_message.edit_text(text=result)
+
+
+
+        try:
+            first = True
+            batches = slit_message(result)
+            print(batches)
+            for batch in batches:
+                if first:
+                    await final_message.edit_text(text=batch, parse_mode='Markdown')
+                    first = False
+                await tg_message.answer(text=batch, parse_mode='Markdown')
+
+        except Exception as e:
+            print('Не смогло отправить финальное сообщение')
+            print(e)
+
+
         try:
             for menu in buttons:
                 await tg_message.answer(menu['message'], reply_markup=menu['keyboard'], parse_mode='HTML')

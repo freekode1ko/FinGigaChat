@@ -28,6 +28,35 @@ from log.bot_logger import user_logger
 from log.logger_base import Logger
 
 
+def slit_message(
+        msg: str,
+        delimiter: str = '\n\n',
+        prefix: str = ''):
+    """
+    Функция, которая делит сообщение на несколько если оно длинное
+
+    :param msg: Текст для отправки или подпись к файлу
+    :param delimiter: Разделитель текста
+    :param prefix: Начало каждого нового сообщения
+
+    """
+    batches = []
+    current_batch = prefix
+    max_batch_length = constants.TELEGRAM_MESSAGE_MAX_LEN
+
+    for paragraph in msg.split(delimiter):
+        if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
+            current_batch += paragraph + delimiter
+        else:
+            batches.append(current_batch.strip())
+            current_batch = prefix + paragraph + delimiter
+
+    if current_batch:
+        batches.append(current_batch.strip())
+
+    return batches
+
+
 async def bot_send_msg(
         bot: Bot,
         user_id: int | str,
@@ -45,22 +74,9 @@ async def bot_send_msg(
     :param prefix: Начало каждого нового сообщения
     return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
-    batches = []
-    current_batch = prefix
-    max_batch_length = constants.TELEGRAM_MESSAGE_MAX_LEN
     messages: list[types.Message] = []
 
-    for paragraph in msg.split(delimiter):
-        if len(current_batch) + len(paragraph) + len(delimiter) < max_batch_length:
-            current_batch += paragraph + delimiter
-        else:
-            batches.append(current_batch.strip())
-            current_batch = prefix + paragraph + delimiter
-
-    if current_batch:
-        batches.append(current_batch.strip())
-
-    for batch in batches:
+    for batch in slit_message(msg, delimiter, prefix):
         msg = await bot.send_message(
             user_id,
             text=batch,
