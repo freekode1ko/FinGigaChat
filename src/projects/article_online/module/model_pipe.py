@@ -8,8 +8,8 @@ from re import search
 from typing import Any, Optional
 
 import pandas as pd
-import pymorphy2
 import requests
+from pymorphy3 import MorphAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
@@ -93,7 +93,7 @@ TOP_SOURCES = '(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)
 
 MAX_LEN_INPUT = 6000
 
-morph = pymorphy2.MorphAnalyzer()
+morph = MorphAnalyzer()
 
 client_names = pd.read_excel(PROJECT_DIR / ALTERNATIVE_NAME_FILE.format('client'))
 commodity_names_ = pd.read_excel(PROJECT_DIR / ALTERNATIVE_NAME_FILE.format('commodity'))

@@ -7,7 +7,7 @@
 """
 from typing import Callable, Iterable
 
-from pymorphy2 import MorphAnalyzer
+from pymorphy3 import MorphAnalyzer
 
 from handlers.news import callback_data_factories
 
