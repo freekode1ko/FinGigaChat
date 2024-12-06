@@ -10,7 +10,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 from configs import config
-from constants import constants, quotes
+from constants import constants, enums, quotes
 from constants.texts import texts_manager
 
 
@@ -65,23 +65,23 @@ def get_menu_kb() -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(
         text='FX',
-        callback_data=quotes.FX,
+        callback_data=enums.QuotesType.FX,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='FI',
-        callback_data=quotes.FI,
+        callback_data=enums.QuotesType.FI,
     ))
     # keyboard.row(types.InlineKeyboardButton(
     #     text='Equity',
-    #     callback_data=quotes.EQUITY,
+    #     callback_data=enums.QuotesType.EQUITY,
     # ))
     keyboard.row(types.InlineKeyboardButton(
         text='Commodities',
-        callback_data=quotes.COMMODITIES,
+        callback_data=enums.QuotesType.COMMODITIES,
     ))
     keyboard.row(types.InlineKeyboardButton(
         text='Ставки',
-        callback_data=quotes.ECO,
+        callback_data=enums.QuotesType.ECO,
     ))
     if literal_eval(texts_manager.WEBAPP_SHOW_BUTTONS):
         keyboard.row(types.InlineKeyboardButton(

@@ -171,35 +171,25 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
 
 
 async def __sent_photo_and_msg(
-    message: types.Message,
-    photo: types.InputFile | str | None = None,
-    day: list[list] = None,
-    month: list[list] = None,
-    title: str | None = '',
-    source: str = '',
+        message: types.Message,
+        photo: types.InputFile | str | None = None,
+        reports: list[list[str]] | None = None,
+        title: str | None = ''
 ) -> None:
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
 
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param photo: Фотокарточка для отправки
-    :param day: Дневной отчет в формате текста
-    :param month: Месячный отчет в формате текста
-    :param title: Подпись к фотокарточке
-    :param source: Не используется на данный момент
-    return None
+    :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param photo:       Фотокарточка для отправки
+    :param reports:     Список отчетов (заголовок, текст, дата)
+    :param title:       Подпись к фотокарточке
     """
-    batch_size = 3500
-    if month:  # 'Публикация месяца
-        for month_rev in month[::-1]:
-            month_rev_text = month_rev[1].replace('Сегодня', 'Сегодня ({})'.format(month_rev[2]))
-            month_rev_text = month_rev_text.replace('cегодня', 'cегодня ({})'.format(month_rev[2]))
-            await __text_splitter(message, month_rev_text, month_rev[0], month_rev[2], batch_size)
-    if day:  # Публикация дня
-        for day_rev in day[::-1]:
-            day_rev_text = day_rev[1].replace('Сегодня', 'Сегодня ({})'.format(day_rev[2]))
-            day_rev_text = day_rev_text.replace('cегодня', 'cегодня ({})'.format(day_rev[2]))
-            await __text_splitter(message, day_rev_text, day_rev[0], day_rev[2], batch_size)
+    if reports:
+        for report in reports:
+            header, text, date_ = report
+            text = re.sub(r'[Сс]егодня', f'\\g<0> ({date_})', text)
+            await __text_splitter(message, text, header, date_, batch_size=3_500)
+
     if photo:
         await message.answer_photo(
             photo,
