@@ -102,13 +102,13 @@ async def get_group_products(
     """
     Получение меню продукты
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
+    :param tg_obj: Объект, содержащий в себе информацию по отправителю, чату и сообщению
     :param callback_data: содержит информацию о текущем меню, группе, продукте, формате выдачи предложений
     :param product_id: Айди Product, если вызов функции из Function Calling
     """
-    chat_id, user_msg = (tg_obj.chat.id, tg_obj.text
+    chat_id, user_msg = ((tg_obj.chat.id, tg_obj.text)
                          if isinstance(tg_obj, types.Message)
-                         else tg_obj.message.chat.id, callback_data.pack())
+                         else (tg_obj.message.chat.id, callback_data.pack()))
     full_name = tg_obj.from_user.full_name
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
