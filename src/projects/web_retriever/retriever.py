@@ -11,7 +11,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 from configs.config import *
 from configs.text_constants import *
-from format import format_answer
+from format import format_answer, contains_bad_answer
 
 
 class Question(BaseModel):
@@ -185,7 +185,6 @@ class WebRetriever:
         :param: debug. Если True, то возвращает и обычный и отформатированный ответ одновременно.
         :return: Самый широкий ответ из нескольких цепочек.
         """
-        # TODO: добавить еще один интернет движок запасной, потому что дак дак может отваливаться
         self.logger.info(f'Старт обработки запроса {query}.')
         try:
             contexts = self.search_engine_first.results(query, max_results=N_WIDE_ANSWER)
@@ -193,7 +192,7 @@ class WebRetriever:
         except Exception as e:
             self.logger.error(f"Не получены ответы от первого движка по причине: {e}")
             try:
-                contexts = self.search_engine_second.results(query)['organic']
+                contexts = (await self.search_engine_second.aresults(query))['organic']
                 self.logger.info(f"Получены ответы от второго движка")
             except Exception as e:
                 self.logger.error(f"Не получены ответы от второго движка по причине: {e}")
@@ -210,7 +209,7 @@ class WebRetriever:
         self.logger.info(f"Обработан запрос: {query}, с ответом: {answer_and_links}")
         if debug:
             return [answer_and_links[0], format_answer(answer_and_links[0], answer_and_links[1])]
-        if answer_and_links[0] == DEFAULT_ANSWER:
+        if contains_bad_answer(answer_and_links[0]):
             return [DEFAULT_ANSWER]
         if output_format == 'tg':
             answer_and_links = format_answer(answer_and_links[0], answer_and_links[1])

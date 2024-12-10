@@ -8,6 +8,21 @@ from configs.text_constants import DEFAULT_ANSWER, USELESS_FRASES, SOURCES_PATTE
 
 pattern = re.compile(r'(</a>)(?!\n\n)(\s*[^,])')
 
+BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)|(в базе знаний нет)|(не могу ответить)|' \
+              '(в предоставленных отрывках нет)|(рекомендуется обратиться)|(не указано в )|(не указаны в )' \
+              '|(отсутствуют в представленных документах)|(нет информации)|(информации нет)'
+
+
+def contains_bad_answer(answer: str, bad_pattern: str = BAD_PATTERN) -> bool:
+    """
+    Возвращает заглушку, если итоговый ответ содержит плохой паттерн.
+
+    :param answer: собранный финальный ответ для валидации.
+    :param bad_pattern: регулярка с фрагментами плохого ответа.
+    :return: Исходный ответ или заглушка.
+    """
+    return bool(re.findall(bad_pattern, answer))
+
 
 def is_contain_link(answer: str) -> bool:
     """
