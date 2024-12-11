@@ -326,6 +326,7 @@ services:
           - ./data/certs:/certs:ro
         command: /bin/bash -c "envsubst < /tmp/base.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
         environment:
+          - DOMAIN_NAME=${DOMAIN_NAME}
           - PORT_ARTICLE=${PORT_ARTICLE}
           - PORT_ARTICLE_ONLINE=${PORT_ARTICLE_ONLINE}
           - PORT_BOT=${PORT_BOT}
