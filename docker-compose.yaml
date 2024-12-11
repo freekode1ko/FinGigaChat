@@ -162,8 +162,8 @@ services:
         env_file:
             - .env
         ports:
-            - "444:444"
-        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 444"
+            - ${PORT_BERT_CLIENT_RELEVANCE}:${PORT_BERT_CLIENT_RELEVANCE}
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port ${PORT_BERT_CLIENT_RELEVANCE}"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -184,8 +184,8 @@ services:
         env_file:
             - .env
         ports:
-            - "446:446"
-        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 446"
+            - ${PORT_BERT_COMMODITY_RELEVANCE}:${PORT_BERT_COMMODITY_RELEVANCE}
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port ${PORT_BERT_COMMODITY_RELEVANCE}"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -204,7 +204,7 @@ services:
         env_file:
             - .env
         ports:
-            - ${WEB_RETRIEVER_PORT}:${WEB_RETRIEVER_PORT}
+            - ${PORT_WEB_RETRIEVER}:${PORT_WEB_RETRIEVER}
         command: poetry run python main.py
         volumes:
             - ./logs:/code/logs
