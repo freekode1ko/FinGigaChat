@@ -25,18 +25,19 @@ agent_graph = create_graph_executable()
 
 
 @tool
-async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableConfig) -> str:
+async def get_preparing_for_meeting(client_name: str, special_info: str, runnable_config: RunnableConfig) -> str:
     """Если пользователь просит составить отчет по подготовке ко встречи, создает отчет и возвращает ему его.
     Примеры того, как могут выглядеть сообщения пользователя, для которых нужно вызывать эту функцию:
     "Составь отчет для встречи с ..." / "Сделай отчет ко встречи с ..." / "Подготовка ко встрече с ...."
 
     Args:
         client_name (str): Название компании клиента в именительном падеже с маленькой буквы.
+        special_info (str): Специальная доп информация, извлеченная из сообщения менеджера, о том, как должен быть сделан отчет.
         runnable_config (RunnableConfig): Конфиг.
     return:
         (str): Сформированный отчет для встречи менеджера с клиентом.
     """
-    print(f"Вызвана функция подготовки ко встречи с параметром {client_name}")
+    print(f"Вызвана функция подготовки ко встречи с параметрами: {client_name}, {special_info}")
     cnt = 1
     result = ''
     result_history = []
@@ -53,7 +54,7 @@ async def get_preparing_for_meeting(client_name: str, runnable_config: RunnableC
     }
 
     try:
-        inputs = {"input": INITIAL_QUERY.format(client_name=client_name)}
+        inputs = {"input": INITIAL_QUERY.format(client_name=client_name, special_info=special_info)}
         async for event in agent_graph.astream(inputs, config=config):
             for k, v in event.items():
                 if k != "__end__":

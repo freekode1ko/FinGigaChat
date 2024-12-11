@@ -43,7 +43,7 @@ async def get_analytical_reports_by_name(name: str, config: RunnableConfig) -> s
                 .filter(
                     models.ResearchResearchType.research_type_id == research_type_id,
                 )
-                .order_by(models.Research.publication_date)
+                .order_by(models.Research.publication_date.desc())
                 .limit(1)
             )
     except Exception as e:

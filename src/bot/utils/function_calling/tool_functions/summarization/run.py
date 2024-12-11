@@ -67,8 +67,7 @@ async def get_news_by_name(name: str, config: RunnableConfig):
         )
     result = client_articles.scalars().all()
 
-    llm = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
-                   verbose=True,
+    llm = GigaChat(verbose=True,
                    credentials=giga_credentials,
                    scope=giga_scope,
                    model=giga_model,
