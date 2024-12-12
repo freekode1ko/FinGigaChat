@@ -226,7 +226,7 @@ async def ask_with_dialog(
         history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
         result = await _get_response(user_id, full_name, user_query, True, history_query)
         retriever_type, response, metadata = result
-        reports_data = metadata.get('reports_data') if metadata else None
+        reports_data = metadata.get('reports_data_research') if metadata else None
 
         msg = await message.answer(
             text=format_response(response),
@@ -265,8 +265,7 @@ async def ask_without_dialog(
     :param session:           Асинхронная сессия базы данных.
     """
     async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
-        chat_id = call.message.chat.id
-        user_id = call.message.from_user.id
+        chat_id = call.message.chat.id  # call.message.from_user.id != chat_id, но в бд хранится user_id равный chat_id
         full_name = call.message.from_user.full_name
         user_query = await get_last_user_msg(chat_id)
         if not user_query:
@@ -276,13 +275,13 @@ async def ask_without_dialog(
         if callback_data.rephrase_query:
             history_query = await get_history_query(chat_id)
             rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
-            result = await _get_response(user_id, full_name, user_query, True, rephrase_query)
+            result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
         else:
             rephrase_query = ''
-            result = await _get_response(user_id, full_name, user_query, use_rephrase=False)
+            result = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
 
         retriever_type, response, metadata = result
-        reports_data = metadata.get('reports_data') if metadata else None
+        reports_data = metadata.get('reports_data_research') if metadata else None
         with_reports = reports_data is not None
         if rephrase_query:
             kb = get_feedback_regenerate_kb(initially_query=True, with_reports=with_reports)

@@ -5,6 +5,8 @@ from copy import copy
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from constants.constants import DEFAULT_RAG_ANSWER
+
 BEGINNING_LEN = 30
 
 BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)|(в базе знаний нет)|(не могу ответить)|' \
@@ -205,3 +207,25 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
             ans.append(candidate)
     # чистим итоговый ответ от вводных слов окончания параграфов
     return '\n\n'.join(filtered for i in ans if (filtered := filter_endings(i)))
+
+
+def format_answer_from_rag_analytical(research_response: str, analytical_response: str) -> str:
+    """
+    Объединить ответы от аналитического РАГа.
+
+    :param research_response:   Ответ от аналитического Рага по данным Research.
+    :param analytical_response: Ответ от аналитического Рага по данным Analytical Hub.
+    :return:                    Объединенный ответ.
+    """
+    response = ''
+    prefix = '<b>Analytical hub:</b>\n'
+
+    if research_response and research_response != DEFAULT_RAG_ANSWER:
+        prefix = '\n\n\n' + prefix
+        response = '<b>Research:</b>\n' + research_response
+    if analytical_response and analytical_response != DEFAULT_RAG_ANSWER:
+        response += prefix + analytical_response
+
+    if not response:
+        return DEFAULT_RAG_ANSWER
+    return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', response)

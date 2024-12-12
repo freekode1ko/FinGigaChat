@@ -17,8 +17,8 @@ from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.base import is_has_access_to_feature
-from utils.rag_utils.rag_format import extract_summarization
-from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
+from utils.rag_utils.rag_format import extract_summarization, format_answer_from_rag_analytical
+from utils.sessions import RagQaAnalyticalClient, RagQaBankerClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
 
@@ -101,12 +101,12 @@ class RAGRouter:
         session = RagStateSupportClient().session
         return await self._request_to_rag_api(session, **self.req_kwargs)
 
-    async def rag_qa_research(self) -> dict[str, Any]:
-        """Создание сессии для API по ВОС CIB Research и получение ответа."""
+    async def rag_qa_analytical(self) -> dict[str, Any]:
+        """Создание сессии для API по ВОС аналитических обзоров банка и получение ответа."""
         async with async_session() as ses:
             if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.rag_research):
-                return {'body': DEFAULT_RAG_ANSWER}
-        session = RagQaResearchClient().session
+                return {'body_research': DEFAULT_RAG_ANSWER, 'body_analytical_hub': DEFAULT_RAG_ANSWER}
+        session = RagQaAnalyticalClient().session
         req_kwargs = deepcopy(self.req_kwargs)
         req_kwargs['json']['with_metadata'] = True
         return await self._request_to_rag_api(session, **req_kwargs)
@@ -159,21 +159,20 @@ class RAGRouter:
 
     async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker_json, research_json, web_json = await asyncio.gather(
-            self.rag_qa_banker(), self.rag_qa_research(), self.rag_web()
+        banker_json, analytical_json, web_json = await asyncio.gather(
+            self.rag_qa_banker(), self.rag_qa_analytical(), self.rag_web()
         )
-        banker, research, web = banker_json['body'], research_json['body'], web_json['body']
+        banker, web = banker_json['body'], web_json['body']
+        research, analytical_hub = analytical_json['body_research'], analytical_json['body_analytical_hub']
+        analytical = format_answer_from_rag_analytical(research, analytical_hub)
         logger.debug('Тексты до объединения ответов:')
-        logger.debug('Ответ новостного рага:')
-        logger.debug(f'{banker}')
-        logger.debug('Ответ веб ретривера:')
-        logger.debug(f'{web}')
-        logger.debug('Ответ рага по ресерчу:')
-        logger.debug(f'{research}')
+        logger.debug(f'Ответ новостного рага: {banker}')
+        logger.debug(f'Ответ веб ретривера: {web}')
+        logger.debug(f'Ответ рага по аналитическим обзорам: {analytical}')
         banker = extract_summarization(banker, web)
-        logger.debug(f'{banker}')
-        response = self.format_combination_answer(banker, research)
-        metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
+        logger.debug(f'Ответ после объединения новостного и веб: {banker}')
+        response = self.format_combination_answer(banker, analytical)
+        metadata = await self.prepare_reports_data(research, analytical_json.get('metadata'))
         return {'body': response, 'metadata': metadata}
 
     async def prepare_reports_data(
@@ -184,14 +183,14 @@ class RAGRouter:
         """
         Подготавливает данные отчетов, добавляя к ним id отчета.
 
-        :param answer:      Ответ от Рага.
+        :param answer:      Ответ от Рага по данным research.
         :param metadata:    Исходные метаданные.
         :return:            Обновленные метаданные с id отчетов.
         """
-        if answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data' not in metadata:
+        if not answer or answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data_research' not in metadata:
             return
 
-        reports_data = metadata['reports_data']
+        reports_data = metadata['reports_data_research']
         has_ids = False
         for report in reports_data:
             research_id = await research_db.get_research_id_by_report_id(report.get('report_id'))
@@ -200,9 +199,9 @@ class RAGRouter:
                 report['research_id'] = research_id
 
         if has_ids:
-            metadata['reports_data'] = reports_data
+            metadata['reports_data_research'] = reports_data
         else:
-            metadata.pop('reports_data')
+            metadata.pop('reports_data_research')
         return metadata
 
     def format_combination_answer(self, banker: str, research: str) -> str:
