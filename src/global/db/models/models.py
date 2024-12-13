@@ -262,6 +262,7 @@ class RegisteredUser(Base):
     role_id = Column(ForeignKey('user_role.id', ondelete='RESTRICT', onupdate='CASCADE'))
 
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    message = relationship('Message', back_populates='user')
     telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
