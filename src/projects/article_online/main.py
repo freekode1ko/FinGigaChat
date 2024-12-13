@@ -6,17 +6,18 @@ import warnings
 
 import pandas as pd
 import requests
+from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from configs import config
 from configs.config import BASE_GIGAPARSER_URL
 from log import sentry
 from log.logger_base import selector_logger
 from module.article_process import ArticleProcess
+from module.monitoring import update_parsing_status, update_saving_status
 from module.utils import add_links_to_queue
 
 MAX_NEWS_BATCH_SIZE = 1000
-MINUTE = 60
-MINUTES_TO_SLEEP = 20
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
@@ -103,6 +104,7 @@ def regular_func() -> tuple[str, list, list]:
             if not df_article.empty:
                 print('Старт получения новостей из тг-каналов из общего списка новостей')
                 all_tg_articles_df = ap_obj_online.get_tg_articles(df_article)
+                update_parsing_status(len(df_article), len(all_tg_articles_df))
 
                 logger.info('Старт обработки новостей с помощью моделей')
                 print('Старт обработки новостей с помощью моделей')
@@ -170,36 +172,41 @@ def post_ids(ids: str) -> None:
         logger.error('Ошибка при отправке id обработанных новостей на сервер: %s', e)
 
 
-if __name__ == '__main__':
-    sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
-    warnings.filterwarnings('ignore')
-    # инициализируем логгер
-    logger = selector_logger(config.log_file)
+def main():
+    """Запуск функции по обновлению новостей, сохранение результатов."""
     try:
-        # запускаем периодическое получение/обработку новостей
-        ap_obj_online = ArticleProcess(logger)
-        while True:
-            start_time = time.time()
-            now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
-            start_msg = f'Запуск pipeline с новостями в {now_str}'
-            logger.info(start_msg)
-            print(start_msg)
+        start_time = time.time()
+        now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
+        start_msg = f'Запуск pipeline с новостями в {now_str}'
+        logger.info(start_msg)
+        print(start_msg)
 
-            gotten_ids, new_subject_links, new_tg_links = regular_func()
-            post_ids(gotten_ids)  # отправка giga parsers полученных айди
-            add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
+        gotten_ids, new_subject_links, new_tg_links = regular_func()
+        post_ids(gotten_ids)  # отправка giga parsers полученных айди
+        update_saving_status(new_subject_links, new_tg_links)
+        add_links_to_queue(new_subject_links, new_tg_links)  # сохранение ссылок новых новостей
 
-            now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
-            work_time = time.time() - start_time
-            end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
-            print(end_msg + '\nОжидайте\n')
-            logger.info(end_msg)
-            for i in range(MINUTES_TO_SLEEP):
-                time.sleep(MINUTE)
-                logger.debug('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
-                print('Ожидание: {}/{} минут'.format(i + 1, MINUTES_TO_SLEEP))
-    except KeyboardInterrupt:
-        pass
+        now_str = datetime.datetime.now().strftime(config.BASE_DATETIME_FORMAT)
+        work_time = time.time() - start_time
+        end_msg = f'Конец pipeline с новостями в {now_str}, завершено за {work_time:.3f} секунд'
+        print(end_msg + '\nОжидайте\n')
+        logger.info(end_msg)
     except Exception as expn:
         logger.error(expn)
         print(expn)
+
+
+if __name__ == '__main__':
+    sentry.init_sentry(dsn=config.SENTRY_NEWS_PARSER_DSN)
+    warnings.filterwarnings('ignore')
+
+    logger = selector_logger(config.log_file)
+    ap_obj_online = ArticleProcess(logger)
+
+    scheduler = BlockingScheduler()
+    trigger = CronTrigger(minute='0,20,40')
+    scheduler.add_job(main, trigger=trigger)
+    try:
+        scheduler.start()
+    except KeyboardInterrupt:
+        scheduler.shutdown()

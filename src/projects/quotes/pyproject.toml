@@ -6,11 +6,11 @@ authors = ["Your Name <you@example.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-asyncpg = "^0.29.0"
 python = "^3.10"
+apscheduler = "^3.10.4"
+asyncpg = "^0.29.0"
 aiogram = "^3.4.1"
 beautifulsoup4 = "^4.12.3"
-click = "^8.1.7"
 environs = "^11.0.0"
 html5lib = "^1.1"
 lxml = "^5.1.0"

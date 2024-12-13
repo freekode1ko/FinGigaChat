@@ -9,25 +9,18 @@ import asyncio
 import datetime
 import json
 import os
-import random
 import re
 import time
 from pathlib import Path
 
 import pandas as pd
 import requests
-import selenium
-import selenium.webdriver as wb
 import sqlalchemy as sa
 from aiohttp import ClientSession
 from aiohttp.web_exceptions import HTTPNoContent
 from bs4 import BeautifulSoup
 from pdf2image import convert_from_path
 from PIL import Image
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
 from sqlalchemy.dialects.postgresql import insert as insert_psql
 
 from configs import config
@@ -36,432 +29,6 @@ from db.database import async_session
 from db.models import FinancialSummary, ParserSource, Research, ResearchResearchType, ResearchType
 from log.logger_base import Logger
 from module import data_transformer, weekly_pulse_parse
-from parsers.exceptions import ResearchError
-from utils.selenium_utils import get_driver
-
-
-class ResearchParser:
-    """Класс для парсинга страниц с портала CIB Research"""
-
-    def __init__(self, driver: WebDriver, logger: Logger.logger) -> None:
-        """Инициализация парсера портала CIB Research"""
-        home_page = config.research_base_url[:-1]  # 'https://research.sberbank-cib.com'
-        login = config.research_cred[0]
-        password = config.research_cred[1]
-
-        self._logger = logger
-        self.driver = driver
-        self.home_page = home_page
-        self.auth(login, password)
-
-    def __sleep_some_time(self, start: float = 1.0, end: float = 2.0) -> None:
-        """
-        Send user emulator to sleep.
-
-        Fake user delay and wait to load HTML elements
-
-        :param start:   Wait from...
-        :param end:     Wait to...
-        :return:        None
-        """
-        sleep_time = random.uniform(start, end)
-        self._logger.info(f'Уходим в ожидание на: {sleep_time}')
-        time.sleep(sleep_time)
-
-    def process_bonds_exchange_text(self, text_rows, start, end=None) -> str:
-        """
-        Get necessary part of the money review.
-
-        :param text_rows:   rows of text of money review
-        :param start:       word to start with
-        :param end:         word to end with
-        :return:            part of text
-        """
-        text = '\n\n'.join(text_rows)
-        pattern = rf'{start}(.*?)$' if end is None else rf'{start}(.*?)(?=\s*{end})'
-        match = re.search(pattern, text, flags=re.DOTALL)
-        if not match:
-            self._logger.warning('Не найден ежедневный финансовый отчет')
-            raise ResearchError('Did not match in money everyday review.')
-        return match.group(0)
-
-    @staticmethod
-    def process_commodity_text(text_rows: list[str]) -> str:
-        """
-        Get necessary part of the commodity review.
-
-        :param text_rows:   rows of text of money review
-        :return:            part of text
-        """
-        # TODO: for summarization WHILE for without summarization
-        new_text_rows = []
-        for row in text_rows:
-            if row.isupper():
-                break
-            new_text_rows.append(row)
-
-        return '\n\n'.join(new_text_rows)
-
-    def auth(self, login, password) -> None:
-        """Авторизация в CIB Research"""
-        self._logger.info('Авторизация на Sberbank CIB Research')
-        self.driver.get(self.home_page)
-        login_field = self.driver.find_element('xpath', "//input[@type='text']")
-        password_field = self.driver.find_element('xpath', "//input[@type='password']")
-
-        login_field.clear()
-        login_field.send_keys(login)
-        password_field.send_keys(password)
-        password_field.send_keys(Keys.ENTER)
-        # TODO: check that I go into research
-        self.__sleep_some_time(5.0, 6.0)
-        # time.sleep(5)
-
-    def find_tab(self, tab: str) -> WebElement:
-        """
-        Поиск необходимой вкладки по тексту
-
-        :param tab: название вкладки, где находятся отчеты
-        :return:    WebElement или ошибка, если не получилось найти элемент
-        """
-        self._logger.info(f'Поиск вкладки {tab}')
-        li_elements = self.driver.find_elements('tag name', 'li')
-        li_element = next((li_elem for li_elem in li_elements if li_elem.text == tab), None)
-
-        if li_element is None:
-            self._logger.warning(f'Вкладка {tab} не найдена')
-            raise ResearchError('Did not find necessary tab')
-        return li_element
-
-    def find_reviews_by_name(self, name: str, count: int) -> list:
-        """
-        Find reviews elements by review's name.
-
-        :param name:    name of the review for filter
-        :param count:   necessary count of reviews
-        :return:        list of reviews' elements
-        """
-        self._logger.info(f'Поиск отчета {name}')
-        # if no name for filter take top reviews
-        if name == '':
-            reviews_elements = self.driver.find_elements('class name', 'title.fading-container')
-            # but now economy month locate in everyday tab so there is processing this
-            # TODO: если ежемесячный уберут из вкладки ежедневные, то удалить строчку
-            reviews_elements = [elem for elem in reviews_elements if 'Ежемесячный обзор' not in elem.text]
-            self._logger.info('Ежедневный экономический отчет найден')
-            return reviews_elements[:count]
-
-        # TODO: если наладится поиск по поисковой строке, то переделать
-        reviews_elements = []
-        start = 0
-
-        while len(reviews_elements) < count:
-            # find review by name and add it
-            elements = self.driver.find_elements('class name', 'title.fading-container')
-            for element in elements[start:]:
-                if name in element.text:
-                    reviews_elements.append(element)
-
-            if len(reviews_elements) >= count:
-                break
-            # load more reviews
-            self._logger.info('Загрузка большего числа отчетов')
-            button_show_more = self.driver.find_element('id', 'loadMorePublications')
-            button_show_more.click()
-            self.__sleep_some_time(3, 6)
-
-            start = len(elements) - 1
-        self._logger.info(f'Отчет {name} найден')
-        return reviews_elements[:count]
-
-    def get_date_and_text_of_review(self, element: wb.remote.webelement.WebElement, type_of_review: str) -> (str, str):
-        """
-        Get and clean text of the review.
-
-        :param type_of_review: type of review which need process
-        :param element: web element of the review
-        :return: clear text of the review
-        """
-        self._logger.info(f'Получаем дату и текст {type_of_review} отчета')
-        element.find_element('tag name', 'a').click()
-        self.__sleep_some_time()
-
-        # get date
-        try:
-            dates = self.driver.find_elements('css selector', 'span.date')
-        except Exception as e:
-            dates = []
-            self._logger.error(f'Ошибка при получении даты {type_of_review} отчета: %s', e)
-        date = next((date.text for date in dates if date.text != ''), None)
-        if date is None:
-            self._logger.error(f'Дата {type_of_review} отчета не найдена')
-            raise ResearchError('Did not find date of the review')
-
-        # get text
-        self._logger.info('Получаем текст отчета и очищаем его')
-        rows = self.driver.find_elements('tag name', 'p')
-        text_rows = [row.text.replace('> ', '') for row in rows if row.text.strip() != '' and '@sber' not in row.text]
-        if type_of_review == 'commodity':
-            text = self.process_commodity_text(text_rows)
-        elif type_of_review == 'bonds':
-            text = self.process_bonds_exchange_text(text_rows, start='Процентные ставки')
-        elif type_of_review == 'exchange':
-            text = self.process_bonds_exchange_text(text_rows, start='Валютный рынок', end='Процентные ставки')
-        else:
-            text = '\n\n'.join(text_rows)
-        # close review page
-        try:
-            element.send_keys(Keys.ESCAPE)
-        except selenium.common.exceptions.ElementNotInteractableException:
-            self._logger.error('Проблема в работе selenium. Не удалось закрыть окно.')
-            self.driver.find_element('class name', 'fancybox-item.fancybox-close').click()
-        self._logger.info('Получили дату и текст отчета')
-        return date, text
-
-    def get_reviews(
-            self,
-            url_part: str,
-            tab: str,
-            title: str,
-            name_of_review: str = '',
-            count_of_review: int = 1,
-            type_of_review: str = '',
-    ) -> list[tuple]:
-        """
-        Get data of reviews from CIB Research
-
-        :param url_part: link for page where locate the reviews
-        :param tab: name of tab where locate the reviews
-        :param title: title of the page where locate the reviews
-        :param name_of_review: name of review which need to parse
-        :param count_of_review: count of the reviews which need to parse
-        :param type_of_review: type of review for text processing
-        :return: data of reviews [(title, date, text)]
-        """
-        # open page
-        url = f'{self.home_page}/group/guest/{url_part}'
-        self._logger.info(f'Открываем страницу {url}')
-        self.driver.get(url)
-        self.__sleep_some_time()
-        assert title in self.driver.title
-
-        # click on tab
-        self._logger.info(f'Открываем вкладку {tab}')
-        tab_element = self.find_tab(tab)
-        tab_element.click()
-        self.__sleep_some_time()
-
-        # find necessary reviews
-        self._logger.info(f'Ищем отчет {name_of_review}')
-        reviews_elements = self.find_reviews_by_name(name_of_review, count_of_review)
-
-        # get data of all reviews
-        reviews_data = []
-        reviews_elements_size = len(reviews_elements)
-        self._logger.info(f'Собираем содержимое для всех отчетов. Всего в обработке {reviews_elements_size} отчетов')
-        for review_num, review_element in enumerate(reviews_elements):
-            title = review_element.text
-            self._logger.info(f'Отчет {title} в обработке. {review_num + 1} из {reviews_elements_size}')
-            date, text = self.get_date_and_text_of_review(review_element, type_of_review)
-            reviews_data.append((title, text, date))
-
-        return reviews_data
-
-    def get_company_html_page(self, url_part: str):
-        """
-        Get page about company in html format
-
-        :param url_part: id company for search by url
-        :return: page in html format
-        """
-        url = f'{self.home_page}/group/guest/companies?companyId={url_part}'
-        self._logger.info(f'Открываем страницу компании: {url}')
-        self.driver.get(url)
-        page_html = self.driver.page_source
-
-        return page_html
-
-    def get_key_econ_ind_table(self) -> pd.DataFrame:
-        """
-        Get page about company in html format
-
-        :return: table in DataFrame format
-        """
-        url = f'{self.home_page}/group/guest/econ'
-        self._logger.info(f'Открываем страницу о ключевых показателях компании: {url}')
-        self.driver.implicitly_wait(5)
-        self.driver.get(url)
-        self.__sleep_some_time(60.0, 65.0)
-        # time.sleep(60)
-
-        page_html = self.driver.page_source
-
-        self._logger.info('Ищем в html нужную таблицу')
-        soup = BeautifulSoup(page_html, 'html.parser')
-        table_soup = soup.find('table', attrs={'class': 'grid container black right victim'})
-        headers = []
-        head = table_soup.find('thead').find('tr')
-        for td in head:
-            col_name = td.text.strip()
-            if col_name != '':
-                headers.append(col_name)
-
-        data = []
-        for tr in table_soup.find_all('tr'):
-            data_row = []
-            for td in tr.find_all('td'):
-                # clear data from line space characters
-                data_row.append(re.sub(r'\s+', ' ', td.text).strip())
-            if data_row:
-                if len(data_row) == 7:
-                    data.append(data_row[1:])
-                elif len(data_row) == 6:
-                    data.append(data_row)
-
-        self._logger.info('Собираем таблицу')
-        df = pd.DataFrame(data, columns=headers)
-        df = df[df.astype(str).ne('').all(1)].reset_index(drop=True)
-        df = df.drop(index=0).reset_index(drop=True)
-
-        table_soup_al_name = soup.find('table', attrs={'class': 'grid container black right'})
-        aliases = []
-        names = []
-        aliases_longevity = []
-
-        for elem in table_soup_al_name:
-            col_text = elem.find('td').text.strip()
-            if col_text != '':
-                if 'name' in elem.find('td').get('class') and 'Норма' not in col_text:
-                    names.append(col_text)
-                    aliases_longevity.append(1)
-                else:
-                    aliases.append(col_text)
-                    aliases_longevity.append(0)
-
-        df['name'] = names
-
-        counts = []
-        counter = 0
-
-        for val in aliases_longevity:
-            if val == 0:
-                counts.append(counter)
-                counter = 0
-            else:
-                counter += 1
-
-        counts.append(counter)
-        del counts[0]
-
-        aliases_series = pd.Series(aliases)
-        aliases_series = aliases_series.repeat(counts).reset_index(drop=True)
-
-        df['id'] = range(1, df.shape[0] + 1)
-        df['alias'] = aliases_series
-        idx_name = list(df.columns).index('name')
-        cols = df.columns[idx_name - 4: idx_name + 1]
-        df_new = df[cols]
-        numeric_cols = []
-        for col in df_new.columns:
-            if re.match(r'^\d+(\.\d+)?[Ee]?$', col):
-                numeric_cols.append(col)
-        df_new = df[['id'] + ['name'] + numeric_cols + ['alias']].copy()
-
-        return df_new
-
-    def get_emulator_cookies(self, driver: WebDriver) -> requests.Session():
-        """
-        Sets selenium session params to requests.Session() object
-
-        :param driver: driver to retrieve session params
-        :return: session
-        """
-        self._logger.info('Загрузка и установка параметров драйвера для selenium')
-        cookies = driver.get_cookies()
-        headers = {
-            header['name']: header['value']
-            for header in
-            driver.execute_script("return window.performance.getEntriesByType('navigation')[0].serverTiming")
-            if header.get('name')
-        }
-        session = requests.Session()
-        session.verify = False
-        session.headers.update(headers)
-        for cookie in cookies:
-            session.cookies.set(cookie['name'], cookie['value'])
-        return session
-
-    def __get_industry_pdf(self, id_: str, value: str) -> None:
-        """
-        Get pdf for industry review
-
-        :param id_:     id of industry in SberResearch
-        :param value:   name of industry in SberResearch
-        """
-        pdf_dir = config.PATH_TO_SOURCES / 'reviews'
-        self._logger.info(f'Скачивание отчета по индустриям с Research в {pdf_dir}')
-        url = config.industry_base_url.format(id_)
-        filename = None
-        self.driver.get(url)
-        self.__sleep_some_time(10.0, 12.0)
-        self.driver.find_element(By.XPATH, '//*[@id="0--1--122--101--113--115--7--90--82--109--83"]').click()
-        self.__sleep_some_time(10.0, 12.0)
-        reviews_rows = self.driver.find_elements(By.XPATH, f"//div[contains(@title, '{value}')]")
-        reviews_size = len(reviews_rows)
-        self._logger.info(f'Обработка отчетов по индустриям ({reviews_size})')
-        for review_num, review in enumerate(reviews_rows):
-            self._logger.info(f'Начало обработки отчет по индустриям № {review_num + 1} из {reviews_size}')
-            link = review.find_element(By.XPATH, './a[1]')
-            self.driver.execute_script('arguments[0].scrollIntoView();', link)
-            filename = review.get_attribute('title').replace(' ', '_')
-            self._logger.info(f'Установлено название обрабатываемого отчета: {filename}')
-            date = review.find_element(By.XPATH, '..').find_element(By.XPATH, '..').find_element(By.CLASS_NAME,
-                                                                                                 'date').text
-            self._logger.info(f'Установлена дата ({date}) для {filename}')
-            filename = f'{filename}__{date}.pdf'
-            filename = pdf_dir / filename
-            link.click()
-            self._logger.info(f'{filename} - Скачан')
-            break
-
-        if not pdf_dir.exists():
-            pdf_dir.mkdir(exist_ok=True, parents=True)
-        old = [f for f in os.listdir(pdf_dir) if value in f]
-        if filename is not None and filename.exists():
-            return
-        if filename is None:
-            raise ResearchError('Не удалось получить файл для отчета по индустрии')
-
-        # time.sleep(5)
-        self.__sleep_some_time(5.0, 6.0)
-        download_report = self.driver.find_element(By.CLASS_NAME, 'file')
-        href = download_report.get_attribute('href')
-
-        session = self.get_emulator_cookies(self.driver)
-        response = session.get(href)
-
-        with open(filename, 'wb') as file:
-            file.write(response.content)
-
-        if len(old):
-            os.remove(os.path.join(pdf_dir, old[0]))
-
-    def get_industry_reviews(self) -> None:
-        """Get all industry reviews"""
-        self._logger.info('Сборка отчетов по индустриям (отрасли)')
-        print('Сборка отчетов по индустриям (отрасли)')
-        industry_reviews = config.industry_reviews
-        for industry in industry_reviews:
-            try:
-                self._logger.info(f'Получение отчета по {industry}')
-                self.__get_industry_pdf(industry, industry_reviews[industry])
-                self._logger.info(f'Отчет по {industry} получен')
-                print(f'{industry_reviews[industry]}..ОК')
-            except Exception as e:
-                self._logger.error(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
-                print(f'{industry_reviews[industry]} Ошибка ({e}) при получении')
-                self.driver.quit()
-                self.driver = get_driver(self._logger)
 
 
 class ResearchAPIParser:
@@ -472,11 +39,6 @@ class ResearchAPIParser:
     def __init__(self, logger: Logger.logger) -> None:
         """Инициализация парсера страниц с портала CIB Research"""
         self._logger = logger
-
-        login = config.research_cred[0]
-        password = config.research_cred[1]
-        self.auth = (login, password)
-
         self.REPEAT_TRIES = config.REPEAT_TRIES
         self.content_len = config.CONTENT_LENGTH__HTML_WITH_ARTICLE
         self.month_dict = config.MONTH_NAMES_DICT
@@ -531,6 +93,7 @@ class ResearchAPIParser:
             all_sources = await session.execute(
                 sa.select(
                     ResearchType.id.label('research_type_id'),
+                    ParserSource.id.label('parser_source_id'),
                     ParserSource.source.label('url'),
                     ParserSource.params,
                     ParserSource.alt_names,
@@ -610,7 +173,7 @@ class ResearchAPIParser:
                 session.add(research)
                 await session.commit()
 
-            session.add(
+            session.add(  # TODO: это не должно быть внутри if research is None
                 ResearchResearchType(
                     research_id=research.id,
                     research_type_id=research_type.id
@@ -684,7 +247,7 @@ class ResearchAPIParser:
             'filepath': file_path,
             'header': header,
             'text': report_text,
-            'parse_datetime': datetime.datetime.utcnow(),
+            'parse_datetime': datetime.datetime.now(),
             'publication_date': date,
             'report_id': report_id,
         }
@@ -707,7 +270,10 @@ class ResearchAPIParser:
         :param check_existing: Делать ли проверку на то, что report_id есть в БД
         :returns: list[dict[research_type_id, filepath, header, text, parse_datetime,publication_date,report_id]]
         """
-        self._logger.info('CIB: Начат парсинг страницы %s', params['url'])
+        self._logger.info(
+            f'CIB: Начат парсинг страницы {params["url"]} '
+            f'c psrser_source.id {params.get("parser_source_id", "undefined")}'
+        )
         for i in range(self.REPEAT_TRIES):
             if params['before_link']:
                 # Тут нужно запрашивать отчеты по порядку
@@ -742,8 +308,8 @@ class ResearchAPIParser:
                     status_code = req.status
                 except Exception as e:
                     self._logger.error(
-                        f'Во время запроса отчетов со страницы {params["url"]} и id:{params["research_type_id"]} произошла ошибка: %s',
-                        e
+                        f'Во время запроса отчетов со страницы {params["url"]} '
+                        f'и id:{params["research_type_id"]} произошла ошибка: {e}',
                     )
                     continue
             if status_code == 200 and len(content) > self.content_len:
@@ -780,6 +346,9 @@ class ResearchAPIParser:
                 data = await self.parse_reports_by_id(element_with_id, session, params, **kwargs)
                 self._logger.info('CIB: задача для получения отчета завершена: %s', str(element_with_id))
                 new_reports.append(data)
+
+        if new_reports:
+            parser_source.update_get_datetime_by_source(params['url'], params.get('parser_source_id'))
         return new_reports
 
     async def parse_weekly_pulse(self, session) -> None:
@@ -929,6 +498,7 @@ class ResearchAPIParser:
         tf = data_transformer.Transformer(self._logger)
         df_parts = pd.DataFrame(columns=metadata_df.columns)
 
+        urls = []
         async with ClientSession() as session:
             for sector_id in sectors_id:
                 self._logger.info(f'Обработка сектора {sector_id} для поиска фин. показателей')
@@ -947,7 +517,7 @@ class ResearchAPIParser:
                         content = await sector_page.text()
                         part = tf.process_fin_summary_table(content, company_id, sector_df)
                         df_parts = pd.concat([part, df_parts], ignore_index=True)
-                        parser_source.update_get_datetime_by_source(source=url)
+                        urls.append(url)
                     except HTTPNoContent as e:
                         self._logger.error('CIB: Ошибка при соединении c CIB: %s', e)
                     except Exception as e:
@@ -965,4 +535,5 @@ class ResearchAPIParser:
         df_parts['money_table'] = df_parts['money_table'].apply(json.dumps)
         # df_parts.to_sql('financial_summary', if_exists='replace', index=False, con=engine)
         await self.save_fin_summary(df_parts)
+        parser_source.update_get_datetime_by_sources(urls)
         self._logger.info('Таблица financial_indicators записана')

@@ -306,7 +306,7 @@ services:
             - .env
         command: poetry run python main.py
         depends_on:
-            - bot
+            - database
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data

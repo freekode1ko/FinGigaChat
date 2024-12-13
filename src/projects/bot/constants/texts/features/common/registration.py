@@ -37,7 +37,6 @@ class RegistrationTexts(BaseSettings):
         'Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: Brief@sberbank.ru',
         title='Пользователя нет в белом списке',
         description='public',
-    )
 
     REGISTRATION_NOT_CORPORATE_EMAIL: str = 'Указана не корпоративная почта'
 
