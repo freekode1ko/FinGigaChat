@@ -43,6 +43,7 @@ from utils.base import (
     next_weekday_time,
     wait_until
 )
+from api.router import router as api_router
 
 storage = MemoryStorage()
 bot = Bot(token=config.api_token)
@@ -189,9 +190,10 @@ async def lifespan(app: FastAPI):
     await sessions.RagWebClient().close()
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(api_router, prefix="/api")
 
 
-@app.post(config.WEBHOOK_URL)
+@app.post('/webhook')
 async def bot_webhook(request: Request):
     update = Update.model_validate_json(await request.body(), context={"bot": bot})
     await dp.feed_update(bot, update)
