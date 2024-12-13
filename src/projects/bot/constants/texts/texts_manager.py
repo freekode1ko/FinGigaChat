@@ -11,6 +11,7 @@ from log.bot_logger import logger
 @dataclass
 class Text:
     """Информация о параметре из Redis"""
+
     key: str
     value: str
     name: str
@@ -31,7 +32,7 @@ class TextsManager:
 
     def _initialize(self) -> None:
         """Инициализация реестра параметров.
-        
+
         По ключу хранится FieldInfo, Pydantic объект, позволяющий получить доступ к
         значению и человекочитаемому названию параметра. При инициализации происходит
         сверка с параметрами в Redis: если параметра нет или значения расходятся,
