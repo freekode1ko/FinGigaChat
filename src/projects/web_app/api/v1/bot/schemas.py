@@ -13,7 +13,7 @@ class MessageType(BaseReadModel):
     description: str
 
 
-class BotInfoRead(BaseWriteModel):
+class BotInfoRead(BaseReadModel):
     """Информация о боте, которая может быть отредактирована администраторами"""
     name: str
     bio: str
