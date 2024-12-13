@@ -10,16 +10,14 @@ from log.bot_logger import logger
 
 @dataclass
 class Text:
+    """Информация о параметре из Redis"""
     key: str
     value: str
     name: str
 
 
 class TextsManager:
-    """
-    Класс для хранения конфига в Redis.
-    Приоритет отдается константам в .py файлах.
-    """
+    """Класс для хранения конфига в Redis"""
 
     PATTERN = 'settings_'
 
@@ -32,11 +30,12 @@ class TextsManager:
         return f'{self.PATTERN}{key}'
 
     def _initialize(self) -> None:
-        """
-        Инициализация реестра параметров. По ключу хранится FieldInfo, Pydantic объект,
-        позволяющий получить доступ к значению и человекочитаемому названию параметра.
-        При инициализации происходит сверка с параметрами в Redis: если параметра нет
-        или значения расходятся, то в Redis устанавливается значение по умолчанию.
+        """Инициализация реестра параметров.
+        
+        По ключу хранится FieldInfo, Pydantic объект, позволяющий получить доступ к
+        значению и человекочитаемому названию параметра. При инициализации происходит
+        сверка с параметрами в Redis: если параметра нет или значения расходятся,
+        то в Redis устанавливается значение по умолчанию.
         """
         save_to_redis = {}
         for config_cls in CONFIG_CLASSES:
@@ -66,10 +65,7 @@ class TextsManager:
         redis_client.set(self._get_redis_key(key), value)
 
     def __getattr__(self, key: str) -> str:
-        """
-        Получает значение константы как атрибута класса.
-        Для внутреннего использования.
-        """
+        """Получает значение константы как атрибута класса"""
         value = redis_client.get(self._get_redis_key(key))
         if value is not None:
             return str(value)
