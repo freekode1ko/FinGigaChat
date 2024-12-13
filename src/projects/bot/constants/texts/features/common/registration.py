@@ -34,10 +34,7 @@ class RegistrationTexts(BaseSettings):
     )
 
     REGISTRATION_NOT_WHITELIST_EMAIL: str = Field(
-        (
-            'Для продолжения регистрации, пожалуйста, '
-            'свяжитесь с командой проекта: @korolkov_m'
-        ),
+        'Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: Brief@sberbank.ru',
         title='Пользователя нет в белом списке',
         description='public',
     )
