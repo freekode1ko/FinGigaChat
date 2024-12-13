@@ -19,7 +19,8 @@ from utils.jwt import create_jwt_token
 from utils.telegram import validate_telegram_data
 from utils.email_send import SmtpSend
 
-from .schemas import AuthData, AuthConfirmation, TelegramData, UserData
+from api.v1.users.schemas import UserRead
+from .schemas import AuthData, AuthConfirmation, TelegramData
 
 
 router = APIRouter(tags=['auth'])
@@ -125,7 +126,7 @@ async def validate_telegram(data: TelegramData, response: Response):
 
 @router.get(
         "/me",
-        response_model=UserData,
+        response_model=UserRead,
         responses={
             status.HTTP_401_UNAUTHORIZED: {
                 'description': 'Ошибка чтения JWT-токена: истек срок действия или неверный токен',
@@ -139,6 +140,6 @@ async def validate_telegram(data: TelegramData, response: Response):
 )
 async def user_identity(
     current_user: Annotated[RegisteredUser, Depends(get_current_user)],
-) -> UserData:
+) -> UserRead:
     """Получение текущего пользователя по JWT-токену."""
-    return UserData.model_validate(current_user)
+    return UserRead.model_validate(current_user)

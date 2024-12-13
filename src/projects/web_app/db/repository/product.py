@@ -11,10 +11,13 @@ class ProductRepository(GenericRepository[Product]):
         super().__init__(session, Product)
 
     async def get_products_tree(self) -> list[Product]:
+        """
+        Получает все продукты со списком дочерних продуктов.
+        Возвращает корневые продукты (parent_id = 0).
+        """
         stmt = sa.select(Product).options(
             selectinload(Product.documents),
             selectinload(Product.children),
         )
         result = await self._session.execute(stmt)
-        products = result.scalars().all()
-        return [product for product in products if product.parent_id == 0]
+        return [product for product in result.scalars() if product.parent_id == 0]

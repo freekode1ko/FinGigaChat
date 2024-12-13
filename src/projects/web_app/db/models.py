@@ -137,6 +137,7 @@ class Industry(Base):
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
     industry_alternative = relationship('IndustryAlternative', back_populates='industry')
+    documents = relationship('IndustryDocuments', back_populates='industry')
 
 
 t_key_eco = Table(
@@ -694,6 +695,8 @@ class IndustryDocuments(Base):
     industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
                            comment='тип отрасли')
 
+    industry = relationship('Industry', back_populates='documents')
+
 
 class Product(Base):
     __tablename__ = 'bot_product'
@@ -948,12 +951,3 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
-
-
-class SettingsAliases(Base):
-    __tablename__ = 'settings_aliases'
-    __table_args__ = {'comment': 'Таблица с человекочитаемыми наименованиями констант из Redis'}
-
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255), unique=True, nullable=False, comment='Наименование константы')
-    name = Column(String(255), nullable=False, comment='Человекочитаемое наименование константы')

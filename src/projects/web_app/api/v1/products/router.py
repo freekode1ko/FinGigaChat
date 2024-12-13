@@ -30,7 +30,7 @@ async def get_products_tree(
     """
     return await product_repository.get_products_tree()
 
-
+# чуть позже будет query-параметр для дерева
 @router.get(
         '/',
         response_model=list[ShortProductRead],
@@ -59,9 +59,10 @@ async def update_product(
     *Только для администраторов*\n
     Изменить продукт
     """
-    product = await product_repository.get_by_pk(product_id)
-    if product is None:
+    if (product := await product_repository.get_by_pk(product_id)) is None:
         raise HTTPException(status_code=404)
+    if product_data.parent_id is not None and await product_repository.get_by_pk(product_data.parent_id) is None:
+        raise HTTPException(status_code=400)
     updated_product = pydantic_to_sqlalchemy(product_data, Product, product)
     await product_repository.update(updated_product)
 
@@ -79,6 +80,8 @@ async def create_product(
     *Только для администраторов*\n
     Создать продукт
     """
+    if await product_repository.get_by_pk(product_data.parent_id) is None:
+        raise HTTPException(status_code=400)
     product = pydantic_to_sqlalchemy(product_data, Product)
     await product_repository.create(product)
 
@@ -90,25 +93,28 @@ async def create_product(
 )
 async def create_document(
     product_id: int,
+    product_repository: Annotated[ProductRepository, Depends(get_repository(ProductRepository))],
+    document_repository: Annotated[ProductDocumentRepository, Depends(get_repository(ProductDocumentRepository))],
     name: str = Form(...),
     description: str | None = Form(None),
     file: UploadFile = File(...),
-    document_repository: ProductDocumentRepository = Depends(get_repository(ProductDocumentRepository)),
 ) -> None:
     """
     *Только для администраторов*\n
     Загрузить документ для продукта
     """
-    filepath = await upload_file(
+    if await product_repository.get_by_pk(product_id) is None:
+        raise HTTPException(status_code=404)
+    saved_file = await upload_file(
         file,
         constants.PATH_TO_PRODUCTS,
-        constants.MAX_PDF_SIZE,
+        constants.MAX_FILE_SIZE,
         (enums.MimeType.PDF.value,),
     )
     document = ProductDocument(
         name=name,
         description=description,
         product_id=product_id,
-        file_path=str(filepath),
+        file_path=str(saved_file.path),
     )
     await document_repository.create(document)

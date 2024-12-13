@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar, Type
+from typing import Any, Generic, TypeVar, Type, Sequence
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,56 +28,49 @@ class GenericRepository(Generic[T]):
 
     async def create(self, instance: T) -> None:
         """
-        Добавляет экземпляр модели в текущую сессию.
+        Добавляет запись в текущую сессию.
 
-        :param instance: Экземпляр модели
+        :param instance: Экземпляр модели SQLAlchemy
         """
         self._session.add(instance)
         await self._session.commit()
 
     async def get_by_pk(self, pk: Any) -> T | None:
         """
-        Возвращает экземпляр модели по первичному ключу.
+        Возвращает запись по первичному ключу.
 
         :param pk: Значение первичного ключа искомого экземпляра
-        :return: Экземпляр модели, если существует, иначе None
+        :return: Экземпляр модели SQLAlchemy, если существует, иначе None
         """
         result = await self._session.execute(
             sa.select(self._model).where(self._primary_key == pk)
         )
         return result.scalars().first()
 
-    async def get_list(self) -> list[T]:
+    async def get_list(self) -> Sequence[T]:
         """
-        Возвращает список всех экземпляров модели. Не поддерживает
-        фильтры или пагинацию.
+        Возвращает список всех записей.
 
-        :return: Список экземпляров модели
+        :return: Список экземпляров модели SQLAlchamy
         """
         result = await self._session.execute(sa.select(self._model))
-        return list(result.scalars().all())
+        return result.scalars().all()
 
     async def update(self, instance: T) -> None:
         """
         Добавляет обновленный экземпляр модели в сессию.
 
-        :param instance: Экземпляр модели
+        :param instance: Экземпляр модели SQLAlchemy
         :return: Обновленный экземпляр модели
         """
         self._session.add(instance)
         await self._session.commit()
 
-    async def delete(self, pk: Any) -> bool:
+    async def delete(self, instance: T) -> None:
         """
-        Удаляет экземпляр модели из БД по первичному ключу.
+        Удаляет запись из БД.
 
-        :param pk: Значение первичного ключа удаляемого экземпляра
-        :return: True, если экземпляр был найден и удален, иначе False
+        :param instance: Экземпляр модели SQLAlchemy
         """
-        stmt = (
-            sa.delete(self._model)
-            .where(self._primary_key == pk)
-        )
-        result = await self._session.execute(stmt)
+        await self._session.delete(instance)
         await self._session.commit()
-        return result.rowcount > 0

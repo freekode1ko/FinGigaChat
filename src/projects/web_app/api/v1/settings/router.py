@@ -1,10 +1,7 @@
 """API для работы с настройками приложения"""
-from typing import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.dependencies import get_current_admin, get_repository
-from db.repository import SettingsAliasesRepository
+from api.dependencies import get_current_admin
 from constants import texts
 
 from .schemas import SettingsRead, SettingsUpdate
@@ -18,18 +15,12 @@ router = APIRouter(tags=['settings'])
         response_model=list[SettingsRead],
         dependencies=[Depends(get_current_admin)],
 )
-async def get_app_settings(
-    settings_repository: Annotated[SettingsAliasesRepository, Depends(get_repository(SettingsAliasesRepository))],
-):
+async def get_app_settings():
     """
     *Только для администраторов*\n
     Получить список доступных настроек приложения
     """
-    allowed_settings = await settings_repository.get_list()
-    return [
-        SettingsRead(key=setting.key, value=await texts.texts_manager.get(setting.key), name=setting.name)
-        for setting in allowed_settings
-    ]
+    return await texts.texts_manager.get_all()
 
 
 @router.post(
@@ -39,12 +30,12 @@ async def get_app_settings(
 async def set_app_setting(
     key: str,
     data: SettingsUpdate,
-    settings_repository: Annotated[SettingsAliasesRepository, Depends(get_repository(SettingsAliasesRepository))]
 ):
     """
     *Только для администраторов*\n
     Установить новое значение настройке приложения
     """
-    if not await settings_repository.get_by_key(key):
+    try:
+        await texts.texts_manager.set(key, data.value)
+    except AttributeError:
         raise HTTPException(status_code=400, detail='Проверьте правильность введенных данных')
-    await texts.texts_manager.set(key, data.value)

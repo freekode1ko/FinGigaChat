@@ -1,60 +1,55 @@
-import config
+from dataclasses import dataclass
+
 from db.redis import redis_client
-from log.logger_base import selector_logger
-from .values import DEFAULT_VALUES
 
 
-logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
-
-
-class TextsManagerError(Exception):
-    """Исключение, возникающее при попытке обращения к неинициализированному менеджеру"""
-    pass
+@dataclass
+class Text:
+    key: str
+    value: str
+    name: str
 
 
 class TextsManager:
     """
-    Класс для работы с константами в Redis.
+    Класс для получения констант из Redis.
 
     Должен быть инициализирован при старте приложения с помощью вызова
     асинхронного метода init().
     """
     PATTERN = 'settings_'
 
-    def __init__(self):
-        self.init_called = False
+    # (!) Временное объявление разрешенных для редактирования ключей
+    # Позже все будет в TextsManager из бота
+    ALLOWED_KEYS = {
+        'HELP_TEXT': 'Текст при старте бота',
+        'REGISTRATION_NOT_WHITELIST_EMAIL': 'Пользователя нет в белом списке'
+    }
 
-    async def init(self):
-        """   
-        Приоритет отдается константам, которые уже установлены в Redis.
-        Это значит, что константы не будут изменены при инициализации этого
-        класса. Однако будут добавлены те константы, которые используются
-        в WebApp, но по какой-то причине отсутствуют в Redis.
-        """
-        for key, value in DEFAULT_VALUES.items():
-            redis_value = await redis_client.get(f'{self.PATTERN}{key}')
-            if not redis_value:
-                await redis_client.set(f'{self.PATTERN}{key}', value)
-            if redis_value and redis_value != str(value):
-                logger.critical(
-                    f'Значение "{value}" для ключа "{key}" не совпадает со значением "{redis_value}" в Redis'
-                )
-        self.init_called = True
+    def _get_redis_key(self, key: str) -> str:
+        """Возвращает ключ для Redis"""
+        return f'{self.PATTERN}{key}'
 
-    async def get(self, key: str):
+    async def get_all(self) -> list[Text]:
+        """Получение публичных констант из Redis"""
+        redis_values = await redis_client.mget([self._get_redis_key(key) for key in self.ALLOWED_KEYS.keys() ])
+        return [
+            Text(key, redis_values[pos], value)
+            for pos, (key, value) in enumerate(self.ALLOWED_KEYS.items())
+        ]
+
+    async def get(self, key: str) -> str:
         """Получение константы из Redis"""
-        if not self.init_called:
-            raise TextsManagerError('Необходимо инициализировать менеджер')
-        value = await redis_client.get(f'{self.PATTERN}{key}')
+        value = await redis_client.get(self._get_redis_key(key))
         if value is not None:
-            return value
-        raise ValueError(f'Значение для "{key}" не найдено в Redis')
+            return str(value)
+        raise AttributeError(f'Значение для "{key}" не найдено в Redis')
 
-    async def set(self, key: str, value: str):
-        """Получение константы из Redis"""
-        if not self.init_called:
-            raise TextsManagerError('Необходимо инициализировать менеджер')
-        value = await redis_client.set(f'{self.PATTERN}{key}', value)
+    async def set(self, key: str, value: str) -> None:
+        """Установка константы в Redis"""
+        if key not in self.ALLOWED_KEYS:
+            raise AttributeError(f'Невозможно установить значение для "{key}"')
+        await redis_client.set(self._get_redis_key(key), value)
 
 
 texts_manager = TextsManager()

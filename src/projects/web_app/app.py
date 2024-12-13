@@ -6,19 +6,20 @@ from fastapi.staticfiles import StaticFiles
 
 import config
 import utils
+from api.exception_handlers import set_exception_handlers
 from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
-from constants import constants, texts
+from constants import constants
 from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
 
 logger = selector_logger(config.LOG_FILE, config.LOG_LEVEL)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await texts.texts_manager.init()
     await utils.add_notify_job(logger)
     utils.scheduler.start()
     yield
@@ -43,6 +44,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+set_exception_handlers(app)
 
 @app.get("/meeting/show", response_class=HTMLResponse)
 async def show_meetings(request: Request):

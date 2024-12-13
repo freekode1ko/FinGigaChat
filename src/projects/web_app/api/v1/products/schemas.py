@@ -1,7 +1,7 @@
 from pydantic import Field, computed_field
 
 from api.v1.common_schemas import BaseReadModel, BaseWriteModel
-
+from utils.utils import transform_path_to_link
 
 class ProductDocumentRead(BaseReadModel):
     """Схема для вывода документа на чтение"""
@@ -12,8 +12,8 @@ class ProductDocumentRead(BaseReadModel):
     description: str | None = None
 
     @computed_field
-    def url(self) -> str:
-        return f'/{self.file_path.lstrip("/code/").lstrip("/")}'
+    def url(self) -> str | None:
+        return transform_path_to_link(self.file_path)
 
 
 class ShortProductRead(BaseReadModel):
@@ -33,8 +33,8 @@ class ProductRead(ShortProductRead):
     а также списки документов и дочерних продуктов.
     """
 
-    documents: list[ProductDocumentRead] = []
-    children: list['ProductRead'] = []
+    documents: list[ProductDocumentRead] = Field(default_factory=list)
+    children: list['ProductRead'] = Field(default_factory=list)
 
 
 ProductRead.model_rebuild()

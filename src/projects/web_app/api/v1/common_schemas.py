@@ -1,7 +1,13 @@
+import math
+from typing import TypeVar, Generic
+
 from fastapi import Query
 from pydantic import BaseModel, ConfigDict
 
 from db.pagination import Pagination
+
+
+T = TypeVar('T')
 
 
 class BaseReadModel(BaseModel):
@@ -29,8 +35,28 @@ class PaginationParams(BaseModel):
     page: int = Query(1, ge=1, description="Номер страницы")
     size: int = Query(10, ge=1, le=100, description="Размер страницы")
 
-    def parse_params(self) -> Pagination:
+    def to_db(self) -> Pagination:
         return Pagination(
             limit=self.size,
             offset=self.size * (self.page - 1),
+        )
+
+
+class PaginatedResponse(BaseReadModel, Generic[T]):
+    items: list[T]
+    total_items: int
+    total_pages: int
+
+    @classmethod
+    def create(
+        cls,
+        items: list[T],
+        total_items: int,
+        page_size: int,
+    ) -> 'PaginatedResponse[T]':
+        total_pages = math.ceil(total_items / page_size) if page_size > 0 else 1
+        return cls(
+            items=items,
+            total_items=total_items,
+            total_pages=total_pages,
         )
