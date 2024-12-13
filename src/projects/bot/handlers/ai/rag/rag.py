@@ -1,4 +1,6 @@
 """Описание обработчиков событий при общении пользователя с RAG-системами."""
+import textwrap
+
 from aiogram import F, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
@@ -8,7 +10,7 @@ from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
+from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT, TELEGRAM_MESSAGE_MAX_LEN
 from constants.enums import FeatureType, RetrieverType
 from constants.texts import texts_manager
 from db.rag_user_feedback import add_rag_activity, update_response, update_user_reaction
@@ -23,6 +25,13 @@ from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 from utils.rag_utils.rag_router import RAGRouter
+
+text_wrapper = textwrap.TextWrapper(
+    width=TELEGRAM_MESSAGE_MAX_LEN - len(DEFAULT_RAG_ANSWER) - 2,  # 2 cимвола - \n\n
+    placeholder='...',
+    replace_whitespace=False,
+    max_lines=1,
+)
 
 
 class RagState(StatesGroup):
@@ -136,6 +145,7 @@ async def _get_response(
 def format_response(answer: str) -> str:
     """Добавление футера к ответу от РАГ."""
     if answer != DEFAULT_RAG_ANSWER:
+        answer = text_wrapper.wrap(answer)[0]  # FIXME: сделать по тз заказчика, когда оно появятся
         answer = texts_manager.RAG_FORMAT_ANSWER.format(answer=answer)
     return answer
 
@@ -311,8 +321,9 @@ async def callback_keyboard(callback_query: types.CallbackQuery, session: AsyncS
     # обновление кнопки на одну не работающую
     button = [types.InlineKeyboardButton(text=txt, callback_data='none')]
     keyboard = types.InlineKeyboardMarkup(row_width=1, inline_keyboard=[button, ])
-    await callback_query.message.edit_text(text=callback_query.message.text, reply_markup=keyboard,
-                                           disable_web_page_preview=True, parse_mode='HTML')
+    await callback_query.message.edit_reply_markup(
+        text=callback_query.message.message_id, reply_markup=keyboard, disable_web_page_preview=True, parse_mode='HTML'
+    )
 
     # добавим в бд обратную связь от пользователя
     await update_user_reaction(session, callback_query.message.chat.id, callback_query.message.message_id, reaction)
@@ -355,8 +366,8 @@ async def get_full_version_of_research(
     kb = get_few_full_research_kb(kb, reports_data)
 
     try:
-        await callback_query.message.edit_text(
-            text=callback_query.message.text, reply_markup=kb, disable_web_page_preview=True, parse_mode='HTML'
+        await callback_query.message.edit_reply_markup(
+            text=callback_query.message.message_id, reply_markup=kb, disable_web_page_preview=True, parse_mode='HTML'
         )
     except TelegramBadRequest:
         pass

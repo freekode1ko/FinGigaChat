@@ -7,8 +7,8 @@ from re import search
 from typing import Any, Optional
 
 import pandas as pd
-import pymorphy2
 import requests
+from pymorphy3 import MorphAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sqlalchemy import text
 
@@ -92,7 +92,7 @@ TOP_SOURCES = '(rbc)|(interfax)|(kommersant)|(vedomosti)|(forbes)|(iz.ru)|(tass)
 
 MAX_LEN_INPUT = 6000
 
-morph = pymorphy2.MorphAnalyzer()
+morph = MorphAnalyzer()
 
 client_names = pd.read_excel(PROJECT_DIR / ALTERNATIVE_NAME_FILE.format('client'))
 commodity_names = pd.read_excel(PROJECT_DIR / ALTERNATIVE_NAME_FILE.format('commodity'))
@@ -629,11 +629,11 @@ def deduplicate(logger: Logger.logger,
     return df
 
 
-def get_gigachat_filtering_list(names: str | float, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
+def get_gigachat_filtering_list(names: list, text_sum: str, giga_chat: GigaChat, name_type: str, logger: Logger.logger) -> str:
     """
     Фильтрует новости по клиентам и комодам с помощью Gigachat.
 
-    :param names:       Строка из имен клиентов или комодов полученных с помощью регулярки.
+    :param names:       Список из имен клиентов или комодов полученных с помощью регулярки.
     :param text_sum:    Суммаризованный текст новости.
     :param giga_chat:   Gigachat.
     :param name_type:   client or commodity.
@@ -644,7 +644,7 @@ def get_gigachat_filtering_list(names: str | float, text_sum: str, giga_chat: Gi
         return ''
     result = []
     giga_answer = ''
-    for name in names.split(';'):
+    for name in names:
         if str(name):
             if name_type == 'client':
                 system_prompt = prompts.CLIENT_SYSTEM_PROMPT
