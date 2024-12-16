@@ -1,0 +1,1 @@
+export const MAX_INDUSTRY_DOCUMENT_SIZE_MB = 100

@@ -1,7 +1,7 @@
 """add broadcast & file tables
 
 Revision ID: f6c7ae1fa4aa
-Revises: 9982181d8fe8
+Revises: d1e69058e32f
 Create Date: 2024-12-11 14:00:25.743256
 
 """
@@ -16,7 +16,7 @@ from models.enums import FileType
 
 # revision identifiers, used by Alembic.
 revision: str = 'f6c7ae1fa4aa'
-down_revision: Union[str, None] = '9982181d8fe8'
+down_revision: Union[str, None] = 'd1e69058e32f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -1,15 +1,11 @@
-import { CloudUpload, Paperclip } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { useUploadProductDocumentMutation } from '@/entities/products'
+import { FileUploadField } from '@/shared/kit'
 import {
   Button,
-  FileInput,
-  FileUploader,
-  FileUploaderContent,
-  FileUploaderItem,
   Form,
   FormControl,
   FormDescription,
@@ -36,7 +32,7 @@ const formSchema = z.object({
     }),
 })
 
-export function UploadDocumentForm({ productId }: { productId: number }) {
+export function UploadDocumentForm({ productId, onSuccess }: { productId: number, onSuccess: () => void }) {
   const [upload] = useUploadProductDocumentMutation()
   const dropZoneConfig = {
     maxFiles: 1,
@@ -63,6 +59,7 @@ export function UploadDocumentForm({ productId }: { productId: number }) {
         error: 'Мы не смогли загрузить документ. Попробуйте позже.',
       }
     )
+    onSuccess()
   }
 
   return (
@@ -98,7 +95,6 @@ export function UploadDocumentForm({ productId }: { productId: number }) {
                   {...field}
                 />
               </FormControl>
-
               <FormMessage />
             </FormItem>
           )}
@@ -111,41 +107,12 @@ export function UploadDocumentForm({ productId }: { productId: number }) {
             <FormItem>
               <FormLabel>Выберите документ</FormLabel>
               <FormControl>
-                <FileUploader
+                <FileUploadField
                   value={field.value}
                   onValueChange={field.onChange}
                   dropzoneOptions={dropZoneConfig}
-                  className="relative bg-background rounded-lg p-2"
-                >
-                  <FileInput
-                    id="fileInput"
-                    className="outline-dashed outline-1 outline-slate-500"
-                  >
-                    <div className="flex items-center justify-center flex-col p-8 w-full ">
-                      <CloudUpload className="text-muted w-10 h-10" />
-                      <p className="mb-1 text-sm text-muted text-center">
-                        <span className="font-semibold">
-                          Кликните для загрузки
-                        </span>
-                        <br />
-                        или перетащите сюда файл
-                      </p>
-                      <p className="text-xs text-foreground">
-                        Только .PDF документы
-                      </p>
-                    </div>
-                  </FileInput>
-                  <FileUploaderContent>
-                    {field.value &&
-                      field.value.length > 0 &&
-                      field.value.map((file, idx) => (
-                        <FileUploaderItem key={idx} index={idx}>
-                          <Paperclip className="h-4 w-4 stroke-current" />
-                          <span>{file.name}</span>
-                        </FileUploaderItem>
-                      ))}
-                  </FileUploaderContent>
-                </FileUploader>
+                  helpText="Только .PDF документы"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

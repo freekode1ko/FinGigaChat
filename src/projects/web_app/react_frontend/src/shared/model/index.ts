@@ -10,4 +10,5 @@ export {
   PAGE_SIZE,
   SITE_MAP,
 } from './constants'
-export type { PaginationProps } from './types'
+export { fileSchema } from './schema'
+export type { PaginatedResponse, PaginationProps } from './types'

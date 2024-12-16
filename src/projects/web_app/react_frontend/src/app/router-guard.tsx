@@ -1,23 +1,32 @@
 import { ChevronLeft, Construction } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 
-import { selectUserIsAuthenticated } from '@/entities/user'
+import { selectUserData } from '@/entities/user'
 import { useAppSelector } from '@/shared/lib'
 import { SITE_MAP } from '@/shared/model'
 import { Button, Paragraph, TypographyH2 } from '@/shared/ui'
 
 interface ProtectionWrapperInterface extends React.PropsWithChildren {
   redirectHome?: boolean
+  admin?: boolean
 }
 
-const AuthGuard = ({ redirectHome, children }: ProtectionWrapperInterface) => {
-  const isAuthenticated = useAppSelector(selectUserIsAuthenticated)
+const AuthGuard = ({
+  redirectHome,
+  admin,
+  children,
+}: ProtectionWrapperInterface) => {
+  const user = useAppSelector(selectUserData)
 
-  if (!isAuthenticated && redirectHome) {
+  if (!user && redirectHome) {
     return <Navigate to={SITE_MAP.news} />
   }
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to={SITE_MAP.login} />
+  }
+  if (admin && user.role !== 1) {
+    // логировать, кто стучался в админку без прав
+    return <Navigate to={SITE_MAP.news} />
   }
   return children
 }

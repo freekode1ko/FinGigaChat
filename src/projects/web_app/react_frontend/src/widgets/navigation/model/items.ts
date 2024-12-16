@@ -1,10 +1,13 @@
 import {
+  ClipboardPen,
+  Factory,
   FileBarChart,
   LayoutDashboardIcon,
   ListChecks,
   LucideIcon,
   NewspaperIcon,
   NotebookPen,
+  Package,
   Podcast,
   Settings,
   ShoppingCart,
@@ -71,10 +74,28 @@ export const profileItems: Array<MenuItem> = [
 
 export const adminItems: Array<MenuItem> = [
   {
+    name: 'Доступы',
+    path: ADMIN_MAP.whitelist,
+    icon: ClipboardPen,
+    description: 'Управление белым списком',
+  },
+  {
     name: 'Продукты',
     path: ADMIN_MAP.home,
     icon: ShoppingCart,
     description: 'Управление продуктами',
+  },
+  {
+    name: 'Отрасли',
+    path: ADMIN_MAP.industries,
+    icon: Factory,
+    description: 'Управление отраслями',
+  },
+  {
+    name: 'Коммоды',
+    path: ADMIN_MAP.commodities,
+    icon: Package,
+    description: 'Управление commodities',
   },
   {
     name: 'Настройки',

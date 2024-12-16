@@ -1,2 +1,5 @@
+export { AdminCommoditiesPage } from './commodities'
 export { AdminHomePage } from './home'
+export { AdminIndustriesPage } from './industries'
 export { AdminSettingsPage } from './settings'
+export { AdminWhitelistPage } from './whitelist'

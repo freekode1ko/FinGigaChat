@@ -61,7 +61,7 @@ export const ProductModal = ({
           <div className="space-y-4">
             <p>Вы уверены, что хотите удалить этот продукт?</p>
             <div className="flex justify-end space-x-2">
-              <Button variant="ghost" onClick={onClose}>
+              <Button variant="outline" onClick={onClose}>
                 Отмена
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
@@ -93,7 +93,12 @@ export const ProductModal = ({
               </ScrollArea>
             </TabsContent>
             <TabsContent value="upload">
-              <UploadDocumentForm productId={item!.id} />
+              <UploadDocumentForm
+                productId={item!.id}
+                onSuccess={() => {
+                  onClose()
+                }}
+              />
             </TabsContent>
           </Tabs>
         ) : null}

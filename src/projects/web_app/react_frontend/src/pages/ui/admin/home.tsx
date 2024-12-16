@@ -1,16 +1,17 @@
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, EllipsisVertical } from 'lucide-react'
 import { useState } from 'react'
 import React from 'react'
 
 import { ProductModal } from '@/widgets/products-modal'
 import { type Product, useGetProductsTreeQuery } from '@/entities/products'
-import { cn } from '@/shared/lib'
+import { Loading } from '@/shared/kit'
 import {
   Button,
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   TypographyH2,
 } from '@/shared/ui'
 
@@ -27,7 +28,17 @@ const AdminHomePage = () => {
   const handleDocuments = (item: Product) =>
     setModalState({ action: 'documents', item })
 
-  if (!data) return <div>loading...</div>
+  if (!data)
+    return (
+      <Loading
+        type="container"
+        message={
+          <p className="text-lg font-semibold leading-6">
+            Загружаем продукты...
+          </p>
+        }
+      />
+    )
   return (
     <div className="p-4">
       <div className="flex justify-between mb-2">
@@ -94,38 +105,45 @@ const ProductNode = ({
   const [isExpanded, setIsExpanded] = React.useState(false)
 
   return (
-    <div className={cn('space-y-2', `pl-${level * 4}`)}>
-      <div className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-secondary">
-        <div className="flex items-center">
-          {item.children.length > 0 && (
-            <button
-              onClick={() => setIsExpanded((prev) => !prev)}
-              aria-label={isExpanded ? 'Свернуть' : 'Развернуть'}
-              className="mr-2"
-            >
-              {isExpanded ? (
-                <ChevronDown size={20} />
-              ) : (
-                <ChevronRight size={20} />
-              )}
-            </button>
-          )}
-          <ContextMenu modal={false}>
-            <ContextMenuTrigger asChild>
-              <p className="text-xl font-medium cursor-pointer">{item.name}</p>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem onSelect={() => onDocuments(item)}>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between rounded-md hover:bg-secondary px-2">
+        <div 
+          className="flex items-center flex-grow cursor-pointer py-2" 
+          onClick={() => item.children.length > 0 && setIsExpanded((prev) => !prev)}
+        >
+          <div style={{ paddingLeft: `${level * 1}rem` }} className="flex items-center flex-grow">
+            {item.children.length > 0 && (
+              <span className="mr-2">
+                {isExpanded ? (
+                  <ChevronDown size={20} />
+                ) : (
+                  <ChevronRight size={20} />
+                )}
+              </span>
+            )}
+            <p className="text-xl font-medium">{item.name}</p>
+          </div>
+        </div>
+        <div className="px-3">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost">
+                <EllipsisVertical className="h-6 w-6" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuItem onSelect={() => onDocuments(item)}>
                 Документы
-              </ContextMenuItem>
-              <ContextMenuItem onSelect={() => onEdit(item)}>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => onEdit(item)}>
                 Редактировать
-              </ContextMenuItem>
-              <ContextMenuItem onSelect={() => onDelete(item)}>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onDelete(item)}>
                 Удалить
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       {isExpanded && item.children.length > 0 && (

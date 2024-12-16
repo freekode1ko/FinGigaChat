@@ -355,5 +355,6 @@ export {
   FileUploader,
   FileUploaderContent,
   FileUploaderItem,
+  type FileUploaderProps,
   useFileUpload,
 }

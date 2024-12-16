@@ -1,9 +1,6 @@
-import { cva, type VariantProps } from 'class-variance-authority'
-import React from 'react'
+import { cva } from 'class-variance-authority'
 
-import { cn } from '../lib'
-
-const inputVariants = cva(
+export const inputVariants = cva(
   'block w-full rounded-md bg-transparent ring-offset-secondary file:border-0 file:bg-transparent file:text-sm file:font-medium dark:[color-scheme:dark] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
@@ -22,23 +19,3 @@ const inputVariants = cva(
     },
   }
 )
-
-interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement>,
-    VariantProps<typeof inputVariants> {}
-
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, variant, fieldSize, type, ...props }, ref) => {
-    return (
-      <input
-        className={cn(inputVariants({ variant, fieldSize, className }))}
-        type={type}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Input.displayName = 'Input'
-
-export { Input }

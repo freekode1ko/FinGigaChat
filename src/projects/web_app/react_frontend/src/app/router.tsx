@@ -1,10 +1,11 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import {
+  AdminCommoditiesPage,
   AdminHomePage,
+  AdminIndustriesPage,
   AdminSettingsPage,
-  // AnalyticDetailsPage,
-  // AnalyticsPage,
+  AdminWhitelistPage,
   AuthPage,
   DashboardPage,
   MeetingsPage,
@@ -13,7 +14,6 @@ import {
   PopularDashboardPage,
   ProfilePage,
   QuoteDetailsPage,
-  // SubscriptionsPage,
 } from '@/pages/ui'
 import { WelcomePage } from '@/pages/ui/welcome'
 import { ADMIN_MAP, SITE_MAP } from '@/shared/model'
@@ -52,11 +52,43 @@ export const appRouter = () =>
       children: [
         {
           path: '',
-          element: <AdminHomePage />,
+          element: (
+            <AuthGuard admin>
+              <AdminHomePage />
+            </AuthGuard>
+          ),
         },
         {
-          path: 'settings',
-          element: <AdminSettingsPage />,
+          path: ADMIN_MAP.settings,
+          element: (
+            <AuthGuard admin>
+              <AdminSettingsPage />
+            </AuthGuard>
+          ),
+        },
+        {
+          path: ADMIN_MAP.commodities,
+          element: (
+            <AuthGuard admin>
+              <AdminCommoditiesPage />
+            </AuthGuard>
+          ),
+        },
+        {
+          path: ADMIN_MAP.industries,
+          element: (
+            <AuthGuard admin>
+              <AdminIndustriesPage />
+            </AuthGuard>
+          ),
+        },
+        {
+          path: ADMIN_MAP.whitelist,
+          element: (
+            <AuthGuard admin>
+              <AdminWhitelistPage />
+            </AuthGuard>
+          ),
         },
       ],
     },

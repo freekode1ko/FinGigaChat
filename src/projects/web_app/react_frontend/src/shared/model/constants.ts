@@ -8,7 +8,10 @@ export const API_ENDPOINTS = {
   notes: 'notes',
   auth: 'auth',
   products: 'products',
+  whitelist: 'whitelist',
   settings: 'settings',
+  commodities: 'commodities',
+  industries: 'industries',
 }
 
 export const API_TAGS = {
@@ -19,6 +22,9 @@ export const API_TAGS = {
   dashboardQuotes: 'DASHBOARD_QUOTES',
   settings: 'SETTINGS',
   products: 'PRODUCTS',
+  commodities: 'COMMODITIES',
+  whitelist: 'WHITELIST',
+  industries: 'INDUSTRIES',
 }
 
 export const SITE_MAP = {
@@ -36,6 +42,9 @@ export const SITE_MAP = {
 export const ADMIN_MAP = {
   home: '/admin',
   settings: '/admin/settings',
+  commodities: '/admin/commodities',
+  whitelist: '/admin/whitelist',
+  industries: '/admin/industries',
 }
 
 export const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'

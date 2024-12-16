@@ -29,6 +29,7 @@
     "@radix-ui/react-tooltip": "^1.1.2",
     "@reduxjs/toolkit": "^2.2.5",
     "@tailwindcss/line-clamp": "^0.4.4",
+    "@tanstack/react-table": "^8.20.6",
     "@types/react-window": "^1.8.8",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
