@@ -6,8 +6,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui'
-import { Table as TableInstance } from "@tanstack/react-table"
-import { flexRender } from "@tanstack/react-table"
+import { Table as TableInstance } from '@tanstack/react-table'
+import { flexRender } from '@tanstack/react-table'
 
 interface DataTableProps<TData> {
   table: TableInstance<TData>
@@ -39,10 +39,7 @@ export function DataTable<TData>({ table }: DataTableProps<TData>) {
               <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
               </TableRow>

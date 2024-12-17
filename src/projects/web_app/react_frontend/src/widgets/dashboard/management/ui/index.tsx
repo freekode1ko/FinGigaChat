@@ -11,7 +11,7 @@ import {
 } from '@/entities/quotes'
 import { setSubscriptions } from '@/entities/quotes'
 import { selectDashboardSubscriptions } from '@/entities/quotes/model/slice'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { cn, useAppDispatch, useAppSelector } from '@/shared/lib'
 import {
   Button,

@@ -1,1 +1,1 @@
-export { CreateProductForm, UploadDocumentForm } from './ui'
+export { CreateProductDialog, CreateProductForm } from './ui'

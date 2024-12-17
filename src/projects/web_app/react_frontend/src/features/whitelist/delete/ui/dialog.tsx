@@ -1,62 +1,63 @@
-import { X } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { useDeleteWhitelistMutation } from '@/entities/whitelist'
-import {
-  Button,
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Paragraph,
-} from '@/shared/ui'
+import { AdaptableModal } from '@/shared/kit'
+import { Button, Paragraph } from '@/shared/ui'
 
-interface DeleteFromWhitelistProps {
+interface DeleteFromWhitelistProps extends React.PropsWithChildren {
   email: string
 }
 
-const DeleteFromWhitelistDialog = ({ email }: DeleteFromWhitelistProps) => {
-  const [deleteFromWhitelist] = useDeleteWhitelistMutation()
+const DeleteFromWhitelistDialog = ({
+  email,
+  children,
+}: DeleteFromWhitelistProps) => {
+  const [delete_] = useDeleteWhitelistMutation()
+  const [open, setOpen] = useState(false)
   const handleDelete = () => {
-    toast.promise(deleteFromWhitelist({ email }).unwrap(), {
+    toast.promise(delete_({ email }).unwrap(), {
       loading: `Удаляем ${email} из белого списка...`,
-      success: 'Пользователь успешно удален!',
+      success: () => {
+        setOpen(false)
+        return 'E-Mail успешно удален из белого списка!'
+      },
       error: 'Мы не смогли удалить пользователя. Попробуйте позже.',
     })
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <X />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Удалить {email}</DialogTitle>
-        </DialogHeader>
-        <Paragraph>
-          Вы уверены, что хотите удалить этого пользователя из белого списка?
-          Действие будет невозможно отменить.
-        </Paragraph>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              Отмена
-            </Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button type="submit" variant="destructive" onClick={handleDelete}>
-              Удалить
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <AdaptableModal
+      open={open}
+      onOpenChange={setOpen}
+      title={`Удалить ${email}`}
+      trigger={children}
+      bottomSlot={
+        <>
+          <Button
+            className="w-full md:w-auto"
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+          >
+            Отмена
+          </Button>
+          <Button
+            className="w-full md:w-auto"
+            type="submit"
+            variant="destructive"
+            onClick={handleDelete}
+          >
+            Удалить
+          </Button>
+        </>
+      }
+    >
+      <Paragraph>
+        Вы уверены, что хотите удалить этого пользователя из белого списка?
+        Действие будет невозможно отменить.
+      </Paragraph>
+    </AdaptableModal>
   )
 }
 

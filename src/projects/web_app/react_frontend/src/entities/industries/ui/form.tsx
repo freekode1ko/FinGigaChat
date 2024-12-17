@@ -1,9 +1,22 @@
-import { type UseFormReturn } from "react-hook-form"
-import { z } from "zod"
+import { type UseFormReturn } from 'react-hook-form'
+import { z } from 'zod'
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger,Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, Input } from "@/shared/ui"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from '@/shared/ui'
 
-import type { entityFormSchema } from "../model"
+import type { entityFormSchema } from '../model'
 
 interface IndustryFormProps {
   form: UseFormReturn<z.infer<typeof entityFormSchema>>
@@ -11,7 +24,7 @@ interface IndustryFormProps {
   actionSlot: React.ReactNode
 }
 
-const IndustryForm = ({form, onSubmit, actionSlot}: IndustryFormProps) => {
+const IndustryForm = ({ form, onSubmit, actionSlot }: IndustryFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

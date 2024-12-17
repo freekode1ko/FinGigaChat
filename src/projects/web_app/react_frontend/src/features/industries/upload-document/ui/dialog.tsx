@@ -1,12 +1,24 @@
-import { useState } from "react"
+import { useState } from 'react'
 
-import { type Industry,IndustryDocument } from "@/entities/industries"
-import { AdaptableModal } from "@/shared/kit"
-import { ScrollArea,Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui"
+import { type Industry, IndustryDocument } from '@/entities/industries'
+import { AdaptableModal } from '@/shared/kit'
+import {
+  ScrollArea,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/ui'
 
-import { UploadIndustryDocumentForm } from "./form"
+import { UploadIndustryDocumentForm } from './form'
 
-const UploadIndustryDocumentDialog = ({industry, children}: {industry: Industry, children: React.ReactNode}) => {
+const UploadIndustryDocumentDialog = ({
+  industry,
+  children,
+}: {
+  industry: Industry
+  children: React.ReactNode
+}) => {
   const [open, setOpen] = useState(false)
   return (
     <AdaptableModal
@@ -32,7 +44,9 @@ const UploadIndustryDocumentDialog = ({industry, children}: {industry: Industry,
                   <IndustryDocument key={doc.id} doc={doc} />
                 ))
               ) : (
-                <p className="text-foreground">Документы по отрасли не найдены</p>
+                <p className="text-foreground">
+                  Документы по отрасли не найдены
+                </p>
               )}
             </div>
           </ScrollArea>

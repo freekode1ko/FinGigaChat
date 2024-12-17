@@ -1,7 +1,7 @@
 import { NotesList } from '@/widgets/notes-list'
 import { AddNoteButton } from '@/features/notes'
 import { type Note, useGetNotesQuery } from '@/entities/notes'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { skipToken } from '@reduxjs/toolkit/query'
 

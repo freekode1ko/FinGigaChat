@@ -4,20 +4,38 @@ import { cn } from '@/shared/lib'
 
 import { adminItems, type MenuItem, menuItems } from '../model'
 
-const MenuItemLink = ({ item }: { item: MenuItem }) => (
+const MenuItemLink = ({
+  item,
+  dir,
+}: {
+  item: MenuItem
+  dir: 'horizontal' | 'vertical'
+}) => (
   <NavLink
     end
     to={item.path}
     className={({ isActive }) =>
       cn(
         isActive ? 'text-accent' : 'text-foreground hover:text-accent',
-        'font-semibold'
+        'font-semibold',
+        dir === 'vertical' && 'w-full'
       )
     }
   >
-    <span className="flex items-center justify-center gap-2 p-2">
+    <span
+      className={cn(
+        'flex items-center gap-2 p-2',
+        dir === 'horizontal' ? 'justify-center' : 'justify-start'
+      )}
+    >
       <item.icon />
-      <p className="text-center leading-tight">{item.name}</p>
+      <span
+        className={cn(
+          dir === 'vertical' ? 'leading-none' : 'text-center leading-tight'
+        )}
+      >
+        {item.name}
+      </span>
     </span>
   </NavLink>
 )
@@ -41,9 +59,11 @@ export const NavigationList = ({
       )}
     >
       {content === 'common'
-        ? menuItems.map((item) => <MenuItemLink key={item.path} item={item} />)
+        ? menuItems.map((item) => (
+            <MenuItemLink key={item.path} item={item} dir={dir} />
+          ))
         : adminItems.map((item) => (
-            <MenuItemLink key={item.path} item={item} />
+            <MenuItemLink key={item.path} item={item} dir={dir} />
           ))}
     </nav>
   )

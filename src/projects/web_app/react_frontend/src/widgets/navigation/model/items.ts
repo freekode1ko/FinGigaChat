@@ -80,6 +80,12 @@ export const adminItems: Array<MenuItem> = [
     description: 'Управление белым списком',
   },
   {
+    name: 'Пользователи',
+    path: ADMIN_MAP.users,
+    icon: UserIcon,
+    description: 'Просмотр пользователей',
+  },
+  {
     name: 'Продукты',
     path: ADMIN_MAP.home,
     icon: ShoppingCart,
@@ -92,7 +98,7 @@ export const adminItems: Array<MenuItem> = [
     description: 'Управление отраслями',
   },
   {
-    name: 'Коммоды',
+    name: 'Товары',
     path: ADMIN_MAP.commodities,
     icon: Package,
     description: 'Управление commodities',

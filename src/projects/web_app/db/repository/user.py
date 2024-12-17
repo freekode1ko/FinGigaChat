@@ -27,7 +27,7 @@ class UserRepository(GenericRepository[RegisteredUser]):
         stmt = sa.select(
             RegisteredUser,
             sa.func.count().over().label("total")
-        )
+        ).order_by(RegisteredUser.user_email)
         if email:
             stmt = stmt.where(sa.func.lower(RegisteredUser.user_email).like(f"%{email.lower()}%"))
         if role_id:
@@ -60,3 +60,14 @@ class UserRepository(GenericRepository[RegisteredUser]):
         query = sa.select(RegisteredUser.user_id).where(RegisteredUser.user_email == email)
         id_ = await self._session.execute(query)
         return int(id_.scalar())
+
+    async def get_user_by_email(self, email: str) -> RegisteredUser | None:
+        """
+        Получение пользователя по его email.
+
+        :param str email: Почта пользователя
+        :return: Пользователь или None
+        """
+        query = sa.select(RegisteredUser).where(RegisteredUser.user_email == email)
+        user = await self._session.execute(query)
+        return user.scalar()

@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { Logo } from '@/features/logo'
-import { useInitializeUser } from '@/entities/user'
+import { useInitializeUser } from '@/entities/auth'
 import { Loading } from '@/shared/kit'
 
 const InitializationWrapper = ({ children }: React.PropsWithChildren) => {

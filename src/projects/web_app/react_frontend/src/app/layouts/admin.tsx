@@ -9,6 +9,8 @@ export const adminLayout = (
         <NavigationList dir="vertical" content="admin" />
       </div>
     }
-    headerSlot={<AdminHeader navigationSlot={<NavigationSheet />} />}
+    headerSlot={
+      <AdminHeader navigationSlot={<NavigationSheet content="admin" />} />
+    }
   />
 )

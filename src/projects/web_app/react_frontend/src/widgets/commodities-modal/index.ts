@@ -1,1 +1,0 @@
-export { CommodityModal } from './ui'

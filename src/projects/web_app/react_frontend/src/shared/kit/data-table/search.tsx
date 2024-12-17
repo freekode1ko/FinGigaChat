@@ -6,10 +6,10 @@ interface DataTableSearchProps {
   placeholder?: string
 }
 
-export function DataTableSearch({ 
-  value, 
+export function DataTableSearch({
+  value,
   onChange,
-  placeholder = "Поиск..."
+  placeholder = 'Поиск...',
 }: DataTableSearchProps) {
   return (
     <div className="flex items-center py-2">
@@ -21,4 +21,4 @@ export function DataTableSearch({
       />
     </div>
   )
-} 
+}

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { ProfileNavigation } from '@/widgets/navigation'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { getCurrentGreeting, useAppSelector } from '@/shared/lib'
 import { ADMIN_MAP } from '@/shared/model'
 import { Button, TypographyH2 } from '@/shared/ui'

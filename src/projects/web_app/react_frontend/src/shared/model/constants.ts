@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
   settings: 'settings',
   commodities: 'commodities',
   industries: 'industries',
+  users: 'users',
 }
 
 export const API_TAGS = {
@@ -25,6 +26,7 @@ export const API_TAGS = {
   commodities: 'COMMODITIES',
   whitelist: 'WHITELIST',
   industries: 'INDUSTRIES',
+  users: 'USERS',
 }
 
 export const SITE_MAP = {
@@ -45,6 +47,7 @@ export const ADMIN_MAP = {
   commodities: '/admin/commodities',
   whitelist: '/admin/whitelist',
   industries: '/admin/industries',
+  users: '/admin/users',
 }
 
 export const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'

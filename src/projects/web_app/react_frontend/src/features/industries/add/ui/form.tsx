@@ -1,17 +1,19 @@
 import { useForm } from 'react-hook-form'
-import {z} from 'zod'
+import { z } from 'zod'
 
 import {
   entityFormSchema,
   IndustryForm,
   useCreateIndustryMutation,
 } from '@/entities/industries'
-import {
-  Button,
-} from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { zodResolver } from '@hookform/resolvers/zod'
 
-export const CreateIndustryForm = ({onSuccess,}: {onSuccess?: () => void}) => {
+export const CreateIndustryForm = ({
+  onSuccess,
+}: {
+  onSuccess?: () => void
+}) => {
   const [create, { isLoading }] = useCreateIndustryMutation()
 
   const form = useForm<z.infer<typeof entityFormSchema>>({

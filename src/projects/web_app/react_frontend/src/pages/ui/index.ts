@@ -3,6 +3,7 @@ export {
   AdminHomePage,
   AdminIndustriesPage,
   AdminSettingsPage,
+  AdminUsersPage,
   AdminWhitelistPage,
 } from './admin'
 export { AnalyticDetailsPage } from './analytic-details'

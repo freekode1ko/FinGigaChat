@@ -34,21 +34,21 @@ async def get_users(
 
 
 @router.patch(
-        '/{user_id}',
+        '/{user_email}',
         status_code=status.HTTP_204_NO_CONTENT,
         dependencies=[Depends(get_current_admin)],
 )
 async def update_user(
     user_repository: Annotated[UserRepository, Depends(get_repository(UserRepository))],
     user_role_repository: Annotated[UserRoleRepository, Depends(get_repository(UserRoleRepository))],
-    user_id: int,
+    user_email: str,
     user_update: UserUpdate,
 ):
     """
     *Только для администраторов*\n
     Обновление роли пользователя.
     """
-    if (user_db := await user_repository.get_by_pk(user_id)) is None:
+    if (user_db := await user_repository.get_user_by_email(user_email)) is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Пользователь не найден',

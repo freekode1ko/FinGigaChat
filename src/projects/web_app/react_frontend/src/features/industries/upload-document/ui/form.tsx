@@ -2,7 +2,10 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
-import { documentFormSchema, useUploadIndustryDocumentMutation } from '@/entities/industries'
+import {
+  documentFormSchema,
+  useUploadIndustryDocumentMutation,
+} from '@/entities/industries'
 import { FileUploadField } from '@/shared/kit'
 import {
   Button,
@@ -19,7 +22,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 
 import { dropZoneConfig } from '../model'
 
-export function UploadIndustryDocumentForm({ industryId, onSuccess }: { industryId: number, onSuccess: () => void }) {
+export function UploadIndustryDocumentForm({
+  industryId,
+  onSuccess,
+}: {
+  industryId: number
+  onSuccess: () => void
+}) {
   const [upload, { isLoading }] = useUploadIndustryDocumentMutation()
 
   const form = useForm<z.infer<typeof documentFormSchema>>({

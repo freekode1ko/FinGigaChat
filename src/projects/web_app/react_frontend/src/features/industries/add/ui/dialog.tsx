@@ -1,8 +1,8 @@
-import { useState } from "react"
+import { useState } from 'react'
 
-import { AdaptableModal } from "@/shared/kit"
+import { AdaptableModal } from '@/shared/kit'
 
-import { CreateIndustryForm } from "./form"
+import { CreateIndustryForm } from './form'
 
 const CreateIndustryDialog = ({ children }: { children: React.ReactNode }) => {
   const [open, setOpen] = useState(false)

@@ -10,7 +10,7 @@ import {
   useGetDashboardSubscriptionsQuery,
   useGetUserDashboardQuery,
 } from '@/entities/quotes'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppDispatch, useAppSelector } from '@/shared/lib'
 import { Paragraph, TypographyH2 } from '@/shared/ui'
 import { skipToken } from '@reduxjs/toolkit/query'

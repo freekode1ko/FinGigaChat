@@ -1,22 +1,37 @@
+import { SquarePlus, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { CreateWhitelistDialog } from '@/features/whitelist/add'
 import { DeleteFromWhitelistDialog } from '@/features/whitelist/delete'
 import { useGetWhitelistQuery, type WhitelistUser } from '@/entities/whitelist'
-import { DataTable, DataTablePagination, DataTableSearch } from '@/shared/kit'
-import { type ColumnDef, getCoreRowModel,useReactTable } from "@tanstack/react-table"
+import {
+  DataTable,
+  DataTablePagination,
+  DataTableSearch,
+  Loading,
+} from '@/shared/kit'
+import { Button } from '@/shared/ui'
+import {
+  type ColumnDef,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
 
 const columns: Array<ColumnDef<WhitelistUser>> = [
   {
-    accessorKey: "email",
-    header: "Email",
+    accessorKey: 'email',
+    header: 'Email',
   },
   {
-    accessorKey: "actions",
+    accessorKey: 'actions',
     header: undefined,
     cell: ({ row }) => (
       <div className="flex justify-end">
-        <DeleteFromWhitelistDialog email={row.original.email} />
+        <DeleteFromWhitelistDialog email={row.original.email}>
+          <Button variant="outline" size="icon">
+            <TrashIcon className="w-4 h-4" />
+          </Button>
+        </DeleteFromWhitelistDialog>
       </div>
     ),
   },
@@ -44,22 +59,35 @@ export function AdminWhitelistPage() {
     onPaginationChange: setPagination,
   })
 
-  if (isLoading) {
-    return <div>Загрузка...</div>
+  if (!whitelist || isLoading) {
+    return (
+      <Loading
+        type="container"
+        message={
+          <p className="text-lg font-semibold leading-6">
+            Загружаем белый список...
+          </p>
+        }
+      />
+    )
   }
-
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Управление белым списком</h1>
-        <CreateWhitelistDialog />
+        <CreateWhitelistDialog>
+          <Button variant="ghost" size="sm">
+            <SquarePlus />
+            <span className="hidden md:inline">Выдать доступ</span>
+          </Button>
+        </CreateWhitelistDialog>
       </div>
-      <div className='space-y-2'>
+      <div className="space-y-2">
         <DataTableSearch
           value={emailFilter}
           onChange={(value) => {
             setEmailFilter(value)
-            setPagination(prev => ({ ...prev, pageIndex: 0 }))
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }))
           }}
           placeholder="Поиск по E-Mail..."
         />

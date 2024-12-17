@@ -46,10 +46,12 @@ export const AdaptableModal = ({
         <DialogContent className={className}>
           <DialogHeader>
             {title && <DialogTitle>{title}</DialogTitle>}
-            {description && <DialogDescription>{description}</DialogDescription>}
+            {description && (
+              <DialogDescription>{description}</DialogDescription>
+            )}
           </DialogHeader>
           {children}
-          {bottomSlot &&  <DialogFooter>{bottomSlot}</DialogFooter>}
+          {bottomSlot && <DialogFooter>{bottomSlot}</DialogFooter>}
         </DialogContent>
       </Dialog>
     )
@@ -59,14 +61,14 @@ export const AdaptableModal = ({
     <Drawer open={open} onOpenChange={onOpenChange}>
       {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
       <DrawerContent className={className}>
-        <div className="mx-auto w-full max-w-sm">
+        <div className="mx-auto w-full max-w-sm max-h-64 overflow-y-auto md:max-h-full">
           <DrawerHeader>
             {title && <DrawerTitle>{title}</DrawerTitle>}
-            {description && <DrawerDescription>{description}</DrawerDescription>}
+            {description && (
+              <DrawerDescription>{description}</DrawerDescription>
+            )}
           </DrawerHeader>
-          <div className="p-4">
-            {children}
-          </div>
+          <div className="p-4">{children}</div>
           {bottomSlot && <DrawerFooter>{bottomSlot}</DrawerFooter>}
         </div>
       </DrawerContent>

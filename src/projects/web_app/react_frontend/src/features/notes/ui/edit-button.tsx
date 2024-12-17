@@ -1,7 +1,7 @@
 import { RefreshCcw } from 'lucide-react'
 
 import { type Note } from '@/entities/notes'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { Button } from '@/shared/ui'
 

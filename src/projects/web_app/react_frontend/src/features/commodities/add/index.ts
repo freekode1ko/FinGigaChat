@@ -1,1 +1,0 @@
-export { UploadResearchForm } from './ui'

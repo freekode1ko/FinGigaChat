@@ -1,1 +1,7 @@
-export type { CreateProduct, Product, ShortProduct } from './types'
+export { documentFormSchema, entityFormSchema } from './schema'
+export type {
+  CreateProduct,
+  Product,
+  ProductDocument,
+  ShortProduct,
+} from './types'

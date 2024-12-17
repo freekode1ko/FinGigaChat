@@ -1,7 +1,7 @@
 import { CheckCheck, LoaderCircle, Send } from 'lucide-react'
 
 import { useSendAnalyticsMutation } from '@/entities/analytics'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { Button } from '@/shared/ui'
 

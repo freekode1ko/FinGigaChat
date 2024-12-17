@@ -1,7 +1,7 @@
 import { ChevronLeft, Construction } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { SITE_MAP } from '@/shared/model'
 import { Button, Paragraph, TypographyH2 } from '@/shared/ui'

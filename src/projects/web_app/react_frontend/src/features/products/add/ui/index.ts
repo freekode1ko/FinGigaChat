@@ -1,2 +1,2 @@
-export { CreateProductForm } from './form_'
-export { UploadDocumentForm } from './upload'
+export { CreateProductDialog } from './dialog'
+export { CreateProductForm } from './form'

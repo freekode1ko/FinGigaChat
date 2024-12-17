@@ -2,7 +2,7 @@ export interface ProductDocument {
   id: number
   name: string
   description: string | null
-  url: string
+  url: Optional<string>
 }
 
 export interface CreateProductDocument {

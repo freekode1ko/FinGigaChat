@@ -6,4 +6,6 @@ export {
   useUpdateProductMutation,
   useUploadProductDocumentMutation,
 } from './api'
-export type { Product } from './model'
+export { transformProductsForCombobox } from './lib'
+export { documentFormSchema, entityFormSchema, type Product } from './model'
+export { ProductDocument, ProductForm } from './ui'

@@ -5,6 +5,7 @@ import {
   AdminHomePage,
   AdminIndustriesPage,
   AdminSettingsPage,
+  AdminUsersPage,
   AdminWhitelistPage,
   AuthPage,
   DashboardPage,
@@ -87,6 +88,14 @@ export const appRouter = () =>
           element: (
             <AuthGuard admin>
               <AdminWhitelistPage />
+            </AuthGuard>
+          ),
+        },
+        {
+          path: ADMIN_MAP.users,
+          element: (
+            <AuthGuard admin>
+              <AdminUsersPage />
             </AuthGuard>
           ),
         },

@@ -1,7 +1,7 @@
 import { MeetingsList } from '@/widgets/meetings-list'
 import { AddMeetingButton } from '@/features/add-meeting'
 import { useGetMeetingsQuery } from '@/entities/meetings'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { TypographyH2 } from '@/shared/ui'
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { ConfirmationCodeStep, EmailStep } from '@/features/user'
+import { ConfirmationCodeStep, EmailStep } from '@/features/auth'
 import { SITE_MAP } from '@/shared/model'
 import { Step, TypographyH2 } from '@/shared/ui'
 

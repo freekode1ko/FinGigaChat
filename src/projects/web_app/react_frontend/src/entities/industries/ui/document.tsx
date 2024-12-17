@@ -1,9 +1,9 @@
-import { Download } from "lucide-react"
+import { Download } from 'lucide-react'
 
-import { Button } from "@/shared/ui"
+import { Button } from '@/shared/ui'
 
-import type { IndustryDocument as IndustryDocumentType } from "../model"
-  
+import type { IndustryDocument as IndustryDocumentType } from '../model'
+
 const IndustryDocument = ({ doc }: { doc: IndustryDocumentType }) => {
   return (
     <div className="w-full border p-2 rounded">

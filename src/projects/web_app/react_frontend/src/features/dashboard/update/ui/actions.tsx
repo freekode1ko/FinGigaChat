@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 
 import { usePutDashboardSubscriptionsMutation } from '@/entities/quotes'
 import { selectDashboardSubscriptions } from '@/entities/quotes/model/slice'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import {
   DropdownMenu,

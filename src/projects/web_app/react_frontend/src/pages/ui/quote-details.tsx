@@ -8,7 +8,7 @@ import {
   useGetDashboardSubscriptionsQuery,
 } from '@/entities/quotes'
 import { selectAppTheme } from '@/entities/theme'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector, useMediaQuery } from '@/shared/lib'
 import {
   Dialog,

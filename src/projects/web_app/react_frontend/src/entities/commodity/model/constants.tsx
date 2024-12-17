@@ -1,0 +1,1 @@
+export const MAX_ANALYTICS_DOCUMENT_SIZE_MB = 100

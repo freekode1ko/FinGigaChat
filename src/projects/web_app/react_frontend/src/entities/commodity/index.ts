@@ -2,8 +2,9 @@ export {
   useGetCommoditiesQuery,
   useUploadCommodityResearchMutation,
 } from './api'
-export type {
-  Commodity,
-  CommodityResearch,
-  CreateCommodityResearch,
+export {
+  analyticsFormSchema,
+  type Commodity,
+  type CreateCommodityResearch,
 } from './model'
+export { CommodityResearch } from './ui'
