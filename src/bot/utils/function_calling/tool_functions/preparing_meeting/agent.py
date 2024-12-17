@@ -33,7 +33,7 @@ def create_agent():
     llm = ChatOpenAI(model=BASE_MODEL,
                      api_key=API_KEY,
                      base_url=BASE_URL,
-                     max_tokens=100000,
+                     max_tokens=5000,
                      temperature=0)
 
     llm_with_tools = llm.bind_tools(tool_functions_prepare_for_meeting, parallel_tool_calls=False)

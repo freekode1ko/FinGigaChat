@@ -81,28 +81,15 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
                     print()
 
         print(f"Логи действий для составления итогового ответа: {result_history}")
-        # TODO: так что могут быть баги/странное поведение
-        #llm = GigaChat(base_url='https://gigachat-preview.devices.sberbank.ru/api/v1/',
-        #               verbose=True,
-        #               credentials=giga_credentials,
-        #               scope=giga_scope,
-        #               model=giga_model,
-        #               verify_ssl_certs=False,
-        #               profanity_check=False,
-        #               temperature=0.00001
-        #               )
-        llm = ChatOpenAI(model=BASE_MODEL,
+        llm = ChatOpenAI(model='gpt-4o-mini',
                          api_key=API_KEY,
                          base_url=BASE_URL,
-                         max_tokens=100000,
+                         max_tokens=8000,
                          temperature=0)
         result = await get_answer_giga(llm,
-                                       FINAL_ANSWER_SYSTEM_PROMPT,
+                                       FINAL_ANSWER_SYSTEM_PROMPT.format(special_info=special_info),
                                        FINAL_ANSWER_USER_PROMPT,
                                        '\n'.join(result_history))
-
-
-
         try:
             first = True
             batches = slit_message(result)
@@ -117,14 +104,11 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
         except Exception as e:
             print('Не смогло отправить финальное сообщение')
             print(e)
-
-
         try:
             for menu in buttons:
                 await tg_message.answer(menu['message'], reply_markup=menu['keyboard'], parse_mode='HTML')
         except:
             pass
-        # TODO: напечатать пользователю итоговый ответ
         return result
     except Exception as e:
         await final_message.edit_text('Произошла ошибка: ' + result)

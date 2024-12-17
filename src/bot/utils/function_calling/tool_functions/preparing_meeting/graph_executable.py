@@ -1,11 +1,14 @@
 """Граф исполнения подготовки ко встречи"""
 
+import re
+
 from langgraph.graph import StateGraph, START, END
 
 from utils.function_calling.tool_functions.preparing_meeting.utils import PlanExecute, Response
 from utils.function_calling.tool_functions.preparing_meeting.planner import create_planner
 from utils.function_calling.tool_functions.preparing_meeting.replanner import create_replanner
 from utils.function_calling.tool_functions.preparing_meeting.agent import create_agent
+from utils.function_calling.tool_functions.preparing_meeting.prompts import REPLANER_PROMPT
 from langchain_core.runnables import RunnableConfig
 
 agent_executor = create_agent()
@@ -20,9 +23,18 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
     plan = state["plan"]
     plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
     task = plan[0]
-    task_formatted = f"""Для следующего плана: {plan_str}\n\n
+    if re.search('(Рекомендация)|(порекомендовать)', task):
+        print('Этап с рекомендацией, добавляем в промпт всю предыдущую информацию')
+        task_formatted = f"""Для следующего плана: {plan_str}\n\n
                          Тебе задано выполнение шага: {1}, {task}. 
                          Информация о проделанных тобой шагах: {state['past_steps']}"""
+    else:
+        task_formatted = f"""Для следующего плана: {plan_str}\n\n
+                             Тебе задано выполнение шага: {1}, {task}. """
+    print()
+    print(len(task_formatted.split()))
+    print(f"task_formatted: {task_formatted}")
+    print()
     agent_response = await agent_executor.ainvoke(
         {"messages": [("user", task_formatted)]},
         config={
@@ -36,8 +48,13 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
             }
         }
     )
+    print()
+    print(state)
+    print()
     return {
         "past_steps": [(task, agent_response["messages"][-1].content)],
+        "past_calls": [task],
+        "past_step": agent_response["messages"][-1].content[0:100] + '...\n'
     }
 
 
@@ -57,6 +74,14 @@ async def plan_step(state: PlanExecute, config: RunnableConfig):
 
 
 async def replan_step(state: PlanExecute, config: RunnableConfig):
+    print()
+    print('Зашли в ноду репланера')
+    print(f'state["past_calls"]: {state["past_calls"]}')
+    print('Промпт репланера:')
+    print(REPLANER_PROMPT.format(input=state['input'],
+                                 plan=state['plan'],
+                                 past_calls=state['past_calls'],
+                                 past_step=state['past_step']))
     output = await replanner.ainvoke(
         state,
         config={
@@ -71,6 +96,10 @@ async def replan_step(state: PlanExecute, config: RunnableConfig):
     if isinstance(output.action, Response):
         return {"response": output.action.response}
     else:
+        print()
+        print('Ответ репланера:')
+        print(output.action.steps)
+        print()
         return {"plan": output.action.steps}
 
 

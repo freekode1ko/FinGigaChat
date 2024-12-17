@@ -7,7 +7,7 @@ env.read_env()
 
 API_KEY = env.str('OPENAI_API_KEY', default='')
 BASE_URL = 'https://api.vsegpt.ru/v1'
-BASE_MODEL = 'openai/gpt-4o'
+BASE_MODEL = 'openai/gpt-4o-latest'
 
 EXECUTION_CONFIG = {
     "recursion_limit": 100,

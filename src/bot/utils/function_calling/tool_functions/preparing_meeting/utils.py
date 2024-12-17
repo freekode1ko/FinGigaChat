@@ -19,6 +19,8 @@ class PlanExecute(TypedDict):
     input: str
     plan: List[str]
     past_steps: Annotated[List[Tuple], operator.add]
+    past_calls: Annotated[List[Tuple], operator.add]
+    past_step: str
     response: str
 
 
