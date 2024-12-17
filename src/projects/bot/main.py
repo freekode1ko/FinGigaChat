@@ -14,6 +14,7 @@ from aiogram.types import BotCommand, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 
+from api.router import router as api_router
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import async_session as async_session_maker, engine
@@ -43,11 +44,11 @@ from utils.base import (
     next_weekday_time,
     wait_until
 )
-from api.router import router as api_router
 
 storage = MemoryStorage()
 bot = Bot(token=config.api_token)
 dp = Dispatcher(storage=storage)
+
 
 async def passive_newsletter(
         newsletter_weekday: int,
@@ -180,6 +181,7 @@ async def main():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """FastApi lifespan"""
     await main()
     yield
     await sessions.GigaOauthClient().close()
@@ -195,11 +197,12 @@ app.include_router(api_router, prefix="/api")
 
 @app.post('/webhook')
 async def bot_webhook(request: Request):
-    update = Update.model_validate_json(await request.body(), context={"bot": bot})
+    """Точка входа для сообщений от сервера Telegram"""
+    update = Update.model_validate_json(await request.body(), context={'bot': bot})
     await dp.feed_update(bot, update)
 
 if __name__ == '__main__':
     try:
-        uvicorn.run(app, host="0.0.0.0", port=config.PORT)
+        uvicorn.run(app, host='0.0.0.0', port=config.PORT)
     except KeyboardInterrupt:
         print('bot was terminated')

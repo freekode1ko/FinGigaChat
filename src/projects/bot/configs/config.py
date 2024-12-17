@@ -130,4 +130,3 @@ WHISPER_MODEL = 'small'
 
 PORT: int = env.int('PORT_BOT', default=8000)
 WEBHOOK_URL = f'{DOMAIN_NAME}/service/bot/webhook'
-

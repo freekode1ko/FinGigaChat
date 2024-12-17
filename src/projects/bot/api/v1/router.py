@@ -1,3 +1,4 @@
+"""Главный роутер API V1"""
 from fastapi import APIRouter
 
 from api.v1.testing.router import router as testing_router
