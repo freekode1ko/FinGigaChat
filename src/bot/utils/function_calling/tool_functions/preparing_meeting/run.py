@@ -1,19 +1,20 @@
 """Тулза по получению отчета для подготовки ко встречи"""
+import traceback
+
 from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
+from langchain_gigachat.chat_models.gigachat import GigaChat
 from langchain_openai import ChatOpenAI
-import traceback
 
-from zmq.backend import first
-
+from configs.config import giga_scope, giga_model, giga_credentials
 from utils.base import slit_message
+from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, AGENT_MODEL
 from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG, MESSAGE_AGENT_START
-from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, BASE_MODEL
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
-from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
 from utils.function_calling.tool_functions.preparing_meeting.prompts import FINAL_ANSWER_SYSTEM_PROMPT, \
     FINAL_ANSWER_USER_PROMPT
+from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
 from utils.function_calling.tool_functions.utils import get_answer_giga
 
 agent_graph = create_graph_executable()
@@ -32,7 +33,7 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
 
     Args:
         client_name (str): Название компании клиента в именительном падеже с маленькой буквы.
-        special_info (str): Специальная доп информация, извлеченная из сообщения менеджера, о том, как должен быть сделан отчет.
+        special_info (str): Специальная доп информация, извлеченная из сообщения менеджера, о том, как должен быть сделан отчет. Если никакой спецификации в запросе нет, то вызови этот аргумент пустой строкой.
         runnable_config (RunnableConfig): Конфиг.
     return:
         (str): Сформированный отчет для встречи менеджера с клиентом.
@@ -81,11 +82,22 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
                     print()
 
         print(f"Логи действий для составления итогового ответа: {result_history}")
-        llm = ChatOpenAI(model='gpt-4o-mini',
-                         api_key=API_KEY,
-                         base_url=BASE_URL,
-                         max_tokens=8000,
-                         temperature=0)
+        if AGENT_MODEL == 'gpt':
+            llm = ChatOpenAI(model='gpt-4o-mini',
+                             api_key=API_KEY,
+                             base_url=BASE_URL,
+                             max_tokens=8000,
+                             temperature=0)
+        elif AGENT_MODEL == 'giga':
+            llm = GigaChat(verbose=True,
+                           credentials=giga_credentials,
+                           scope=giga_scope,
+                           model=giga_model,
+                           verify_ssl_certs=False,
+                           profanity_check=False,
+                           temperature=0.00001)
+        else:
+            raise Exception('Wrong agent model type')
         result = await get_answer_giga(llm,
                                        FINAL_ANSWER_SYSTEM_PROMPT.format(special_info=special_info),
                                        FINAL_ANSWER_USER_PROMPT,
@@ -96,10 +108,10 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
             print(batches)
             for batch in batches:
                 if first:
-                    await final_message.edit_text(text=batch, parse_mode='HTML')
+                    await final_message.edit_text(text=batch, parse_mode='Markdown')
                     first = False
                     continue
-                await tg_message.answer(text=batch, parse_mode='HTML')
+                await tg_message.answer(text=batch, parse_mode='Markdown')
 
         except Exception as e:
             print('Не смогло отправить финальное сообщение')

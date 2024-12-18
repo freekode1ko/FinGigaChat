@@ -5,6 +5,9 @@ from environs import Env
 env = Env()
 env.read_env()
 
+AGENT_MODEL = 'giga'
+# AGENT_MODEL = 'gpt'
+
 API_KEY = env.str('OPENAI_API_KEY', default='')
 BASE_URL = 'https://api.vsegpt.ru/v1'
 BASE_MODEL = 'openai/gpt-4o-latest'

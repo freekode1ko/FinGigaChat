@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langchain_gigachat.chat_models.gigachat import GigaChat
 
-from configs.config import giga_scope, giga_model, giga_credentials
+from configs.config import giga_scope, giga_agent_model, giga_credentials
 from constants.texts import texts_manager
 from db import models
 from db.api.client import get_research_type_id_by_name
@@ -70,7 +70,7 @@ async def get_news_by_name(name: str, config: RunnableConfig):
     llm = GigaChat(verbose=True,
                    credentials=giga_credentials,
                    scope=giga_scope,
-                   model=giga_model,
+                   model=giga_agent_model,
                    verify_ssl_certs=False,
                    profanity_check=False,
                    temperature=0.00001

@@ -80,6 +80,7 @@ giga_oauth_url = 'https://ngw.devices.sberbank.ru:9443'
 giga_chat_url = 'https://gigachat.devices.sberbank.ru'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
+giga_agent_model = 'GigaChat-Max'
 
 # url к rag-сервисам
 BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'

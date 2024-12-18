@@ -4,7 +4,7 @@ import re
 
 from langgraph.graph import StateGraph, START, END
 
-from utils.function_calling.tool_functions.preparing_meeting.utils import PlanExecute, Response
+from utils.function_calling.tool_functions.preparing_meeting.utils import PlanExecute
 from utils.function_calling.tool_functions.preparing_meeting.planner import create_planner
 from utils.function_calling.tool_functions.preparing_meeting.replanner import create_replanner
 from utils.function_calling.tool_functions.preparing_meeting.agent import create_agent
@@ -93,14 +93,15 @@ async def replan_step(state: PlanExecute, config: RunnableConfig):
             }
         }
     )
-    if isinstance(output.action, Response):
-        return {"response": output.action.response}
+    if len(output.replan) == 1 and output.replan[0] == '__end__':
+        print('Окончание работы графа')
+        return {"response": output.replan[0]}
     else:
         print()
         print('Ответ репланера:')
-        print(output.action.steps)
+        print(output.replan)
         print()
-        return {"plan": output.action.steps}
+        return {"plan": output.replan}
 
 
 def should_end(state: PlanExecute):
