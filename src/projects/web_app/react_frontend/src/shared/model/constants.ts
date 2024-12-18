@@ -7,6 +7,12 @@ export const API_ENDPOINTS = {
   subscriptions: 'subscriptions',
   notes: 'notes',
   auth: 'auth',
+  products: 'products',
+  whitelist: 'whitelist',
+  settings: 'settings',
+  commodities: 'commodities',
+  industries: 'industries',
+  users: 'users',
 }
 
 export const API_TAGS = {
@@ -15,6 +21,12 @@ export const API_TAGS = {
   dashboard: 'DASHBOARD',
   dashboardSubscriptions: 'DASHBOARD_SUBSCRIPTIONS',
   dashboardQuotes: 'DASHBOARD_QUOTES',
+  settings: 'SETTINGS',
+  products: 'PRODUCTS',
+  commodities: 'COMMODITIES',
+  whitelist: 'WHITELIST',
+  industries: 'INDUSTRIES',
+  users: 'USERS',
 }
 
 export const SITE_MAP = {
@@ -27,6 +39,15 @@ export const SITE_MAP = {
   notes: '/notes',
   profile: '/profile',
   login: '/login',
+}
+
+export const ADMIN_MAP = {
+  home: '/admin',
+  settings: '/admin/settings',
+  commodities: '/admin/commodities',
+  whitelist: '/admin/whitelist',
+  industries: '/admin/industries',
+  users: '/admin/users',
 }
 
 export const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'

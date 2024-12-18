@@ -194,3 +194,11 @@ class FeatureType(str, Enum):
 
     rag_research = 'rag_research'
     web_retriever = 'web_retriever'
+
+
+class FileType(str, Enum):
+    """Тип файла"""
+
+    IMAGE = 'image'
+    DOCUMENT = 'document'
+    OTHER = 'other'

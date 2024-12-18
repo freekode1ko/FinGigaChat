@@ -152,6 +152,7 @@ class MessageType(Base):
     description = Column(String(255),)
 
     message = relationship('Message', back_populates='message_type')
+    broadcast = relationship('Broadcast', back_populates='message_type')
 
 
 t_metals = Table(
@@ -260,8 +261,9 @@ class RegisteredUser(Base):
     user_email = Column(Text, server_default=sa.text("''::text"))
     role_id = Column(ForeignKey('user_role.id', ondelete='RESTRICT', onupdate='CASCADE'))
 
-    message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    message = relationship('Message', back_populates='user')
+    telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
 
@@ -357,6 +359,7 @@ class IndustryAlternative(Base):
     industry = relationship('Industry', back_populates='industry_alternative')
 
 
+### DEPRECATED: Message -> Broadcast & TelegramMessage ###
 class Message(Base):
     __tablename__ = 'message'
     __table_args__ = {'comment': 'Хранилище отправленных пользователям сообщений'}
@@ -370,6 +373,64 @@ class Message(Base):
 
     message_type = relationship('MessageType', back_populates='message')
     user = relationship('RegisteredUser', back_populates='message')
+######
+
+
+t_broadcast_file = Table(
+    'broadcast_file', metadata,
+    Column('broadcast_id', ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True),
+    Column('telegram_file_id', ForeignKey('telegram_file.telegram_file_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+)
+
+
+class Broadcast(Base):
+    __tablename__ = 'broadcast'
+    __table_args__ = {'comment': 'Рассылки сообщений в боте'}
+
+    id = Column(BigInteger, primary_key=True)
+    text = Column(Text, nullable=False)
+    message_type_id = Column(
+        ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'),
+        nullable=False
+    )
+    function_name = Column(Text, nullable=False)
+    created_at = Column(DateTime(True), nullable=False)
+
+    telegram_messages = relationship('TelegramMessage', back_populates='broadcast')
+    telegram_files = relationship(
+        'TelegramFile',
+        secondary=t_broadcast_file,
+        back_populates='broadcasts'
+    )
+    message_type = relationship('MessageType', back_populates='broadcast')
+
+
+class TelegramMessage(Base):
+    __tablename__ = 'telegram_message'
+    __table_args__ = {'comment': 'Доставленные пользователям сообщения'}
+
+    telegram_message_id = Column(BigInteger, primary_key=True)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    send_datetime = Column(DateTime(True), nullable=False)
+
+    user = relationship('RegisteredUser', back_populates='telegram_messages')
+    broadcast = relationship('Broadcast', back_populates='telegram_messages')
+
+
+class TelegramFile(Base):
+    __tablename__ = 'telegram_file'
+    __table_args__ = {'comment': 'Файлы бота в Telegram'}
+
+    telegram_file_id = Column(String(255), primary_key=True)
+    file_type = Column(Enum(enums.FileType, name='file_type'), nullable=False)
+    created_at = Column(DateTime(True), nullable=False)
+
+    broadcasts = relationship(
+        'Broadcast',
+        secondary=t_broadcast_file,
+        back_populates='telegram_files'
+    )
 
 
 class ParserSource(Base):

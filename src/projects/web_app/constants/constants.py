@@ -7,13 +7,18 @@ AUTH_MAIL_TITLE = 'Авторизация в AI-помощнике'
 
 TELEGRAM_DATA_VALIDITY_PERIOD = 60 * 60  # 1 час
 
-JWT_ALGORITHM = "HS256"
+JWT_ALGORITHM = 'HS256'
 JWT_TOKEN_EXPIRE = 60 * 60 * 24 * 7  # 1 неделя
-JWT_TOKEN_NAME = "token"
-AUTH_TOKEN_NAME = "auth"
+JWT_TOKEN_NAME = 'token'
+AUTH_TOKEN_NAME = 'auth'
 
 PROJECT_DIR = pathlib.Path(__file__).parent.parent  # noqa
+PATH_TO_PRODUCTS = PROJECT_DIR / 'sources' / 'products' # мб лучше относительный путь?
+PATH_TO_INDUSTRIES = PROJECT_DIR / 'sources' / 'analytics' / 'industry'
+PATH_TO_COMMODITY_REPORTS = PROJECT_DIR / 'sources' / 'commodity_reports'
 PATH_TO_REPORTS = PROJECT_DIR / 'sources' / 'reports'
+
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
 CLIENT_SCORE_ARTICLE = 3
 

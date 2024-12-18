@@ -11,10 +11,15 @@ import {
   SheetTitle,
 } from '@/shared/ui'
 
-import { menuItems } from '../model'
+import { adminItems, menuItems } from '../model'
 
-export const NavigationSheet = () => {
+export const NavigationSheet = ({
+  content,
+}: {
+  content: 'common' | 'admin'
+}) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
+  const items = content === 'common' ? menuItems : adminItems
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -27,8 +32,9 @@ export const NavigationSheet = () => {
         </SheetHeader>
         <div className="min-w-full table">
           <div className="flex flex-col space-y-3 mt-8">
-            {menuItems.map((item, itemIdx) => (
+            {items.map((item, itemIdx) => (
               <NavLink
+                end
                 key={itemIdx}
                 to={item.path}
                 className={({ isActive }) =>
