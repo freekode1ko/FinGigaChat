@@ -3,14 +3,18 @@ import asyncio
 import datetime
 import time
 import warnings
+from contextlib import asynccontextmanager
 from typing import Any, Callable
 
 import pandas as pd
+import uvicorn
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI, Request
 
+from api.router import router as api_router
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import async_session as async_session_maker, engine
@@ -130,8 +134,7 @@ async def start_bot():
     dp.update.middleware(StateMiddleware())
 
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    await bot.set_webhook(config.WEBHOOK_FULL_URL)
 
 
 async def main():
@@ -173,19 +176,33 @@ async def main():
                 apscheduler=scheduler,
                 **param['kwargs'],
             ))
-    try:
-        await start_bot()
-    finally:
-        await sessions.GigaOauthClient().close()
-        await sessions.GigaChatClient().close()
-        await sessions.RagQaBankerClient().close()
-        await sessions.RagStateSupportClient().close()
-        await sessions.RagQaResearchClient().close()
-        await sessions.RagWebClient().close()
+    await start_bot()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Fastapi lifespan"""
+    await main()
+    yield
+    await sessions.GigaOauthClient().close()
+    await sessions.GigaChatClient().close()
+    await sessions.RagQaBankerClient().close()
+    await sessions.RagStateSupportClient().close()
+    await sessions.RagQaResearchClient().close()
+    await sessions.RagWebClient().close()
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(api_router, prefix='/api')
+
+
+@app.post(config.WEBHOOK_LOCAL_URL)
+async def bot_webhook(request: Request):
+    """Точка входа для сообщений от сервера Telegram"""
+    update = Update.model_validate_json(await request.body(), context={'bot': bot})
+    await dp.feed_update(bot, update)
 
 if __name__ == '__main__':
     try:
-        asyncio.run(main())
+        uvicorn.run(app, host='0.0.0.0', port=config.PORT)
     except KeyboardInterrupt:
         print('bot was terminated')
