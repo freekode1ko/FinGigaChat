@@ -134,7 +134,7 @@ async def start_bot():
     dp.update.middleware(StateMiddleware())
 
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
-    await bot.set_webhook(config.WEBHOOK_URL)
+    await bot.set_webhook(config.WEBHOOK_FULL_URL)
 
 
 async def main():
@@ -181,7 +181,7 @@ async def main():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """FastApi lifespan"""
+    """Fastapi lifespan"""
     await main()
     yield
     await sessions.GigaOauthClient().close()
@@ -192,10 +192,10 @@ async def lifespan(app: FastAPI):
     await sessions.RagWebClient().close()
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix='/api')
 
 
-@app.post('/webhook')
+@app.post(config.WEBHOOK_LOCAL_URL)
 async def bot_webhook(request: Request):
     """Точка входа для сообщений от сервера Telegram"""
     update = Update.model_validate_json(await request.body(), context={'bot': bot})
