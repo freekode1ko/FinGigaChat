@@ -7,7 +7,7 @@ env.read_env()
 
 PROJECT_DIR = Path(__file__).parent
 
-PORT = env.int('WEB_RETRIEVER_PORT', default=447)
+PORT = env.int('PORT_WEB_RETRIEVER', default=447)
 
 LOG_FILE = env.str('LOG_FILE', default='web_retriever')
 LOG_LEVEL = 20  # INFO

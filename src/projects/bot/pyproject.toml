@@ -13,6 +13,7 @@ alembic = "^1.14.0"
 apscheduler = "^3.10.4"
 asyncpg = "^0.29.0"
 environs = "^11.2.1"
+fastapi = "^0.115.6"
 fuzzywuzzy = "^0.18.0"
 gigachat = "^0.1.36"
 langchain = "^0.3.11"
@@ -36,6 +37,7 @@ sentry-sdk = "^1.45.1"
 soundfile = "^0.12.1"
 speechrecognition = "^3.12.0"
 sqlalchemy = "^2.0.36"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
 xgboost = "^2.1.3"
 
 

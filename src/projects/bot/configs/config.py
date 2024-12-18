@@ -127,3 +127,9 @@ ECO_FUZZY_SEARCH_SCORE_CUTOFF: int = 90
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 WHISPER_MODEL = 'small'
+
+PORT: int = env.int('PORT_BOT', default=8000)
+
+WEBHOOK_LOCAL_URL = '/webhook'
+SERVICE_URL = '/service/bot'
+WEBHOOK_FULL_URL = f'{DOMAIN_NAME}{SERVICE_URL}{WEBHOOK_LOCAL_URL}'

@@ -66,6 +66,8 @@ services:
             - TZ=Europe/Moscow
         env_file:
             - .env
+        ports:
+            - ${PORT_BOT}:${PORT_BOT}
         command: bash -c "poetry run python main.py"
         depends_on:
             alembic:
@@ -136,8 +138,8 @@ services:
         env_file:
             - .env
         ports:
-            - "443:443"
-        command: bash -c "poetry run uvicorn --ssl-keyfile data/certs/privkey.pem --ssl-certfile data/certs/fullchain.pem app:app --host 0.0.0.0 --port 443"
+            - ${PORT_WEB_APP}:${PORT_WEB_APP}
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port ${PORT_WEB_APP}"
         depends_on:
             - bot
         volumes:
@@ -160,8 +162,8 @@ services:
         env_file:
             - .env
         ports:
-            - "444:444"
-        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 444"
+            - ${PORT_BERT_CLIENT_RELEVANCE}:${PORT_BERT_CLIENT_RELEVANCE}
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port ${PORT_BERT_CLIENT_RELEVANCE}"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -182,8 +184,8 @@ services:
         env_file:
             - .env
         ports:
-            - "446:446"
-        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port 446"
+            - ${PORT_BERT_COMMODITY_RELEVANCE}:${PORT_BERT_COMMODITY_RELEVANCE}
+        command: bash -c "poetry run uvicorn app:app --host 0.0.0.0 --port ${PORT_BERT_COMMODITY_RELEVANCE}"
         volumes:
             - ./logs:/code/logs
             - ./data:/code/data
@@ -202,7 +204,7 @@ services:
         env_file:
             - .env
         ports:
-            - ${WEB_RETRIEVER_PORT}:${WEB_RETRIEVER_PORT}
+            - ${PORT_WEB_RETRIEVER}:${PORT_WEB_RETRIEVER}
         command: poetry run python main.py
         volumes:
             - ./logs:/code/logs
@@ -311,6 +313,43 @@ services:
             - ./data:/code/data
             - ./sources:/code/sources/
         restart: always
+
+
+    nginx:
+        image: nginx:latest
+        container_name: nginx
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - ./build/nginx/template.conf:/tmp/base.template
+          - ./data/certs:/certs:ro
+        command: /bin/bash -c "envsubst < /tmp/base.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+        environment:
+          - DOMAIN_NAME=${DOMAIN_NAME}
+          - PORT_ARTICLE=${PORT_ARTICLE}
+          - PORT_ARTICLE_ONLINE=${PORT_ARTICLE_ONLINE}
+          - PORT_BOT=${PORT_BOT}
+          - PORT_BERT_CLIENT_RELEVANCE=${PORT_BERT_CLIENT_RELEVANCE}
+          - PORT_BERT_COMMODITY_RELEVANCE=${PORT_BERT_COMMODITY_RELEVANCE}
+          - PORT_WEB_RETRIEVER=${PORT_WEB_RETRIEVER}
+          - PORT_WEB_APP=${PORT_WEB_APP}
+          - PORT_QUOTES=${PORT_QUOTES}
+          - PORT_RESEARCH=${PORT_RESEARCH}
+          - PORT_USERS_STATISTICS=${PORT_USERS_STATISTICS}
+          - PORT_PARSER_MONITORING=${PORT_PARSER_MONITORING}
+        depends_on:
+            - article
+            - article_online
+            - bot
+            - bert_client_relevance
+            - bert_commodity_relevance
+            - web-app
+            - web_retriever
+            - quotes
+            - research
+            - users_statistics
+            - parser_monitoring
 
 volumes:
   redis_data:
