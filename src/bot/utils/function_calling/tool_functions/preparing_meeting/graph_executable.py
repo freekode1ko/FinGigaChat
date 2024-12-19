@@ -2,21 +2,19 @@
 
 import re
 
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END
 
-from utils.function_calling.tool_functions.preparing_meeting.utils import PlanExecute
-from utils.function_calling.tool_functions.preparing_meeting.planner import create_planner
-from utils.function_calling.tool_functions.preparing_meeting.replanner import create_replanner
 from utils.function_calling.tool_functions.preparing_meeting.agent import create_agent
+from utils.function_calling.tool_functions.preparing_meeting.config import DEBUG_GRAPH
+from utils.function_calling.tool_functions.preparing_meeting.planner import create_planner
 from utils.function_calling.tool_functions.preparing_meeting.prompts import REPLANER_PROMPT
-from langchain_core.runnables import RunnableConfig
+from utils.function_calling.tool_functions.preparing_meeting.replanner import create_replanner
+from utils.function_calling.tool_functions.preparing_meeting.utils import PlanExecute
 
 agent_executor = create_agent()
 planner = create_planner()
 replanner = create_replanner()
-
-# TODO: глянуть на адекватность
-# TODO: добавить в какую-нибудь документацию наглядный вид графа
 
 
 async def execute_step(state: PlanExecute, config: RunnableConfig):
@@ -24,17 +22,17 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
     plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
     task = plan[0]
     if re.search('(Рекомендация)|(порекомендовать)', task):
-        print('Этап с рекомендацией, добавляем в промпт всю предыдущую информацию')
         task_formatted = f"""Для следующего плана: {plan_str}\n\n
                          Тебе задано выполнение шага: {1}, {task}. 
                          Информация о проделанных тобой шагах: {state['past_steps']}"""
     else:
         task_formatted = f"""Для следующего плана: {plan_str}\n\n
                              Тебе задано выполнение шага: {1}, {task}. """
-    print()
-    print(len(task_formatted.split()))
-    print(f"task_formatted: {task_formatted}")
-    print()
+    if DEBUG_GRAPH:
+        print()
+        print(len(task_formatted.split()))
+        print(f"task_formatted: {task_formatted}")
+        print()
     agent_response = await agent_executor.ainvoke(
         {"messages": [("user", task_formatted)]},
         config={
@@ -48,9 +46,10 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
             }
         }
     )
-    print()
-    print(state)
-    print()
+    if DEBUG_GRAPH:
+        print()
+        print(state)
+        print()
     return {
         "past_steps": [(task, agent_response["messages"][-1].content)],
         "past_calls": [task],
@@ -74,14 +73,10 @@ async def plan_step(state: PlanExecute, config: RunnableConfig):
 
 
 async def replan_step(state: PlanExecute, config: RunnableConfig):
-    print()
-    print('Зашли в ноду репланера')
-    print(f'state["past_calls"]: {state["past_calls"]}')
-    print('Промпт репланера:')
-    print(REPLANER_PROMPT.format(input=state['input'],
-                                 plan=state['plan'],
-                                 past_calls=state['past_calls'],
-                                 past_step=state['past_step']))
+    if DEBUG_GRAPH:
+        print()
+        print('Зашли в ноду репланера')
+        print(f'state["past_calls"]: {state["past_calls"]}')
     output = await replanner.ainvoke(
         state,
         config={
@@ -94,13 +89,15 @@ async def replan_step(state: PlanExecute, config: RunnableConfig):
         }
     )
     if len(output.replan) == 1 and output.replan[0] == '__end__':
-        print('Окончание работы графа')
+        if DEBUG_GRAPH:
+            print('Окончание работы графа')
         return {"response": output.replan[0]}
     else:
-        print()
-        print('Ответ репланера:')
-        print(output.replan)
-        print()
+        if DEBUG_GRAPH:
+            print()
+            print('Ответ репланера:')
+            print(output.replan)
+            print()
         return {"plan": output.replan}
 
 

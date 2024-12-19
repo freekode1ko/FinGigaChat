@@ -4,18 +4,15 @@ import traceback
 from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
-from langchain_gigachat.chat_models.gigachat import GigaChat
-from langchain_openai import ChatOpenAI
 
-from configs.config import giga_scope, giga_model, giga_credentials
 from utils.base import slit_message
-from utils.function_calling.tool_functions.preparing_meeting.config import API_KEY, BASE_URL, AGENT_MODEL
-from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG, MESSAGE_AGENT_START
+from utils.function_calling.tool_functions.preparing_meeting.config import EXECUTION_CONFIG, MESSAGE_AGENT_START, \
+    DEBUG_GRAPH
 from utils.function_calling.tool_functions.preparing_meeting.graph_executable import create_graph_executable
 from utils.function_calling.tool_functions.preparing_meeting.prompts import FINAL_ANSWER_SYSTEM_PROMPT, \
     FINAL_ANSWER_USER_PROMPT
 from utils.function_calling.tool_functions.preparing_meeting.prompts import INITIAL_QUERY
-from utils.function_calling.tool_functions.utils import get_answer_giga
+from utils.function_calling.tool_functions.utils import get_answer_llm, get_model
 
 agent_graph = create_graph_executable()
 
@@ -38,8 +35,10 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
     return:
         (str): Сформированный отчет для встречи менеджера с клиентом.
     """
-    print(f"Вызвана функция подготовки ко встречи с параметрами: {client_name}, {special_info}")
+    if DEBUG_GRAPH:
+        print(f"Вызвана функция подготовки ко встречи с параметрами: {client_name}, {special_info}")
     cnt = 1
+
     result = ''
     result_history = []
     tg_message: types.Message = runnable_config['configurable']['message']
@@ -57,55 +56,43 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
     try:
         inputs = {"input": INITIAL_QUERY.format(client_name=client_name, special_info=special_info)}
         async for event in agent_graph.astream(inputs, config=config):
-            for k, v in event.items():
-                if k != "__end__":
-                    if cnt == 1:
+            for node, graph_state in event.items():
+                if node != "__end__":
+                    if cnt == 1 and DEBUG_GRAPH:
                         print(f"Запрос пользователя: {inputs['input']}")
                         print("Составленный план:")
-                        print(v['plan'])
+                        print(graph_state['plan'])
                         print()
-                    print(f'Шаг {cnt}')
+                    if DEBUG_GRAPH:
+                        print(f'Шаг {cnt}')
                     cnt += 1
-                    if 'plan' in v:
-                        # print(v['plan'])
-                        if len(v['plan']) > 0:
-                            print(v['plan'][0])
-                            print(f"plan: {v['plan'][0]}")
-                            result_history.append(v['plan'][0])
-                    if 'past_steps' in v:
-                        if len(v['past_steps']) > 0:
-                            print(f"past_steps: {v['past_steps'][0][1]}")
-                            result_history.append(f"Выполненный шаг: {v['past_steps'][0][1]}")
-                    if 'response' in v:
-                        result = v['response']
-                        print(f"Итоговый ответ: {v['response']}")
-                    print()
-
-        print(f"Логи действий для составления итогового ответа: {result_history}")
-        if AGENT_MODEL == 'gpt':
-            llm = ChatOpenAI(model='gpt-4o-mini',
-                             api_key=API_KEY,
-                             base_url=BASE_URL,
-                             max_tokens=8000,
-                             temperature=0)
-        elif AGENT_MODEL == 'giga':
-            llm = GigaChat(verbose=True,
-                           credentials=giga_credentials,
-                           scope=giga_scope,
-                           model=giga_model,
-                           verify_ssl_certs=False,
-                           profanity_check=False,
-                           temperature=0.00001)
-        else:
-            raise Exception('Wrong agent model type')
-        result = await get_answer_giga(llm,
-                                       FINAL_ANSWER_SYSTEM_PROMPT.format(special_info=special_info),
-                                       FINAL_ANSWER_USER_PROMPT,
-                                       '\n'.join(result_history))
+                    if 'plan' in graph_state:
+                        if len(graph_state['plan']) > 0:
+                            if DEBUG_GRAPH:
+                                print(graph_state['plan'][0])
+                                print(f"plan: {graph_state['plan'][0]}")
+                            result_history.append(graph_state['plan'][0])
+                    if 'past_steps' in graph_state:
+                        if len(graph_state['past_steps']) > 0:
+                            if DEBUG_GRAPH:
+                                print(f"past_steps: {graph_state['past_steps'][0][1]}")
+                            result_history.append(f"Выполненный шаг: {graph_state['past_steps'][0][1]}")
+                    if 'response' in graph_state:
+                        result = graph_state['response']
+                        if DEBUG_GRAPH:
+                            print(f"Итоговый ответ: {graph_state['response']}")
+        if DEBUG_GRAPH:
+            print(f"Логи действий для составления итогового ответа: {result_history}")
+        llm = get_model()
+        result = await get_answer_llm(llm,
+                                      FINAL_ANSWER_SYSTEM_PROMPT.format(special_info=special_info),
+                                      FINAL_ANSWER_USER_PROMPT,
+                                      '\n'.join(result_history))
         try:
             first = True
             batches = slit_message(result)
-            print(batches)
+            if DEBUG_GRAPH:
+                print(batches)
             for batch in batches:
                 if first:
                     await final_message.edit_text(text=batch, parse_mode='Markdown')
@@ -114,18 +101,20 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
                 await tg_message.answer(text=batch, parse_mode='Markdown')
 
         except Exception as e:
-            print('Не смогло отправить финальное сообщение')
-            print(e)
+            if DEBUG_GRAPH:
+                print(f'Не смогло отправить финальное сообщение: {e}')
         try:
             for menu in buttons:
                 await tg_message.answer(menu['message'], reply_markup=menu['keyboard'], parse_mode='HTML')
-        except:
-            pass
+        except Exception as e:
+            if DEBUG_GRAPH:
+                print(f'Не смогло отправить финальное сообщение: {e}')
         return result
     except Exception as e:
         await final_message.edit_text('Произошла ошибка: ' + result)
         await tg_message.answer(str(e))
-        print(e)
-        print(traceback.format_exc())
+        if DEBUG_GRAPH:
+            print(e)
+            print(traceback.format_exc())
 
     return result

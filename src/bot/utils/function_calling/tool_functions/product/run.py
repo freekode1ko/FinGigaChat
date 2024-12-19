@@ -93,12 +93,13 @@ async def get_product_list(name: str | None, runnable_config: RunnableConfig) ->
         raise Exception
 
 
+# TODO: однажды здесь должен быть рексис...
 @tool
 async def get_product_recommendation(text: str, config: RunnableConfig):
     """Возвращает список рекомендованных продуктовых предложений по заданному тексту.
 
     Args:
-        name (str): текст с новостными инфоповодами
+        text (str): текст с новостными инфоповодами
     return:
         (str): строку с рекомендованными продуктами.
     """

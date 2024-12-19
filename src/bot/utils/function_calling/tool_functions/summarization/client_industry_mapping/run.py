@@ -5,6 +5,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from db.database import engine
+from utils.function_calling.tool_functions.preparing_meeting.config import DEBUG_GRAPH
 
 
 def create_client_industry_dict() -> dict:
@@ -35,7 +36,8 @@ async def get_industry_by_client_name(text: str, config: RunnableConfig) -> str:
     return:
         (str): Отрасль клиента
     """
-    print(f'Вызвана функция get_industry_by_client_name с параметром: {text}')
+    if DEBUG_GRAPH:
+        print(f'Вызвана функция get_industry_by_client_name с параметром: {text}')
     try:
         client_industry = CLIENT_INDUSTRY_MAPPING[text.lower().strip()]
         return client_industry

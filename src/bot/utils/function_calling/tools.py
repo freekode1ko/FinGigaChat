@@ -1,13 +1,15 @@
 """Функции для запуска function calling"""
-from aiogram import types
-from langchain_gigachat.chat_models import GigaChat
-from langgraph.prebuilt import create_react_agent
+
 import traceback
+
+from aiogram import types
+from langgraph.prebuilt import create_react_agent
 
 from constants.enums import FeatureType
 from utils.decorators import has_access_to_feature
 from utils.function_calling.tool_functions import tools_functions
 from utils.function_calling.tool_functions.utils import LanggraphConfig
+from utils.function_calling.tool_functions.utils import get_model
 
 
 @has_access_to_feature(feature=FeatureType.admin, is_need_answer=False)
@@ -19,16 +21,9 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
 
     :return:             Вызвалась ли функция
     """
-    giga = GigaChat(verbose=True,
-                    credentials="YTQwNDJmMTUtYTY5NS00NTc3LTkxZmMtOTA4MTlkMTNjMGRiOmQxMWMyYzI1LTdlMzQtNGViNC1hYjMyLWQ0NDk5ODhiNmY1NA==",
-                    scope='GIGACHAT_API_CORP',
-                    model='GigaChat-Max',
-                    verify_ssl_certs=False,
-                    profanity_check=False,
-                    temperature=0.00001
-                    )
+    llm = get_model()
 
-    langgraph_agent_executor = create_react_agent(giga, tools_functions)
+    langgraph_agent_executor = create_react_agent(llm, tools_functions)
     conf = LanggraphConfig(message=message)
 
     try:

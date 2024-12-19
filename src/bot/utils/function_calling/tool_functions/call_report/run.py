@@ -3,12 +3,10 @@ from fuzzywuzzy import process
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from constants import constants
 from db import models
 from db.database import async_session
-from main import bot
-from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_CALL_REPORTS
-from utils.function_calling.tool_functions.utils import parse_runnable_config, send_status_message_for_agent
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_CALL_REPORTS, DEBUG_GRAPH
+from utils.function_calling.tool_functions.utils import send_status_message_for_agent
 
 
 @tool
@@ -20,7 +18,8 @@ async def get_call_reports_by_name(name: str, config: RunnableConfig) -> str:
     return:
         (str): суммаризованный текст предыдущих взаимодействий с пользователем.
     """
-    print(f'Вызвана функция get_call_reports_by_name с параметром {name}')
+    if DEBUG_GRAPH:
+        print(f'Вызвана функция get_call_reports_by_name с параметром {name}')
 
     await send_status_message_for_agent(config, MESSAGE_RUN_CALL_REPORTS)
 

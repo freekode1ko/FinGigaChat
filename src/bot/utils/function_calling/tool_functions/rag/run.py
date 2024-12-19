@@ -1,12 +1,12 @@
+"""Функции для работы с Рагами """
+
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from configs import config
-from constants import constants
 from constants.enums import HTTPMethod
-from main import bot
 from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_RAG_NEWS, MESSAGE_RUN_RAG_WEB, \
-    MESSAGE_RUN_RAG_WEB, MESSAGE_RUN_RAG_CIB
+    MESSAGE_RUN_RAG_CIB, DEBUG_GRAPH
 from utils.function_calling.tool_functions.utils import send_status_message_for_agent
 from utils.sessions import RagWebClient, RagQaBankerClient, RagQaResearchClient
 
@@ -42,12 +42,12 @@ async def rag_news(request_text: str, config: RunnableConfig):
         (str): текст ответа.
     """
     # rag_qa_banker
-    print(f"Вызвана функция rag_news с параметром {request_text}")
+    if DEBUG_GRAPH:
+        print(f"Вызвана функция rag_news с параметром {request_text}")
 
     await send_status_message_for_agent(config, MESSAGE_RUN_RAG_NEWS)
 
     msg = await request_to_rag_api(RagQaBankerClient, request_text)
-    print(f'Окончен вызов функции rag_news')
     return msg
 
 
@@ -60,12 +60,12 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    print(f"Вызвана функция rag_cib с параметром {request_text}")
+    if DEBUG_GRAPH:
+        print(f"Вызвана функция rag_cib с параметром {request_text}")
 
     await send_status_message_for_agent(config, MESSAGE_RUN_RAG_CIB)
 
     msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
-    print(f'Окончен вызов функции rag_cib')
     return msg
 
 
@@ -78,10 +78,10 @@ async def rag_web(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    print(f"Вызвана функция rag_web с параметром {request_text}")
+    if DEBUG_GRAPH:
+        print(f"Вызвана функция rag_web с параметром {request_text}")
 
     await send_status_message_for_agent(config, MESSAGE_RUN_RAG_WEB)
 
     msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
-    print(f'Окончен вызов функции rag_web')
     return msg

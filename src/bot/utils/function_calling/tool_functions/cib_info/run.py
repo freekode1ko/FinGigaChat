@@ -7,7 +7,7 @@ from db import models
 from fuzzywuzzy import process
 
 from db.database import async_session
-from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_CIB_REPORTS
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_CIB_REPORTS, DEBUG_GRAPH
 from utils.function_calling.tool_functions.utils import send_status_message_for_agent
 
 
@@ -22,7 +22,8 @@ async def get_analytical_reports_by_name(name: str, config: RunnableConfig) -> s
     """
     # фин показатели
     # последний отчет
-    print(f'Вызвана функция get_research_reports_by_name с параметром: {name}')
+    if DEBUG_GRAPH:
+        print(f'Вызвана функция get_research_reports_by_name с параметром: {name}')
     try:
         await send_status_message_for_agent(config, MESSAGE_RUN_CIB_REPORTS)
 
@@ -49,5 +50,4 @@ async def get_analytical_reports_by_name(name: str, config: RunnableConfig) -> s
     except Exception as e:
         print(e)
         print(traceback.format_exc())
-    print(f'Окончен вызов функции get_research_reports_by_name')
     return reports.scalars().all()

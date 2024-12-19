@@ -1,19 +1,16 @@
 import sqlalchemy as sa
-from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
-from langchain_gigachat.chat_models.gigachat import GigaChat
 
-from configs.config import giga_scope, giga_agent_model, giga_credentials
 from constants.texts import texts_manager
 from db import models
 from db.api.client import get_research_type_id_by_name
 from db.database import async_session
 from handlers.clients import keyboards
 from module.fuzzy_search import FuzzyAlternativeNames
-from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_NEWS
+from utils.function_calling.tool_functions.preparing_meeting.config import MESSAGE_RUN_NEWS, DEBUG_GRAPH
 from utils.function_calling.tool_functions.tool_prompts import SUMMARIZATION_SYSTEM, SUMMARIZATION_USER
-from utils.function_calling.tool_functions.utils import get_answer_giga, send_status_message_for_agent
+from utils.function_calling.tool_functions.utils import get_answer_llm, send_status_message_for_agent, get_model
 
 
 @tool
@@ -25,7 +22,8 @@ async def get_news_by_name(name: str, config: RunnableConfig):
     return:
         (str): Текст с новостями по компании.
     """
-    print(f'Вызвана функция get_news_by_name с параметром: {name}')
+    if DEBUG_GRAPH:
+        print(f'Вызвана функция get_news_by_name с параметром: {name}')
 
     await send_status_message_for_agent(config, MESSAGE_RUN_NEWS)
 
@@ -54,9 +52,10 @@ async def get_news_by_name(name: str, config: RunnableConfig):
             )
             print('Добавлено меню в новостях')
         except Exception as e:
-            print('Не добавлено меню в новостях ;(')
+            print(f'Не добавлено меню в новостях: {e}')
     else:
         return 'Ничего не найдено'
+
     async with async_session() as session:
         client_articles = await session.execute(
             sa.select(models.Article.text_sum)
@@ -65,17 +64,10 @@ async def get_news_by_name(name: str, config: RunnableConfig):
             .order_by(models.Article.date)
             .limit(limit)
         )
+
     result = client_articles.scalars().all()
 
-    llm = GigaChat(verbose=True,
-                   credentials=giga_credentials,
-                   scope=giga_scope,
-                   model=giga_agent_model,
-                   verify_ssl_certs=False,
-                   profanity_check=False,
-                   temperature=0.00001
-                   )
-    text = await get_answer_giga(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, '\n'.join(result))
-    print(f'Закончен вызов функции get_news_by_name')
+    llm = get_model()
+    text = await get_answer_llm(llm, SUMMARIZATION_SYSTEM, SUMMARIZATION_USER, '\n'.join(result))
 
     return text

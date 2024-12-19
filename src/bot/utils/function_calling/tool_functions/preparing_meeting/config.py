@@ -5,12 +5,18 @@ from environs import Env
 env = Env()
 env.read_env()
 
+DEBUG_GRAPH = True
+
 AGENT_MODEL = 'giga'
+AGENT_MODEL_TYPE = 'GigaChat-Max'
 # AGENT_MODEL = 'gpt'
+# AGENT_MODEL = 'gpt-4o-latest'
+
+MAX_TOKENS = 8000
+TEMP = 0.00001
 
 API_KEY = env.str('OPENAI_API_KEY', default='')
 BASE_URL = 'https://api.vsegpt.ru/v1'
-BASE_MODEL = 'openai/gpt-4o-latest'
 
 EXECUTION_CONFIG = {
     "recursion_limit": 100,
