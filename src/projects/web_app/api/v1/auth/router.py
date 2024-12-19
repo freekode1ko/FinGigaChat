@@ -18,6 +18,7 @@ from db.models import RegisteredUser
 from utils.jwt import create_jwt_token
 from utils.telegram import validate_telegram_data
 from utils.email_send import SmtpSend
+from utils.utils import is_valid_email
 
 from api.v1.users.schemas import UserRead
 from .schemas import AuthData, AuthConfirmation, TelegramData
@@ -43,7 +44,7 @@ async def login(
     Аутентификация через EMail.
     Подходит для использования приложения вне Telegram.
     """
-    if not re.search(r'\w+@sber(bank)?.ru', data.email):
+    if not is_valid_email(data.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Введите корпоративную почту'

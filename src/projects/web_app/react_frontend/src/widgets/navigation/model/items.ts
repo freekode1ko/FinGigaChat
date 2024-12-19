@@ -5,6 +5,7 @@ import {
   LayoutDashboardIcon,
   ListChecks,
   LucideIcon,
+  MessageCircleIcon,
   NewspaperIcon,
   NotebookPen,
   Package,
@@ -84,6 +85,12 @@ export const adminItems: Array<MenuItem> = [
     path: ADMIN_MAP.users,
     icon: UserIcon,
     description: 'Просмотр пользователей',
+  },
+  {
+    name: 'Управление ботом',
+    path: ADMIN_MAP.bot,
+    icon: MessageCircleIcon,
+    description: 'Управление ботом',
   },
   {
     name: 'Продукты',

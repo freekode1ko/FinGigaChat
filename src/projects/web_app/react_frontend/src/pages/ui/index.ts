@@ -1,4 +1,5 @@
 export {
+  AdminBotPage,
   AdminCommoditiesPage,
   AdminHomePage,
   AdminIndustriesPage,
