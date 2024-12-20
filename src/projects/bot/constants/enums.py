@@ -211,3 +211,11 @@ class QuotesType(str, Enum):
     EQUITY = 'equity'
     COMMODITIES = 'commodities'
     ECO = 'eco'
+
+
+class FileType(str, Enum):
+    """Тип файла"""
+
+    IMAGE = 'image'
+    DOCUMENT = 'document'
+    OTHER = 'other'

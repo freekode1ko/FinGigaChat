@@ -137,6 +137,7 @@ class Industry(Base):
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
     industry_alternative = relationship('IndustryAlternative', back_populates='industry')
+    documents = relationship('IndustryDocuments', back_populates='industry')
 
 
 t_key_eco = Table(
@@ -637,6 +638,8 @@ class IndustryDocuments(Base):
                          primary_key=False, nullable=True, comment='id отрасли')
     industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
                            comment='тип отрасли')
+
+    industry = relationship('Industry', back_populates='documents')
 
 
 class Product(Base):

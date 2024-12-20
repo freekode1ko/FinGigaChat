@@ -21,7 +21,7 @@ export const ItemRow = ({ index, data, style }: ManageItemProps) => {
   } else if (item.type === 'item') {
     const quote = item.item as DashboardSubscription
     return (
-      <div className='border-b border-border h-[56px]' style={style}>
+      <div className="border-b border-border h-[56px]" style={style}>
         <DashboardSubscriptionUpdateMenu
           quoteId={quote.id}
           quoteName={quote.name}

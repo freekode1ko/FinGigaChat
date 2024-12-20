@@ -191,3 +191,9 @@ class FeatureType(str, Enum):
     knowledgebase = 'knowledgebase'
     common = 'common'
     admin = 'admin'
+
+
+class MimeType(str, Enum):
+    """MIME-типы доступные для загрузки."""
+
+    PDF = 'application/pdf'

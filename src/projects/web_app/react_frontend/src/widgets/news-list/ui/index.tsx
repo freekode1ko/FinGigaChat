@@ -24,7 +24,8 @@ const NewsList = ({
           section={news.section}
           news_type={news.news_type}
           sendReportButton={
-            showSendReportButton && news.news_type == 'cib' && (
+            showSendReportButton &&
+            news.news_type == 'cib' && (
               <SendCIBReportButton newsId={news.news_id} />
             )
           }

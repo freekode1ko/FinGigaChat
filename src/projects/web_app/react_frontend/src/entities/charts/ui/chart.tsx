@@ -37,13 +37,15 @@ export const CustomChart = ({
     if (inputData.length < 2) return theme === 'dark' ? '#383E55' : '#E1E1EA'
     let compIndex = inputData.length - 2
     while (inputData[compIndex].date === inputData[inputData.length - 1].date) {
-      compIndex -= 1;
+      compIndex -= 1
     }
-    if (!inputData[compIndex]) return theme === 'dark' ? '#383E55' : '#E1E1EA';
-    return inputData[inputData.length - 1].value >= inputData[compIndex].value ? "#26A69A" : "#EF5350";
-  };
+    if (!inputData[compIndex]) return theme === 'dark' ? '#383E55' : '#E1E1EA'
+    return inputData[inputData.length - 1].value >= inputData[compIndex].value
+      ? '#26A69A'
+      : '#EF5350'
+  }
 
-  const openCloseColor = getOpenCloseColor();
+  const openCloseColor = getOpenCloseColor()
 
   const axisStyles = {
     strokeStyle: theme === 'dark' ? '#383E55' : '#E1E1EA',
@@ -95,9 +97,10 @@ export const CustomChart = ({
           ratio={1.0}
           width={observableWidth}
           seriesName={`Chart ${resetCount}`}
-          margin={size == 'small' ?
-            { left: 0, right: 0, top: 0, bottom: 0 } 
-            : { left: 0, right: 46, top: 0, bottom: 24 }
+          margin={
+            size == 'small'
+              ? { left: 0, right: 0, top: 0, bottom: 0 }
+              : { left: 0, right: 46, top: 0, bottom: 24 }
           }
           data={data}
           xScale={xScale}

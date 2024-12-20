@@ -2,7 +2,7 @@ import {
   selectSubscriptionsToUpdate,
   useUpdateSubscriptionsMutation,
 } from '@/entities/subscriptions'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { Button } from '@/shared/ui'
 

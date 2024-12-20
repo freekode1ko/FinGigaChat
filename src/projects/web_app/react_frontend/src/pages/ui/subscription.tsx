@@ -1,7 +1,7 @@
 import { SubscriptionsWidget } from '@/widgets/subscribition-accordion'
 import { ManageSubscriptionsButtonGroup } from '@/features/manage-subscriptions'
 import { useGetSubscriptionsQuery } from '@/entities/subscriptions'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { skipToken } from '@reduxjs/toolkit/query'
 

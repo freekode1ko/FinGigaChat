@@ -1,5 +1,5 @@
 import type { CreateNote, Note } from '@/entities/notes'
-import type { UserId } from '@/entities/user'
+import type { UserId } from '@/entities/auth'
 
 export const mapUpdateFormData = (
   data: CreateNote,

@@ -45,8 +45,10 @@ from utils.base import (
     wait_until
 )
 
+from bot import bot
+
 storage = MemoryStorage()
-bot = Bot(token=config.api_token)
+
 dp = Dispatcher(storage=storage)
 
 

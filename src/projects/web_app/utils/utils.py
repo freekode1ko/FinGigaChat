@@ -1,3 +1,4 @@
+import re
 import datetime as dt
 import subprocess
 from typing import Any
@@ -6,7 +7,24 @@ from pathlib import Path
 
 from config import BASE_DATETIME_FORMAT, SERVER_DATE_FORMAT
 
+
 SUBPROCESS_CALL_TIMEOUT = 30
+
+
+def transform_path_to_link(path: str) -> str | None:
+    """Преобразование пути файлу в абсолютную ссылку""" 
+    return f'/{path.lstrip("/code/").lstrip("/")}' if len(path.strip()) else None
+
+
+def is_valid_email(email: str) -> bool:
+    """
+    Проверка, что Email корпоративный
+
+    :param email: Email для проверки
+    :return: True, если Email корпоративный, иначе False
+    """
+    return re.search(r'\w+@sber(bank)?.ru', email) is not None
+
 
 def format_date(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """

@@ -10,14 +10,6 @@ DEFAULT_VALUES = {
         'Никому не сообщайте этот код.'
     ),
 
-    # WATERMARK
-    'FONT_TYPE': 'Helvetica',
-    'FONT_SIZE': 20,
-    'ROTATION': 45,
-    'FONT_COLOR_ALPHA': 0.3,
-    'VERTICAL_REPETITIONS': 3,
-    'HORIZONTAL_REPETITIONS': 3,
-
     # SPECIAL DASHBOARD
     # По ключу идет название кастомной секции, по значению список с котировками
     # из БД вида "название котировки:название секции"

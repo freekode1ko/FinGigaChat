@@ -9,10 +9,8 @@ const MenuItemLink = ({ item }: { item: MenuItem }) => (
     to={item.path}
     className={({ isActive }) =>
       cn(
-        isActive
-          ? 'text-accent'
-          : 'text-foreground hover:text-accent',
-          'font-semibold'
+        isActive ? 'text-accent' : 'text-foreground hover:text-accent',
+        'font-semibold'
       )
     }
   >
@@ -23,7 +21,6 @@ const MenuItemLink = ({ item }: { item: MenuItem }) => (
   </NavLink>
 )
 
-
 /*
   Компонент с навигационными кнопками для мобильных устройств.
   Отображается на устройствах со узким экраном.
@@ -32,7 +29,7 @@ export const NavigationTabs = () => {
   return (
     <nav
       className={cn(
-        'md:hidden sticky bottom-0 w-full bg-background border-t border-border z-50 items-center grid grid-cols-3 py-2',
+        'md:hidden sticky bottom-0 w-full bg-background border-t border-border z-50 items-center grid grid-cols-3 py-2'
       )}
     >
       {menuItems.map((item) => (
