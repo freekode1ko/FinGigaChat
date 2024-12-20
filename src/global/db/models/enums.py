@@ -196,6 +196,23 @@ class FeatureType(str, Enum):
     web_retriever = 'web_retriever'
 
 
+class LinksType(str, Enum):
+    """Тип ссылки."""
+
+    subject_link = 'subject_link'  # ссылка на новость, содержащая новость об объекте (клиенте, коммоде и тд)
+    tg_link = 'tg_link'  # ссылка на новость из тг-каналов, не относящаяся ни к чему (отрасли)
+
+
+class QuotesType(str, Enum):
+    """Кнопки в меню хэндлера quotes"""
+
+    FX = 'fx'
+    FI = 'fi'
+    EQUITY = 'equity'
+    COMMODITIES = 'commodities'
+    ECO = 'eco'
+
+
 class FileType(str, Enum):
     """Тип файла"""
 
