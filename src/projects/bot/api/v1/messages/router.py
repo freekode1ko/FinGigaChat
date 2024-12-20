@@ -23,9 +23,9 @@ async def send_message_to_users(user_msg):
 
         async with async_session() as session:
             broadcast = models.Broadcast(
-                    text='123',
-                    message_type_id=1,
-                    function_name='test',
+                    text=user_msg.message_text,
+                    message_type_id=user_msg.message_type_id,
+                    function_name=user_msg.function_name,
                     created_at=datetime.datetime.now(),
                 )
             session.add(

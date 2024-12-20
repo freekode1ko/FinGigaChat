@@ -15,4 +15,6 @@ class BaseMessage(BaseModel):
     message_text: str
     parse_mode: ParseMethods = ParseMethods.html
     user_roles: list[int] = None
+    message_type_id: int = 1
+    function_name: str = ''
 
