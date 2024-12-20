@@ -17,8 +17,8 @@ from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.base import is_has_access_to_feature
-from utils.rag_utils.rag_format import extract_summarization
-from utils.sessions import RagQaBankerClient, RagQaResearchClient, RagStateSupportClient, RagWebClient
+from utils.rag_utils.rag_format import extract_summarization, format_answer_from_rag_analytical
+from utils.sessions import RagQaAnalyticalClient, RagQaBankerClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
 
@@ -28,17 +28,17 @@ class RAGRouter:
 
     RAG_BAD_ANSWERS = (DEFAULT_RAG_ANSWER, texts_manager.RAG_ERROR_ANSWER)
 
-    def __init__(self, user_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
+    def __init__(self, chat_id: int, full_name: str, user_query: str, rephrase_query: str, use_rephrase: bool = True):
         """
         Инициализация экземпляра RAGRouter.
 
-        :param user_id:         Id Telegram пользователя.
+        :param chat_id:         Id Telegram чата пользователя.
         :param full_name:       Полное имя пользователя в Telegram.
         :param user_query:      Запрос пользователя.
         :param rephrase_query:  Перефразированный запрос пользователя.
         :param use_rephrase:    Нужно ли использовать перефразированный запрос пользователя для получения ответа.
         """
-        self.user_id = user_id
+        self.chat_id = chat_id
         self.full_name = full_name
         self.user_query = user_query
         self.rephrase_query = rephrase_query
@@ -101,20 +101,24 @@ class RAGRouter:
         session = RagStateSupportClient().session
         return await self._request_to_rag_api(session, **self.req_kwargs)
 
-    async def rag_qa_research(self) -> dict[str, Any]:
-        """Создание сессии для API по ВОС CIB Research и получение ответа."""
+    async def rag_qa_analytical(self) -> dict[str, Any]:
+        """Создание сессии для API по ВОС аналитических обзоров банка и получение ответа."""
         async with async_session() as ses:
-            if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.rag_research):
-                return {'body': DEFAULT_RAG_ANSWER}
-        session = RagQaResearchClient().session
+            if not await is_has_access_to_feature(ses, self.chat_id, enums.FeatureType.rag_research):
+                return {'body_research': DEFAULT_RAG_ANSWER, 'body_analytical_hub': DEFAULT_RAG_ANSWER}
+        session = RagQaAnalyticalClient().session
         req_kwargs = deepcopy(self.req_kwargs)
         req_kwargs['json']['with_metadata'] = True
+        req_kwargs['rag_error_msg'] = {
+            'body_research': texts_manager.RAG_ERROR_ANSWER,
+            'body_analytical_hub': texts_manager.RAG_ERROR_ANSWER
+        }
         return await self._request_to_rag_api(session, **req_kwargs)
 
     async def rag_web(self) -> dict[str, Any]:
         """Создание сессии для API по ВОС web_retriever и получение ответа"""
         async with async_session() as ses:
-            if not await is_has_access_to_feature(ses, self.user_id, enums.FeatureType.web_retriever):
+            if not await is_has_access_to_feature(ses, self.chat_id, enums.FeatureType.web_retriever):
                 return {'body': DEFAULT_RAG_ANSWER}
         session = RagWebClient().session
         return await self._request_to_rag_api(session, **self.req_kwargs)
@@ -127,18 +131,19 @@ class RAGRouter:
         :param  kwargs:             Параметры http запроса.
         :return:                    Словарь ответа от RAG.
         """
+        rag_error_msg = kwargs.pop('rag_error_msg', {'body': texts_manager.RAG_ERROR_ANSWER})
         try:
             async with session.request(method=HTTPMethod.POST, **kwargs) as rag_response:
                 rag_response_dict = await rag_response.json()
             user_logger.info('*%d* %s - "%s" : На запрос ВОС ответила: "%s"' %
-                             (self.user_id, self.full_name, self.query, rag_response_dict))
+                             (self.chat_id, self.full_name, self.query, rag_response_dict))
         except ClientError as e:
             logger.critical('ERROR : ВОС не сформировал ответ по причине: %s' % e)
             user_logger.critical('*%d* %s - "%s" : ВОС не сформировал ответ по причине: "%s"' %
-                                 (self.user_id, self.full_name, self.query, e))
+                                 (self.chat_id, self.full_name, self.query, e))
         else:
             return rag_response_dict
-        return {'body': texts_manager.RAG_ERROR_ANSWER}
+        return rag_error_msg
 
     async def _request_to_giga(self) -> str:
         """
@@ -148,32 +153,31 @@ class RAGRouter:
         """
         try:
             giga_answer = await giga.aget_giga_answer(text=self.query)
-            user_logger.info(f'*{self.user_id}* {self.full_name} - "{self.query}" : '
+            user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
                              f'На запрос GigaChat ответил: "{giga_answer}"')
         except Exception as e:
             giga_answer = texts_manager.RAG_ERROR_ANSWER
             logger.critical(f'ERROR : GigaChat не сформировал ответ по причине: {e}"')
-            user_logger.critical(f'*{self.user_id}* {self.full_name} - "{self.query}" : '
+            user_logger.critical(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
                                  f'GigaChat не сформировал ответ по причине: {e}"')
         return giga_answer
 
     async def get_combination_response(self) -> dict[str, Any]:
         """Комбинация ответов от разных рагов."""
-        banker_json, research_json, web_json = await asyncio.gather(
-            self.rag_qa_banker(), self.rag_qa_research(), self.rag_web()
+        banker_json, analytical_json, web_json = await asyncio.gather(
+            self.rag_qa_banker(), self.rag_qa_analytical(), self.rag_web()
         )
-        banker, research, web = banker_json['body'], research_json['body'], web_json['body']
+        banker, web = banker_json['body'], web_json['body']
+        research, analytical_hub = analytical_json['body_research'], analytical_json['body_analytical_hub']
+        analytical = format_answer_from_rag_analytical(research, analytical_hub)
         logger.debug('Тексты до объединения ответов:')
-        logger.debug('Ответ новостного рага:')
-        logger.debug(f'{banker}')
-        logger.debug('Ответ веб ретривера:')
-        logger.debug(f'{web}')
-        logger.debug('Ответ рага по ресерчу:')
-        logger.debug(f'{research}')
+        logger.debug(f'Ответ новостного рага: {banker}')
+        logger.debug(f'Ответ веб ретривера: {web}')
+        logger.debug(f'Ответ рага по аналитическим обзорам: {analytical}')
         banker = extract_summarization(banker, web)
-        logger.debug(f'{banker}')
-        response = self.format_combination_answer(banker, research)
-        metadata = await self.prepare_reports_data(research, research_json.get('metadata'))
+        logger.debug(f'Ответ после объединения новостного и веб: {banker}')
+        response = self.format_combination_answer(banker, analytical)
+        metadata = await self.prepare_reports_data(research, analytical_json.get('metadata'))
         return {'body': response, 'metadata': metadata}
 
     async def prepare_reports_data(
@@ -184,14 +188,14 @@ class RAGRouter:
         """
         Подготавливает данные отчетов, добавляя к ним id отчета.
 
-        :param answer:      Ответ от Рага.
+        :param answer:      Ответ от Рага по данным research.
         :param metadata:    Исходные метаданные.
         :return:            Обновленные метаданные с id отчетов.
         """
-        if answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data' not in metadata:
+        if not answer or answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data_research' not in metadata:
             return
 
-        reports_data = metadata['reports_data']
+        reports_data = metadata['reports_data_research']
         has_ids = False
         for report in reports_data:
             research_id = await research_db.get_research_id_by_report_id(report.get('report_id'))
@@ -200,9 +204,9 @@ class RAGRouter:
                 report['research_id'] = research_id
 
         if has_ids:
-            metadata['reports_data'] = reports_data
+            metadata['reports_data_research'] = reports_data
         else:
-            metadata.pop('reports_data')
+            metadata.pop('reports_data_research')
         return metadata
 
     def format_combination_answer(self, banker: str, research: str) -> str:
