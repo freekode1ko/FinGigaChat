@@ -376,13 +376,6 @@ class Message(Base):
 ######
 
 
-t_broadcast_file = Table(
-    'broadcast_file', metadata,
-    Column('broadcast_id', ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True),
-    Column('telegram_file_id', ForeignKey('telegram_file.telegram_file_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-)
-
-
 class Broadcast(Base):
     __tablename__ = 'broadcast'
     __table_args__ = {'comment': 'Рассылки сообщений в боте'}
@@ -397,11 +390,7 @@ class Broadcast(Base):
     created_at = Column(DateTime(True), nullable=False)
 
     telegram_messages = relationship('TelegramMessage', back_populates='broadcast')
-    telegram_files = relationship(
-        'TelegramFile',
-        secondary=t_broadcast_file,
-        back_populates='broadcasts'
-    )
+    telegram_files = relationship('TelegramFile', back_populates='broadcast')
     message_type = relationship('MessageType', back_populates='broadcast')
 
 
@@ -409,7 +398,8 @@ class TelegramMessage(Base):
     __tablename__ = 'telegram_message'
     __table_args__ = {'comment': 'Доставленные пользователям сообщения'}
 
-    telegram_message_id = Column(BigInteger, primary_key=True)
+    id = Column(BigInteger, primary_key=True)
+    telegram_message_id = Column(BigInteger, nullable=False)
     user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     send_datetime = Column(DateTime(True), nullable=False)
@@ -422,15 +412,14 @@ class TelegramFile(Base):
     __tablename__ = 'telegram_file'
     __table_args__ = {'comment': 'Файлы бота в Telegram'}
 
-    telegram_file_id = Column(String(255), primary_key=True)
+    id = Column(Integer, primary_key=True)
+    telegram_file_id = Column(String(255), nullable=False)
+    file_name = Column(String(255), nullable=False)
     file_type = Column(Enum(enums.FileType, name='file_type'), nullable=False)
     created_at = Column(DateTime(True), nullable=False)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
-    broadcasts = relationship(
-        'Broadcast',
-        secondary=t_broadcast_file,
-        back_populates='telegram_files'
-    )
+    broadcast = relationship('Broadcast', back_populates='telegram_files')
 
 
 class ParserSource(Base):

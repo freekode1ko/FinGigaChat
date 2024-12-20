@@ -37,7 +37,8 @@ def upgrade():
 
     op.create_table(
         'telegram_message',
-        sa.Column('telegram_message_id', sa.BigInteger(), primary_key=True),
+        sa.Column('id', sa.BigInteger(), primary_key=True),
+        sa.Column('telegram_message_id', sa.BigInteger(), nullable=False),
         sa.Column('user_id', sa.BigInteger(), sa.ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False),
         sa.Column('broadcast_id', sa.BigInteger(), sa.ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False),
         sa.Column('send_datetime', sa.DateTime(timezone=True), nullable=False),
@@ -46,22 +47,17 @@ def upgrade():
 
     op.create_table(
         'telegram_file',
-        sa.Column('telegram_file_id', sa.String(length=255), primary_key=True),
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('telegram_file_id', sa.String(length=255), nullable=False),
+        sa.Column('file_name', sa.String(length=255), nullable=False),
         sa.Column('file_type', file_type_enum, nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('broadcast_id', sa.BigInteger(), sa.ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False),
         comment='Файлы бота в Telegram'
-    )
-
-    op.create_table(
-        'broadcast_file',
-        sa.Column('broadcast_id', sa.BigInteger(), sa.ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True),
-        sa.Column('telegram_file_id', sa.String(length=255), sa.ForeignKey('telegram_file.telegram_file_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True),
-        comment='Связь между рассылками и файлами Telegram'
     )
 
 
 def downgrade():
-    op.drop_table('broadcast_file')
     op.drop_table('telegram_file')
     op.drop_table('telegram_message')
     op.drop_table('broadcast')
