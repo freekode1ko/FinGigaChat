@@ -42,7 +42,6 @@ async def send_message_to_users(user_msg):
                     text=user_msg.message_text,
                     parse_mode=user_msg.parse_mode,
                 )
-                print(user_mes)
                 session.add(
                     models.TelegramMessage(
                         telegram_message_id=user_mes.message_id,
