@@ -26,6 +26,7 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 from constants import enums
 from constants.enums import FormatType
 
+
 class Base(DeclarativeBase):
 
     len_of_any_str_field = 100
@@ -358,7 +359,7 @@ class IndustryAlternative(Base):
     industry = relationship('Industry', back_populates='industry_alternative')
 
 
-### DEPRECATED: Message -> Broadcast & TelegramMessage ###
+# DEPRECATED: Message -> Broadcast & TelegramMessage #
 class Message(Base):
     __tablename__ = 'message'
     __table_args__ = {'comment': 'Хранилище отправленных пользователям сообщений'}
@@ -372,7 +373,7 @@ class Message(Base):
 
     message_type = relationship('MessageType', back_populates='message')
     user = relationship('RegisteredUser', back_populates='message')
-######
+#
 
 
 class Broadcast(Base):
