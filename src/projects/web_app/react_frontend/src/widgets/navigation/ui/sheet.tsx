@@ -47,7 +47,7 @@ export const NavigationSheet = ({
                 }
                 onClick={() => setIsOpen(false)}
               >
-                <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-2 pl-2">
                   {createElement(item.icon, { className: 'h-4 w-4' })}
                   {item.name}
                 </span>

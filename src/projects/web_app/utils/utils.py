@@ -12,7 +12,7 @@ SUBPROCESS_CALL_TIMEOUT = 30
 
 
 def transform_path_to_link(path: str) -> str | None:
-    """Преобразование пути к файлу в абсолютную ссылку"""
+    """Преобразование пути файлу в абсолютную ссылку""" 
     return f'/{path.lstrip("/code/").lstrip("/")}' if len(path.strip()) else None
 
 

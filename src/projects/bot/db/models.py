@@ -26,7 +26,6 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 from constants import enums
 from constants.enums import FormatType
 
-
 class Base(DeclarativeBase):
 
     len_of_any_str_field = 100
@@ -48,7 +47,7 @@ class Article(Base):
 
     id = Column(Integer, Identity(always=True, start=1, increment=1, minvalue=1,
                 maxvalue=2147483647, cycle=False, cache=1), primary_key=True)
-    link = Column(Text, nullable=False, unique=True, comment='Ссылка на новость')
+    link = Column(Text, nullable=False, comment='Ссылка на новость')
     date = Column(DateTime, nullable=False, comment='Дата и время публикации новости')
     text_ = Column('text', Text, nullable=False, comment='Исходный текст новости')
     title = Column(Text, comment='Заголовок новости (если заголовка не было, то его формирует гигачат)')
@@ -152,6 +151,7 @@ class MessageType(Base):
     description = Column(String(255),)
 
     message = relationship('Message', back_populates='message_type')
+    broadcast = relationship('Broadcast', back_populates='message_type')
 
 
 t_metals = Table(
@@ -174,10 +174,64 @@ class SourceGroup(Base):
     id = Column(Integer, primary_key=True,)
     name = Column(String(64), nullable=False)
     name_latin = Column(String(64), nullable=False)
-    period_cron = Column(Text, comment='Cron выражение периодичности парсинга данных')
-    alert_timedelta = Column(Integer, comment='Количество секунд, после которых должен отправляться алерт, если парсер не обновился')
 
     parser_source = relationship('ParserSource', back_populates='source_group')
+
+
+t_report_bon_day = Table(
+    'report_bon_day', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_bon_mon = Table(
+    'report_bon_mon', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_eco_day = Table(
+    'report_eco_day', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_eco_mon = Table(
+    'report_eco_mon', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_exc_day = Table(
+    'report_exc_day', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_exc_mon = Table(
+    'report_exc_mon', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
+
+
+t_report_met_day = Table(
+    'report_met_day', metadata,
+    Column('0', Text),
+    Column('1', Text),
+    Column('2', Text)
+)
 
 
 t_user_log = Table(
@@ -206,8 +260,9 @@ class RegisteredUser(Base):
     user_email = Column(Text, server_default=sa.text("''::text"))
     role_id = Column(ForeignKey('user_role.id', ondelete='RESTRICT', onupdate='CASCADE'))
 
-    message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    message = relationship('Message', back_populates='user')
+    telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
 
@@ -303,6 +358,7 @@ class IndustryAlternative(Base):
     industry = relationship('Industry', back_populates='industry_alternative')
 
 
+### DEPRECATED: Message -> Broadcast & TelegramMessage ###
 class Message(Base):
     __tablename__ = 'message'
     __table_args__ = {'comment': 'Хранилище отправленных пользователям сообщений'}
@@ -316,6 +372,50 @@ class Message(Base):
 
     message_type = relationship('MessageType', back_populates='message')
     user = relationship('RegisteredUser', back_populates='message')
+######
+
+
+class Broadcast(Base):
+    __tablename__ = 'broadcast'
+    __table_args__ = {'comment': 'Рассылки сообщений в боте'}
+
+    id = Column(BigInteger, primary_key=True)
+    text = Column(Text, nullable=False)
+    message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    function_name = Column(Text, nullable=False)
+    created_at = Column(DateTime(True), nullable=False)
+
+    telegram_messages = relationship('TelegramMessage', back_populates='broadcast')
+    telegram_files = relationship('TelegramFile', back_populates='broadcast')
+    message_type = relationship('MessageType', back_populates='broadcast')
+
+
+class TelegramMessage(Base):
+    __tablename__ = 'telegram_message'
+    __table_args__ = {'comment': 'Доставленные пользователям сообщения'}
+
+    id = Column(BigInteger, primary_key=True)
+    telegram_message_id = Column(BigInteger, nullable=False)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    send_datetime = Column(DateTime(True), nullable=False)
+
+    user = relationship('RegisteredUser', back_populates='telegram_messages')
+    broadcast = relationship('Broadcast', back_populates='telegram_messages')
+
+
+class TelegramFile(Base):
+    __tablename__ = 'telegram_file'
+    __table_args__ = {'comment': 'Файлы бота в Telegram'}
+
+    id = Column(Integer, primary_key=True)
+    telegram_file_id = Column(String(255), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    file_type = Column(Enum(enums.FileType, name='file_type'), nullable=False)
+    created_at = Column(DateTime(True), nullable=False)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+    broadcast = relationship('Broadcast', back_populates='telegram_files')
 
 
 class ParserSource(Base):
@@ -330,7 +430,6 @@ class ParserSource(Base):
     source_group_id = Column(ForeignKey('source_group.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     last_update_datetime = Column(DateTime)
     previous_update_datetime = Column(DateTime)
-    last_save_datetime = Column(DateTime)
     params = Column(JSON)
     before_link = Column(Text, nullable=True, server_default='')
 
@@ -785,7 +884,7 @@ class Quotes(Base):
         {'comment': 'Таблица cо списком котировок, получаемых через сторонние API', }
     )
 
-    id = sa.Column(sa.BigInteger, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False, comment='Название')
     params = sa.Column(sa.JSON, comment='Параметры для запросов')
     source = sa.Column(sa.String, comment='Url для запросов')
@@ -810,8 +909,8 @@ class QuotesValues(Base):
         {'comment': 'Таблица cо списком значений для графиков'}
     )
 
-    id = sa.Column(sa.BigInteger, primary_key=True,)
-    quote_id = sa.Column(sa.BigInteger, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    id = sa.Column(sa.Integer, primary_key=True,)
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
 
     date = sa.Column(sa.DateTime, nullable=False, comment='Дата')
 
@@ -881,15 +980,3 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
-
-
-class ArticleOnlinePendingLinksQueue(Base):
-    __tablename__ = 'article_online_pending_links_queue'
-    __table_args__ = {'comment': 'Таблица, содержащая недавно сохраненные ссылки, для их обработки QABanker'}
-
-    id = Column(Integer, primary_key=True)
-    type_of_link = Column(Enum(enums.LinksType), nullable=False, comment='Тип ссылки')
-    link = Column(
-        Text, ForeignKey('article.link', ondelete='CASCADE', onupdate='CASCADE'),
-        unique=True, nullable=False, comment='Ссылка на новость'
-    )

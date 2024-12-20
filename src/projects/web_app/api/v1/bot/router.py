@@ -23,8 +23,8 @@ async def send_message(message: MessageCreate):
     """
     # DEMO
     async with httpx.AsyncClient() as client:
-        response = await client.post(f"http://bot_container:{os.getenv('PORT_BOT')}/api/v1/message/", json={
-            "message": message.message,
+        response = await client.post(f"http://bot_container:{os.getenv('PORT_BOT')}/api/v1/message/send", json={
+            "message_text": message.message,
         })
         try:
             response.raise_for_status()
