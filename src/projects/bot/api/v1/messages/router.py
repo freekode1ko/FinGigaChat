@@ -1,7 +1,5 @@
 """API для работы отправки сообщений"""
-import types
-
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 
 from api.v1.messages import schemas
 from bot import bot
@@ -11,12 +9,13 @@ import sqlalchemy as sa
 from db import models
 import datetime
 
+
 router = APIRouter(tags=["messages"])
 
 
 async def send_message_to_users(user_msg):
     try:
-        if user_msg.user_roles is None:
+        if not user_msg.user_roles:
             role_ids = [1]
         else:
             role_ids = user_msg.user_roles
@@ -37,7 +36,7 @@ async def send_message_to_users(user_msg):
                 .filter(models.RegisteredUser.role_id.in_(role_ids)))
             user_ids = user_ids.scalars().all()
             for user_id in user_ids:
-                user_mes: types.Message = await bot.send_message(
+                user_mes = await bot.send_message(
                     chat_id=user_id,
                     text=user_msg.message_text,
                     parse_mode=user_msg.parse_mode,
