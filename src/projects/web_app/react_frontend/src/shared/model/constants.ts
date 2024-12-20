@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   commodities: 'commodities',
   industries: 'industries',
   users: 'users',
+  bot: 'bot',
 }
 
 export const API_TAGS = {
@@ -48,6 +49,7 @@ export const ADMIN_MAP = {
   whitelist: '/admin/whitelist',
   industries: '/admin/industries',
   users: '/admin/users',
+  bot: '/admin/bot',
 }
 
 export const DESKTOP_MEDIA_QUERY = '(min-width: 768px)'

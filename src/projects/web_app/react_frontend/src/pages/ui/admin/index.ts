@@ -1,3 +1,4 @@
+export { AdminBotPage } from './bot'
 export { AdminCommoditiesPage } from './commodities'
 export { AdminHomePage } from './home'
 export { AdminIndustriesPage } from './industries'

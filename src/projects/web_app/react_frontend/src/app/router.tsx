@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import {
+  AdminBotPage,
   AdminCommoditiesPage,
   AdminHomePage,
   AdminIndustriesPage,
@@ -56,6 +57,14 @@ export const appRouter = () =>
           element: (
             <AuthGuard admin>
               <AdminHomePage />
+            </AuthGuard>
+          ),
+        },
+        {
+          path: ADMIN_MAP.bot,
+          element: (
+            <AuthGuard admin>
+              <AdminBotPage />
             </AuthGuard>
           ),
         },

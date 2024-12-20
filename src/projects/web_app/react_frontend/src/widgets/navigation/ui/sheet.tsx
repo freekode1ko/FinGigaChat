@@ -41,13 +41,13 @@ export const NavigationSheet = ({
                   cn(
                     'flex gap-2 no-underline py-2',
                     isActive
-                      ? 'font-medium border-b-2 border-primary-800 text-primary-800 dark:border-primary-400 dark:text-primary-400'
-                      : 'text-dark-blue hover:text-primary-800 dark:text-white dark:hover:text-primary-400'
+                      ? 'font-semibold border-l-2 border-accent text-accent'
+                      : 'hover:text-accent'
                   )
                 }
                 onClick={() => setIsOpen(false)}
               >
-                <span className="inline-flex items-center gap-2">
+                <span className="inline-flex items-center gap-2 pl-2">
                   {createElement(item.icon, { className: 'h-4 w-4' })}
                   {item.name}
                 </span>

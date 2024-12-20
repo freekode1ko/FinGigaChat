@@ -8,6 +8,7 @@ from api.v1.common_schemas import PaginationParams, PaginatedResponse
 from db.models import Whitelist
 from db.mapper import pydantic_to_sqlalchemy
 from db.repository import WhitelistRepository
+from utils.utils import is_valid_email
 
 
 router = APIRouter(tags=['whitelist'])
@@ -44,8 +45,12 @@ async def add_to_whitelist(
     *Только для администраторов*\n
     Добавить E-Mail в белый список.
     """
-    email_db = await whitelist_repository.get_by_pk(data.user_email)
-    if email_db is not None:
+    if not is_valid_email(data.user_email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Введите корпоративную почту'
+        )
+    if await whitelist_repository.get_by_pk(data.user_email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Такой адрес уже есть в базе',
@@ -66,8 +71,7 @@ async def remove_from_whitelist(
     *Только для администраторов*\n
     Удалить E-Mail из белого списка.
     """
-    email_db = await whitelist_repository.get_by_pk(email)
-    if email_db is None:
+    if (email_db := await whitelist_repository.get_by_pk(email)) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Проверьте корректность введенного адреса',

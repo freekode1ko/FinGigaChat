@@ -21,7 +21,7 @@ class BotInfoRead(BaseReadModel):
 
 class MessageCreate(BaseWriteModel):
     """Схема для создания сообщения"""
-    text: str = Field(min_length=1)
+    message: str = Field(min_length=1)
 
 
 class MessageRead(BaseReadModel):

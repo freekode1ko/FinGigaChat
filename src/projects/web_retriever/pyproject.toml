@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-duckduckgo-search = "^6.4.1"
+duckduckgo-search = "^6.3.7"
 environs = "^11.2.1"
 fastapi = "^0.110.3"
 gigachat = "^0.1.36"

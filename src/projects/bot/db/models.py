@@ -60,6 +60,18 @@ class Article(Base):
     relation_telegram_article = relationship('RelationTelegramArticle', back_populates='article')
 
 
+class ArticleOnlinePendingLinksQueue(Base):
+    __tablename__ = 'article_online_pending_links_queue'
+    __table_args__ = {'comment': 'Таблица, содержащая недавно сохраненные ссылки, для их обработки QABanker'}
+
+    id = Column(Integer, primary_key=True)
+    type_of_link = Column(Enum(enums.LinksType), nullable=False, comment='Тип ссылки')
+    link = Column(
+        Text, ForeignKey('article.link', ondelete='CASCADE', onupdate='CASCADE'),
+        unique=True, nullable=False, comment='Ссылка на новость'
+    )
+
+
 t_bonds = Table(
     'bonds', metadata,
     Column('Название', Text),
@@ -152,6 +164,7 @@ class MessageType(Base):
     description = Column(String(255),)
 
     message = relationship('Message', back_populates='message_type')
+    broadcast = relationship('Broadcast', back_populates='message_type')
 
 
 t_metals = Table(
@@ -206,8 +219,9 @@ class RegisteredUser(Base):
     user_email = Column(Text, server_default=sa.text("''::text"))
     role_id = Column(ForeignKey('user_role.id', ondelete='RESTRICT', onupdate='CASCADE'))
 
-    message = relationship('Message', back_populates='user')
     telegram = relationship('TelegramChannel', secondary='user_telegram_subscription', back_populates='user')
+    message = relationship('Message', back_populates='user')
+    telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
 
 
@@ -303,6 +317,7 @@ class IndustryAlternative(Base):
     industry = relationship('Industry', back_populates='industry_alternative')
 
 
+# DEPRECATED: Message -> Broadcast & TelegramMessage #
 class Message(Base):
     __tablename__ = 'message'
     __table_args__ = {'comment': 'Хранилище отправленных пользователям сообщений'}
@@ -316,6 +331,50 @@ class Message(Base):
 
     message_type = relationship('MessageType', back_populates='message')
     user = relationship('RegisteredUser', back_populates='message')
+#
+
+
+class Broadcast(Base):
+    __tablename__ = 'broadcast'
+    __table_args__ = {'comment': 'Рассылки сообщений в боте'}
+
+    id = Column(BigInteger, primary_key=True)
+    text = Column(Text, nullable=False)
+    message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    function_name = Column(Text, nullable=False)
+    created_at = Column(DateTime(True), nullable=False)
+
+    telegram_messages = relationship('TelegramMessage', back_populates='broadcast')
+    telegram_files = relationship('TelegramFile', back_populates='broadcast')
+    message_type = relationship('MessageType', back_populates='broadcast')
+
+
+class TelegramMessage(Base):
+    __tablename__ = 'telegram_message'
+    __table_args__ = {'comment': 'Доставленные пользователям сообщения'}
+
+    id = Column(BigInteger, primary_key=True)
+    telegram_message_id = Column(BigInteger, nullable=False)
+    user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    send_datetime = Column(DateTime(True), nullable=False)
+
+    user = relationship('RegisteredUser', back_populates='telegram_messages')
+    broadcast = relationship('Broadcast', back_populates='telegram_messages')
+
+
+class TelegramFile(Base):
+    __tablename__ = 'telegram_file'
+    __table_args__ = {'comment': 'Файлы бота в Telegram'}
+
+    id = Column(Integer, primary_key=True)
+    telegram_file_id = Column(String(255), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    file_type = Column(Enum(enums.FileType, name='file_type'), nullable=False)
+    created_at = Column(DateTime(True), nullable=False)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+
+    broadcast = relationship('Broadcast', back_populates='telegram_files')
 
 
 class ParserSource(Base):
@@ -881,15 +940,3 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
-
-
-class ArticleOnlinePendingLinksQueue(Base):
-    __tablename__ = 'article_online_pending_links_queue'
-    __table_args__ = {'comment': 'Таблица, содержащая недавно сохраненные ссылки, для их обработки QABanker'}
-
-    id = Column(Integer, primary_key=True)
-    type_of_link = Column(Enum(enums.LinksType), nullable=False, comment='Тип ссылки')
-    link = Column(
-        Text, ForeignKey('article.link', ondelete='CASCADE', onupdate='CASCADE'),
-        unique=True, nullable=False, comment='Ссылка на новость'
-    )
