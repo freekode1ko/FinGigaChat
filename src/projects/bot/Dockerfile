@@ -1,21 +1,28 @@
 FROM ubuntu:22.04
 
 RUN apt-get update -y
-RUN apt-get install python3-setuptools python3-dev libpq-dev -y
-RUN apt-get install python3 python3-pip -y
-RUN apt-get install ffmpeg -y
-RUN apt-get install poppler-utils -y
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 RUN apt-get install -y tzdata
 
+RUN apt-get install -y software-properties-common
+RUN add-apt-repository ppa:deadsnakes/ppa
+
+RUN apt-get install -y libpq-dev
+RUN apt-get install -y gcc
+RUN apt-get install -y python3.12-dev
+RUN apt-get install -y ffmpeg
+RUN apt-get install -y poppler-utils
+RUN apt-get install -y wget
+
+RUN wget https://bootstrap.pypa.io/get-pip.py && python3.12 get-pip.py && rm get-pip.py
+
 WORKDIR /code
 
-RUN pip install poetry
+RUN python3.12 -m pip install poetry
 # install pdf_watermark that is a cli util
-RUN pip install pdf-watermark
-
+RUN python3.12 -m pip install pdf-watermark
 # install packages
 COPY ./pyproject.toml /code/pyproject.toml
 
