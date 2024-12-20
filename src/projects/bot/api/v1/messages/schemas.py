@@ -14,4 +14,5 @@ class BaseMessage(BaseModel):
     user_id: int
     message_text: str
     parse_mode: ParseMethods = ParseMethods.html
+    user_roles: list[int] = None
 
