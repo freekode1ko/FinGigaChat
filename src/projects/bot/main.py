@@ -160,7 +160,7 @@ async def main():
         **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
     )
     scheduler.add_job(
-        newsletter.send_new_products_to_user,
+        newsletter.ProductDocumentSender.send_new_products_to_users,
         kwargs={'bot': bot},
         **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
     )

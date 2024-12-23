@@ -23,8 +23,8 @@ def upgrade() -> None:
         'relation_registered_user_products',
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('product_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['product_id'], ['bot_product.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['registered_user.user_id'], ),
+        sa.ForeignKeyConstraint(['product_id'], ['bot_product.id'], onupdate='CASCADE', ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['user_id'], ['registered_user.user_id'], onupdate='CASCADE', ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('user_id', 'product_id'),
         comment='Таблица отношений между пользователями и продуктами для рассылки'
     )

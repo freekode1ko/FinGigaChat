@@ -950,5 +950,5 @@ class RelationUsersProducts(Base):
     __tablename__ = "relation_registered_user_products"
     __table_args__ = {'comment': 'Таблица отношений между пользователями и продуктами для рассылки'}
 
-    user_id = Column(Integer, ForeignKey("registered_user.user_id"), primary_key=True)
-    product_id = Column(Integer, ForeignKey("bot_product.id"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("registered_user.user_id", ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    product_id = Column(Integer, ForeignKey("bot_product.id", ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
