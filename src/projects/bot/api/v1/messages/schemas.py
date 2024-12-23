@@ -1,12 +1,5 @@
-# from enum import StrEnum
-
+"""Схемы для API messages"""
 from pydantic import BaseModel, Field
-
-
-# class ParseMethods(StrEnum):
-
-#     html = "HTML"
-#     markdown = "Markdown"
 
 
 class BaseMessage(BaseModel):

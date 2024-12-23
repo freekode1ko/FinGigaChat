@@ -37,8 +37,10 @@ giga_model = 'GigaChat-Pro'
 
 BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
 QABANKER_STORE_UPDATE_URL = 'http://213.171.8.248:8000/api/v1/store/update'
-ROBERTA_CLIENT_RELEVANCE_LINK = 'http://bert_client_relevance_container:444/query'
-ROBERTA_COMMODITY_RELEVANCE_LINK = 'http://bert_commodity_relevance_container:446/query'
+ROBERTA_CLIENT_RELEVANCE_PORT = env.str('PORT_BERT_CLIENT_RELEVANCE', default='444')
+ROBERTA_CLIENT_RELEVANCE_LINK = f'http://bert_client_relevance_container:{ROBERTA_CLIENT_RELEVANCE_PORT}/query'
+ROBERTA_COMMODITY_RELEVANCE_PORT = env.str('PORT_BERT_COMMODITY_RELEVANCE', default='446')
+ROBERTA_COMMODITY_RELEVANCE_LINK = f'http://bert_commodity_relevance_container:{ROBERTA_COMMODITY_RELEVANCE_PORT}/query'
 
 POST_TO_GIGAPARSER_TIMEOUT = 1200
 POST_TO_SERVICE_TIMEOUT = 90
