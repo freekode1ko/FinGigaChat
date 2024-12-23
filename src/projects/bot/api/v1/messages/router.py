@@ -5,15 +5,16 @@ import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks
 
 from api.v1.messages import schemas
-from bot import bot
 from db import models
 from db.database import async_session
+from utils.bot import bot
 
 
 router = APIRouter(tags=['messages'])
 
 
 async def send_message_to_users(user_msg):
+    """Отправка сообщения пользователю"""
     try:
         if not user_msg.user_roles:
             role_ids = [1]
@@ -26,10 +27,8 @@ async def send_message_to_users(user_msg):
                     message_type_id=user_msg.message_type_id,
                     function_name=user_msg.function_name,
                     created_at=datetime.datetime.now(),
-                )
-            session.add(
-                broadcast
             )
+            session.add(broadcast)
             await session.flush()
             user_ids = await session.execute(
                 sa.select(models.RegisteredUser.user_id)

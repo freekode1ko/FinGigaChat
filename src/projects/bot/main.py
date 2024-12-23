@@ -15,7 +15,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 
 from api.router import router as api_router
-from bot import bot
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import async_session as async_session_maker, engine
@@ -45,6 +44,7 @@ from utils.base import (
     next_weekday_time,
     wait_until
 )
+from utils.bot import bot
 
 storage = MemoryStorage()
 
