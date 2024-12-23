@@ -458,11 +458,11 @@ class ProductDocumentSender:
     """Функции для отправки новых продуктов пользователям"""
 
     @staticmethod
-    async def get_new_documents() -> list[models.Product]:
+    async def get_new_products() -> list[models.Product]:
         """
-        Получить новые документы
+        Получить новые продукты
 
-        :return: Документы с is_new == True
+        :return: Продукты с is_new == True
         """
         async with async_session() as session:
             products = await session.execute(
@@ -600,7 +600,7 @@ class ProductDocumentSender:
         logger.info(f'Начинается рассылка Продуктов пользователям в {newsletter_dt_str}')
 
         # Получение продуктов
-        products = await cls.get_new_documents()
+        products = await cls.get_new_products()
         if not products:
             logger.info(f'Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
             return
