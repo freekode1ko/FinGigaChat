@@ -54,5 +54,7 @@ giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
 host_name = 'localhost' if ENV.is_local() else 'bert_client_relevance_container'
-ROBERTA_CLIENT_RELEVANCE_LINK = f'http://{host_name}:444/query'
-ROBERTA_COMMODITY_RELEVANCE_LINK = 'http://bert_commodity_relevance_container:446/query'
+ROBERTA_CLIENT_RELEVANCE_PORT = env.str('PORT_BERT_CLIENT_RELEVANCE', default='444')
+ROBERTA_CLIENT_RELEVANCE_LINK = f'http://{host_name}:{ROBERTA_CLIENT_RELEVANCE_PORT}/query'
+ROBERTA_COMMODITY_RELEVANCE_PORT = env.str('PORT_BERT_COMMODITY_RELEVANCE', default='446')
+ROBERTA_COMMODITY_RELEVANCE_LINK = f'http://bert_commodity_relevance_container:{ROBERTA_COMMODITY_RELEVANCE_PORT}/query'
