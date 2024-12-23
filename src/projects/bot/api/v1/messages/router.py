@@ -1,19 +1,20 @@
 """API для работы отправки сообщений"""
+import datetime
+
+import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks
 
 from api.v1.messages import schemas
-from bot import bot
-from db.database import async_session
-
-import sqlalchemy as sa
 from db import models
-import datetime
+from db.database import async_session
+from utils.bot import bot
 
 
-router = APIRouter(tags=["messages"])
+router = APIRouter(tags=['messages'])
 
 
 async def send_message_to_users(user_msg):
+    """Отправка сообщения пользователю"""
     try:
         if not user_msg.user_roles:
             role_ids = [1]
@@ -22,14 +23,12 @@ async def send_message_to_users(user_msg):
 
         async with async_session() as session:
             broadcast = models.Broadcast(
-                    text=user_msg.message_text,
-                    message_type_id=user_msg.message_type_id,
-                    function_name=user_msg.function_name,
-                    created_at=datetime.datetime.now(),
-                )
-            session.add(
-                broadcast
+                text=user_msg.message_text,
+                message_type_id=user_msg.message_type_id,
+                function_name=user_msg.function_name,
+                created_at=datetime.datetime.now(),
             )
+            session.add(broadcast)
             await session.flush()
             user_ids = await session.execute(
                 sa.select(models.RegisteredUser.user_id)
@@ -56,8 +55,8 @@ async def send_message_to_users(user_msg):
         return {'error': str(e), 'full': str(traceback.format_exc())}
 
 
-@router.post("/send")
+@router.post('/send')
 async def send_message(user_msg: schemas.BaseMessage, background_tasks: BackgroundTasks):  # TODO: remove
     """Отправить сообщение"""
     background_tasks.add_task(send_message_to_users, user_msg)
-    return {"status": "OK"}
+    return {'status': 'OK'}

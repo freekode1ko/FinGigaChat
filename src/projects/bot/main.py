@@ -8,7 +8,7 @@ from typing import Any, Callable
 
 import pandas as pd
 import uvicorn
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -44,8 +44,7 @@ from utils.base import (
     next_weekday_time,
     wait_until
 )
-
-from bot import bot
+from utils.bot import bot
 
 storage = MemoryStorage()
 
