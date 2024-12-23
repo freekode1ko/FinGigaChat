@@ -223,7 +223,7 @@ class RegisteredUser(Base):
     message = relationship('Message', back_populates='user')
     telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
-    products = relationship("Product", secondary="relation_registered_user_products", back_populates="users")
+    products = relationship('Product', secondary='relation_registered_user_products', back_populates='users')
 
 
 class Whitelist(Base):
@@ -712,7 +712,7 @@ class Product(Base):
     broadcast_message = Column(Text, nullable=True, comment='Текст рассылки для продукта')
 
     documents = relationship('ProductDocument')
-    users = relationship("RegisteredUser", secondary="relation_registered_user_products", back_populates="products")
+    users = relationship('RegisteredUser', secondary='relation_registered_user_products', back_populates='products')
 
 
 class ProductDocument(Base):
@@ -947,7 +947,7 @@ class RelationRoleToFeature(Base):
 
 
 class RelationUsersProducts(Base):
-    __tablename__ = "relation_registered_user_products"
+    __tablename__ = 'relation_registered_user_products'
     __table_args__ = {'comment': 'Таблица отношений между пользователями и продуктами для рассылки'}
 
     user_id = Column(Integer, ForeignKey("registered_user.user_id", ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)

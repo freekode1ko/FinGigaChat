@@ -20,7 +20,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types.web_app_info import WebAppInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot import bot
 from configs import config
 from constants.constants import (
     CANCEL_CALLBACK,
@@ -35,6 +34,7 @@ from db.whitelist import is_email_in_whitelist
 from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
+from utils.bot import bot
 from utils.decorators import has_access_to_feature
 from utils.newsletter import ProductDocumentSender
 

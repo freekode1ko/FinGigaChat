@@ -11,7 +11,6 @@ import asyncio
 import datetime
 import itertools
 import os
-import sqlalchemy as sa
 import subprocess
 import tempfile
 import time
@@ -21,6 +20,7 @@ from typing import List
 import pandas as pd
 from aiogram import Bot, exceptions, types
 from aiogram.utils.media_group import MediaGroupBuilder, MediaType
+import sqlalchemy as sa
 
 import module.data_transformer as dt
 from configs import config
@@ -468,7 +468,7 @@ class ProductDocumentSender:
             products = await session.execute(
                 sa.select(models.Product)
                 .join(models.ProductDocument, models.Product.documents)
-                .filter(models.Product.is_new == True).distinct()
+                .filter(models.Product.is_new == True).distinct()  # noqa:E712
             )
             return products.scalars().all()
 
@@ -532,8 +532,8 @@ class ProductDocumentSender:
             for document in documents:
                 path = Path(document.file_path)
                 if not path.exists():
-                    logger.error(
-                        f'В рассылку по Продукту id={product_id} НЕ добавлен файл {str(document.name)} по пути {str(document.file_path)}')
+                    logger.error(f'В рассылку по Продукту id={product_id} НЕ добавлен файл {str(document.name)} '
+                                 f'по пути {str(document.file_path)}')
                     continue
                 media.add_document(media=types.FSInputFile(path))
                 logger.info(
@@ -556,7 +556,6 @@ class ProductDocumentSender:
         :param bot: Бот
         :param product_id: ID продукта
         """
-
         logger.info(f'Начало отправки пользователям по Продукту id={product_id}')
         for user_ids_batch in itertools.batched(users_ids, config.MAX_MESSAGES_PER_SECOND):
             for user_id in user_ids_batch:
@@ -602,7 +601,7 @@ class ProductDocumentSender:
         # Получение продуктов
         products = await cls.get_new_products()
         if not products:
-            logger.info(f'Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
+            logger.info('Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
             return
         logger.info(f'Найдено {len(products)} новых продуктов')
 
@@ -630,4 +629,4 @@ class ProductDocumentSender:
                 logger.error(f'Рассылка по Продукту с id={product.id} завершилась с ошибкой {str(e)}')
             else:
                 logger.info(f'Отправка сообщений по Продукту с id={product.id} завершена')
-    logger.info(f'Рассылка Продуктов пользователям завершена')
+    logger.info('Рассылка Продуктов пользователям завершена')
