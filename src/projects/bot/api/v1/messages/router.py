@@ -1,16 +1,16 @@
 """API для работы отправки сообщений"""
+import datetime
+
+import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks
 
 from api.v1.messages import schemas
 from bot import bot
+from db import models
 from db.database import async_session
 
-import sqlalchemy as sa
-from db import models
-import datetime
 
-
-router = APIRouter(tags=["messages"])
+router = APIRouter(tags=['messages'])
 
 
 async def send_message_to_users(user_msg):
@@ -56,8 +56,8 @@ async def send_message_to_users(user_msg):
         return {'error': str(e), 'full': str(traceback.format_exc())}
 
 
-@router.post("/send")
+@router.post('/send')
 async def send_message(user_msg: schemas.BaseMessage, background_tasks: BackgroundTasks):  # TODO: remove
     """Отправить сообщение"""
     background_tasks.add_task(send_message_to_users, user_msg)
-    return {"status": "OK"}
+    return {'status': 'OK'}

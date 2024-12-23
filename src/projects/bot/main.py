@@ -8,13 +8,14 @@ from typing import Any, Callable
 
 import pandas as pd
 import uvicorn
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 
 from api.router import router as api_router
+from bot import bot
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
 from db.database import async_session as async_session_maker, engine
@@ -44,8 +45,6 @@ from utils.base import (
     next_weekday_time,
     wait_until
 )
-
-from bot import bot
 
 storage = MemoryStorage()
 
