@@ -223,6 +223,7 @@ class RegisteredUser(Base):
     message = relationship('Message', back_populates='user')
     telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
+    products = relationship("Product", secondary="relation_registered_user_products", back_populates="users")
 
 
 class Whitelist(Base):
@@ -707,8 +708,11 @@ class Product(Base):
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
                          comment='Текст сообщения, которое выдается при нажатии на продукт')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    is_new = Column(Boolean, default=False, comment='Новый ли продукт, отвечает за отправку продуктов пользователям')
+    broadcast_message = Column(Text, nullable=True, comment='Текст рассылки для продукта')
 
     documents = relationship('ProductDocument')
+    users = relationship("RegisteredUser", secondary="relation_registered_user_products", back_populates="products")
 
 
 class ProductDocument(Base):
@@ -940,3 +944,11 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
+
+
+class RelationUsersProducts(Base):
+    __tablename__ = "relation_registered_user_products"
+    __table_args__ = {'comment': 'Таблица отношений между пользователями и продуктами для рассылки'}
+
+    user_id = Column(Integer, ForeignKey("registered_user.user_id"), primary_key=True)
+    product_id = Column(Integer, ForeignKey("bot_product.id"), primary_key=True)

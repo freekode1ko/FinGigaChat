@@ -5,10 +5,12 @@
 - новостей по подпискам на клиентов, сырье, отрасли;
 - викли пульса;
 - отчетов CIB research по подпискам.
+- новых продуктов
 """
 import asyncio
 import datetime
 import os
+import sqlalchemy as sa
 import subprocess
 import tempfile
 import time
@@ -23,11 +25,12 @@ import module.data_transformer as dt
 from configs import config
 from constants.texts import texts_manager
 from db import message, models, parser_source
+from db.api.product_document import product_document_db
 from db.api.research import research_db
 from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
-from db.database import engine
+from db.database import async_session, engine
 from db.user import get_users_subscriptions
 from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
@@ -448,3 +451,99 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
         f'Рассылка Weekly Check up в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
         f'Переходим в ожидание следующей рассылки.'
     )
+
+
+async def send_new_products_to_user(bot: Bot):
+    """"""
+    now = datetime.datetime.now()
+    newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
+
+    logger.info(f'Начинается рассылка Продуктов пользователям в {newsletter_dt_str}')
+    try:
+        async with async_session() as session:
+            # Получение продуктов
+            products = await session.execute(
+                sa.select(models.Product)
+                .join(models.ProductDocument, models.Product.documents)
+                .filter(models.Product.is_new == True).distinct()
+            )
+            products = products.scalars().all()
+            if not products:
+                logger.info(f'Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
+                return
+            logger.info(f'Найдено {len(products)} новых продуктов')
+
+            for product in products:
+                logger.info(f'Начинается рассылка Продукта id={product.id}')
+
+                # Получение пользователей для рассылки
+                users_ids = await session.execute(
+                    sa.select(models.RegisteredUser.user_id)
+                    .join(models.RelationUsersProducts, models.RegisteredUser.user_id == models.RelationUsersProducts.user_id)
+                    .filter(models.RelationUsersProducts.product_id == product.id)
+                )
+                users_ids = users_ids.scalars().all()
+                if not users_ids:
+                    logger.error(f'Не найдено пользователей для рассылки по Продукту id={product.id}')
+                    continue
+                logger.info(f'Рассылки по Продукту id={product.id} будет осуществлена на {len(users_ids)} пользователей ')
+
+                # Получение документов по продукту для рассылки
+                try:
+                    documents = await product_document_db.get_all_by_product_id(product.id)
+                except Exception as e:
+                    logger.error(f'Документы по Продукту id={product.id} не получены из-за ошибки {str(e)}')
+                else:
+                    logger.info(f'Документы по Продукту id={product.id} получены')
+
+                # Создание медиа группы для ускорения отправки сообщений
+                try:
+                    logger.info(f'Старт формирования telegram медиа группы по Продукту id={product.id}')
+                    media = MediaGroupBuilder(
+                        caption=(
+                            product.broadcast_message
+                            if product.broadcast_message else
+                            texts_manager.BROADCAST_PRODUCT_DEFAULT_ANSWER
+                        )
+                    )
+
+                    for document in documents:
+                        if not os.path.exists('/code/' + document.file_path):
+                            logger.error(
+                                f'В рассылку по Продукту id={product.id} НЕ добавлен файл {str(document.name)} по пути {str(document.file_path)}')
+                            continue
+                        media.add_document(media=types.FSInputFile('/code/' + document.file_path))
+                        logger.info(
+                            f'В рассылку по Продукту id={product.id} добавлен файл {document.name} по пути {document.file_path}')
+                    media = media.build()
+                except Exception as e:
+                    logger.error(f'Формирования telegram медиа группы по Продукту id={product.id} завершилось с ошибкой {str(e)}')
+                    continue
+                else:
+                    logger.info(f'Формирования telegram медиа группы по Продукту id={product.id} завершилось успешно')
+
+                logger.info(f'Начало отправки пользователям по Продукту id={product.id}')
+                for user_id in users_ids:
+                    try:
+                        await bot.send_media_group(chat_id=user_id, media=media)
+                    except Exception as e:
+                        logger.error(f'Во время отправки сообщения пользователю {user_id} Продукта с id={product.id} '
+                                     f'произошла ошибка {str(e)}')
+                    else:
+                        logger.info(f'Сообщение пользователю {user_id} по Продукту с id={product.id} отправлено')
+
+                try:
+                    await session.execute(
+                        sa.update(models.Product).values(is_new=False).where(models.Product.id == product.id)
+                    )
+                    await session.commit()
+                except Exception as e:
+                    logger.error(f'Не получилось проставить is_new=False Продукта с id={product.id} произошла ошибка {str(e)}')
+                else:
+                    logger.info(f'Продукта с id={product.id} обновлен is_new=False')
+            logger.info(f'Отправка сообщений по Продукту с id={product.id} завершена')
+
+    except Exception as e:
+        logger.error(f'Рассылка Продуктов пользователям завершилась с ошибкой {str(e)}')
+    else:
+        logger.info(f'Рассылка Продуктов пользователям завершена успешно')

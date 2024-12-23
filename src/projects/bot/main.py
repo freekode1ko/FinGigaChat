@@ -159,6 +159,11 @@ async def main():
         kwargs={'bot': bot},
         **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
     )
+    scheduler.add_job(
+        newsletter.send_new_products_to_user,
+        kwargs={'bot': bot},
+        **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
+    )
     scheduler.start()
 
     for passive_newsletter_params in newsletter_config.NEWSLETTER_CONFIG:
