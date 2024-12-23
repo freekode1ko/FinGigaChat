@@ -12,20 +12,5 @@ export default defineConfig(() => {
     },
     envDir: '..',
     envPrefix: 'FRONTEND_',
-    build: {
-      assetsDir: 'static',
-      rollupOptions: {
-        output: {
-          entryFileNames: `static/js/main.js`,
-          chunkFileNames: `static/js/[name].js`,
-          assetFileNames: ({ name }) => {
-            if (name?.endsWith('.css')) {
-              return `static/css/main.css`
-            }
-            return `static/[ext]/[name].[ext]`
-          },
-        },
-      },
-    },
   }
 })

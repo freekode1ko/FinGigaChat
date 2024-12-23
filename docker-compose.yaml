@@ -316,6 +316,17 @@ services:
         restart: always
 
 
+    web-app-frontend:
+        build:
+            context: ./src/projects/web_app/react_frontend
+            dockerfile: Dockerfile
+        container_name: web_app_frontend
+        volumes:
+            - frontend_build:/code/dist
+        depends_on:
+            - web-app
+
+
     nginx:
         image: nginx:latest
         container_name: nginx
@@ -323,6 +334,7 @@ services:
           - "80:80"
           - "443:443"
         volumes:
+          - frontend_build:/usr/share/nginx/html
           - ./build/nginx/template.conf:/tmp/base.template
           - ./data/certs:/certs:ro
         command: /bin/bash -c "envsubst < /tmp/base.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
@@ -346,6 +358,7 @@ services:
             - bert_client_relevance
             - bert_commodity_relevance
             - web-app
+            - web-app-frontend
             - web_retriever
             - quotes
             - research
@@ -354,3 +367,4 @@ services:
 
 volumes:
   redis_data:
+  frontend_build:
