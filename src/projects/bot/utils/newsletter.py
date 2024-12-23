@@ -500,6 +500,7 @@ class ProductDocumentSender:
             documents = await product_document_db.get_all_by_product_id(product_id)
         except Exception as e:
             logger.error(f'Документы по Продукту id={product_id} не получены из-за ошибки {str(e)}')
+            raise
         else:
             logger.info(f'Документы по Продукту id={product_id} получены')
             return documents
@@ -540,6 +541,7 @@ class ProductDocumentSender:
             media = media.build()
         except Exception as e:
             logger.error(f'Формирования telegram медиа группы по Продукту id={product_id} завершилось с ошибкой {str(e)}')
+            raise
         else:
             logger.info(f'Формирования telegram медиа группы по Продукту id={product_id} завершилось успешно')
             return media
@@ -596,15 +598,16 @@ class ProductDocumentSender:
         newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
 
         logger.info(f'Начинается рассылка Продуктов пользователям в {newsletter_dt_str}')
-        try:
-            # Получение продуктов
-            products = await cls.get_new_documents()
-            if not products:
-                logger.info(f'Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
-                return
-            logger.info(f'Найдено {len(products)} новых продуктов')
 
-            for product in products:
+        # Получение продуктов
+        products = await cls.get_new_documents()
+        if not products:
+            logger.info(f'Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
+            return
+        logger.info(f'Найдено {len(products)} новых продуктов')
+
+        for product in products:
+            try:
                 logger.info(f'Начинается рассылка Продукта id={product.id}')
                 # Получение пользователей для рассылки
                 users_ids = await cls.get_users_for_product(product.id)
@@ -618,14 +621,13 @@ class ProductDocumentSender:
 
                 # Создание медиа группы для ускорения отправки сообщений
                 media = await cls.create_documents_media_group(product.id, documents, product.broadcast_message)
-
                 # Отправка сообщения пользователям
                 await cls.send_media_to_users(users_ids, media, bot, product.id)
                 # Обновления статуса по продукту
                 await cls.update_product_in_new_field(product.id)
-                logger.info(f'Отправка сообщений по Продукту с id={product.id} завершена')
 
-        except Exception as e:
-            logger.error(f'Рассылка Продуктов пользователям завершилась с ошибкой {str(e)}')
-        else:
-            logger.info(f'Рассылка Продуктов пользователям завершена успешно')
+            except Exception as e:
+                logger.error(f'Рассылка по Продукту с id={product.id} завершилась с ошибкой {str(e)}')
+            else:
+                logger.info(f'Отправка сообщений по Продукту с id={product.id} завершена')
+    logger.info(f'Рассылка Продуктов пользователям завершена')
