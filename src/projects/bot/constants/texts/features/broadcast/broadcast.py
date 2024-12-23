@@ -1,9 +1,9 @@
-"""Модуль для общих на всего бота текстовок."""
+"""Модуль для текстовок по рассылкам."""
 from pydantic_settings import BaseSettings
 
 
 class BroadcastTexts(BaseSettings):
-    """Класс для общих на всего бота текстовок"""
+    """Класс для текстовок по рассылкам"""
 
     BROADCAST_PRODUCT_DEFAULT_ANSWER: str = (
         'Появилось новое актуальное предложение продукта Банка, '
