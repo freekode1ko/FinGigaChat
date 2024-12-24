@@ -1,12 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
-
-
-class UserData(BaseModel):
-    """Модель пользователя на выход."""
-    model_config = ConfigDict(from_attributes = True, populate_by_name = True)
-
-    user_id: int = Field(..., alias="id")
-    user_email: str = Field(..., alias="email")
+from pydantic import BaseModel
 
 
 class TelegramData(BaseModel):

@@ -1,15 +1,9 @@
 import { RectangleHorizontal, Square } from 'lucide-react'
 import { useId } from 'react'
 
-import {
-  updateSubscription,
-} from '@/entities/quotes'
+import { updateSubscription } from '@/entities/quotes'
 import { cn, useAppDispatch } from '@/shared/lib'
-import {
-  Button,
-  Checkbox,
-  Label,
-} from '@/shared/ui'
+import { Button, Checkbox, Label } from '@/shared/ui'
 
 interface DashboardSubscriptionUpdateMenuProps {
   quoteId: number
@@ -36,18 +30,26 @@ const DashboardSubscriptionUpdateMenu = ({
 
   return (
     <div className="flex items-center justify-between gap-2 py-2">
-      <div className='flex flex-row flex-[2] items-center gap-2'>
-        <Checkbox id={hintId} checked={isActive} onCheckedChange={() => handleClick(quoteId, { active: !isActive })} />
-        <Label htmlFor={hintId} className={cn('ml-2', !isActive && 'opacity-50')} style={{
+      <div className="flex flex-row flex-[2] items-center gap-2">
+        <Checkbox
+          id={hintId}
+          checked={isActive}
+          onCheckedChange={() => handleClick(quoteId, { active: !isActive })}
+        />
+        <Label
+          htmlFor={hintId}
+          className={cn('ml-2', !isActive && 'opacity-50')}
+          style={{
             overflow: 'hidden',
             display: '-webkit-box',
             WebkitBoxOrient: 'vertical',
             WebkitLineClamp: 2,
-          }}>
-            {quoteName}
+          }}
+        >
+          {quoteName}
         </Label>
       </div>
-      <div className='flex flex-row flex-1 items-center justify-end gap-2'>
+      <div className="flex flex-row flex-1 items-center justify-end gap-2">
         <Button
           variant={viewType === 1 ? 'secondary' : 'ghost'}
           size="icon"

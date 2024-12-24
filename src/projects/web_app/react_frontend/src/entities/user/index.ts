@@ -1,15 +1,6 @@
 export {
-  useLazyGetCurrentUserQuery,
-  useLoginMutation,
-  useValidateTelegramDataMutation,
-  useVerifyCodeMutation,
+  useGetUserRolesQuery,
+  useGetUsersQuery,
+  useUpdateUserRoleMutation,
 } from './api'
-export { useInitializeUser } from './lib'
-export {
-  selectUserData,
-  selectUserIsAuthenticated,
-  setUser,
-  unsetUser,
-  type UserId,
-  userSlice,
-} from './model'
+export type { User } from './model'

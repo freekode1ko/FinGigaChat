@@ -7,9 +7,7 @@ interface LogoProps {
 }
 
 const Logo = () => {
-  return (
-    <TypographyH2 className="uppercase">Brief</TypographyH2>
-  )
+  return <TypographyH2 className="uppercase">Brief</TypographyH2>
 }
 
 const LogoWrapper = ({ navigateOnClick }: LogoProps) => {

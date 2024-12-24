@@ -17,6 +17,33 @@ export {
 } from './card'
 export { Checkbox } from './checkbox'
 export {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from './command'
+export {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuPortal,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from './context'
+export {
   Dialog,
   DialogClose,
   DialogContent,
@@ -53,6 +80,13 @@ export {
   DropdownMenuTrigger,
 } from './dropdown'
 export {
+  FileInput,
+  FileUploader,
+  FileUploaderContent,
+  FileUploaderItem,
+  useFileUpload,
+} from './file-upload'
+export {
   Form,
   FormControl,
   FormDescription,
@@ -66,7 +100,9 @@ export { Label } from './label'
 export { Layout } from './layout'
 export { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from './otp'
 export { ShowMoreButton } from './pagination'
+export { Popover, PopoverContent, PopoverTrigger } from './popover'
 export { Progress } from './progress'
+export { ScrollArea, ScrollBar } from './scrollarea'
 export {
   Select,
   SelectContent,
@@ -104,6 +140,7 @@ export {
   TableHeader,
   TableRow,
 } from './table'
+export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
 export { Textarea } from './textarea'
 export { Toaster } from './toast'
 export {

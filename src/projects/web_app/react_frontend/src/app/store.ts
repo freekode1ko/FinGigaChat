@@ -1,7 +1,7 @@
 import { dashboardSubscriptionsSlice } from '@/entities/quotes'
 import { manageSubscriptionsSlice } from '@/entities/subscriptions'
 import { themeSlice } from '@/entities/theme'
-import { userSlice } from '@/entities/user'
+import { userSlice } from '@/entities/auth'
 import { baseApi } from '@/shared/api'
 import { loadFromLocalStorage, saveToLocalStorage } from '@/shared/lib/redux'
 import { configureStore } from '@reduxjs/toolkit'

@@ -1,11 +1,6 @@
 import React, { useState } from 'react'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardTitle,
-} from '@/shared/ui'
+import { Card, CardContent, CardDescription, CardTitle } from '@/shared/ui'
 
 import type { News } from '../model'
 
@@ -21,10 +16,15 @@ export const NewsCard = ({
 }: NewsCardProps) => {
   const [isTruncated, setIsTruncated] = useState(true)
   return (
-    <Card className='cursor-pointer hover:bg-card-foreground border-b border-border hover:border-none' onClick={() => setIsTruncated(!isTruncated)}>
-      <CardContent className='flex flex-row items-center justify-between py-2'>
-          <p className='text-muted-foreground'>{date}</p>
-          <span onClick={(event) => event.stopPropagation()}>{sendReportButton}</span>
+    <Card
+      className="cursor-pointer hover:bg-card-foreground border-b border-border hover:border-none"
+      onClick={() => setIsTruncated(!isTruncated)}
+    >
+      <CardContent className="flex flex-row items-center justify-between py-2">
+        <p className="text-muted-foreground">{date}</p>
+        <span onClick={(event) => event.stopPropagation()}>
+          {sendReportButton}
+        </span>
       </CardContent>
       <CardContent>
         <CardTitle>{title}</CardTitle>

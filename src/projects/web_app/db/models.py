@@ -137,6 +137,7 @@ class Industry(Base):
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
     industry_alternative = relationship('IndustryAlternative', back_populates='industry')
+    documents = relationship('IndustryDocuments', back_populates='industry')
 
 
 t_key_eco = Table(
@@ -187,62 +188,6 @@ class SourceGroup(Base):
     name_latin = Column(String(64), nullable=False)
 
     parser_source = relationship('ParserSource', back_populates='source_group')
-
-
-t_report_bon_day = Table(
-    'report_bon_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
-
-
-t_report_bon_mon = Table(
-    'report_bon_mon', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
-
-
-t_report_eco_day = Table(
-    'report_eco_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
-
-
-t_report_eco_mon = Table(
-    'report_eco_mon', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
-
-
-t_report_exc_day = Table(
-    'report_exc_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
-
-
-t_report_exc_mon = Table(
-    'report_exc_mon', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
-
-
-t_report_met_day = Table(
-    'report_met_day', metadata,
-    Column('0', Text),
-    Column('1', Text),
-    Column('2', Text)
-)
 
 
 t_user_log = Table(
@@ -693,6 +638,8 @@ class IndustryDocuments(Base):
                          primary_key=False, nullable=True, comment='id отрасли')
     industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
                            comment='тип отрасли')
+
+    industry = relationship('Industry', back_populates='documents')
 
 
 class Product(Base):

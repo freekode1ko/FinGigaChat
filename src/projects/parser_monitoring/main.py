@@ -5,71 +5,52 @@ import warnings
 import schedule
 
 from configs import config
+from constants.enums import RequestType
 from db import parser_source
-from log.logger_base import Logger, selector_logger
-from module.formatter import ParserStatusFormatter
+from log.logger_base import logger
+from module.auth import get_access_token
+from module.formatter import ParserFormatter
 from module.sender import SendToMonitoring
 
 
-def send_parser_statuses(logger: Logger.logger) -> None:
-    """
-    Сборка полной статистики по использованию бота
+def send_to_monitoring(token: str, request_type: RequestType = RequestType.PUT) -> None:
+    """Сборка полной статистики по использованию бота"""
+    sending_obj = SendToMonitoring(token)
+    match request_type:
+        case RequestType.POST:
+            getter_data_func = parser_source.get_parser_data_for_create
+            sending_func = sending_obj.create_parsers
+        case RequestType.PUT:
+            getter_data_func = parser_source.get_parser_data_for_update
+            sending_func = sending_obj.update_parsers_last_parsing_datetime
+        case _:
+            raise ValueError('Неизвестный тип запроса')
 
-    :param logger: логгер
-    """
-    msg = 'Получение данных по парсерам'
-    logger.info(msg)
-    print(msg)
-    # Get parser_source data with source_group data
-    data = parser_source.get_parser_data()
-    msg = 'Данные получены'
-    logger.info(msg)
-    print(msg)
-
-    msg = 'Форматирование данных'
-    logger.info(msg)
-    print(msg)
-    # Format data to send
-    formatted_data = ParserStatusFormatter.format(data)
-    msg = 'Данные отформатированы'
-    logger.info(msg)
-    print(msg)
-
-    # send data to monitoring
-    for i in range(config.POST_TO_SERVICE_ATTEMPTS):
-        try:
-            msg = 'Отправка данных на сервис мониторинг: %s'
-            logger.info(msg, formatted_data)
-            print(msg % formatted_data)
-            response = SendToMonitoring.send(formatted_data, timeout=config.POST_TO_SERVICE_TIMEOUT)
-            msg = 'Данные отправлены: ответ %s'
-            logger.info(msg, response)
-            print(msg % response)
-            break
-        except Exception as e:
-            msg = 'Ошибка при отправке данных: %s'
-            logger.error(msg, e)
-            print(msg % e)
-            time.sleep(10)
+    data = getter_data_func()
+    formatted_data = ParserFormatter.format(data, request_type)
+    try:
+        sending_func(formatted_data, timeout=config.POST_TO_SERVICE_TIMEOUT)
+    except Exception as e:
+        logger.exception(e)
+        raise e
 
 
 def main():
     """Сборщик статистики использования бота и справочника пользователей"""
     warnings.filterwarnings('ignore')
-    # логгер для сохранения действий программы + пользователей
-    logger = selector_logger(config.log_file, config.LOG_LEVEL_INFO)
 
-    msg = 'Инициализация сервиса отправки данных по статусам парсеров'
-    logger.info(msg)
-    print(msg)
+    logger.info('Аутентификация в системе мониторинга')
+    token = get_access_token()
+    logger.info('Инициализация сервиса отправки данных по статусам парсеров')
+    send_to_monitoring(token, RequestType.POST)
 
     if config.DEBUG:
         while True:
-            send_parser_statuses(logger)
-            time.sleep(5 * 50)
+            send_to_monitoring(token)
+            time.sleep(config.PENDING_SLEEP_TIME)
 
     # отправка данных по парсерам каждые config.SEND_STATUSES_EVERY_MINUTES минут
-    schedule.every(config.SEND_STATUSES_EVERY_MINUTES).minutes.do(send_parser_statuses, logger=logger)
+    schedule.every(config.SEND_STATUSES_EVERY_MINUTES).minutes.do(send_to_monitoring, token=token)
 
     while True:
         schedule.run_pending()

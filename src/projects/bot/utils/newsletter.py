@@ -5,9 +5,11 @@
 - новостей по подпискам на клиентов, сырье, отрасли;
 - викли пульса;
 - отчетов CIB research по подпискам.
+- новых продуктов
 """
 import asyncio
 import datetime
+import itertools
 import os
 import subprocess
 import tempfile
@@ -16,18 +18,20 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
+import sqlalchemy as sa
 from aiogram import Bot, exceptions, types
-from aiogram.utils.media_group import MediaGroupBuilder
+from aiogram.utils.media_group import MediaGroupBuilder, MediaType
 
 import module.data_transformer as dt
 from configs import config
 from constants.texts import texts_manager
 from db import message, models, parser_source
+from db.api.product_document import product_document_db
 from db.api.research import research_db
 from db.api.research_section import research_section_db
 from db.api.telegram_section import telegram_section_db
 from db.api.user_research_subscription import user_research_subscription_db
-from db.database import engine
+from db.database import async_session, engine
 from db.user import get_users_subscriptions
 from keyboards.analytics import constructors as anal_keyboards
 from log.bot_logger import logger, user_logger
@@ -448,3 +452,181 @@ async def send_weekly_check_up(bot: Bot, user_df: pd.DataFrame, **kwargs) -> Non
         f'Рассылка Weekly Check up в {newsletter_dt_str} для {users_cnt} пользователей успешно завершена за {work_time:.3f} секунд. '
         f'Переходим в ожидание следующей рассылки.'
     )
+
+
+class ProductDocumentSender:
+    """Функции для отправки новых продуктов пользователям"""
+
+    @staticmethod
+    async def get_new_products() -> list[models.Product]:
+        """
+        Получить новые продукты
+
+        :return: Продукты с is_new == True
+        """
+        async with async_session() as session:
+            products = await session.execute(
+                sa.select(models.Product)
+                .join(models.ProductDocument, models.Product.documents)
+                .filter(models.Product.is_new == True).distinct()  # noqa:E712
+            )
+            return products.scalars().all()
+
+    @staticmethod
+    async def get_users_for_product(product_id: int) -> list[int]:
+        """
+        Получение id пользователей которым нужно отправить продукт
+
+        :param product_id: ID продукта
+        :return: Айди пользователей
+        """
+        async with async_session() as session:
+            users_ids = await session.execute(
+                sa.select(models.RegisteredUser.user_id)
+                .join(models.RelationUsersProducts, models.RegisteredUser.user_id == models.RelationUsersProducts.user_id)
+                .filter(models.RelationUsersProducts.product_id == product_id)
+            )
+            return users_ids.scalars().all()
+
+    @staticmethod
+    async def get_product_documents(product_id: int) -> list[models.ProductDocument]:
+        """
+        Получение документов привязанных к продукту
+
+        :param product_id: ID продукта
+        :return: Список документов
+        """
+        try:
+            documents = await product_document_db.get_all_by_product_id(product_id)
+        except Exception as e:
+            logger.error(f'Документы по Продукту id={product_id} не получены из-за ошибки {str(e)}')
+            raise
+        else:
+            logger.info(f'Документы по Продукту id={product_id} получены')
+            return documents
+
+    @staticmethod
+    async def create_documents_media_group(
+            product_id: int,
+            documents: list[models.ProductDocument],
+            broadcast_message: str,
+    ) -> list[MediaType]:
+        """
+        Создание MediaGroup для группы документов
+
+        :param product_id: ID продукта
+        :param documents: Список документов
+        :param broadcast_message: Сообщение к файлам
+        :return: Медиа группа
+        """
+        try:
+            logger.info(f'Старт формирования telegram медиа группы по Продукту id={product_id}')
+            media = MediaGroupBuilder(
+                caption=(
+                    broadcast_message
+                    if broadcast_message else
+                    texts_manager.BROADCAST_PRODUCT_DEFAULT_ANSWER
+                )
+            )
+
+            for document in documents:
+                path = Path(document.file_path)
+                if not path.exists():
+                    logger.error(f'В рассылку по Продукту id={product_id} НЕ добавлен файл {str(document.name)} '
+                                 f'по пути {str(document.file_path)}')
+                    continue
+                media.add_document(media=types.FSInputFile(path))
+                logger.info(
+                    f'В рассылку по Продукту id={product_id} добавлен файл {document.name} по пути {document.file_path}')
+            media = media.build()
+        except Exception as e:
+            logger.error(f'Формирования telegram медиа группы по Продукту id={product_id} завершилось с ошибкой {str(e)}')
+            raise
+        else:
+            logger.info(f'Формирования telegram медиа группы по Продукту id={product_id} завершилось успешно')
+            return media
+
+    @staticmethod
+    async def send_media_to_users(users_ids: list[int], media: list[MediaType], bot: Bot, product_id: int) -> None:
+        """
+        Отправка медиа группы пользователям
+
+        :param users_ids: Список ID пользователей для отправки сообщения
+        :param media: Медиа группа для отправки
+        :param bot: Бот
+        :param product_id: ID продукта
+        """
+        logger.info(f'Начало отправки пользователям по Продукту id={product_id}')
+        for user_ids_batch in itertools.batched(users_ids, config.MAX_MESSAGES_PER_SECOND):
+            for user_id in user_ids_batch:
+                try:
+                    await bot.send_media_group(chat_id=user_id, media=media)
+                except Exception as e:
+                    logger.error(f'Во время отправки сообщения пользователю {user_id} Продукта с id={product_id} '
+                                 f'произошла ошибка {str(e)}')
+                else:
+                    logger.info(f'Сообщение пользователю {user_id} по Продукту с id={product_id} отправлено')
+            await asyncio.sleep(1)
+
+    @staticmethod
+    async def update_product_in_new_field(product_id: int) -> None:
+        """
+        Обновление is_new у продукта на False
+
+        :param product_id: ID продукта
+        """
+        async with async_session() as session:
+            try:
+                await session.execute(
+                    sa.update(models.Product).values(is_new=False).where(models.Product.id == product_id)
+                )
+                await session.commit()
+            except Exception as e:
+                logger.error(f'Не получилось проставить is_new=False Продукта с id={product_id} произошла ошибка {str(e)}')
+            else:
+                logger.info(f'Продукта с id={product_id} обновлен is_new=False')
+
+    @classmethod
+    async def send_new_products_to_users(cls, bot: Bot) -> None:
+        """
+        Рассылка документов по продуктам пользователям
+
+        :param bot: Бот
+        """
+        now = datetime.datetime.now()
+        newsletter_dt_str = now.strftime(config.INVERT_DATETIME_FORMAT)
+
+        logger.info(f'Начинается рассылка Продуктов пользователям в {newsletter_dt_str}')
+
+        # Получение продуктов
+        products = await cls.get_new_products()
+        if not products:
+            logger.info('Не найдено новых продуктов, рассылка завершена (P.s. или у продуктов нет документов)')
+            return
+        logger.info(f'Найдено {len(products)} новых продуктов')
+
+        for product in products:
+            try:
+                logger.info(f'Начинается рассылка Продукта id={product.id}')
+                # Получение пользователей для рассылки
+                users_ids = await cls.get_users_for_product(product.id)
+                if not users_ids:
+                    logger.error(f'Не найдено пользователей для рассылки по Продукту id={product.id}')
+                    continue
+                logger.info(f'Рассылки по Продукту id={product.id} будет осуществлена на {len(users_ids)} пользователей ')
+
+                # Получение документов по продукту для рассылки
+                documents = await cls.get_product_documents(product.id)
+
+                # Создание медиа группы для ускорения отправки сообщений
+                media = await cls.create_documents_media_group(product.id, documents, product.broadcast_message)
+                # Отправка сообщения пользователям
+                await cls.send_media_to_users(users_ids, media, bot, product.id)
+                # Обновления статуса по продукту
+                await cls.update_product_in_new_field(product.id)
+
+            except Exception as e:
+                logger.error(f'Рассылка по Продукту с id={product.id} завершилась с ошибкой {str(e)}')
+            else:
+                logger.info(f'Отправка сообщений по Продукту с id={product.id} завершена')
+    logger.info('Рассылка Продуктов пользователям завершена')

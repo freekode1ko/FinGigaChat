@@ -1,4 +1,4 @@
-import type { UserId } from '@/entities/user'
+import type { UserId } from '@/entities/auth'
 
 import type { AddMeetingFormData } from '.'
 

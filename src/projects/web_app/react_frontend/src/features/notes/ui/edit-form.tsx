@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 
 import { type Note, useUpdateNoteMutation } from '@/entities/notes'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import {
   Button,

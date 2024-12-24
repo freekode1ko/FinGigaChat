@@ -1,7 +1,7 @@
 import { SquarePen } from 'lucide-react'
 import { useState } from 'react'
 
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import { Button } from '@/shared/ui'
 

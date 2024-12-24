@@ -4,13 +4,15 @@ from datetime import datetime
 
 import pandas as pd
 
-from schemas.parser import ParserStatusSend
+from constants.enums import RequestType
+from log.logger_base import logger
+from schemas.parser import ParserCreate, ParserUpdateLastUpdateTime
 
 
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-class ParserStatusFormatter:
+class ParserFormatter:
     """Класс форматирования статусов парсеров"""
 
     @staticmethod
@@ -32,18 +34,24 @@ class ParserStatusFormatter:
         )
 
     @classmethod
-    def format(cls, data: pd.DataFrame) -> list[ParserStatusSend]:
-        """Отформатировать статусы парсеров"""
-        res = []
-        for i, row in data.iterrows():
-            d = row.to_dict()
-            if not d['last_update_datetime']:
-                del d['last_update_datetime']
-            else:
-                d['last_update_datetime'] = cls._convert_datetime_to_utc_tz(d['last_update_datetime'])
-            if not d['previous_update_datetime']:
-                del d['previous_update_datetime']
-            else:
-                d['previous_update_datetime'] = cls._convert_datetime_to_utc_tz(d['previous_update_datetime'])
-            res.append(ParserStatusSend(**d))
+    def format(cls, data: pd.DataFrame, request_type: RequestType) -> list[ParserUpdateLastUpdateTime | ParserCreate]:
+        """
+        Форматирование даты парсинга.
+
+        (в таблице parser_source все даты должны быть сохранены с помощью current_timestamp или datetime.now())
+
+        :param data:            Датафрейм с данными по парсерам.
+        :param request_type:    Тип запроса: на создание или обновление парсера.
+        :return:                Список из Pydantic моделей с данными из датафрейма.
+        """
+        logger.info('Форматирование данных')
+        model = ParserUpdateLastUpdateTime if request_type == RequestType.PUT else ParserCreate
+        data['name'] = data['name'].astype(str)
+
+        if 'last_update_datetime' in data.columns:
+            data = data.dropna(subset=['last_update_datetime'])
+            data['last_update_datetime'] = data['last_update_datetime'].apply(lambda lud: cls._convert_datetime_to_utc_tz(lud))
+
+        res = [model(**row.dropna()) for _, row in data.iterrows()]
+        logger.info('Данные отформатированы')
         return res

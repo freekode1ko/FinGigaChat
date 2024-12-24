@@ -1,0 +1,7 @@
+export { AdminBotPage } from './bot'
+export { AdminCommoditiesPage } from './commodities'
+export { AdminHomePage } from './home'
+export { AdminIndustriesPage } from './industries'
+export { AdminSettingsPage } from './settings'
+export { AdminUsersPage } from './users'
+export { AdminWhitelistPage } from './whitelist'

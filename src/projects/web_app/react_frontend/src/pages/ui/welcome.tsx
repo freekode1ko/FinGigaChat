@@ -26,8 +26,8 @@ const WelcomePage = () => {
   }
 
   const handleSkip = () => {
-      localStorage.setItem('onboarding', 'true')
-      navigate('/news')
+    localStorage.setItem('onboarding', 'true')
+    navigate('/news')
   }
 
   return (
@@ -39,26 +39,38 @@ const WelcomePage = () => {
       </div>
       <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
         {step === 1 && (
-          <SliderContent title='Дашборд'>
-            Создавайте свой персональный дашборд, настройте его под свои задачи и следите за интересующими вас котировками!
+          <SliderContent title="Дашборд">
+            Создавайте свой персональный дашборд, настройте его под свои задачи
+            и следите за интересующими вас котировками!
           </SliderContent>
         )}
         {step === 2 && (
-          <SliderContent title='Новости'>
-            Получайте актуальные новости и обновления по вашим финансовым инструментам, чтобы оставаться в курсе каждый день!
+          <SliderContent title="Новости">
+            Получайте актуальные новости и обновления по вашим финансовым
+            инструментам, чтобы оставаться в курсе каждый день!
           </SliderContent>
         )}
         {step === 3 && (
-          <SliderContent title='Заметки и встречи'>
-            Планируйте встречи, создавайте заметки и контролируйте время для достижения целей, чтобы ничего не пропустить!
+          <SliderContent title="Заметки и встречи">
+            Планируйте встречи, создавайте заметки и контролируйте время для
+            достижения целей, чтобы ничего не пропустить!
           </SliderContent>
         )}
       </div>
-      <div className='w-full text-center space-y-1'>
-        <Button size='sm' variant='ghost' className='text-muted text-xs' onClick={handleSkip}>
+      <div className="w-full text-center space-y-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-muted text-xs"
+          onClick={handleSkip}
+        >
           Пропустить
         </Button>
-        <Button size='lg' className='w-full rounded-none' onClick={handleNextStep}>
+        <Button
+          size="lg"
+          className="w-full rounded-none"
+          onClick={handleNextStep}
+        >
           {step < 3 ? 'Далее' : 'В приложение!'}
         </Button>
       </div>
@@ -66,7 +78,10 @@ const WelcomePage = () => {
   )
 }
 
-const SliderContent = ({title, children}: {title: string} & React.PropsWithChildren) => {
+const SliderContent = ({
+  title,
+  children,
+}: { title: string } & React.PropsWithChildren) => {
   return (
     <div className="w-full">
       <div className="h-80 w-3/4 bg-gray-400 mx-auto rounded-md"></div>

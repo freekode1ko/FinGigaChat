@@ -83,7 +83,7 @@ giga_model = 'GigaChat-Pro'
 
 # url к rag-сервисам
 BASE_QA_BANKER_URL = 'http://213.171.8.248:8000'
-BASE_QA_RESEARCH_URL = 'http://193.124.47.175:8000'
+BASE_QA_ANALYTICAL_URL = 'http://193.124.47.175:8000'
 BASE_QA_WEB_URL = f'http://web_retriever_container:{WEB_RETRIEVER_PORT}'
 BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
 POST_TO_SERVICE_TIMEOUT = 90
@@ -127,3 +127,11 @@ ECO_FUZZY_SEARCH_SCORE_CUTOFF: int = 90
 dict_of_emoji: dict = read_asset_from_json('emoji_dict.json')
 
 WHISPER_MODEL = 'small'
+
+PORT: int = env.int('PORT_BOT', default=8000)
+
+WEBHOOK_LOCAL_URL = '/webhook'
+SERVICE_URL = '/service/bot'
+WEBHOOK_FULL_URL = f'{DOMAIN_NAME}{SERVICE_URL}{WEBHOOK_LOCAL_URL}'
+
+MAX_MESSAGES_PER_SECOND = 30

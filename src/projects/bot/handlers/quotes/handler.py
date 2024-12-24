@@ -9,15 +9,16 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.chat_action import ChatActionMiddleware
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import utils.base
 from configs import config
-from configs.config import PATH_TO_SOURCES
 from constants import enums, quotes as callback_prefixes
 from constants.constants import sample_of_img_title
 from constants.texts import texts_manager
 from db.api.exc import exc_db
 from db.database import engine
+from handlers.quotes.research_utils import get_part_from_start_to_end, get_reports_for_quotes, get_until_upper_case
 from keyboards.quotes import callbacks, constructors as keyboards
 from log.bot_logger import user_logger
 from module import data_transformer as dt
@@ -89,45 +90,44 @@ async def main_menu_command(message: types.Message) -> None:
 
 
 @router.callback_query(callbacks.FX.filter())
-async def exchange_info(callback_query: types.CallbackQuery, callback_data: callbacks.FX) -> None:
+async def exchange_info(callback_query: types.CallbackQuery, callback_data: callbacks.FX, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с валютой и их курсом
 
     Отправляет копию меню в конце, если были отправлены данные
 
     :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_data:  Содержит дополнительную информацию
+    :param session:        Сессия с бд
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await exchange_info_command(callback_query.message)
+    await exchange_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def exchange_info_command(message: types.Message) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с валютой и их курсом
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
-    # Получаем курсы и преобразуем в таблицу
+async def exchange_info_command(message: types.Message, session: AsyncSession) -> None:
+    """Вывод в чат информации по котировкам связанной с валютой и их курсом"""
     exc_data = await exc_db.get_all()
     df = pd.DataFrame([
         [i.name, i.value, i.display_order, i.exc_type.name, i.exc_type.display_order]
         for i in exc_data
     ], columns=['name', 'value', 'display_order', 'exc_type_name', 'exc_type_display_order'])
+    exc_data.sort(
+        key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min,
+        reverse=True,
+    )
+    curr_date = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
 
     header_color = '#E2EFDA'
     default_color = '#ffffff'
-    row_colors = []
-    text_props = []
     cells_counter = 1
-    data = []
     last_exc_type = ''
+    row_colors, text_props, data = [], [], []
     for _, row in df.sort_values(['exc_type_display_order', 'display_order']).iterrows():
         if last_exc_type != row['exc_type_name']:
             last_exc_type = row['exc_type_name']
@@ -135,8 +135,6 @@ async def exchange_info_command(message: types.Message) -> None:
             row_colors.append(header_color)
             text_props.append((cells_counter, 0, dict(fontstyle='italic', fontweight='bold')))
             cells_counter += 1
-
-        # Добавляем пробелы между тысячами
         try:
             row['value'] = f'{float(row["value"]):_}'.replace('_', ' ')
         except ValueError:
@@ -146,12 +144,9 @@ async def exchange_info_command(message: types.Message) -> None:
         row_colors.append(default_color)
         cells_counter += 1
 
-    df = pd.DataFrame(data, columns=['Валютная пара', 'Значение'])
-    png_name = 'exc'
-    transformer = dt.Transformer()
-    png_path = transformer.draw_table(
-        df,
-        png_name,
+    png_path = dt.Transformer.draw_table(
+        data=pd.DataFrame(data, columns=['Валютная пара', 'Значение']),
+        png_name='exc',
         col_width=3,
         header_color=header_color,
         row_colors=row_colors,
@@ -160,22 +155,11 @@ async def exchange_info_command(message: types.Message) -> None:
         text_props=text_props,
     )
 
-    day = pd.read_sql_query('SELECT * FROM "report_exc_day"', con=engine).values.tolist()
-    month = pd.read_sql_query('SELECT * FROM "report_exc_mon"', con=engine).values.tolist()
-    photo = types.FSInputFile(png_path)
-    title = 'Курсы валют'
-    data_source = 'investing.com, ru.tradingview.com, www.finam.ru, www.cbr.ru'
-    exc_data.sort(
-        key=lambda x: x.parser_source.last_update_datetime if x.parser_source.last_update_datetime else datetime.min,
-        reverse=True,
-    )
-    curdatetime = exc_data[0].parser_source.last_update_datetime.strftime(config.BASE_DATETIME_FORMAT)
     await utils.base.__sent_photo_and_msg(
         message,
-        photo,
-        day,
-        month,
-        title=sample_of_img_title.format(title, data_source, curdatetime),
+        photo=types.FSInputFile(png_path),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.FX, format_func=get_part_from_start_to_end),
+        title=sample_of_img_title.format('Курсы валют', 'investing.com, ru.tradingview.com, finam.ru, cbr.ru', curr_date)
     )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
 
@@ -243,66 +227,46 @@ def format_cell_in_commodity_df(value: str | float | None) -> str | None:
 
 
 @router.callback_query(callbacks.Commodities.filter())
-async def metal_info(callback_query: types.CallbackQuery, callback_data: callbacks.Commodities) -> None:
+async def metal_info(callback_query: types.CallbackQuery, callback_data: callbacks.Commodities, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с сырьем (комодами)
 
     Отправляет копию меню в конце, если были отправлены данные
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await metal_info_command(callback_query.message)
+    await metal_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def metal_info_command(
-        message: types.Message,
-        with_table: bool = True,
-) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с сырьем (комодами)
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param with_table: Отправлять ли таблицу с котировками
-    """
-    day = pd.read_sql_table('report_met_day', con=engine).values.tolist()
-    if not with_table:
-        await utils.base.__sent_photo_and_msg(message, None, day)
-        return
-
+async def metal_info_command(message: types.Message, session: AsyncSession) -> None:
+    """Вывод в чат информации по котировкам связанной с сырьем (комодами)."""
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
         'JOIN relation_commodity_metals rcm ON rcm.name_from_source=metals."Metals" '
-        'WHERE sub_name IN :sub_names ORDER BY sub_name'
+        f'WHERE sub_name IN {callback_prefixes.COMMODITY_TABLE_ELEMENTS} ORDER BY sub_name'
     )
-    with engine.connect() as conn:
-        materials = conn.execute(query.bindparams(sub_names=callback_prefixes.COMMODITY_TABLE_ELEMENTS)).fetchall()
-
+    res = await session.execute(query)
+    commodities = res.fetchall()
     number_columns = list(callback_prefixes.COMMODITY_MARKS.values())
-    materials_df = pd.DataFrame(materials, columns=['Сырье', 'Ед. изм.', *number_columns])
-
+    materials_df = pd.DataFrame(commodities, columns=['Сырье', 'Ед. изм.', *number_columns])
     materials_df[number_columns] = materials_df[number_columns].applymap(format_cell_in_commodity_df)
     materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(lambda x: x + '%' if x else '-')
 
-    transformer = dt.Transformer()
-    transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
-
-    png_path = PATH_TO_SOURCES / 'img' / 'metal_table.png'
-    photo = types.FSInputFile(png_path)
-    title = 'Сырьевые товары'
-    data_source = 'LME, Bloomberg, investing.com'
+    png_path = dt.Transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
     await utils.base.__sent_photo_and_msg(
         message,
-        photo,
-        day,
-        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
+        photo=types.FSInputFile(png_path),
+        reports=await get_reports_for_quotes(session, enums.QuotesType.COMMODITIES, get_until_upper_case),
+        title=sample_of_img_title.format('Сырьевые товары', 'LME, Bloomberg, investing.com', utils.base.read_curdatetime())
     )
 
 
@@ -316,47 +280,45 @@ async def not_realized_function(callback_query: types.CallbackQuery) -> None:
 
 
 @router.callback_query(callbacks.GetFIItemData.filter())
-async def get_fi_item_data(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData) -> None:
+async def get_fi_item_data(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData, session: AsyncSession) -> None:
     """
-    Данные по фин показателю
+    Данные по фин показателю.
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     _type = callback_data.type
 
     match _type:
         case enums.FIGroupType.bonds.value:
-            await bonds_info(callback_query, callback_data)
+            await bonds_info(callback_query, callback_data, session)
         case _:
             await not_realized_function(callback_query)
 
 
-async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData) -> None:
+async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbacks.GetFIItemData, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с облигациями
 
     Отправляет копию меню в конце, если были отправлены данные
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await bonds_info_command(callback_query.message)
+    await bonds_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def bonds_info_command(message: types.Message) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с облигациями
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
+async def bonds_info_command(message: types.Message, session: AsyncSession) -> None:
+    """Вывод в чат информации по котировкам связанной с облигациями"""
     columns = ['Название', 'Доходность', 'Изм, %']
     bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
     bonds = bonds[columns].dropna(axis=0)
@@ -365,50 +327,39 @@ async def bonds_info_command(message: types.Message) -> None:
     years = ['1 год', '2 года', '3 года', '5 лет', '7 лет', '10 лет', '15 лет', '20 лет']
     for num, name in enumerate(bond_ru['Cрок до погашения'].values):
         bond_ru['Cрок до погашения'].values[num] = years[num]
+    png_path = dt.Transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
 
-    transformer = dt.Transformer()
-    png_path = PATH_TO_SOURCES / 'img' / 'bonds_table.png'
-    transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
-    photo = types.FSInputFile(png_path)
-    day = pd.read_sql_query('SELECT * FROM "report_bon_day"', con=engine).values.tolist()
-    month = pd.read_sql_query('SELECT * FROM "report_bon_mon"', con=engine).values.tolist()
-    title = 'Доходность ОФЗ'
-    data_source = 'investing.com'
     await utils.base.__sent_photo_and_msg(
         message,
-        photo,
-        day,
-        month,
-        title=sample_of_img_title.format(title, data_source, utils.base.read_curdatetime()),
+        photo=types.FSInputFile(png_path),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.FI, format_func=get_part_from_start_to_end),
+        title=sample_of_img_title.format('Доходность ОФЗ', 'investing.com', utils.base.read_curdatetime())
     )
 
 
 @router.callback_query(callbacks.Eco.filter())
-async def economy_info(callback_query: types.CallbackQuery, callback_data: callbacks.Eco) -> None:
+async def economy_info(callback_query: types.CallbackQuery, callback_data: callbacks.Eco, session: AsyncSession) -> None:
     """
     Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
 
     Отправляет копию меню в конце, если были отправлены данные
 
-    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    :param callback_data: содержит дополнительную информацию
+    :param callback_query: Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param callback_data:  Содержит дополнительную информацию.
+    :param session:        Асинхронная сессия к бд.
     """
     chat_id = callback_query.message.chat.id
     user_msg = callback_data.pack()
     from_user = callback_query.from_user
     full_name = f"{from_user.first_name} {from_user.last_name or ''}"
-    await economy_info_command(callback_query.message)
+    await economy_info_command(callback_query.message, session)
     await utils.base.send_full_copy_of_message(callback_query)
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def economy_info_command(message: types.Message) -> None:
-    """
-    Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)
-
-    :param message: Объект, содержащий в себе информацию по отправителю, чату и сообщению
-    """
+async def economy_info_command(message: types.Message, session: AsyncSession) -> None:
+    """Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)"""
     world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
     rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
     rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
@@ -437,19 +388,14 @@ async def economy_info_command(message: types.Message) -> None:
     world_bet = world_bet[['Страна', 'Ставка, %', 'Предыдущая, %']]
     for num, country in enumerate(world_bet['Страна'].values):
         world_bet.Страна[world_bet.Страна == country] = countries[country]
-    transformer = dt.Transformer()
-    png_path = PATH_TO_SOURCES / 'img' / 'world_bet_table.png'
-    world_bet = world_bet.round(2)
-    transformer.render_mpl_table(world_bet, 'world_bet', header_columns=0, col_width=2.2)
-    photo = types.FSInputFile(png_path)
-    day = pd.read_sql_query('SELECT * FROM "report_eco_day"', con=engine).values.tolist()
-    month = pd.read_sql_query('SELECT * FROM "report_eco_mon"', con=engine).values.tolist()
-    title = 'Ключевые ставки ЦБ мира'
-    data_source = 'ЦБ стран мира'
+
+    png_path = dt.Transformer.render_mpl_table(world_bet.round(2), 'world_bet', header_columns=0, col_width=2.2)
     curdatetime = utils.base.read_curdatetime()
     await utils.base.__sent_photo_and_msg(
-        message, photo, day, month,
-        title=sample_of_img_title.format(title, data_source, curdatetime)
+        message,
+        photo=types.FSInputFile(png_path),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.ECO),
+        title=sample_of_img_title.format('Ключевые ставки ЦБ мира', 'ЦБ стран мира', curdatetime)
     )
 
     month_dict = {
@@ -469,14 +415,11 @@ async def economy_info_command(message: types.Message) -> None:
     for num, date in enumerate(rus_infl['Дата'].values):
         cell = str(date).split('.')
         rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
-    transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2)
-    png_path = PATH_TO_SOURCES / 'img' / 'rus_infl_table.png'
-    photo = types.FSInputFile(png_path)
-    title = 'Инфляция в России'
-    data_source = 'ЦБ РФ'
+
+    png_path = dt.Transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2)
     await message.answer_photo(
-        photo,
-        caption=sample_of_img_title.format(title, data_source, curdatetime),
+        photo=types.FSInputFile(png_path),
+        caption=sample_of_img_title.format('Инфляция в России', 'ЦБ РФ', curdatetime),
         parse_mode='HTML',
         protect_content=texts_manager.PROTECT_CONTENT,
     )

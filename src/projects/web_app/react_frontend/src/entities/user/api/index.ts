@@ -1,57 +1,55 @@
 import { baseApi } from '@/shared/api'
-import { API_ENDPOINTS, KEEP_UNUSED_DATA_INF } from '@/shared/model'
+import {
+  API_ENDPOINTS,
+  API_TAGS,
+  type PaginatedResponse,
+  type PaginationProps,
+} from '@/shared/model'
 
-import type { User } from '../model'
+import type { User, UserRole } from '../model'
 
-interface TelegramData {
-  id: TelegramWebApps.WebAppUser['id']
-  data: string
-}
-
-interface LoginInterface {
-  email: string
-}
-
-interface VerifyCodeInteface extends LoginInterface {
-  reg_code: string
+interface UserQuery extends PaginationProps {
+  email?: string
+  role_id?: number
 }
 
 export const usersApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
-    getCurrentUser: build.query<User, void>({
-      query: () => ({
-        url: API_ENDPOINTS.auth + '/me',
+    getUsers: build.query<PaginatedResponse<User>, UserQuery>({
+      query: ({ page, size, email, role_id }) => ({
+        url: `${API_ENDPOINTS.users}/`,
+        params: { page, size, email, role_id },
         method: 'GET',
       }),
-      keepUnusedDataFor: KEEP_UNUSED_DATA_INF,
+      providesTags: (result) =>
+        result
+          ? result.items.map(({ email }) => ({
+              type: API_TAGS.users,
+              email,
+            }))
+          : [{ type: API_TAGS.users }],
     }),
-    login: build.mutation<string, LoginInterface>({
-      query: (data) => ({
-        url: `${API_ENDPOINTS.auth}/login`,
-        method: 'POST',
-        body: data,
+    getUserRoles: build.query<Array<UserRole>, void>({
+      query: () => ({
+        url: `${API_ENDPOINTS.users}/roles`,
+        method: 'GET',
       }),
     }),
-    verifyCode: build.mutation<string, VerifyCodeInteface>({
-      query: (data) => ({
-        url: `${API_ENDPOINTS.auth}/verify`,
-        method: 'POST',
-        body: data,
+    updateUserRole: build.mutation<string, { roleId: number; email: string }>({
+      query: ({ roleId, email }) => ({
+        url: `${API_ENDPOINTS.users}/` + email,
+        method: 'PATCH',
+        body: { role: roleId },
       }),
-    }),
-    validateTelegramData: build.mutation<string, TelegramData>({
-      query: (data) => ({
-        url: `${API_ENDPOINTS.auth}/validate_telegram`,
-        method: 'POST',
-        body: data,
-      }),
+      invalidatesTags: (_result, _error, { email }) => [
+        { type: API_TAGS.users, email },
+      ],
     }),
   }),
 })
 
 export const {
-  useValidateTelegramDataMutation,
-  useLoginMutation,
-  useVerifyCodeMutation,
-  useLazyGetCurrentUserQuery,
+  useGetUsersQuery,
+  useGetUserRolesQuery,
+  useUpdateUserRoleMutation,
 } = usersApi

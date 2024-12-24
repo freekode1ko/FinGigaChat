@@ -8,8 +8,7 @@ interface ThemeSwitcherProps {
   hideText?: boolean
 }
 
-
-const ThemeSwitcher = ({hideText}: ThemeSwitcherProps) => {
+const ThemeSwitcher = ({ hideText }: ThemeSwitcherProps) => {
   const appTheme = useAppSelector(selectAppTheme)
   const dispatch = useAppDispatch()
 

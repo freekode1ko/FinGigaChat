@@ -1,11 +1,14 @@
-import { EllipsisVertical, RectangleHorizontal, Square, Trash2 } from 'lucide-react'
+import {
+  EllipsisVertical,
+  RectangleHorizontal,
+  Square,
+  Trash2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  usePutDashboardSubscriptionsMutation,
-} from '@/entities/quotes'
+import { usePutDashboardSubscriptionsMutation } from '@/entities/quotes'
 import { selectDashboardSubscriptions } from '@/entities/quotes/model/slice'
-import { selectUserData } from '@/entities/user'
+import { selectUserData } from '@/entities/auth'
 import { useAppSelector } from '@/shared/lib'
 import {
   DropdownMenu,
@@ -27,7 +30,7 @@ const DashboardSubscriptionActions = ({
   quoteId,
   viewType,
   show,
-}: DashboardSubscriptionUpdateMenuProps & {show?: boolean}) => {
+}: DashboardSubscriptionUpdateMenuProps & { show?: boolean }) => {
   // const dispatch = useAppDispatch()
   const subscriptions = useAppSelector(selectDashboardSubscriptions)
   const user = useAppSelector(selectUserData)
@@ -66,19 +69,23 @@ const DashboardSubscriptionActions = ({
       <DropdownMenuTrigger>
         <EllipsisVertical className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56'>
+      <DropdownMenuContent className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Тип отображения</DropdownMenuLabel>
           <DropdownMenuCheckboxItem
             checked={viewType === 1}
-            onCheckedChange={() => viewType !== 1 && handleClick(quoteId, { type: 1 })}
+            onCheckedChange={() =>
+              viewType !== 1 && handleClick(quoteId, { type: 1 })
+            }
           >
             <RectangleHorizontal />
             <span>Упрощенный</span>
           </DropdownMenuCheckboxItem>
           <DropdownMenuCheckboxItem
             checked={viewType !== 1}
-            onCheckedChange={() => viewType === 1 && handleClick(quoteId, { type: 2 })}
+            onCheckedChange={() =>
+              viewType === 1 && handleClick(quoteId, { type: 2 })
+            }
           >
             <Square />
             <span>Расширенный</span>
@@ -86,7 +93,10 @@ const DashboardSubscriptionActions = ({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem className='text-destructive' onClick={() => handleClick(quoteId, { active: false })}>
+          <DropdownMenuItem
+            className="text-destructive"
+            onClick={() => handleClick(quoteId, { active: false })}
+          >
             <Trash2 />
             <span>Скрыть тикер</span>
           </DropdownMenuItem>

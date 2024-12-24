@@ -1,4 +1,5 @@
 """Модуль с текстовками регистрации."""
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 from configs.config import STATE_TIMEOUT
@@ -32,8 +33,10 @@ class RegistrationTexts(BaseSettings):
         'Нажмите /start, чтобы попробовать еще раз.'
     )
 
-    REGISTRATION_NOT_WHITELIST_EMAIL: str = (
-        'Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: Brief@sberbank.ru'
+    REGISTRATION_NOT_WHITELIST_EMAIL: str = Field(
+        'Для продолжения регистрации, пожалуйста, свяжитесь с командой проекта: Brief@sberbank.ru',
+        title='Пользователя нет в белом списке',
+        description='public',
     )
 
     REGISTRATION_NOT_CORPORATE_EMAIL: str = 'Указана не корпоративная почта'
