@@ -115,6 +115,7 @@ export {
   SelectTrigger,
   SelectValue,
 } from './select'
+export { Separator } from './separator'
 export {
   Sheet,
   SheetClose,
@@ -143,6 +144,7 @@ export {
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs'
 export { Textarea } from './textarea'
 export { Toaster } from './toast'
+export { Toggle } from './toggle'
 export {
   Tooltip,
   TooltipContent,
