@@ -17,10 +17,10 @@ import time
 from pathlib import Path
 from typing import List
 
+import sqlalchemy as sa
 import pandas as pd
 from aiogram import Bot, exceptions, types
 from aiogram.utils.media_group import MediaGroupBuilder, MediaType
-import sqlalchemy as sa
 
 import module.data_transformer as dt
 from configs import config
