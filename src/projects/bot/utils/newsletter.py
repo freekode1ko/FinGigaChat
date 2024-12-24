@@ -17,8 +17,8 @@ import time
 from pathlib import Path
 from typing import List
 
-import sqlalchemy as sa
 import pandas as pd
+import sqlalchemy as sa
 from aiogram import Bot, exceptions, types
 from aiogram.utils.media_group import MediaGroupBuilder, MediaType
 
