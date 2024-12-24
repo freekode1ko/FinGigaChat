@@ -1,0 +1,52 @@
+"""Функции для запуска function calling"""
+
+import traceback
+
+from aiogram import types
+from langgraph.prebuilt import create_react_agent
+
+from constants.enums import FeatureType
+from utils.decorators import has_access_to_feature
+from utils.function_calling.tool_functions import tools_functions
+from utils.function_calling.tool_functions.utils import LanggraphConfig
+from utils.function_calling.tool_functions.utils import get_model
+
+
+@has_access_to_feature(feature=FeatureType.admin, is_need_answer=False)
+async def find_and_run_tool_function(message: types.Message, message_text: str) -> bool:
+    """Функция вызывающая реализующая функционал function calling
+
+    :param message_text: Текст по которому будет вызываться функция
+    :param message:      Объект сообщения из aiogram, для взаимодействия с пользователем
+
+    :return:             Вызвалась ли функция
+    """
+    llm = get_model()
+
+    langgraph_agent_executor = create_react_agent(llm, tools_functions)
+    conf = LanggraphConfig(message=message)
+
+    try:
+        res = await langgraph_agent_executor.ainvoke(
+            {'messages': [('user', message_text)]},
+            conf.config_to_langgraph_format(),
+        )
+        # Функция завершилась с ошибкой
+        try:
+            if res['messages'][2].status == 'error':
+                print(res['messages'])
+                return False
+        except Exception as e:
+            print(e)
+            print('Сломался парсинг ответа, надо смотреть руками: ')
+            print(res['messages'])
+            return False
+        # Проверка есть ли вызов функции в ответе от модели
+        return 'function_call' in res['messages'][1].additional_kwargs
+
+    except Exception as e:
+        print()
+        print(e)
+        print(traceback.format_exc())
+        # Случаи когда не смогли достучаться до модели или ошибки langgraph-gigachat
+        return False
