@@ -34,7 +34,9 @@ from db.whitelist import is_email_in_whitelist
 from handlers.ai.rag.rag import clear_user_dialog_if_need
 from log.bot_logger import user_logger
 from module.email_send import SmtpSend
+from utils.bot import bot
 from utils.decorators import has_access_to_feature
+from utils.newsletter import ProductDocumentSender
 
 
 class Form(StatesGroup):
@@ -241,3 +243,11 @@ async def open_web_app(message: types.Message) -> None:
         resize_keyboard=True
     )
     await message.answer('Для открытия WebApp нажмите:', reply_markup=markup)
+
+
+@router.message(Command('send_products_to_users'))
+@has_access_to_feature(FeatureType.admin)
+async def send_new_products_to_users(message: types.Message) -> None:
+    """Отправки сообщения по продуктам пользователям"""
+    await message.answer('Старт отправки сообщения по продуктам пользователям')
+    await ProductDocumentSender.send_new_products_to_users(bot)
