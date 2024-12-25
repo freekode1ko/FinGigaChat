@@ -4,8 +4,8 @@ import pandas as pd
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from agent_app import logger
 from utils.tool_functions.session import engine
-from config import DEBUG_GRAPH
 
 
 def create_client_industry_dict() -> dict:
@@ -36,11 +36,10 @@ async def get_industry_by_client_name(text: str, config: RunnableConfig) -> str:
     return:
         (str): Отрасль клиента
     """
-    if DEBUG_GRAPH:
-        print(f'Вызвана функция get_industry_by_client_name с параметром: {text}')
+    logger.info(f'Вызвана функция get_industry_by_client_name с параметром: {text}')
     try:
         client_industry = CLIENT_INDUSTRY_MAPPING[text.lower().strip()]
         return client_industry
     except Exception as e:
-        print(e)
+        logger.error(e)
         return "Ошибка при получении отрасли клиента."

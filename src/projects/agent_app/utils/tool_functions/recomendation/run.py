@@ -3,7 +3,7 @@
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from config import DEBUG_GRAPH
+from agent_app import logger
 from utils.tool_functions.tool_prompts import RECOMENDATION_SYSTEM, RECOMENDATION_USER
 from utils.tool_functions.utils import get_answer_llm, get_model
 
@@ -18,8 +18,7 @@ async def get_recomendation_by_contexts(text: str, config: RunnableConfig):
     return:
         (str): Текст с рекомендациями продуктов.
     """
-    if DEBUG_GRAPH:
-        print(f'Вызвана функция get_recomendation_by_contexts с параметром: {text}')
+    logger.info(f'Вызвана функция get_recomendation_by_contexts с параметром: {text}')
 
     llm = get_model()
     result = await get_answer_llm(llm, RECOMENDATION_SYSTEM, RECOMENDATION_USER, text)

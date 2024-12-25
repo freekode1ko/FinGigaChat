@@ -7,8 +7,8 @@ import sqlalchemy as sa
 from fuzzywuzzy import process
 from sqlalchemy.orm import InstrumentedAttribute
 
-sys.path.append(str(Path(__file__).absolute().parent.parent.parent.parent) + "/bot")
-from db import models
+sys.path.append(str(Path(__file__).absolute().parent.parent.parent.parent.parent) + "/global/db")
+from models import models
 from utils.tool_functions.text_manager import texts_manager
 from utils.tool_functions.session import async_session
 

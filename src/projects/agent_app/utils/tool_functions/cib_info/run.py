@@ -1,14 +1,13 @@
+"""Получение аналитический отчетов"""
+
+import sqlalchemy as sa
+from fuzzywuzzy import process
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
-import traceback
-import sqlalchemy as sa
 
-from db import models
-from fuzzywuzzy import process
-
+from agent_app import logger
 from utils.tool_functions.session import async_session
-from config import MESSAGE_RUN_CIB_REPORTS, DEBUG_GRAPH
-from utils.tool_functions.utils import send_status_message_for_agent
+from db import models
 
 
 @tool
@@ -22,10 +21,9 @@ async def get_analytical_reports_by_name(name: str, config: RunnableConfig) -> s
     """
     # фин показатели
     # последний отчет
-    if DEBUG_GRAPH:
-        print(f'Вызвана функция get_research_reports_by_name с параметром: {name}')
+    logger.info(f'Вызвана функция get_research_reports_by_name с параметром: {name}')
     try:
-        await send_status_message_for_agent(config, MESSAGE_RUN_CIB_REPORTS)
+        #await send_status_message_for_agent(config, MESSAGE_RUN_CIB_REPORTS)
 
         async with async_session() as session:
             clients = await session.execute(
@@ -47,7 +45,7 @@ async def get_analytical_reports_by_name(name: str, config: RunnableConfig) -> s
                 .order_by(models.Research.publication_date.desc())
                 .limit(1)
             )
+        return reports.scalars().all()
     except Exception as e:
-        print(e)
-        print(traceback.format_exc())
-    return reports.scalars().all()
+        logger.error(e)
+        return "Ошибка получения аналитического отчета"

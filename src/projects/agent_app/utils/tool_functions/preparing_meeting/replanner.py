@@ -3,9 +3,10 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables.base import Runnable
 
-from utils.function_calling.tool_functions.preparing_meeting.prompts import REPLANER_PROMPT
-from utils.function_calling.tool_functions.preparing_meeting.utils import Replan
-from utils.function_calling.tool_functions.utils import get_model
+from agent_app import logger
+from utils.tool_functions.preparing_meeting.prompts import REPLANER_PROMPT
+from utils.tool_functions.preparing_meeting.utils import Replan
+from utils.tool_functions.utils import get_model
 
 
 def create_replanner() -> Runnable:
@@ -16,4 +17,5 @@ def create_replanner() -> Runnable:
     """
     replanner_prompt = ChatPromptTemplate.from_template(REPLANER_PROMPT)
     replanner = replanner_prompt | get_model().with_structured_output(Replan)
+    logger.info('Инициализирован репланировщик')
     return replanner

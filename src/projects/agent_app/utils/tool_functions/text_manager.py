@@ -4,9 +4,10 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent.parent) + "/bot/constants/texts")
+sys.path.append(str(Path(__file__).absolute().parent.parent.parent.parent) + "/bot")
 from features import CONFIG_CLASSES
 from db.redis.client import redis_client_sync as redis_client
-#from log.bot_logger import logger
+from agent_app import logger
 
 
 class TextsManager:

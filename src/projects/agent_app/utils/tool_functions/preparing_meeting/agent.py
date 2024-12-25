@@ -12,6 +12,7 @@ from utils.tool_functions.rag.run import rag_news, rag_cib
 from utils.tool_functions.client_industry_mapping.run import get_industry_by_client_name
 from utils.tool_functions.summarization.run import get_news_by_name
 from utils.tool_functions.utils import get_model
+from agent_app import logger
 
 tool_functions_prepare_for_meeting = [
     get_call_reports_by_name,
@@ -40,4 +41,5 @@ def create_agent() -> Runnable:
     llm_with_tools = llm.bind_tools(tool_functions_prepare_for_meeting, parallel_tool_calls=False)
 
     agent_executor = create_react_agent(llm_with_tools, tool_functions_prepare_for_meeting, state_modifier=prompt)
+    logger.info('Инициализирован инстанс агента')
     return agent_executor

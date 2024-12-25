@@ -6,7 +6,7 @@ from logging import Formatter, Handler, LogRecord
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from config import log_lvl
+from config import LOG_LEVEL
 
 
 LOG_FORMAT = '%(asctime)s,%(msecs)d %(levelname)-8s [%(module)s:%(lineno)d in %(funcName)s] %(message)s'
@@ -45,6 +45,7 @@ def selector_logger(module_logger: str, level: int) -> logging.Logger:
     if not os.path.isdir(logs_path):
         raise FileExistsError(f'Файл {logs_path} не является каталогом')
     return Logger(module_logger, level).logger
+
 
 class DBHandler(Handler):
     """Обработчик для сохранения журнальных сообщений в базу данных"""
@@ -87,12 +88,13 @@ class DBHandler(Handler):
             conn.execute(query.bindparams(**querykwargs))
             conn.commit()
 
-def get_handler(url_engine, level: int = log_lvl) -> DBHandler:
+
+def get_handler(url_engine, level: int = LOG_LEVEL) -> DBHandler:
     """Получить хендлер"""
     return DBHandler(url_engine, level, LOG_FORMAT)
 
 
-def get_db_logger(name, handler, level: int = log_lvl) -> logging.Logger:
+def get_db_logger(name, handler, level: int = LOG_LEVEL) -> logging.Logger:
     """Создает логер, который записывает в базу данных"""
     logger = logging.getLogger(name)
     logger.addHandler(handler)

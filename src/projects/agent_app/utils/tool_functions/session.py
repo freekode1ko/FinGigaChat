@@ -15,7 +15,6 @@ from config import (
     BASE_QA_BANKER_URL,
     BASE_QA_RESEARCH_URL,
     BASE_QA_WEB_URL,
-    BASE_STATE_SUPPORT_URL,
 )
 
 
@@ -55,14 +54,6 @@ class RagQaBankerClient(BaseClient):
 
     def __init__(self):
         super().__init__(BASE_QA_BANKER_URL)
-
-
-@singleton
-class RagStateSupportClient(BaseClient):
-    """Клиент для получения ответа от RAG по господдержке."""
-
-    def __init__(self):
-        super().__init__(BASE_STATE_SUPPORT_URL)
 
 
 @singleton
