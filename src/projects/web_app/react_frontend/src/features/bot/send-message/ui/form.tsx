@@ -42,7 +42,6 @@ const SendMessageForm = () => {
   })
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values)
     toast.promise(send(values), {
       loading: 'Запускаем рассылку...',
       success: () => {

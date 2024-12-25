@@ -27,6 +27,7 @@ class CommodityRepository(GenericRepository[Commodity]):
         query = (
             sa.select(Commodity)
             .options(joinedload(Commodity.commodity_research))
+            .order_by(Commodity.id)
         )
         result = await self._session.execute(query)
         return result.unique().scalars().all()

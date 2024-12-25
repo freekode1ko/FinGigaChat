@@ -16,12 +16,14 @@ const CommodityResearch = ({
       </h3>
       <div className="flex flex-col gap-2 items-center">
         <p className="mt-2 text-foreground">{research.text}</p>
-        <Button variant="ghost" size="sm" asChild>
-          <a href={research.url} target="_blank" rel="noreferrer">
-            <Download className="h-4 w-4" />
-            <span>Скачать</span>
-          </a>
-        </Button>
+        {research.url && (
+          <Button variant="ghost" size="sm" asChild>
+            <a href={research.url} target="_blank" rel="noreferrer">
+              <Download className="h-4 w-4" />
+              <span>Скачать</span>
+            </a>
+          </Button>
+        )}
       </div>
     </div>
   )
