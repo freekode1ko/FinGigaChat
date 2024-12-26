@@ -9,14 +9,17 @@ from log.bot_logger import logger
 class ProductDocumentCRUD(BaseCRUD[models.ProductDocument]):
     """Класс, который создает объекты для взаимодействия с таблицей models.ProductDocument"""
 
-    async def get_all_by_product_id(self, product_id: int) -> list[models.ProductDocument]:
+    async def get_all_by_product_id(self, product_id: int, is_new: bool | None = None) -> list[models.ProductDocument]:
         """Получить все файлы продукта по айди продукта
 
         :param product_id: айди продукта
+        :param is_new: новые ли продукты возвращать
         :return: список файлов продуктов с данным айди группы
         """
         async with self._async_session_maker() as session:
             stmt = sa.select(self._table).where(self._table.product_id == product_id).order_by(self._order)
+            if is_new is not None:
+                stmt = stmt.filter(self._table.is_new == is_new)
             result = await session.scalars(stmt)
             return list(result)
 

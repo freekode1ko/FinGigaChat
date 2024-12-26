@@ -709,7 +709,6 @@ class Product(Base):
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
                          comment='Текст сообщения, которое выдается при нажатии на продукт')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
-    is_new = Column(Boolean, default=False, comment='Новый ли продукт, отвечает за отправку продуктов пользователям')
     broadcast_message = Column(Text, nullable=True, comment='Текст рассылки для продукта')
 
     documents = relationship('ProductDocument', cascade='all, delete-orphan')
@@ -726,6 +725,7 @@ class ProductDocument(Base):
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
     product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
                         primary_key=False, nullable=False, comment='id категории продукта')
+    is_new = Column(Boolean, default=False, comment='Новый ли файл, отвечает за отправку пользователям')
 
 
 class TelegramGroup(Base):
