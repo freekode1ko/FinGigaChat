@@ -468,7 +468,7 @@ class ProductDocumentSender:
             products = await session.execute(
                 sa.select(models.Product)
                 .join(models.ProductDocument, models.Product.documents)
-                .filter(models.Product.is_new == True).distinct()  # noqa:E712
+                .filter(models.ProductDocument.is_new == True).distinct()  # noqa:E712
             )
             return products.scalars().all()
 
@@ -497,7 +497,7 @@ class ProductDocumentSender:
         :return: Список документов
         """
         try:
-            documents = await product_document_db.get_all_by_product_id(product_id)
+            documents = await product_document_db.get_all_by_product_id(product_id, is_new=True)
         except Exception as e:
             logger.error(f'Документы по Продукту id={product_id} не получены из-за ошибки {str(e)}')
             raise
@@ -578,7 +578,7 @@ class ProductDocumentSender:
         async with async_session() as session:
             try:
                 await session.execute(
-                    sa.update(models.Product).values(is_new=False).where(models.Product.id == product_id)
+                    sa.update(models.ProductDocument).values(is_new=False).where(models.ProductDocument.product_id == product_id)
                 )
                 await session.commit()
             except Exception as e:
