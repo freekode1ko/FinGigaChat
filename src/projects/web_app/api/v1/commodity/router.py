@@ -62,6 +62,6 @@ async def create_research(
     research = CommodityResearch(
         title=title,
         text=text,
-        file_name=saved_file.filename if saved_file else " ",
+        file_name=saved_file.filename if saved_file else None,
     )
     await commodity_repository.add_commodity_research(commodity, research)
