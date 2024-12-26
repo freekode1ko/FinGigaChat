@@ -13,6 +13,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
+from sulguk import AiogramSulgukMiddleware
 
 from api.router import router as api_router
 from configs import config, newsletter_config
@@ -136,6 +137,9 @@ async def start_bot():
 
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
     await bot.set_webhook(config.WEBHOOK_FULL_URL)
+
+    # Добавляем middleware для парсинга Telegram-совместимого HTML
+    bot.session.middleware(AiogramSulgukMiddleware())
 
 
 async def main():

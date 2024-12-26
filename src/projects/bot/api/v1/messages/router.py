@@ -3,6 +3,7 @@ import datetime
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks
+from sulguk import SULGUK_PARSE_MODE
 
 from api.v1.messages import schemas
 from db import models
@@ -38,7 +39,7 @@ async def send_message_to_users(user_msg):
                 user_mes = await bot.send_message(
                     chat_id=user_id,
                     text=user_msg.message_text,
-                    parse_mode=user_msg.parse_mode,
+                    parse_mode=SULGUK_PARSE_MODE,
                 )
                 session.add(
                     models.TelegramMessage(

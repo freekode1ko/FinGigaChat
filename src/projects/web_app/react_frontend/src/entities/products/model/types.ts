@@ -8,7 +8,7 @@ export interface ProductDocument {
 export interface CreateProductDocument {
   name: string
   description?: string
-  file: File
+  file: Optional<File>
 }
 
 export interface ShortProduct {

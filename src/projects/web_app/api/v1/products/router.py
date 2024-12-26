@@ -86,6 +86,24 @@ async def create_product(
     await product_repository.create(product)
 
 
+@router.delete(
+        '/{product_id}',
+        status_code=status.HTTP_204_NO_CONTENT,
+        dependencies=[Depends(get_current_admin)],
+)
+async def delete_product(
+    product_id: int,
+    product_repository: Annotated[ProductRepository, Depends(get_repository(ProductRepository))],
+):
+    """
+    *Только для администраторов*\n
+    Удалить продукт
+    """
+    if (product := await product_repository.get_by_pk_with_documents(product_id)) is None:
+        raise HTTPException(status_code=404)
+    await product_repository.delete(product)
+
+
 @router.post(
     '/{product_id}/documents',
     status_code=status.HTTP_201_CREATED,
@@ -97,24 +115,28 @@ async def create_document(
     document_repository: Annotated[ProductDocumentRepository, Depends(get_repository(ProductDocumentRepository))],
     name: str = Form(...),
     description: str | None = Form(None),
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
 ) -> None:
     """
     *Только для администраторов*\n
-    Загрузить документ для продукта
+    Загрузить документ для продукта.\n
+    Если файл не загружен, то в базе будет сохранен пустой путь.
     """
     if await product_repository.get_by_pk(product_id) is None:
         raise HTTPException(status_code=404)
-    saved_file = await upload_file(
-        file,
-        constants.PATH_TO_PRODUCTS,
-        constants.MAX_FILE_SIZE,
-        (enums.MimeType.PDF.value,),
-    )
+    if file is not None:
+        saved_file = await upload_file(
+            file,
+            constants.PATH_TO_PRODUCTS,
+            constants.MAX_FILE_SIZE,
+            (enums.MimeType.PDF.value,),
+        )
+    else:
+        saved_file = None
     document = ProductDocument(
         name=name,
         description=description,
         product_id=product_id,
-        file_path=str(saved_file.path),
+        file_path=str(saved_file.path) if saved_file else " ",
     )
     await document_repository.create(document)

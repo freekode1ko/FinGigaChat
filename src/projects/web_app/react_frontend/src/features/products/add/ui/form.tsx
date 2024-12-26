@@ -30,8 +30,8 @@ export const CreateProductForm = ({
     },
   })
 
-  const handleSubmit = (values: z.infer<typeof entityFormSchema>) => {
-    create(values).unwrap()
+  const handleSubmit = async (values: z.infer<typeof entityFormSchema>) => {
+    await create(values).unwrap()
     onSuccess && onSuccess()
   }
 
