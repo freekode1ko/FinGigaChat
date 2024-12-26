@@ -51,7 +51,10 @@ const ProductForm = ({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 flex flex-col max-w-full">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-4 flex flex-col max-w-full"
+      >
         <FormField
           control={form.control}
           name="name"
@@ -106,8 +109,7 @@ const ProductForm = ({
                             ? transformProductsForCombobox(products).find(
                                 (product) => product.id === field.value
                               )?.name
-                            : 'Выбрать продукт...'
-                          }
+                            : 'Выбрать продукт...'}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </FormControl>

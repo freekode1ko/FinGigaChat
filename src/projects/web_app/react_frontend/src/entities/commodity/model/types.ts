@@ -2,13 +2,13 @@ interface CommodityResearch {
   id: number
   title?: string
   text: string
-  url: string
+  url: Optional<string>
 }
 
 interface CreateCommodityResearch {
   title?: string
   text: string
-  file: File
+  file: Optional<File>
 }
 
 interface ShortCommodity {

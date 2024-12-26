@@ -27,11 +27,11 @@ const commodityApi = baseApi.injectEndpoints({
     >({
       query({ research, commodityId }) {
         const formData = new FormData()
-        formData.append('file', research.file, research.file.name)
+        if (research.file) formData.append('file', research.file)
         formData.append('text', research.text)
         if (research.title) formData.append('title', research.title)
         return {
-          url: `${API_ENDPOINTS.products}/` + commodityId + '/researches',
+          url: `${API_ENDPOINTS.commodities}/` + commodityId + '/researches',
           method: 'POST',
           body: formData,
         }
