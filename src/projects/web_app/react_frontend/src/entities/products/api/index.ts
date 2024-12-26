@@ -52,7 +52,7 @@ const productsApi = baseApi.injectEndpoints({
     >({
       query({ document, productId }) {
         const formData = new FormData()
-        formData.append('file', document.file, document.file.name)
+        if (document.file) formData.append('file', document.file)
         formData.append('name', document.name)
         if (document.description)
           formData.append('description', document.description)
@@ -62,6 +62,7 @@ const productsApi = baseApi.injectEndpoints({
           body: formData,
         }
       },
+      invalidatesTags: [API_TAGS.products],
     }),
   }),
 })

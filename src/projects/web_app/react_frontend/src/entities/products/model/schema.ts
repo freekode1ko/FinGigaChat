@@ -21,7 +21,7 @@ const entityFormSchema = z.object({
 const documentFormSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  files: fileSchema(MAX_PRODUCT_DOCUMENT_SIZE_MB),
+  files: fileSchema(MAX_PRODUCT_DOCUMENT_SIZE_MB).nullable(),
 })
 
 export { documentFormSchema, entityFormSchema }

@@ -468,7 +468,7 @@ class ProductDocumentSender:
             products = await session.execute(
                 sa.select(models.Product)
                 .join(models.ProductDocument, models.Product.documents)
-                .filter(models.Product.is_new == True).distinct()  # noqa:E712
+                .filter(models.ProductDocument.is_new == True).distinct()  # noqa:E712
             )
             return products.scalars().all()
 
@@ -497,7 +497,7 @@ class ProductDocumentSender:
         :return: Список документов
         """
         try:
-            documents = await product_document_db.get_all_by_product_id(product_id)
+            documents = await product_document_db.get_all_by_product_id(product_id, is_new=True)
         except Exception as e:
             logger.error(f'Документы по Продукту id={product_id} не получены из-за ошибки {str(e)}')
             raise
@@ -509,25 +509,17 @@ class ProductDocumentSender:
     async def create_documents_media_group(
             product_id: int,
             documents: list[models.ProductDocument],
-            broadcast_message: str,
     ) -> list[MediaType]:
         """
         Создание MediaGroup для группы документов
 
         :param product_id: ID продукта
         :param documents: Список документов
-        :param broadcast_message: Сообщение к файлам
         :return: Медиа группа
         """
         try:
             logger.info(f'Старт формирования telegram медиа группы по Продукту id={product_id}')
-            media = MediaGroupBuilder(
-                caption=(
-                    broadcast_message
-                    if broadcast_message else
-                    texts_manager.BROADCAST_PRODUCT_DEFAULT_ANSWER
-                )
-            )
+            media = MediaGroupBuilder()
 
             for document in documents:
                 path = Path(document.file_path)
@@ -547,7 +539,7 @@ class ProductDocumentSender:
             return media
 
     @staticmethod
-    async def send_media_to_users(users_ids: list[int], media: list[MediaType], bot: Bot, product_id: int) -> None:
+    async def send_media_to_users(users_ids: list[int], media: list[MediaType], bot: Bot, product_id: int, text: str) -> None:
         """
         Отправка медиа группы пользователям
 
@@ -555,11 +547,14 @@ class ProductDocumentSender:
         :param media: Медиа группа для отправки
         :param bot: Бот
         :param product_id: ID продукта
+        :param text: текст для сообщения
         """
         logger.info(f'Начало отправки пользователям по Продукту id={product_id}')
+        caption = text if text else texts_manager.BROADCAST_PRODUCT_DEFAULT_ANSWER
         for user_ids_batch in itertools.batched(users_ids, config.MAX_MESSAGES_PER_SECOND):
             for user_id in user_ids_batch:
                 try:
+                    await bot.send_message(chat_id=user_id, text=caption)
                     await bot.send_media_group(chat_id=user_id, media=media)
                 except Exception as e:
                     logger.error(f'Во время отправки сообщения пользователю {user_id} Продукта с id={product_id} '
@@ -578,7 +573,7 @@ class ProductDocumentSender:
         async with async_session() as session:
             try:
                 await session.execute(
-                    sa.update(models.Product).values(is_new=False).where(models.Product.id == product_id)
+                    sa.update(models.ProductDocument).values(is_new=False).where(models.ProductDocument.product_id == product_id)
                 )
                 await session.commit()
             except Exception as e:
@@ -619,9 +614,9 @@ class ProductDocumentSender:
                 documents = await cls.get_product_documents(product.id)
 
                 # Создание медиа группы для ускорения отправки сообщений
-                media = await cls.create_documents_media_group(product.id, documents, product.broadcast_message)
+                media = await cls.create_documents_media_group(product.id, documents)
                 # Отправка сообщения пользователям
-                await cls.send_media_to_users(users_ids, media, bot, product.id)
+                await cls.send_media_to_users(users_ids, media, bot, product.id, product.broadcast_message )
                 # Обновления статуса по продукту
                 await cls.update_product_in_new_field(product.id)
 

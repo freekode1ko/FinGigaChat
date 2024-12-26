@@ -3,12 +3,12 @@ import datetime
 
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks
+from sulguk import transform_html
 
 from api.v1.messages import schemas
 from db import models
 from db.database import async_session
 from utils.bot import bot
-
 
 router = APIRouter(tags=['messages'])
 
@@ -35,18 +35,22 @@ async def send_message_to_users(user_msg):
                 .filter(models.RegisteredUser.role_id.in_(role_ids)))
             user_ids = user_ids.scalars().all()
             for user_id in user_ids:
-                user_mes = await bot.send_message(
-                    chat_id=user_id,
-                    text=user_msg.message_text,
-                    parse_mode=user_msg.parse_mode,
-                )
-                session.add(
-                    models.TelegramMessage(
-                        telegram_message_id=user_mes.message_id,
-                        user_id=user_id,
-                        broadcast_id=broadcast.id,
-                        send_datetime=datetime.datetime.now()
-                    ))
+                try:
+                    result = transform_html(user_msg.message_text)
+                    user_mes = await bot.send_message(
+                        chat_id=user_id,
+                        text=result.text,
+                        entities=result.entities,
+                    )
+                    session.add(
+                        models.TelegramMessage(
+                            telegram_message_id=user_mes.message_id,
+                            user_id=user_id,
+                            broadcast_id=broadcast.id,
+                            send_datetime=datetime.datetime.now()
+                        ))
+                except Exception as e:
+                    continue
             await session.commit()
 
     except Exception as e:

@@ -97,7 +97,7 @@ async def delete_industry(
     *Только для администраторов*
     Удалить отрасль
     """
-    if (industry := await industry_repository.get_by_pk(industry_id)) is None:
+    if (industry := await industry_repository.get_by_pk_with_documents(industry_id)) is None:
         raise HTTPException(status_code=404)
     await industry_repository.delete(industry)
 
@@ -127,7 +127,7 @@ async def create_document(
         (enums.MimeType.PDF.value,),
     )
     document = IndustryDocuments(
-        name=name,
+        file_name=name,
         industry_id=industry_id,
         file_path=str(saved_file.path),
     )
