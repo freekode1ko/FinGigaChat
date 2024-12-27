@@ -35,21 +35,26 @@ export function UploadDocumentForm({
   const form = useForm<z.infer<typeof documentFormSchema>>({
     resolver: zodResolver(documentFormSchema),
     disabled: isLoading,
+    defaultValues: {
+      files: null,
+    },
   })
 
   const onSubmit = (values: z.infer<typeof documentFormSchema>) => {
     toast.promise(
       upload({
-        document: { ...values, file: values.files[0] },
+        document: { ...values, file: values.files ? values.files[0] : null },
         productId,
       }).unwrap(),
       {
         loading: `Загружаем документ ${values.name}...`,
-        success: 'Документ успешно загружен!',
+        success: () => {
+          onSuccess()
+          return 'Документ успешно загружен!'
+        },
         error: 'Мы не смогли загрузить документ. Попробуйте позже.',
       }
     )
-    onSuccess()
   }
 
   return (
@@ -104,6 +109,9 @@ export function UploadDocumentForm({
                   helpText="Только .PDF документы"
                 />
               </FormControl>
+              <FormDescription>
+                Вы можете не загружать документ, если это не требуется 
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

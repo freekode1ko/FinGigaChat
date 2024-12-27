@@ -13,7 +13,7 @@ class CommodityResearchRead(BaseReadModel):
 
     @computed_field
     def url(self) -> str | None:
-        return transform_path_to_link(f'/sources/commodity_reports/{self.file_name}')
+        return transform_path_to_link(f'/sources/commodity_reports/{self.file_name}') if self.file_name else None
 
 
 class CommodityRead(BaseReadModel):

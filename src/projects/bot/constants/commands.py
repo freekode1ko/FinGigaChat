@@ -105,4 +105,8 @@ SECRET_COMMANDS: list[dict] = [
         'command': 'web_app',
         'description': 'Отправить кнопку с веб апом',
     },
+    {
+        'command': 'send_products_to_users',
+        'description': 'Принудительно вызвать отправку сообщений по новым продуктам пользователям',
+    },
 ]

@@ -30,5 +30,6 @@ class IndustryRepository(GenericRepository[Industry]):
         result = await self._session.execute(
             sa.select(Industry)
             .options(sa.orm.selectinload(Industry.documents))
+            .order_by(Industry.id)
         )
         return result.scalars().all()

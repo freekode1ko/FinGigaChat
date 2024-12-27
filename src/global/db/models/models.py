@@ -137,7 +137,8 @@ class Industry(Base):
 
     client = relationship('Client', back_populates='industry')
     commodity = relationship('Commodity', back_populates='industry')
-    industry_alternative = relationship('IndustryAlternative', back_populates='industry')
+    industry_alternative = relationship('IndustryAlternative', back_populates='industry', cascade='all, delete-orphan')
+    documents = relationship('IndustryDocuments', back_populates='industry', cascade='all, delete-orphan')
 
 
 t_key_eco = Table(
@@ -223,6 +224,7 @@ class RegisteredUser(Base):
     message = relationship('Message', back_populates='user')
     telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
+    products = relationship("Product", secondary="relation_registered_user_products", back_populates="users")
 
 
 class Whitelist(Base):
@@ -697,7 +699,7 @@ class Product(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, comment='id файла в базе')
     parent_id = Column(Integer, ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=True,
                        comment='ID родительского продукта, который выступает в качестве категории продуктов')
-    children = relationship('Product', back_populates='parent')
+    children = relationship('Product', back_populates='parent', cascade='all, delete-orphan')
     parent = relationship('Product', back_populates='children', remote_side=[id])
 
     name = Column(String(255), nullable=False, comment='Имя продукта (кредит, GM, ...)')
@@ -707,8 +709,10 @@ class Product(Base):
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"),
                          comment='Текст сообщения, которое выдается при нажатии на продукт')
     display_order = Column(Integer(), server_default=sa.text('0'), nullable=False, comment='Порядок отображения')
+    broadcast_message = Column(Text, nullable=True, comment='Текст рассылки для продукта')
 
-    documents = relationship('ProductDocument')
+    documents = relationship('ProductDocument', cascade='all, delete-orphan')
+    users = relationship("RegisteredUser", secondary="relation_registered_user_products", back_populates="products")
 
 
 class ProductDocument(Base):
@@ -721,6 +725,7 @@ class ProductDocument(Base):
     description = Column(Text(), nullable=True, server_default=sa.text("''::text"), comment='Описание')
     product_id = Column(ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'),
                         primary_key=False, nullable=False, comment='id категории продукта')
+    is_new = Column(Boolean, default=False, comment='Новый ли файл, отвечает за отправку пользователям')
 
 
 class TelegramGroup(Base):
@@ -940,3 +945,11 @@ class RelationRoleToFeature(Base):
 
     user_role_id = Column(ForeignKey('user_role.id'), primary_key=True)
     feature_id = Column(ForeignKey('feature.id'), primary_key=True)
+
+
+class RelationUsersProducts(Base):
+    __tablename__ = "relation_registered_user_products"
+    __table_args__ = {'comment': 'Таблица отношений между пользователями и продуктами для рассылки'}
+
+    user_id = Column(Integer, ForeignKey("registered_user.user_id", ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+    product_id = Column(Integer, ForeignKey("bot_product.id", ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)

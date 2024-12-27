@@ -35,21 +35,26 @@ export function UploadResearchForm({
   const form = useForm<z.infer<typeof analyticsFormSchema>>({
     resolver: zodResolver(analyticsFormSchema),
     disabled: isLoading,
+    defaultValues: {
+      files: null,
+    },
   })
 
   const onSubmit = (values: z.infer<typeof analyticsFormSchema>) => {
     toast.promise(
       upload({
-        research: { ...values, file: values.files[0] },
+        research: { ...values, file: values.files ? values.files[0] : null },
         commodityId,
       }).unwrap(),
       {
         loading: `Загружаем исследование ${values.title ?? ''}...`,
-        success: 'Исследование успешно загружено!',
+        success: () => {
+          onSuccess()
+          return 'Исследование успешно загружено!'
+        },
         error: 'Мы не смогли загрузить исследование. Попробуйте позже.',
       }
     )
-    onSuccess()
   }
 
   return (
@@ -103,6 +108,9 @@ export function UploadResearchForm({
                   helpText="Только .PDF документы"
                 />
               </FormControl>
+              <FormDescription>
+                Вы можете не добавлять документ с аналитикой, если это не требуется
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

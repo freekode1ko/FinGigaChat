@@ -8,11 +8,12 @@ from typing import Any, Callable
 
 import pandas as pd
 import uvicorn
-from aiogram import Bot, Dispatcher
+from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, Update
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
+from starlette.responses import JSONResponse
 
 from api.router import router as api_router
 from configs import config, newsletter_config
@@ -44,8 +45,7 @@ from utils.base import (
     next_weekday_time,
     wait_until
 )
-
-from bot import bot
+from utils.bot import bot
 
 storage = MemoryStorage()
 
@@ -159,6 +159,11 @@ async def main():
         kwargs={'bot': bot},
         **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
     )
+    scheduler.add_job(
+        newsletter.ProductDocumentSender.send_new_products_to_users,
+        kwargs={'bot': bot},
+        **newsletter_config.CIB_RESEARCH_NEWSLETTER_PARAMS,
+    )
     scheduler.start()
 
     for passive_newsletter_params in newsletter_config.NEWSLETTER_CONFIG:
@@ -201,7 +206,11 @@ app.include_router(api_router, prefix='/api')
 async def bot_webhook(request: Request):
     """Точка входа для сообщений от сервера Telegram"""
     update = Update.model_validate_json(await request.body(), context={'bot': bot})
-    await dp.feed_update(bot, update)
+    try:
+        await dp.feed_update(bot, update)
+    except Exception as e:
+        logger.error(f'Ошибка при отправке ответа: {e}')
+    return JSONResponse(status_code=200, content={"ok": True})
 
 if __name__ == '__main__':
     try:

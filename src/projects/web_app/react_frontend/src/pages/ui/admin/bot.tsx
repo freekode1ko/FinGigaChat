@@ -1,4 +1,4 @@
-import { SendMessageForm } from "@/features/bot/send-message"
+import { SendMessageForm } from '@/features/bot/send-message'
 
 export function AdminBotPage() {
   return (
