@@ -691,6 +691,8 @@ class IndustryDocuments(Base):
     industry_type = Column(Integer(), nullable=True, server_default=str(enums.IndustryTypes.default.value),
                            comment='тип отрасли')
 
+    industry = relationship('Industry', back_populates='documents')
+
 
 class Product(Base):
     __tablename__ = 'bot_product'
