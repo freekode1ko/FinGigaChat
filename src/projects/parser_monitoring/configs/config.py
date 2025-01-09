@@ -3,6 +3,7 @@ import json
 import pathlib
 
 from environs import Env
+from pytz import timezone
 
 from constants.enums import Environment
 
@@ -52,3 +53,6 @@ PENDING_SLEEP_TIME = 60
 
 POST_TO_SERVICE_TIMEOUT = 90
 POST_TO_SERVICE_ATTEMPTS = 3
+
+UTC_TZ = timezone('UTC')
+MOSCOW_TZ = timezone('Europe/Moscow')
