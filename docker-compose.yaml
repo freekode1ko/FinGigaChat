@@ -128,7 +128,7 @@ services:
 
     web_app:
         build:
-            context: ./src/projects/web_app
+            context: ./src/projects/web_app/backend
             additional_contexts:
                 root_dir: ./
             dockerfile: Dockerfile
@@ -318,7 +318,7 @@ services:
 
     nginx:
         build:
-            context: ./src/projects/web_app/react_frontend
+            context: ./src/projects/web_app/frontend
             dockerfile: Dockerfile
         container_name: nginx
         ports:
