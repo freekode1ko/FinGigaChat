@@ -1,1 +1,0 @@
-export { DeleteFromWhitelistDialog } from './dialog'

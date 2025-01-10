@@ -10,6 +10,7 @@ import {
   TabsTrigger,
 } from '@/shared/ui'
 
+import { DeleteProductDocumentButton } from '../../delete' // fix
 import { UploadDocumentForm } from './form'
 
 const UploadProductDocumentDialog = ({
@@ -41,7 +42,7 @@ const UploadProductDocumentDialog = ({
             <div className="flex flex-col gap-2 justify-center items-center p-2">
               {product?.documents.length ? (
                 product?.documents.map((doc) => (
-                  <ProductDocument key={doc.id} doc={doc} />
+                  <ProductDocument key={doc.id} doc={doc} actionSlot={<DeleteProductDocumentButton id={doc.id} />} />
                 ))
               ) : (
                 <p className="text-foreground">

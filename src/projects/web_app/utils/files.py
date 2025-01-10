@@ -32,6 +32,11 @@ class FileTypeError(ApplicationError):
     pass
 
 
+class FileNameError(ApplicationError):
+    """Ошибка при попытке сохранить файл с уже существующим именем"""
+    pass
+
+
 class FileSaveError(InfrastructureError):
     """Ошибка сохранения файла на сервере"""
     pass
@@ -53,8 +58,11 @@ async def upload_file(
     """
     if file.content_type not in allowed_types:
         raise FileTypeError('Недопустимое расширение файла')
-    filename = f'{uuid.uuid4().hex}_{file.filename}'
-    filepath = Path(dest) / filename
+
+    filepath = Path(dest) / file.filename
+    if filepath.exists():
+        raise FileNameError('Измените название файла')
+
     size = 0
     try:
         async with aiofiles.open(filepath, 'wb') as out_file:
@@ -65,4 +73,5 @@ async def upload_file(
                 await out_file.write(content)
     except Exception:
         raise FileSaveError('Ошибка при попытке сохранить файл')
-    return File(filepath, filename, size)
+
+    return File(filepath, file.filename, size)

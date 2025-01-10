@@ -6,10 +6,10 @@ import {
 } from 'lucide-react'
 import React from 'react'
 
+import { UploadProductDocumentDialog } from '@/features/product-documents/upload'
 import { CreateProductDialog } from '@/features/products/add'
 import { DeleteProductDialog } from '@/features/products/delete'
 import { UpdateProductDialog } from '@/features/products/update'
-import { UploadProductDocumentDialog } from '@/features/products/upload-document'
 import { type Product, useGetProductsTreeQuery } from '@/entities/products'
 import { Loading } from '@/shared/kit'
 import {

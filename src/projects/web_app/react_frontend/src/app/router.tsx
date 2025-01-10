@@ -7,7 +7,6 @@ import {
   AdminIndustriesPage,
   AdminSettingsPage,
   AdminUsersPage,
-  AdminWhitelistPage,
   AuthPage,
   DashboardPage,
   MeetingsPage,
@@ -89,14 +88,6 @@ export const appRouter = () =>
           element: (
             <AuthGuard admin>
               <AdminIndustriesPage />
-            </AuthGuard>
-          ),
-        },
-        {
-          path: ADMIN_MAP.whitelist,
-          element: (
-            <AuthGuard admin>
-              <AdminWhitelistPage />
             </AuthGuard>
           ),
         },

@@ -5,7 +5,6 @@ export {
   AdminIndustriesPage,
   AdminSettingsPage,
   AdminUsersPage,
-  AdminWhitelistPage,
 } from './admin'
 export { AnalyticDetailsPage } from './analytic-details'
 export { AnalyticsPage } from './analytics'

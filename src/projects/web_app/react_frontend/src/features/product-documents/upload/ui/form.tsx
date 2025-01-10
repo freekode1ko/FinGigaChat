@@ -6,6 +6,7 @@ import {
   documentFormSchema,
   useUploadProductDocumentMutation,
 } from '@/entities/products'
+import { handleError } from '@/shared/api'
 import { FileUploadField } from '@/shared/kit'
 import {
   Button,
@@ -36,11 +37,13 @@ export function UploadDocumentForm({
     resolver: zodResolver(documentFormSchema),
     disabled: isLoading,
     defaultValues: {
+      name: '',
+      description: '',
       files: null,
     },
   })
 
-  const onSubmit = (values: z.infer<typeof documentFormSchema>) => {
+  const onSubmit = async (values: z.infer<typeof documentFormSchema>, callOnSuccess: boolean = false) => {
     toast.promise(
       upload({
         document: { ...values, file: values.files ? values.files[0] : null },
@@ -49,17 +52,21 @@ export function UploadDocumentForm({
       {
         loading: `Загружаем документ ${values.name}...`,
         success: () => {
-          onSuccess()
+          if (callOnSuccess) {
+            onSuccess()
+          }
+          form.reset()
           return 'Документ успешно загружен!'
         },
-        error: 'Мы не смогли загрузить документ. Попробуйте позже.',
+        error: (error) => handleError(error),
       }
     )
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4">
+
         <FormField
           control={form.control}
           name="name"
@@ -116,9 +123,25 @@ export function UploadDocumentForm({
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          Сохранить
-        </Button>
+
+        <div className="flex flex-col md:flex-row gap-2 md:justify-end">
+          <Button
+            className="w-full md:w-auto"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => onSubmit(form.getValues(), false)}
+          >
+            Сохранить и продолжить
+          </Button>
+          <Button
+            className="w-full md:w-auto"
+            disabled={isLoading}
+            onClick={() => onSubmit(form.getValues(), true)}
+          >
+            Сохранить
+          </Button>
+        </div>
+
       </form>
     </Form>
   )

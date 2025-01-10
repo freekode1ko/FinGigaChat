@@ -1,5 +1,4 @@
 import {
-  ClipboardPen,
   Factory,
   FileBarChart,
   LayoutDashboardIcon,
@@ -74,12 +73,6 @@ export const profileItems: Array<MenuItem> = [
 ]
 
 export const adminItems: Array<MenuItem> = [
-  {
-    name: 'Доступы',
-    path: ADMIN_MAP.whitelist,
-    icon: ClipboardPen,
-    description: 'Управление белым списком',
-  },
   {
     name: 'Пользователи',
     path: ADMIN_MAP.users,

@@ -193,7 +193,10 @@ const FileUploader = forwardRef<
     )
 
     useEffect(() => {
-      if (!value) return
+      if (!value) {
+        setIsLOF(false)
+        return
+      }
       if (value.length === maxFiles) {
         setIsLOF(true)
         return
