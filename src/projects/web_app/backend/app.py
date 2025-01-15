@@ -11,7 +11,6 @@ from db.meeting import get_user_meetings, add_meeting, get_user_email
 from log.logger_base import selector_logger
 from api.router import router as api_router
 from constants import constants
-from utils.decorators import handle_jinja_template_exceptions
 from utils.templates import templates
 
 
@@ -96,8 +95,3 @@ async def create_meeting(
     logger.info('Информация о встрече %s пользователя %s отправлена на почту', theme, user_id)
 
     return 'OK'
-
-@app.get("/{full_path:path}", response_class=HTMLResponse)
-@handle_jinja_template_exceptions
-async def show_react_app(request: Request, full_path: str) -> HTMLResponse:
-    return templates.TemplateResponse("index.html", {"request": request})

@@ -8,7 +8,7 @@ export const baseApi = createApi({
     baseUrl:
       import.meta.env.VITE_DEBUG === 'true'
         ? DEV_API_URL
-        : `${window.location.origin}/api/v1`,
+        : `${window.location.origin}/service/web_app/api/v1`,
   }),
   tagTypes: [
     API_TAGS.notes,

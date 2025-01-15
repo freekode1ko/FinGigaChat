@@ -126,9 +126,9 @@ services:
         restart: always
 
 
-    web-app:
+    web_app:
         build:
-            context: ./src/projects/web_app
+            context: ./src/projects/web_app/backend
             additional_contexts:
                 root_dir: ./
             dockerfile: Dockerfile
@@ -317,7 +317,9 @@ services:
 
 
     nginx:
-        image: nginx:latest
+        build:
+            context: ./src/projects/web_app/frontend
+            dockerfile: Dockerfile
         container_name: nginx
         ports:
           - "80:80"
@@ -346,12 +348,13 @@ services:
             - bot
             - bert_client_relevance
             - bert_commodity_relevance
-            - web-app
+            - web_app
             - web_retriever
             - quotes
             - research
             - users_statistics
             - parser_monitoring
+
 
 volumes:
   redis_data:
