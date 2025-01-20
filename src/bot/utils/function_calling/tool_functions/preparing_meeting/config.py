@@ -7,10 +7,10 @@ env.read_env()
 
 DEBUG_GRAPH = True
 
-AGENT_MODEL = 'giga'
-AGENT_MODEL_TYPE = 'GigaChat-Max'
-# AGENT_MODEL = 'gpt'
-# AGENT_MODEL = 'gpt-4o-latest'
+#AGENT_MODEL = 'giga'
+#AGENT_MODEL_TYPE = 'GigaChat-Max'
+AGENT_MODEL = 'gpt'
+AGENT_MODEL_TYPE = 'gpt-4o'
 
 MAX_TOKENS = 8000
 TEMP = 0.00001

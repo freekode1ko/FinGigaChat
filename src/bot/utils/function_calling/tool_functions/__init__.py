@@ -11,5 +11,5 @@ from utils.function_calling.tool_functions.product.run import get_product_list
 
 tools_functions = [get_commodity_quote,
                    get_help_function,
-                   get_product_list,
+                   #get_product_list,
                    get_preparing_for_meeting]

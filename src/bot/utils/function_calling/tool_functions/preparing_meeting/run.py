@@ -1,6 +1,8 @@
 """Тулза по получению отчета для подготовки ко встречи"""
 import traceback
 
+import asyncio
+
 from aiogram import types
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
@@ -46,17 +48,21 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
     message_text = MESSAGE_AGENT_START
     final_message = await tg_message.answer(message_text + f'...', parse_mode='HTML')
     buttons = []
-    config = EXECUTION_CONFIG['configurable'] = {
+    config = EXECUTION_CONFIG
+    config['configurable'] = {
         "message": tg_message,
         'buttons': buttons,
-        'message_text': [message_text,],
+        'message_text': [message_text, ],
         'final_message': final_message,
     }
 
     try:
         inputs = {"input": INITIAL_QUERY.format(client_name=client_name, special_info=special_info)}
         async for event in agent_graph.astream(inputs, config=config):
+            await asyncio.sleep(1)
             for node, graph_state in event.items():
+                print(f"node: {node}")
+                print(f"state: {graph_state}")
                 if node != "__end__":
                     if cnt == 1 and DEBUG_GRAPH:
                         print(f"Запрос пользователя: {inputs['input']}")

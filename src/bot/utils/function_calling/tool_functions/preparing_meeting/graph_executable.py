@@ -21,7 +21,7 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
     plan = state["plan"]
     plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
     task = plan[0]
-    if re.search('(Рекомендация)|(порекомендовать)', task):
+    if re.search('(рекомендовать)|(рекомендация)|(порекомендовать)', task.lower()):
         task_formatted = f"""Для следующего плана: {plan_str}\n\n
                          Тебе задано выполнение шага: {1}, {task}. 
                          Информация о проделанных тобой шагах: {state['past_steps']}"""
@@ -43,7 +43,8 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
                 'final_message': config['configurable']['final_message'],
                 'task_text': task,
                 'tasks_left': len(plan)
-            }
+            },
+            'recursion_limit': 100
         }
     )
     if DEBUG_GRAPH:
@@ -66,7 +67,8 @@ async def plan_step(state: PlanExecute, config: RunnableConfig):
                 'buttons': config['configurable']['buttons'],
                 'message_text': config['configurable']['message_text'],
                 'final_message': config['configurable']['final_message']
-            }
+            },
+            'recursion_limit': 100
         }
     )
     return {"plan": plan.steps}
@@ -85,7 +87,8 @@ async def replan_step(state: PlanExecute, config: RunnableConfig):
                 'buttons': config['configurable']['buttons'],
                 'message_text': config['configurable']['message_text'],
                 'final_message': config['configurable']['final_message']
-            }
+            },
+            'recursion_limit': 100
         }
     )
     if len(output.replan) == 1 and output.replan[0] == '__end__':
