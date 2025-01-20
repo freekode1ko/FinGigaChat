@@ -10,7 +10,7 @@ DEBUG_GRAPH = True
 #AGENT_MODEL = 'giga'
 #AGENT_MODEL_TYPE = 'GigaChat-Max'
 AGENT_MODEL = 'gpt'
-AGENT_MODEL_TYPE = 'gpt-4o'
+AGENT_MODEL_TYPE = 'gpt-4o-mini'
 
 MAX_TOKENS = 8000
 TEMP = 0.00001

@@ -29,7 +29,9 @@ async def request_to_rag_api(rag_type, query, with_metadata=False):
             return await rag_response.json()
     except Exception as e:
         print(e)
-        pass
+        import traceback
+        print(traceback.format_exc())
+        return 'В данный момент не работает, перейди к следующему шагу'
 
 
 @tool
@@ -42,13 +44,18 @@ async def rag_news(request_text: str, config: RunnableConfig):
         (str): текст ответа.
     """
     # rag_qa_banker
-    if DEBUG_GRAPH:
-        print(f"Вызвана функция rag_news с параметром {request_text}")
+    try:
+        if DEBUG_GRAPH:
+            print(f"Вызвана функция rag_news с параметром {request_text}")
 
-    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_NEWS)
+        await send_status_message_for_agent(config, MESSAGE_RUN_RAG_NEWS)
 
-    msg = await request_to_rag_api(RagQaBankerClient, request_text)
-    return msg
+        msg = await request_to_rag_api(RagQaBankerClient, request_text)
+        return msg
+    except Exception as e:
+        print(e)
+        import traceback
+        print(traceback.format_exc())
 
 
 @tool
@@ -60,13 +67,18 @@ async def rag_cib(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    if DEBUG_GRAPH:
-        print(f"Вызвана функция rag_cib с параметром {request_text}")
+    try:
+        if DEBUG_GRAPH:
+            print(f"Вызвана функция rag_cib с параметром {request_text}")
 
-    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_CIB)
+        await send_status_message_for_agent(config, MESSAGE_RUN_RAG_CIB)
 
-    msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
-    return msg
+        msg = await request_to_rag_api(RagQaResearchClient, request_text, with_metadata=True)
+        return msg
+    except Exception as e:
+        print(e)
+        import traceback
+        print(traceback.format_exc())
 
 
 @tool
@@ -78,10 +90,15 @@ async def rag_web(request_text: str, config: RunnableConfig):
     return:
         (str): текст ответа.
     """
-    if DEBUG_GRAPH:
-        print(f"Вызвана функция rag_web с параметром {request_text}")
+    try:
+        if DEBUG_GRAPH:
+            print(f"Вызвана функция rag_web с параметром {request_text}")
 
-    await send_status_message_for_agent(config, MESSAGE_RUN_RAG_WEB)
+        await send_status_message_for_agent(config, MESSAGE_RUN_RAG_WEB)
 
-    msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
-    return msg
+        msg = await request_to_rag_api(RagWebClient, request_text, with_metadata=True)
+        return msg
+    except Exception as e:
+        print(e)
+        import traceback
+        print(traceback.format_exc())

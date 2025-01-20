@@ -2,6 +2,7 @@
 import traceback
 
 import asyncio
+from time import sleep
 
 from aiogram import types
 from langchain_core.runnables import RunnableConfig
@@ -59,8 +60,9 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
     try:
         inputs = {"input": INITIAL_QUERY.format(client_name=client_name, special_info=special_info)}
         async for event in agent_graph.astream(inputs, config=config):
-            await asyncio.sleep(1)
+            sleep(1)
             for node, graph_state in event.items():
+                print('#'*30)
                 print(f"node: {node}")
                 print(f"state: {graph_state}")
                 if node != "__end__":
@@ -101,16 +103,18 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
                 print(batches)
             for batch in batches:
                 if first:
-                    await final_message.edit_text(text=batch, parse_mode='Markdown')
+                    await final_message.edit_text(text=batch, parse_mode='HTML')
                     first = False
                     continue
-                await tg_message.answer(text=batch, parse_mode='Markdown')
+                await tg_message.answer(text=batch, parse_mode='HTML')
 
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             if DEBUG_GRAPH:
                 print(f'Не смогло отправить финальное сообщение: {e}')
         try:
-            for menu in buttons:
+            for menu in buttons[:1]:
                 await tg_message.answer(menu['message'], reply_markup=menu['keyboard'], parse_mode='HTML')
         except Exception as e:
             if DEBUG_GRAPH:

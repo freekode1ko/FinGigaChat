@@ -21,7 +21,8 @@ async def execute_step(state: PlanExecute, config: RunnableConfig):
     plan = state["plan"]
     plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
     task = plan[0]
-    if re.search('(рекомендовать)|(рекомендация)|(порекомендовать)', task.lower()):
+    if re.search('(рекоменд)|(рекомендовать)|(рекомендация)|(порекомендовать)', task.lower()):
+        print("HEREEEEE")
         task_formatted = f"""Для следующего плана: {plan_str}\n\n
                          Тебе задано выполнение шага: {1}, {task}. 
                          Информация о проделанных тобой шагах: {state['past_steps']}"""

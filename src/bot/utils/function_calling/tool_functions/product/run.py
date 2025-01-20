@@ -105,7 +105,5 @@ async def get_product_recommendation(text: str, config: RunnableConfig):
     """
     print(f"Вызвана get_product_recomendation с параметром {text}")
 
-    await send_status_message_for_agent(config, MESSAGE_RUN_PRODUCT_RECOMMENDATION)
-
     msg = "Рекомендованные продукты"
     return msg

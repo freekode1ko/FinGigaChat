@@ -9,6 +9,7 @@ from utils.function_calling.tool_functions.cib_info.run import get_analytical_re
 from utils.function_calling.tool_functions.preparing_meeting.prompts import BASE_PROMPT
 from utils.function_calling.tool_functions.product.run import get_product_recommendation
 from utils.function_calling.tool_functions.rag.run import rag_news, rag_cib
+from utils.function_calling.tool_functions.recomendation.run import get_recommendation_by_contexts
 from utils.function_calling.tool_functions.summarization.client_industry_mapping.run import get_industry_by_client_name
 from utils.function_calling.tool_functions.summarization.run import get_news_by_name
 from utils.function_calling.tool_functions.utils import get_model
@@ -20,7 +21,7 @@ tool_functions_prepare_for_meeting = [
     rag_cib,
     # TODO: после сливания со стабильной версией веб ретривера, можно добавить этот тул агенту
     # rag_web,
-    get_product_recommendation,
+    get_recommendation_by_contexts,
     get_news_by_name,
     get_industry_by_client_name
 ]
