@@ -233,7 +233,7 @@ const FileUploader = forwardRef<
           tabIndex={0}
           onKeyDownCapture={handleKeyDown}
           className={cn(
-            'grid w-full focus:outline-none overflow-hidden',
+            'grid focus:outline-none overflow-hidden',
             className,
             value && value.length > 0 && 'gap-2'
           )}
@@ -257,7 +257,7 @@ const FileUploaderContent = forwardRef<
 
   return (
     <div
-      className="w-full px-1"
+      className="px-1"
       ref={containerRef}
       aria-description="content file holder"
     >
@@ -266,7 +266,7 @@ const FileUploaderContent = forwardRef<
         ref={ref}
         className={cn(
           'flex rounded-xl gap-1',
-          orientation === 'horizontal' ? 'flex-raw flex-wrap' : 'flex-col',
+          orientation === 'horizontal' ? 'flex-row flex-wrap' : 'flex-col',
           className
         )}
       >
@@ -281,7 +281,7 @@ const FileUploaderItem = forwardRef<
   HTMLDivElement,
   { index: number } & React.HTMLAttributes<HTMLDivElement>
 >(({ className, index, children, ...props }, ref) => {
-  const { removeFileFromSet, activeIndex, direction } = useFileUpload()
+  const { removeFileFromSet, activeIndex, direction, orientation } = useFileUpload()
   const isSelected = index === activeIndex
   return (
     <div
@@ -289,6 +289,7 @@ const FileUploaderItem = forwardRef<
       className={cn(
         'transparent hover:bg-secondary', // стиль button ghost
         'h-6 p-1 justify-between cursor-pointer relative',
+        orientation === 'horizontal' && 'pr-6',
         className,
         isSelected && 'bg-muted'
       )}
@@ -301,7 +302,7 @@ const FileUploaderItem = forwardRef<
         type="button"
         className={cn(
           'absolute',
-          direction === 'rtl' ? 'top-1 left-1' : 'top-1 right-1'
+          direction === 'rtl' ? 'top-1 left-1' : 'top-1 right-1',
         )}
         onClick={() => removeFileFromSet(index)}
       >
@@ -324,13 +325,13 @@ const FileInput = forwardRef<
       ref={ref}
       {...props}
       className={cn(
-        'relative w-full',
+        'relative',
         isLOF ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
       )}
     >
       <div
         className={cn(
-          'w-full rounded-lg duration-300 ease-in-out',
+          'rounded-lg duration-300 ease-in-out',
           dropzoneState.isDragAccept
             ? 'border-green-500'
             : dropzoneState.isDragReject || isFileTooBig

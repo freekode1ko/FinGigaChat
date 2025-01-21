@@ -1,4 +1,5 @@
 export { AdaptableModal } from './adaptable-modal'
+export { Combobox } from './combobox'
 export { DataTable, DataTablePagination, DataTableSearch } from './data-table'
 export { DeleteConfirmationButton } from './delete-confirmation'
 export { FileUploadField } from './file-upload'

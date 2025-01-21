@@ -33,6 +33,22 @@ async def get_users(
     return PaginatedResponse.create(validated_users, total, pagination.size)
 
 
+@router.get(
+        '/flat',
+        dependencies=[Depends(get_current_admin)],
+)
+async def get_flat_users(
+    user_repository: Annotated[UserRepository, Depends(get_repository(UserRepository))],
+) -> list[UserRead]:
+    """
+    *Только для администраторов*\n
+    Список пользователей плоским списком без пагинации и фильтрации.
+    """
+    db_users = await user_repository.get_list()
+    validated_users = users_adapter.validate_python(db_users)
+    return validated_users
+
+
 @router.patch(
         '/{user_email}',
         status_code=status.HTTP_204_NO_CONTENT,
