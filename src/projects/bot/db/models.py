@@ -164,7 +164,7 @@ class MessageType(Base):
     description = Column(String(255),)
 
     message = relationship('Message', back_populates='message_type')
-    broadcast = relationship('Broadcast', back_populates='message_type')
+    broadcast_versions = relationship('BroadcastVersion', back_populates='message_type')
 
 
 t_metals = Table(
@@ -224,6 +224,7 @@ class RegisteredUser(Base):
     telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
     products = relationship('Product', secondary='relation_registered_user_products', back_populates='users')
+    broadcast_versions = relationship('BroadcastVersion', back_populates='author')
 
 
 class Whitelist(Base):
@@ -340,14 +341,30 @@ class Broadcast(Base):
     __table_args__ = {'comment': 'Рассылки сообщений в боте'}
 
     id = Column(BigInteger, primary_key=True)
-    text = Column(Text, nullable=False)
-    message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
-    function_name = Column(Text, nullable=False)
     created_at = Column(DateTime(True), nullable=False)
+    deleted_at = Column(DateTime(True), nullable=True)
 
+    versions = relationship('BroadcastVersion', back_populates='broadcast')
     telegram_messages = relationship('TelegramMessage', back_populates='broadcast')
-    telegram_files = relationship('TelegramFile', back_populates='broadcast')
-    message_type = relationship('MessageType', back_populates='broadcast')
+
+
+class BroadcastVersion(Base):
+    __tablename__ = 'broadcast_version'
+    __table_args__ = {'comment': 'Версии рассылок сообщений в боте'}
+
+    id = Column(BigInteger, primary_key=True)
+    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    message_text = Column(Text, nullable=True)
+    message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    function_name = Column(Text, nullable=True)
+    created_at = Column(DateTime(True), nullable=False)
+    author_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=True)
+
+    broadcast = relationship('Broadcast', back_populates='versions')
+    message_type = relationship('MessageType', back_populates='broadcast_versions')
+    telegram_files = relationship('TelegramFile', secondary='relation_telegram_file_broadcast_version', back_populates='broadcast_versions')
+    telegram_messages = relationship('TelegramMessage', back_populates='broadcast_version')
+    author = relationship('RegisteredUser', back_populates='broadcast_versions')
 
 
 class TelegramMessage(Base):
@@ -358,10 +375,19 @@ class TelegramMessage(Base):
     telegram_message_id = Column(BigInteger, nullable=False)
     user_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
+    broadcast_version_id = Column(ForeignKey('broadcast_version.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=True)
     send_datetime = Column(DateTime(True), nullable=False)
 
     user = relationship('RegisteredUser', back_populates='telegram_messages')
     broadcast = relationship('Broadcast', back_populates='telegram_messages')
+    broadcast_version = relationship('BroadcastVersion', back_populates='telegram_messages')
+
+
+relation_telegram_file_broadcast_version = Table(
+    'relation_telegram_file_broadcast_version', Base.metadata,
+    Column('telegram_file_id', BigInteger, ForeignKey('telegram_file.id', ondelete='CASCADE', onupdate='CASCADE')),
+    Column('broadcast_version_id', BigInteger, ForeignKey('broadcast_version.id', ondelete='CASCADE', onupdate='CASCADE'))
+)
 
 
 class TelegramFile(Base):
@@ -373,9 +399,8 @@ class TelegramFile(Base):
     file_name = Column(String(255), nullable=False)
     file_type = Column(Enum(enums.FileType, name='file_type'), nullable=False)
     created_at = Column(DateTime(True), nullable=False)
-    broadcast_id = Column(ForeignKey('broadcast.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
 
-    broadcast = relationship('Broadcast', back_populates='telegram_files')
+    broadcast_versions = relationship('BroadcastVersion', secondary='relation_telegram_file_broadcast_version', back_populates='telegram_files')
 
 
 class ParserSource(Base):
