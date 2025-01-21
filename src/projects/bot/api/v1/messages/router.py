@@ -1,66 +1,80 @@
 """API для работы отправки сообщений"""
-import datetime
+from typing import Annotated
 
-import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks
-from sulguk import transform_html
+from fastapi import APIRouter, Query, BackgroundTasks, HTTPException
+from fastapi import (
+    Depends
+)
 
-from api.v1.messages import schemas
-from db import models
-from db.database import async_session
-from utils.bot import bot
+from utils.api.pagination import PaginationData, get_pagination_dep
+from utils.messages import send_message_to_users
+from . import crud as messages_crud
+from .schemas import CreateBroadcast
 
-router = APIRouter(tags=['messages'])
+router = APIRouter(tags=["messages"])
 
 
-async def send_message_to_users(user_msg):
-    """Отправка сообщения пользователю"""
+@router.get('/')
+async def get_messages(
+        pagination: Annotated[
+            PaginationData,
+            Depends(get_pagination_dep),
+        ],
+        full: Annotated[bool, Query(description="Номер страницы")] = False
+):
+    """Получить пользовательское сообщение"""
+    print(pagination)
+    messages = await messages_crud.get_messages(pagination, full=full)
+    return {
+        "messages": messages,
+        "pagination": pagination
+    }
+
+
+@router.get('/{message_id}')
+async def get_message(
+        message_id: int,
+        full: Annotated[bool, Query(description="Номер страницы")] = False
+):
+    """Получить пользовательское сообщение"""
+    messages = await messages_crud.get_message(message_id, full=full)
+    return {
+        "message": messages,
+    }
+
+
+@router.post('/')
+async def create_message(
+        user_msg: CreateBroadcast,
+        background_tasks: BackgroundTasks
+):
     try:
-        if not user_msg.user_roles:
-            role_ids = [1]
-        else:
-            role_ids = user_msg.user_roles
-
-        async with async_session() as session:
-            broadcast = models.Broadcast(
-                text=user_msg.message_text,
-                message_type_id=user_msg.message_type_id,
-                function_name=user_msg.function_name,
-                created_at=datetime.datetime.now(),
-            )
-            session.add(broadcast)
-            await session.flush()
-            user_ids = await session.execute(
-                sa.select(models.RegisteredUser.user_id)
-                .filter(models.RegisteredUser.role_id.in_(role_ids)))
-            user_ids = user_ids.scalars().all()
-            for user_id in user_ids:
-                try:
-                    result = transform_html(user_msg.message_text)
-                    user_mes = await bot.send_message(
-                        chat_id=user_id,
-                        text=result.text,
-                        entities=result.entities,
-                    )
-                    session.add(
-                        models.TelegramMessage(
-                            telegram_message_id=user_mes.message_id,
-                            user_id=user_id,
-                            broadcast_id=broadcast.id,
-                            send_datetime=datetime.datetime.now()
-                        ))
-                except Exception as e:
-                    continue
-            await session.commit()
-
+        message, broadcast_id = await messages_crud.create_message(user_msg)
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return {'error': str(e), 'full': str(traceback.format_exc())}
+        raise HTTPException(status_code=500, detail=str(e))
+    background_tasks.add_task(send_message_to_users, broadcast_id, user_msg.users_ids, user_msg.users_emails, user_msg.user_roles)
+    return {**message.model_dump()}
 
 
-@router.post('/send')
-async def send_message(user_msg: schemas.BaseMessage, background_tasks: BackgroundTasks):  # TODO: remove
-    """Отправить сообщение"""
-    background_tasks.add_task(send_message_to_users, user_msg)
-    return {'status': 'OK'}
+@router.patch('/{message_id}')
+async def edit_message(
+        message_id: int,
+        user_msg: CreateBroadcast,
+        background_tasks: BackgroundTasks
+):
+    try:
+        message = await messages_crud.edit_message(user_msg, message_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    background_tasks.add_task(send_message_to_users, message_id, user_msg.users_ids, user_msg.users_emails, user_msg.user_roles)
+    return {**message.model_dump()}
+
+
+@router.delete('/{message_id}')
+async def delete_messages(
+        message_id: int,
+        background_tasks: BackgroundTasks
+):
+    await messages_crud.delete_message(message_id)
+    background_tasks.add_task(send_message_to_users, message_id)
