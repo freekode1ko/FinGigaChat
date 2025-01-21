@@ -224,6 +224,7 @@ class RegisteredUser(Base):
     telegram_messages = relationship('TelegramMessage', back_populates='user')
     quote_subscriptions = relationship('UsersQuotesSubscriptions', back_populates='user')
     products = relationship('Product', secondary='relation_registered_user_products', back_populates='users')
+    broadcast_versions = relationship('BroadcastVersion', back_populates='author')
 
 
 class Whitelist(Base):
@@ -357,12 +358,13 @@ class BroadcastVersion(Base):
     message_type_id = Column(ForeignKey('message_type.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False)
     function_name = Column(Text, nullable=True)
     created_at = Column(DateTime(True), nullable=False)
+    author_id = Column(ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=True)
 
     broadcast = relationship('Broadcast', back_populates='versions')
     message_type = relationship('MessageType', back_populates='broadcast_versions')
     telegram_files = relationship('TelegramFile', secondary='relation_telegram_file_broadcast_version', back_populates='broadcast_versions')
     telegram_messages = relationship('TelegramMessage', back_populates='broadcast_version')
-    user_roles = relationship('UserRole', secondary='relation_broadcast_version_user_role', back_populates='broadcast_versions')
+    author = relationship('RegisteredUser', back_populates='broadcast_versions')
 
 
 class TelegramMessage(Base):
@@ -948,14 +950,6 @@ class UserRole(Base):
     description = Column(Text, comment='Описание роли')
 
     features = relationship('Feature', secondary='relation_role_to_feature', back_populates='user_roles')
-    broadcast_versions = relationship('BroadcastVersion', secondary='relation_broadcast_version_user_role', back_populates='user_roles')
-
-
-relation_broadcast_version_user_role = Table(
-    'relation_broadcast_version_user_role', Base.metadata,
-    Column('broadcast_version_id', Integer, ForeignKey('broadcast_version.id', ondelete='CASCADE', onupdate='CASCADE')),
-    Column('user_role_id', Integer, ForeignKey('user_role.id', ondelete='CASCADE', onupdate='CASCADE'))
-)
 
 
 class Feature(Base):

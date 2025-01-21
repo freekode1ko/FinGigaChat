@@ -48,11 +48,11 @@ async def create_message(
         user_msg: CreateBroadcast,
         background_tasks: BackgroundTasks
 ):
-    # try:
-    message, broadcast_id = await messages_crud.create_message(user_msg)
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=str(e))
-    background_tasks.add_task(send_message_to_users, broadcast_id)
+    try:
+        message, broadcast_id = await messages_crud.create_message(user_msg)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    background_tasks.add_task(send_message_to_users, broadcast_id, user_msg.users_ids, user_msg.users_emails, user_msg.user_roles)
     return {**message.model_dump()}
 
 
@@ -67,7 +67,7 @@ async def edit_message(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    background_tasks.add_task(send_message_to_users, message_id)
+    background_tasks.add_task(send_message_to_users, message_id, user_msg.users_ids, user_msg.users_emails, user_msg.user_roles)
     return {**message.model_dump()}
 
 

@@ -19,10 +19,13 @@ class BroadcastFile(BaseModel):
 class CreateBroadcast(BaseModel):
     """Модель сообщений"""
 
+    author_id: int
     message_text: str
-    message_files: list[int] = Field(default_factory=list)
+    message_files: list[int] | None = Field(default_factory=list)
     message_type_id: int = 1
     user_roles: list[int] = Field(default_factory=list)
+    users_emails: list[str] = Field(default_factory=list)
+    users_ids: list[int] = Field(default_factory=list)
     parse_mode: str = 'HTML'
     function_name: str = ''
 
@@ -30,10 +33,10 @@ class CreateBroadcast(BaseModel):
 class BaseBroadcast(BaseModel):
     """Модель сообщений"""
 
+    author_id: int
     message_text: str
     message_files: list[int] = Field(default_factory=list)
     message_type_id: int = 1
-    user_roles: list[int] = Field(default_factory=list)
     create_at: datetime
     parse_mode: str = 'HTML'
     function_name: str = ''
@@ -51,30 +54,3 @@ class BroadcastWithVersions(FullBroadcast):
 class BroadcastList(BaseModel):
     broadcasts: list[BaseBroadcast | FullBroadcast]
 
-    # @classmethod
-    # def from_dict(cls, data: dict):
-    #     """Создать экземпляр класса из словаря."""
-    #
-    #     files_data = data.get('files', [])
-    #     files = [MessageFile(**file) for file in files_data] if files_data else []
-    #
-    #     return cls(
-    #         user_id=data['user_id'],
-    #         message_text=data['message_text'],
-    #         files=files,
-    #         parse_mode=data.get('parse_mode', ParseMethods.html)
-    #     )
-
-    # @classmethod
-    # def from_db(cls, data: models.Broadcast):
-    #     """Создать экземпляр класса из строки базы данных."""
-    #
-    #     user_id, message_text, files_data, parse_mode = db_row
-    #     files = [MessageFile(name=file) for file in files_data] if files_data else []
-    #
-    #     return cls(
-    #         user_id=user_id,
-    #         message_text=message_text,
-    #         files=files,
-    #         parse_mode=ParseMethods(parse_mode) if parse_mode else ParseMethods.html
-    #     )
