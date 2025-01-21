@@ -29,6 +29,13 @@ export const usersApi = baseApi.injectEndpoints({
             }))
           : [{ type: API_TAGS.users }],
     }),
+    getFlatUsers: build.query<Array<User>, void>({
+      query: () => ({
+        url: `${API_ENDPOINTS.users}/flat`,
+        method: 'GET',
+      }),
+      providesTags: () => [{ type: API_TAGS.users }],
+    }),
     getUserRoles: build.query<Array<UserRole>, void>({
       query: () => ({
         url: `${API_ENDPOINTS.users}/roles`,
@@ -50,6 +57,7 @@ export const usersApi = baseApi.injectEndpoints({
 
 export const {
   useGetUsersQuery,
+  useGetFlatUsersQuery,
   useGetUserRolesQuery,
   useUpdateUserRoleMutation,
 } = usersApi

@@ -6,6 +6,7 @@ import {
   analyticsFormSchema,
   useUploadCommodityResearchMutation,
 } from '@/entities/commodity'
+import { handleError } from '@/shared/api'
 import { FileUploadField } from '@/shared/kit'
 import {
   Button,
@@ -40,26 +41,29 @@ export function UploadResearchForm({
     },
   })
 
-  const onSubmit = (values: z.infer<typeof analyticsFormSchema>) => {
+  const onSubmit = (values: z.infer<typeof analyticsFormSchema>, callOnSuccess: boolean = false) => {
     toast.promise(
       upload({
         research: { ...values, file: values.files ? values.files[0] : null },
         commodityId,
       }).unwrap(),
       {
-        loading: `Загружаем исследование ${values.title ?? ''}...`,
+        loading: `Загружаем аналитику ${values.title ?? ''}...`,
         success: () => {
-          onSuccess()
-          return 'Исследование успешно загружено!'
+          if (callOnSuccess) {
+            onSuccess()
+          }
+          form.reset()
+          return 'Аналитика успешно загружена!'
         },
-        error: 'Мы не смогли загрузить исследование. Попробуйте позже.',
+        error: (error) => handleError(error),
       }
     )
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form className="space-y-4">
         <FormField
           control={form.control}
           name="title"
@@ -115,9 +119,25 @@ export function UploadResearchForm({
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          Сохранить
-        </Button>
+
+        <div className="flex flex-col md:flex-row gap-2 md:justify-end">
+          <Button
+            className="w-full md:w-auto"
+            variant="outline"
+            disabled={isLoading}
+            onClick={() => onSubmit(form.getValues(), false)}
+          >
+            Сохранить и продолжить
+          </Button>
+          <Button
+            className="w-full md:w-auto"
+            disabled={isLoading}
+            onClick={() => onSubmit(form.getValues(), true)}
+          >
+            Сохранить
+          </Button>
+        </div>
+
       </form>
     </Form>
   )

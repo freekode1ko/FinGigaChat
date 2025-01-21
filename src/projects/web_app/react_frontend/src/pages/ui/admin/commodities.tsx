@@ -1,6 +1,6 @@
 import { EllipsisVertical } from 'lucide-react'
 
-import { UploadCommodityResearchDialog } from '@/features/commodities/upload-analytics'
+import { UploadCommodityResearchDialog } from '@/features/commodity-research/upload'
 import { type Commodity, useGetCommoditiesQuery } from '@/entities/commodity'
 import {
   DataTable,

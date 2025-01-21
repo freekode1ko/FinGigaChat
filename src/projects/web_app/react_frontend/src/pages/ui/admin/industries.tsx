@@ -3,7 +3,7 @@ import { EllipsisVertical, SquarePlus } from 'lucide-react'
 import { CreateIndustryDialog } from '@/features/industries/add'
 import { DeleteIndustryDialog } from '@/features/industries/delete'
 import { UpdateIndustryDialog } from '@/features/industries/update'
-import { UploadIndustryDocumentDialog } from '@/features/industries/upload-document'
+import { UploadIndustryDocumentDialog } from '@/features/industry-documents/upload'
 import { type Industry, useGetIndustriesQuery } from '@/entities/industries'
 import { DataTable, DataTablePagination, Loading } from '@/shared/kit'
 import {

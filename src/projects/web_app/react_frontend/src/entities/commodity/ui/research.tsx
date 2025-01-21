@@ -6,11 +6,14 @@ import type { CommodityResearch as CommodityResearchType } from '../model'
 
 const CommodityResearch = ({
   research,
+  actionSlot,
 }: {
   research: CommodityResearchType
+  actionSlot?: React.ReactNode
 }) => {
   return (
     <div className="w-full border p-2 rounded">
+      {actionSlot && <div className="absolute top-0 right-0">{actionSlot}</div>}
       <h3 className="font-bold">
         {research.title ? research.title : 'Нет названия'}
       </h3>

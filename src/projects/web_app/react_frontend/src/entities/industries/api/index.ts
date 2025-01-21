@@ -53,6 +53,12 @@ const industriesApi = baseApi.injectEndpoints({
         }
       },
     }),
+    deleteIndustryDocument: build.mutation<string, { id: number }>({
+      query: ({ id }) => ({
+        url: `${API_ENDPOINTS.industries}/documents/` + id,
+        method: 'DELETE',
+      }),
+    }),
   }),
 })
 
@@ -62,4 +68,5 @@ export const {
   useDeleteIndustryMutation,
   useUpdateIndustryMutation,
   useUploadIndustryDocumentMutation,
+  useDeleteIndustryDocumentMutation,
 } = industriesApi

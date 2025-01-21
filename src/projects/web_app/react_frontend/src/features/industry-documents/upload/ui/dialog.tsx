@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-import { type Commodity, CommodityResearch } from '@/entities/commodity'
+import { DeleteIndustryDocumentButton } from '@/features/industry-documents/delete'
+import { type Industry, IndustryDocument } from '@/entities/industries'
 import { AdaptableModal } from '@/shared/kit'
 import {
   ScrollArea,
@@ -10,13 +11,13 @@ import {
   TabsTrigger,
 } from '@/shared/ui'
 
-import { UploadResearchForm } from './form'
+import { UploadIndustryDocumentForm } from './form'
 
-const UploadCommodityResearchDialog = ({
-  commodity,
+const UploadIndustryDocumentDialog = ({
+  industry,
   children,
 }: {
-  commodity: Commodity
+  industry: Industry
   children: React.ReactNode
 }) => {
   const [open, setOpen] = useState(false)
@@ -24,36 +25,36 @@ const UploadCommodityResearchDialog = ({
     <AdaptableModal
       open={open}
       onOpenChange={setOpen}
-      title={`Аналитика по ${commodity.name}`}
+      title={`Документы для ${industry.name}`}
       trigger={children}
     >
       <Tabs defaultValue="view">
         <TabsList className="w-full bg-secondary">
           <TabsTrigger value="view" className="flex-1">
-            Просмотр аналитики
+            Просмотр документов
           </TabsTrigger>
           <TabsTrigger value="upload" className="flex-1">
-            Добавить аналитику
+            Загрузить документ
           </TabsTrigger>
         </TabsList>
         <TabsContent value="view">
           <ScrollArea className="h-96 rounded-md border">
             <div className="flex flex-col gap-2 justify-center industrys-center p-2">
-              {commodity?.commodity_research.length ? (
-                commodity?.commodity_research.map((research) => (
-                  <CommodityResearch key={research.id} research={research} />
+              {industry?.documents.length ? (
+                industry?.documents.map((doc) => (
+                  <IndustryDocument key={doc.id} doc={doc} actionSlot={<DeleteIndustryDocumentButton id={doc.id} />} />
                 ))
               ) : (
                 <p className="text-foreground">
-                  Аналитика по товару не найдена
+                  Документы по отрасли не найдены
                 </p>
               )}
             </div>
           </ScrollArea>
         </TabsContent>
         <TabsContent value="upload">
-          <UploadResearchForm
-            commodityId={commodity!.id}
+          <UploadIndustryDocumentForm
+            industryId={industry!.id}
             onSuccess={() => setOpen(false)}
           />
         </TabsContent>
@@ -62,4 +63,4 @@ const UploadCommodityResearchDialog = ({
   )
 }
 
-export { UploadCommodityResearchDialog }
+export { UploadIndustryDocumentDialog }

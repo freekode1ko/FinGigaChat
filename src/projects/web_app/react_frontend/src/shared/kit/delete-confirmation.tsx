@@ -14,7 +14,7 @@ const DeleteConfirmationButton = ({ onConfirm, disabled }: { onConfirm: () => vo
   return (
     <div className="flex items-center gap-2">
       {confirm ? 
-        <Button onClick={onConfirm} disabled={disabled} variant='ghost'><span>Точно удалить?</span><Check className="w-4 h-4" /></Button> : 
+        <Button onClick={onConfirm} disabled={disabled} variant='ghost' className="bg-secondary"><span>Точно удалить?</span><Check className="w-4 h-4" /></Button> : 
         <Button onClick={() => setConfirm(true)} size='icon' variant='ghost'><X className="w-4 h-4" /></Button>
       }
     </div>

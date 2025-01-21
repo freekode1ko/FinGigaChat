@@ -1,4 +1,5 @@
 import {
+  DoorOpen,
   Factory,
   FileBarChart,
   LayoutDashboardIcon,
@@ -108,5 +109,11 @@ export const adminItems: Array<MenuItem> = [
     path: ADMIN_MAP.settings,
     icon: Settings,
     description: 'Управление настройками приложения',
+  },
+  {
+    name: 'Вернуться в BRIEF',
+    path: SITE_MAP.news,
+    icon: DoorOpen,
+    description: 'Вернуться в BRIEF',
   },
 ]
