@@ -3,7 +3,7 @@ import re
 
 
 # API URL
-GIGAPARSERS_API = 'https://gigaparsers.ru/api/get_quotes'
+GIGAPARSERS_API = 'https://parsers360.ru/api/get_quotes'
 
 
 # Правила для каждой секции:
