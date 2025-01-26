@@ -1,1 +1,1 @@
-export { SendMessageForm } from './main'
+export { SendMessageForm } from './create'

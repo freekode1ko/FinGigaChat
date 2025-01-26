@@ -1,4 +1,5 @@
 export { AdminBotPage } from './bot'
+export { AdminBroadcastPage } from './broadcast'
 export { AdminCommoditiesPage } from './commodities'
 export { AdminHomePage } from './home'
 export { AdminIndustriesPage } from './industries'

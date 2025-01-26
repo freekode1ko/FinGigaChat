@@ -1,1 +1,1 @@
-export { SendMessageDialog } from './ui'
+export { SendMessageDialog, UpdateMessageDialog } from './ui'

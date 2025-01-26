@@ -16,6 +16,7 @@ import {
   ProfilePage,
   QuoteDetailsPage,
 } from '@/pages/ui'
+import { AdminBroadcastPage } from '@/pages/ui/admin'
 import { WelcomePage } from '@/pages/ui/welcome'
 import { ADMIN_MAP, SITE_MAP } from '@/shared/model'
 
@@ -66,6 +67,16 @@ export const appRouter = () =>
               <AdminBotPage />
             </AuthGuard>
           ),
+          children: [
+            {
+              path: ':broadcastId',
+              element: (
+                <AuthGuard admin>
+                  <AdminBroadcastPage />
+                </AuthGuard>
+              ),
+            },
+          ],
         },
         {
           path: ADMIN_MAP.settings,

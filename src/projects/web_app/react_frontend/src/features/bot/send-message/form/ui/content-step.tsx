@@ -1,7 +1,7 @@
 import { useFormContext } from "react-hook-form"
 
-import { dropZoneConfig } from "@/entities/bot/model"
-import { FileUploadField } from "@/shared/kit"
+// import { dropZoneConfig } from "@/entities/bot/model"
+// import { FileUploadField } from "@/shared/kit"
 import { RichTextEditor } from "@/shared/kit/markdown-editor"
 import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui"
 
@@ -11,23 +11,23 @@ export const ContentStep = () => {
   return (
     <>
       <FormField
-          control={control}
-          name="message"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Текст рассылки</FormLabel>
-              <FormControl>
-                <RichTextEditor {...field} />
-              </FormControl>
-              <FormDescription>
-                Не вставляйте собственные HTML или Markdown теги, используйте
-                этот редактор для форматирования текста
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
+        control={control}
+        name="message"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Текст рассылки</FormLabel>
+            <FormControl>
+              <RichTextEditor {...field} />
+            </FormControl>
+            <FormDescription>
+              Не вставляйте собственные HTML или Markdown теги, используйте
+              этот редактор для форматирования текста
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+        {/* <FormField
           control={control}
           name="files"
           render={({ field }) => (
@@ -42,10 +42,13 @@ export const ContentStep = () => {
                   helpText="Вы можете прикрепить изображения и .PDF документы"
                 />
               </FormControl>
+              <FormDescription>
+                В данный момент невозможно прикрепить файлы к рассылке
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
-        />
+        /> */}
     </>
   )
 }

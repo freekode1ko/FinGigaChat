@@ -26,6 +26,7 @@ export const API_TAGS = {
   commodities: 'COMMODITIES',
   industries: 'INDUSTRIES',
   users: 'USERS',
+  bot_messages: 'BOT_MESSAGES',
 }
 
 export const SITE_MAP = {

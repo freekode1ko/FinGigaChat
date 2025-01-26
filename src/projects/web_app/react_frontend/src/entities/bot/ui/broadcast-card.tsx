@@ -1,27 +1,39 @@
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Dot } from "lucide-react"
 import { useState } from "react"
 
-import { UserRole } from "@/entities/user"
 import { cn } from "@/shared/lib"
 import { Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/ui"
 
-const BroadcastCard = ({broadcast, actionSlot}: {broadcast: {id: number, title: string, content: string, created_at: Date, roles: Array<UserRole>}, actionSlot?: React.ReactNode}) => {
+import type { FullBroadcast } from "../model"
+import { BroadcastBadge } from "./broadcast-badge"
+
+interface BroadcastCardProps {
+  broadcast: FullBroadcast
+  isNewest: boolean
+  actionSlot?: React.ReactNode
+}
+
+const BroadcastCard = ({broadcast, isNewest, actionSlot}: BroadcastCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   return (
     <Card className="relative">
-      {actionSlot && <div className="absolute top-0 right-0">{actionSlot}</div>}
+      <div className="absolute top-0 right-0">{actionSlot}</div>
       <CardHeader>
-        <CardTitle>{broadcast.content.length > 40 ? broadcast.content.slice(0, 40) + '...' : broadcast.content}</CardTitle>
-        <CardDescription>{broadcast.created_at.toLocaleDateString()}</CardDescription>
+        <CardTitle dangerouslySetInnerHTML={{__html: broadcast.message_text.length > 40 ? broadcast.message_text.slice(0, 40) + '...' : broadcast.message_text}} />
+        <BroadcastBadge
+          deletedAt={broadcast.deleted_at}
+          createdAt={broadcast.create_at}
+          isNewest={isNewest}
+        />
       </CardHeader>
-      <CardContent>
-        <p>{isExpanded ? broadcast.content : (broadcast.content.length > 200 ? broadcast.content.slice(0, 200) + '...' : broadcast.content)}</p>
-      </CardContent>
+      <CardContent dangerouslySetInnerHTML={{__html: isExpanded ? broadcast.message_text : (broadcast.message_text.length > 200 ? broadcast.message_text.slice(0, 200) + '...' : broadcast.message_text)}} className="space-y-2" />
       <CardFooter>
-        <p className="text-sm text-muted-foreground">Получатели: {broadcast.roles.map(role => role.name).join(', ')}</p>
+        <CardDescription>{new Date(broadcast.create_at).toLocaleDateString()}</CardDescription>
+        <Dot className="h-4 w-4 text-muted-foreground" />
+        <CardDescription>{broadcast.author_id}</CardDescription>
       </CardFooter>
-      {broadcast.content.length > 200 && (
+      {broadcast.message_text.length > 200 && (
         <Button className="pt-1 w-full" variant='ghost' onClick={() => setIsExpanded(!isExpanded)}>
           <span>{isExpanded ? 'Свернуть' : 'Развернуть'}</span>
           <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && 'rotate-180')} />
