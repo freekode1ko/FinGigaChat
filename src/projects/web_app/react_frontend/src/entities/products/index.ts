@@ -1,5 +1,6 @@
 export {
   useCreateProductMutation,
+  useDeleteProductDocumentMutation,
   useDeleteProductMutation,
   useGetProductsQuery,
   useGetProductsTreeQuery,

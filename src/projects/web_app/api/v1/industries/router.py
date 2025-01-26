@@ -132,3 +132,20 @@ async def create_document(
         file_path=str(saved_file.path),
     )
     await industry_document_repository.create(document)
+
+
+@router.delete(
+    '/documents/{document_id}',
+    dependencies=[Depends(get_current_admin)],
+)
+async def delete_document(
+    document_id: int,
+    industry_document_repository: Annotated[IndustryDocumentRepository, Depends(get_repository(IndustryDocumentRepository))],
+):
+    """
+    *Только для администраторов*\n
+    Удалить документ для отрасли
+    """
+    if (document := await industry_document_repository.get_by_pk(document_id)) is None:
+        raise HTTPException(status_code=404, detail='Документ не существует')
+    await industry_document_repository.delete(document)

@@ -1,6 +1,8 @@
 export {
+  useGetFlatUsersQuery,
   useGetUserRolesQuery,
   useGetUsersQuery,
   useUpdateUserRoleMutation,
 } from './api'
-export type { User } from './model'
+export { getCurrentName } from './lib'
+export type { User, UserRole } from './model'

@@ -1,5 +1,5 @@
 import {
-  ClipboardPen,
+  DoorOpen,
   Factory,
   FileBarChart,
   LayoutDashboardIcon,
@@ -75,12 +75,6 @@ export const profileItems: Array<MenuItem> = [
 
 export const adminItems: Array<MenuItem> = [
   {
-    name: 'Доступы',
-    path: ADMIN_MAP.whitelist,
-    icon: ClipboardPen,
-    description: 'Управление белым списком',
-  },
-  {
     name: 'Пользователи',
     path: ADMIN_MAP.users,
     icon: UserIcon,
@@ -115,5 +109,11 @@ export const adminItems: Array<MenuItem> = [
     path: ADMIN_MAP.settings,
     icon: Settings,
     description: 'Управление настройками приложения',
+  },
+  {
+    name: 'Вернуться в BRIEF',
+    path: SITE_MAP.news,
+    icon: DoorOpen,
+    description: 'Вернуться в BRIEF',
   },
 ]

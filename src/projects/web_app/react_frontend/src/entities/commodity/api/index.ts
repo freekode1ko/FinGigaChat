@@ -41,8 +41,21 @@ const commodityApi = baseApi.injectEndpoints({
         { type: API_TAGS.commodities, id: 'LIST' },
       ],
     }),
+    deleteCommodityResearch: build.mutation<string, { id: number }>({
+      query: ({ id }) => ({
+        url: `${API_ENDPOINTS.commodities}/researches/` + id,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: API_TAGS.commodities, id: id },
+        { type: API_TAGS.commodities, id: 'LIST' },
+      ],
+    }),
   }),
 })
 
-export const { useGetCommoditiesQuery, useUploadCommodityResearchMutation } =
-  commodityApi
+export const {
+  useGetCommoditiesQuery,
+  useUploadCommodityResearchMutation,
+  useDeleteCommodityResearchMutation,
+} = commodityApi

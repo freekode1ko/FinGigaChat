@@ -7,7 +7,6 @@ import {
   AdminIndustriesPage,
   AdminSettingsPage,
   AdminUsersPage,
-  AdminWhitelistPage,
   AuthPage,
   DashboardPage,
   MeetingsPage,
@@ -17,6 +16,7 @@ import {
   ProfilePage,
   QuoteDetailsPage,
 } from '@/pages/ui'
+import { AdminBroadcastPage } from '@/pages/ui/admin'
 import { WelcomePage } from '@/pages/ui/welcome'
 import { ADMIN_MAP, SITE_MAP } from '@/shared/model'
 
@@ -67,6 +67,16 @@ export const appRouter = () =>
               <AdminBotPage />
             </AuthGuard>
           ),
+          children: [
+            {
+              path: ':broadcastId',
+              element: (
+                <AuthGuard admin>
+                  <AdminBroadcastPage />
+                </AuthGuard>
+              ),
+            },
+          ],
         },
         {
           path: ADMIN_MAP.settings,
@@ -89,14 +99,6 @@ export const appRouter = () =>
           element: (
             <AuthGuard admin>
               <AdminIndustriesPage />
-            </AuthGuard>
-          ),
-        },
-        {
-          path: ADMIN_MAP.whitelist,
-          element: (
-            <AuthGuard admin>
-              <AdminWhitelistPage />
             </AuthGuard>
           ),
         },

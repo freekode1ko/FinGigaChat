@@ -22,6 +22,7 @@ class BotInfoRead(BaseReadModel):
 class MessageCreate(BaseWriteModel):
     """Схема для создания сообщения"""
     message: str = Field(min_length=1)
+    user_emails: list[str] = []
 
 
 class MessageRead(BaseReadModel):

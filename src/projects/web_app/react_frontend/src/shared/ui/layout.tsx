@@ -5,9 +5,10 @@ type LayoutProps = {
   headerSlot?: React.ReactNode
   bottomMenuSlot?: React.ReactNode
   sidebarSlot?: React.ReactNode
+  adminButtonSlot?: React.ReactNode
 }
 
-const Layout = ({ headerSlot, bottomMenuSlot, sidebarSlot }: LayoutProps) => {
+const Layout = ({ headerSlot, bottomMenuSlot, sidebarSlot, adminButtonSlot }: LayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen scroll-smooth bg-background text-text">
       {headerSlot}
@@ -18,6 +19,7 @@ const Layout = ({ headerSlot, bottomMenuSlot, sidebarSlot }: LayoutProps) => {
           </aside>
         )}
         <main className="flex-1 w-full">
+          {adminButtonSlot}
           <Outlet />
         </main>
       </div>

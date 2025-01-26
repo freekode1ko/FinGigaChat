@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 
+import { selectUserData } from '@/entities/auth'
 // import { NewsList } from '@/widgets/news-list'
 import { ChartSkeleton, CustomChart, mapFinancialData } from '@/entities/charts'
 // import { useGetNewsQuery } from '@/entities/news'
@@ -8,7 +9,6 @@ import {
   useGetDashboardSubscriptionsQuery,
 } from '@/entities/quotes'
 import { selectAppTheme } from '@/entities/theme'
-import { selectUserData } from '@/entities/auth'
 import { useAppSelector, useMediaQuery } from '@/shared/lib'
 import {
   Dialog,

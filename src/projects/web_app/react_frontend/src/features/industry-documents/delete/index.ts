@@ -1,0 +1,1 @@
+export { DeleteIndustryDocumentButton } from './ui'

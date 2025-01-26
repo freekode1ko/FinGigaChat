@@ -4,9 +4,10 @@ import { Button } from '@/shared/ui'
 
 import type { IndustryDocument as IndustryDocumentType } from '../model'
 
-const IndustryDocument = ({ doc }: { doc: IndustryDocumentType }) => {
+const IndustryDocument = ({ doc, actionSlot }: { doc: IndustryDocumentType, actionSlot?: React.ReactNode }) => {
   return (
     <div className="w-full border p-2 rounded">
+      {actionSlot && <div className="absolute top-0 right-0">{actionSlot}</div>}
       <h3 className="font-bold">{doc.name}</h3>
       <div className="flex gap-2 industrys-center">
         <Button variant="ghost" size="sm" asChild>

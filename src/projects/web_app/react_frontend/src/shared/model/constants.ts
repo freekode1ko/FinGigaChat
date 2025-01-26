@@ -8,7 +8,6 @@ export const API_ENDPOINTS = {
   notes: 'notes',
   auth: 'auth',
   products: 'products',
-  whitelist: 'whitelist',
   settings: 'settings',
   commodities: 'commodities',
   industries: 'industries',
@@ -25,9 +24,9 @@ export const API_TAGS = {
   settings: 'SETTINGS',
   products: 'PRODUCTS',
   commodities: 'COMMODITIES',
-  whitelist: 'WHITELIST',
   industries: 'INDUSTRIES',
   users: 'USERS',
+  bot_messages: 'BOT_MESSAGES',
 }
 
 export const SITE_MAP = {

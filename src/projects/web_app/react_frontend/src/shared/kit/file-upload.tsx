@@ -10,11 +10,19 @@ import {
 
 interface FileFieldProps extends FileUploaderProps {
   helpText?: string
+  orientation?: 'vertical' | 'horizontal'
 }
 
-const FileUploadField = ({ helpText, ...props }: FileFieldProps) => {
+const getFilename = (filename: string) => {
+  if (filename.length > 20) {
+    return filename.slice(0, 20) + '...' 
+  }
+  return filename
+}
+
+const FileUploadField = ({ helpText, orientation = 'vertical', ...props }: FileFieldProps) => {
   return (
-    <FileUploader {...props} className="relative bg-background rounded-lg p-2">
+    <FileUploader {...props} className="relative bg-background rounded-lg p-2" orientation={orientation}>
       <FileInput
         id="fileInput"
         className="outline-dashed outline-1 outline-slate-500"
@@ -26,7 +34,7 @@ const FileUploadField = ({ helpText, ...props }: FileFieldProps) => {
             <br />
             или перетащите сюда файл
           </p>
-          {helpText && <p className="text-xs text-foreground">{helpText}</p>}
+          {helpText && <p className="text-xs text-foreground text-center">{helpText}</p>}
         </div>
       </FileInput>
       <FileUploaderContent>
@@ -35,7 +43,7 @@ const FileUploadField = ({ helpText, ...props }: FileFieldProps) => {
           props.value.map((file, idx) => (
             <FileUploaderItem key={idx} index={idx}>
               <Paperclip className="h-4 w-4 stroke-current" />
-              <span>{file.name}</span>
+              <span>{getFilename(file.name)}</span>
             </FileUploaderItem>
           ))}
       </FileUploaderContent>

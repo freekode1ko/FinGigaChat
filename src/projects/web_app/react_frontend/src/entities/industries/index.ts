@@ -1,5 +1,6 @@
 export {
   useCreateIndustryMutation,
+  useDeleteIndustryDocumentMutation,
   useDeleteIndustryMutation,
   useGetIndustriesQuery,
   useUpdateIndustryMutation,

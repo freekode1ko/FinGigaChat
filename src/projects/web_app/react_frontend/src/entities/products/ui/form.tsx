@@ -1,21 +1,12 @@
-import { Check, ChevronsUpDown } from 'lucide-react'
-import { useRef, useState } from 'react'
 import { type UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
 
-import { cn } from '@/shared/lib'
+import { Combobox } from '@/shared/kit'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  Button,
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
   Form,
   FormControl,
   FormDescription,
@@ -24,9 +15,6 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   Textarea,
 } from '@/shared/ui'
 
@@ -46,9 +34,6 @@ const ProductForm = ({
   onSubmit,
   actionSlot,
 }: ProductFormProps) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [openCombobox, setOpenCombobox] = useState(false)
-
   return (
     <Form {...form}>
       <form
@@ -86,6 +71,7 @@ const ProductForm = ({
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name="parent_id"
@@ -93,64 +79,11 @@ const ProductForm = ({
             <FormItem className="flex flex-col">
               <FormLabel>Родительский продукт</FormLabel>
               {products ? (
-                <div ref={containerRef}>
-                  <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          className={cn(
-                            'w-full justify-between text-wrap whitespace-normal text-left',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value
-                            ? transformProductsForCombobox(products).find(
-                                (product) => product.id === field.value
-                              )?.name
-                            : 'Выбрать продукт...'}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="min-w-full p-0"
-                      container={containerRef.current}
-                    >
-                      <Command>
-                        <CommandInput placeholder="Поиск по продуктам..." />
-                        <CommandList>
-                          <CommandEmpty>Таких продуктов нет</CommandEmpty>
-                          <CommandGroup>
-                            {transformProductsForCombobox(products).map(
-                              (product) => (
-                                <CommandItem
-                                  value={product.name}
-                                  key={product.id}
-                                  onSelect={() => {
-                                    form.setValue('parent_id', product.id)
-                                    setOpenCombobox(false)
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      product.id === field.value
-                                        ? 'opacity-100'
-                                        : 'opacity-0'
-                                    )}
-                                  />
-                                  {product.name}
-                                </CommandItem>
-                              )
-                            )}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <Combobox
+                  {...field}
+                  items={transformProductsForCombobox(products)}
+                  placeholder="Корневой продукт"
+                />
               ) : (
                 <div>Загружаем продукты...</div>
               )}
