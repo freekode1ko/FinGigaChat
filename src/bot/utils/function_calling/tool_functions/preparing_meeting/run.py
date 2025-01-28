@@ -103,10 +103,10 @@ async def get_preparing_for_meeting(client_name: str, special_info: str, runnabl
                 print(batches)
             for batch in batches:
                 if first:
-                    await final_message.edit_text(text=batch, parse_mode='HTML')
+                    await final_message.edit_text(text=batch, parse_mode='Markdown')
                     first = False
                     continue
-                await tg_message.answer(text=batch, parse_mode='HTML')
+                await tg_message.answer(text=batch, parse_mode='Markdown')
 
         except Exception as e:
             import traceback

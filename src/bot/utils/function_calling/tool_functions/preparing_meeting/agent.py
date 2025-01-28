@@ -33,8 +33,16 @@ def create_agent() -> Runnable:
 
     :return:
     """
-    prompt = hub.pull("ih/ih-react-agent-executor")
-    prompt.messages[0].prompt.template = BASE_PROMPT
+    prompt = \
+        """================================ System Message ================================
+    
+Ты ассистент менеджера по работе с ключевыми клиентами в крупном банке. Менеджер задает тебе какой-то вопрос или просит что-то сделать. Тебе даны инструменты, чтобы ты мог это выполнить. Ни в коем случае не используй более одного вызова инструмента в своей работе.
+
+============================= Messages Placeholder =============================
+
+{messages}
+"""
+    # prompt.messages[0].prompt.template = BASE_PROMPT
 
     llm = get_model()
 
