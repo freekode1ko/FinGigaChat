@@ -35,7 +35,7 @@ giga_chat_url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions'
 giga_scope = 'GIGACHAT_API_CORP'
 giga_model = 'GigaChat-Pro'
 
-BASE_GIGAPARSER_URL = 'http://gigaparsers.ru:7000/{}'
+BASE_GIGAPARSER_URL = 'http://parsers360.ru:7000/{}'
 QABANKER_STORE_UPDATE_URL = 'http://213.171.8.248:8000/api/v1/store/update'
 ROBERTA_CLIENT_RELEVANCE_PORT = env.str('PORT_BERT_CLIENT_RELEVANCE', default='444')
 ROBERTA_CLIENT_RELEVANCE_LINK = f'http://bert_client_relevance_container:{ROBERTA_CLIENT_RELEVANCE_PORT}/query'
