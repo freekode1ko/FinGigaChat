@@ -538,7 +538,6 @@ class ProductDocumentSender:
             logger.info(f'Формирования telegram медиа группы по Документу id={document_id} завершилось успешно')
             return media
 
-
     @staticmethod
     async def send_media_to_users(user_products: dict[int, list], bot: Bot) -> None:
         """
