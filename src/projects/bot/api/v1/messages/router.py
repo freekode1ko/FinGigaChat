@@ -49,7 +49,7 @@ async def send_message_to_users(user_msg):
                             broadcast_id=broadcast.id,
                             send_datetime=datetime.datetime.now()
                         ))
-                except Exception as e:
+                except Exception:
                     continue
             await session.commit()
 

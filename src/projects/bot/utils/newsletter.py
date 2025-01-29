@@ -539,7 +539,6 @@ class ProductDocumentSender:
             return media
 
 
-
     @staticmethod
     async def send_media_to_users(user_products: dict[int, list], bot: Bot) -> None:
         """
@@ -548,7 +547,6 @@ class ProductDocumentSender:
         :param user_products: Словарь с ID пользователей и списком сообщений для отправки
         :param bot: Бот
         """
-
         for user_ids_batch in itertools.batched(
                 user_products,
                 config.MAX_MESSAGES_PER_SECOND // max(len(x) for x in user_products.values())
