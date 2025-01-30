@@ -136,7 +136,7 @@ async def start_bot():
     dp.update.middleware(StateMiddleware())
 
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
-    await bot.set_webhook(config.WEBHOOK_FULL_URL)
+    await bot.set_webhook(config.WEBHOOK_FULL_URL, drop_pending_updates=True)
 
 
 async def main():
