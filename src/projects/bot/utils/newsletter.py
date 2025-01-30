@@ -14,12 +14,14 @@ import os
 import subprocess
 import tempfile
 import time
+from collections import defaultdict
 from pathlib import Path
 from typing import List
 
 import pandas as pd
 import sqlalchemy as sa
 from aiogram import Bot, exceptions, types
+from aiogram.enums import ParseMode
 from aiogram.utils.media_group import MediaGroupBuilder, MediaType
 
 import module.data_transformer as dt
@@ -506,61 +508,62 @@ class ProductDocumentSender:
             return documents
 
     @staticmethod
-    async def create_documents_media_group(
-            product_id: int,
-            documents: list[models.ProductDocument],
+    async def create_document_media_group(
+            document: models.ProductDocument,
     ) -> list[MediaType]:
         """
-        Создание MediaGroup для группы документов
+        Создание MediaGroup для документа т.к. решено отправлять файлы по одному
 
-        :param product_id: ID продукта
-        :param documents: Список документов
+        :param document: Документ
         :return: Медиа группа
         """
+        document_id = document.id
         try:
-            logger.info(f'Старт формирования telegram медиа группы по Продукту id={product_id}')
+            logger.info(f'Старт формирования telegram медиа группы по Документу id={document_id}')
             media = MediaGroupBuilder()
 
-            for document in documents:
-                path = Path(document.file_path)
-                if not path.exists():
-                    logger.error(f'В рассылку по Продукту id={product_id} НЕ добавлен файл {str(document.name)} '
-                                 f'по пути {str(document.file_path)}')
-                    continue
-                media.add_document(media=types.FSInputFile(path))
-                logger.info(
-                    f'В рассылку по Продукту id={product_id} добавлен файл {document.name} по пути {document.file_path}')
+            path = Path(document.file_path)
+            if not path.exists():
+                logger.error(f'В рассылку по Документу id={document_id} НЕ добавлен файл {str(document.name)} '
+                             f'по пути {str(document.file_path)}')
+                raise FileNotFoundError
+            media.add_document(media=types.FSInputFile(path))
+            logger.info(
+                f'В рассылку по Документу id={document_id} добавлен файл {document.name} по пути {document.file_path}')
             media = media.build()
         except Exception as e:
-            logger.error(f'Формирования telegram медиа группы по Продукту id={product_id} завершилось с ошибкой {str(e)}')
+            logger.error(f'Формирования telegram медиа группы по Документу id={document_id} завершилось с ошибкой {str(e)}')
             raise
         else:
-            logger.info(f'Формирования telegram медиа группы по Продукту id={product_id} завершилось успешно')
+            logger.info(f'Формирования telegram медиа группы по Документу id={document_id} завершилось успешно')
             return media
 
     @staticmethod
-    async def send_media_to_users(users_ids: list[int], media: list[MediaType], bot: Bot, product_id: int, text: str) -> None:
+    async def send_media_to_users(user_products: dict[int, list], bot: Bot) -> None:
         """
-        Отправка медиа группы пользователям
+        Отправка медиа групп пользователям
 
-        :param users_ids: Список ID пользователей для отправки сообщения
-        :param media: Медиа группа для отправки
+        :param user_products: Словарь с ID пользователей и списком сообщений для отправки
         :param bot: Бот
-        :param product_id: ID продукта
-        :param text: текст для сообщения
         """
-        logger.info(f'Начало отправки пользователям по Продукту id={product_id}')
-        caption = text if text else texts_manager.BROADCAST_PRODUCT_DEFAULT_ANSWER
-        for user_ids_batch in itertools.batched(users_ids, config.MAX_MESSAGES_PER_SECOND):
+        for user_ids_batch in itertools.batched(
+                user_products,
+                config.MAX_MESSAGES_PER_SECOND // max(len(x) for x in user_products.values())
+        ):
             for user_id in user_ids_batch:
+                logger.info(f'Начало отправки пользователю id={user_id}')
+                text = texts_manager.BROADCAST_PRODUCT_DEFAULT_ANSWER
                 try:
-                    await bot.send_message(chat_id=user_id, text=caption)
-                    await bot.send_media_group(chat_id=user_id, media=media)
+                    await bot.send_message(chat_id=user_id, text=text)
+                    for user_file in user_products[user_id]:
+                        if (description := user_file['description']) or user_file['name']:
+                            text_message = f'<b>{user_file["name"] or ""}</b>{"\n\n" if description else ""}{description or ""}'
+                            await bot.send_message(chat_id=user_id, text=text_message, parse_mode=ParseMode.HTML)
+                        await bot.send_media_group(chat_id=user_id, media=user_file['media_group'])
                 except Exception as e:
-                    logger.error(f'Во время отправки сообщения пользователю {user_id} Продукта с id={product_id} '
-                                 f'произошла ошибка {str(e)}')
+                    logger.error(f'Во время отправки сообщения пользователю {user_id} произошла ошибка {str(e)}')
                 else:
-                    logger.info(f'Сообщение пользователю {user_id} по Продукту с id={product_id} отправлено')
+                    logger.info(f'Сообщение пользователю {user_id} по продуктам отправлено')
             await asyncio.sleep(1)
 
     @staticmethod
@@ -600,8 +603,9 @@ class ProductDocumentSender:
             return
         logger.info(f'Найдено {len(products)} новых продуктов')
 
-        for product in products:
-            try:
+        try:
+            user_products = defaultdict(list)
+            for product in products:
                 logger.info(f'Начинается рассылка Продукта id={product.id}')
                 # Получение пользователей для рассылки
                 users_ids = await cls.get_users_for_product(product.id)
@@ -613,15 +617,24 @@ class ProductDocumentSender:
                 # Получение документов по продукту для рассылки
                 documents = await cls.get_product_documents(product.id)
 
-                # Создание медиа группы для ускорения отправки сообщений
-                media = await cls.create_documents_media_group(product.id, documents)
-                # Отправка сообщения пользователям
-                await cls.send_media_to_users(users_ids, media, bot, product.id, product.broadcast_message )
+                for document in documents:
+                    # Создание медиа группы для ускорения отправки сообщений
+                    media = await cls.create_document_media_group(document)
+                    for user_id in users_ids:
+                        user_products[user_id].append({
+                            'media_group': media,
+                            'description': document.description,
+                            'name': document.name,
+                        })
+
+            # Отправка сообщения пользователям
+            await cls.send_media_to_users(user_products, bot)
+
+        except Exception as e:
+            logger.error(f'Рассылка завершилась с ошибкой {str(e)}')
+        else:
+            for product in products:
                 # Обновления статуса по продукту
                 await cls.update_product_in_new_field(product.id)
-
-            except Exception as e:
-                logger.error(f'Рассылка по Продукту с id={product.id} завершилась с ошибкой {str(e)}')
-            else:
-                logger.info(f'Отправка сообщений по Продукту с id={product.id} завершена')
+                logger.info(f'Обновление по Продукту с id={product.id} завершено')
     logger.info('Рассылка Продуктов пользователям завершена')
