@@ -210,7 +210,6 @@ app.include_router(api_router, prefix='/api')
 async def bot_webhook(request: Request):
     """Точка входа для сообщений от сервера Telegram"""
     update = Update.model_validate_json(await request.body(), context={'bot': bot})
-    logger.info(f'Received update {update}')
     try:
         await dp.feed_update(bot, update)
     except Exception as e:
@@ -219,6 +218,6 @@ async def bot_webhook(request: Request):
 
 if __name__ == '__main__':
     try:
-        uvicorn.run(app, host='0.0.0.0', port=80)
+        uvicorn.run(app, host='0.0.0.0', port=config.PORT)
     except KeyboardInterrupt:
         print('bot was terminated')
