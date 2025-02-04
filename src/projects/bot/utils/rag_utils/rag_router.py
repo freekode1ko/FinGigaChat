@@ -47,7 +47,7 @@ class RAGRouter:
         self.req_kwargs = dict(
             url='/api/v1/question',
             json={'body': self.add_question_mark(self.query)},
-            timeout=config.POST_TO_SERVICE_TIMEOUT
+            timeout=config.POST_TO_RAG_SERVICE_TIMEOUT
         )
 
     async def get_rag_type(self) -> None:
