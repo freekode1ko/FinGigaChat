@@ -14,7 +14,7 @@ async def get_user_constant(constant_name: str, user_id: int) -> str | None:
     :return:                Значение пользовательской константы.
     """
     name = constant_name + str(user_id)
-    return await redis_client.get(name) or None
+    return await redis_client.get(name)
 
 
 async def update_user_constant(constant_name: str, user_id: int, value: str) -> None:
