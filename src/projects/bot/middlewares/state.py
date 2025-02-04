@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 
 from configs.config import BASE_DATETIME_FORMAT, STATE_TIMEOUT
-from db.redis.last_activity import get_last_activity, update_last_activity
+from db.redis import ACTIVITY_NAME, FON_TASK_NAME, get_user_constant, update_user_constant
 from log.bot_logger import logger
 
 
@@ -38,7 +38,7 @@ class StateMiddleware(BaseMiddleware):
         :param state:       Объект состояния.
         :return:            None или входное значение состояния.
         """
-        last_activity_date = await get_last_activity(user_id)
+        last_activity_date = await get_user_constant(ACTIVITY_NAME, user_id)
 
         if last_activity_date and raw_state:
             last_activity_date = dt.datetime.strptime(last_activity_date, BASE_DATETIME_FORMAT)
@@ -61,8 +61,14 @@ class StateMiddleware(BaseMiddleware):
         :param event:   Событие.
         :param data:    Контекстные данные.
         """
+        user_id = self.get_user_id(event)
         raw_state = data.get('raw_state')
         state = data.get('state')
+
+        has_fon_task = await get_user_constant(FON_TASK_NAME, user_id)
+        if has_fon_task:
+            await event.message.reply('⏳ Повторите свой запрос после того, как я закончу отвечать на предыдущий')
+            return
 
         try:
             if event.message.text.startswith('/') and raw_state:
@@ -72,11 +78,10 @@ class StateMiddleware(BaseMiddleware):
         except AttributeError:
             pass
 
-        user_id = self.get_user_id(event)
         if user_id is None:
             return await handler(event, data)
 
         data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state, state)
         await handler(event, data)
         activity_date = dt.datetime.utcnow().strftime(BASE_DATETIME_FORMAT)
-        await update_last_activity(user_id, activity_date)
+        await update_user_constant(ACTIVITY_NAME, user_id, activity_date)
