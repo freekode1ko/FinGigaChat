@@ -121,7 +121,7 @@ async def ask_with_dialog(
     :param state:              Состояние.
     :param message:            Message от пользователя.
     :param session:            Асинхронная сессия базы данных.
-    :param waiting_answer_msg:                Сообщение от бота с процессом формирования ответа.
+    :param waiting_answer_msg: Сообщение от бота с процессом формирования ответа.
     :param first_user_query:   Запрос от пользователя вне режима ВОС.
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
@@ -135,7 +135,7 @@ async def ask_with_dialog(
         retriever_type, response, metadata = result
         reports_data = metadata.get('reports_data_research') if metadata else None
 
-        waiting_answer_msg = await waiting_answer_msg.edit_text(
+        msg = await waiting_answer_msg.edit_text(
             text=format_response(response),
             parse_mode='HTML',
             disable_web_page_preview=True,
@@ -144,7 +144,7 @@ async def ask_with_dialog(
 
         await _add_data_to_db(
             session=session,
-            msg=waiting_answer_msg,
+            msg=msg,
             user_query=user_query,
             clear_response=response,
             retriever_type=retriever_type,
@@ -152,7 +152,7 @@ async def ask_with_dialog(
         )
 
         await redis.update_history_query(chat_id, history_query)
-        await state.update_data(rag_last_bot_msg=waiting_answer_msg.message_id, reports_data=reports_data, rag_fon_task=False)
+        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data, rag_fon_task=False)
         await redis.del_user_constant(redis.FON_TASK_NAME, chat_id)
 
 
@@ -161,7 +161,7 @@ async def ask_without_dialog(
         callback_data: RegenerateResponse,
         state: FSMContext,
         session: AsyncSession,
-):
+) -> None:
     """
     Отправляет ответ на запрос пользователя без использования истории диалога.
 
