@@ -616,7 +616,7 @@ class ProductDocumentSender:
                 # Создание медиа группы для ускорения отправки сообщений
                 media = await cls.create_documents_media_group(product.id, documents)
                 # Отправка сообщения пользователям
-                await cls.send_media_to_users(users_ids, media, bot, product.id, product.broadcast_message )
+                await cls.send_media_to_users(users_ids, media, bot, product.id, product.broadcast_message)
                 # Обновления статуса по продукту
                 await cls.update_product_in_new_field(product.id)
 
