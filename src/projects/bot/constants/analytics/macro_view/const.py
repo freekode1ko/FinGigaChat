@@ -6,6 +6,6 @@ MENU = 'analytics_macroview_menu'
 
 SECTIONS = 'analytics_macroview_sections'
 
-TITLE = 'Macro Brief'
-MESSAGE_TEXT_FORMAT = '<b>Macro Brief</b>\n\n{}'
+TITLE = 'Weekly ChekUp'
+MESSAGE_TEXT_FORMAT = '<b>Weekly ChekUp</b>\n\n{}'
 FILES_PATH = config.PATH_TO_SOURCES / 'analytics' / 'macro_view'

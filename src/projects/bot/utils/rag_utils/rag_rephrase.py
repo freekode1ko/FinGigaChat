@@ -4,7 +4,7 @@ import re
 import module.gigachat as gig
 from configs.prompts import AUGMENT_MESSAGE_PROMPT, AUGMENT_SYSTEM_PROMPT, NEW_QUERY_BY_DIALOG_PROMPT
 from constants.constants import COUNT_OF_USEFUL_LAST_MSGS
-from db.redis import get_dialog
+from db.redis import user_dialog
 from log.bot_logger import logger
 
 
@@ -37,7 +37,7 @@ async def get_rephrase_query_by_history(chat_id: int, full_name: str, query: str
     :param query:       Запрос пользователя.
     :return:            Переписанный (если нужно) на основе диалога запрос пользователя.
     """
-    user_dialog_history = await get_dialog(chat_id)
+    user_dialog_history = await user_dialog.get_dialog(chat_id)
     rephrase_query = await _make_rephrase_query_by_history(query, user_dialog_history)
 
     if matches := re.findall(r'Отдельный вопрос:(.*?)(?:\n|$)', rephrase_query):

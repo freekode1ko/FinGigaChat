@@ -41,6 +41,7 @@ from middlewares.logger import LoggingMiddleware
 from middlewares.state import StateMiddleware
 from utils import newsletter, sessions
 from utils.base import (
+    bot_send_background_tasks_msg,
     check_relevance_features,
     next_weekday_time,
     wait_until
@@ -138,6 +139,9 @@ async def start_bot():
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
     await bot.set_webhook(config.WEBHOOK_FULL_URL, drop_pending_updates=True)
 
+    # Просьба повторить попытку снова из-за прерванных фоновых задач, удаляем константы
+    await bot_send_background_tasks_msg(bot)
+
 
 async def main():
     """Точка входа для приложения"""
@@ -210,7 +214,7 @@ async def bot_webhook(request: Request):
         await dp.feed_update(bot, update)
     except Exception as e:
         logger.error(f'Ошибка при отправке ответа: {e}')
-    return JSONResponse(status_code=200, content={"ok": True})
+    return JSONResponse(status_code=200, content={'ok': True})
 
 if __name__ == '__main__':
     try:
