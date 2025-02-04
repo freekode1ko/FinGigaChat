@@ -41,7 +41,7 @@ from middlewares.logger import LoggingMiddleware
 from middlewares.state import StateMiddleware
 from utils import newsletter, sessions
 from utils.base import (
-    bot_edit_fon_tasks_msg,
+    bot_send_fon_tasks_msg,
     check_relevance_features,
     next_weekday_time,
     wait_until
@@ -139,8 +139,8 @@ async def start_bot():
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
     await bot.set_webhook(config.WEBHOOK_FULL_URL, drop_pending_updates=True)
 
-    # Редактируем сообщения из-за прерванных фоновых задач, удаляем константы
-    await bot_edit_fon_tasks_msg(bot)
+    # Просьба повторить попытку снова из-за прерванных фоновых задач, удаляем константы
+    await bot_send_fon_tasks_msg(bot)
 
 
 async def main():
