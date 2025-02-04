@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 
 from configs.config import BASE_DATETIME_FORMAT, STATE_TIMEOUT
-from db.redis import ACTIVITY_NAME, FON_TASK_NAME, get_user_constant, update_user_constant
+from db.redis.user_constants import ACTIVITY_NAME, BACKGROUND_TASK_NAME, get_user_constant, update_user_constant
 from log.bot_logger import logger
 
 
@@ -65,8 +65,8 @@ class StateMiddleware(BaseMiddleware):
         raw_state = data.get('raw_state')
         state = data.get('state')
 
-        has_fon_task = await get_user_constant(FON_TASK_NAME, user_id)
-        if has_fon_task:
+        has_background_task = await get_user_constant(BACKGROUND_TASK_NAME, user_id)
+        if has_background_task:
             await event.message.reply('⏳ Повторите свой запрос после того, как я закончу отвечать на предыдущий')
             return
 

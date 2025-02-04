@@ -2,7 +2,7 @@
 from db.redis.client import redis_client
 
 ACTIVITY_NAME = 'activity_'
-FON_TASK_NAME = 'fon_task_'
+BACKGROUND_TASK_NAME = 'background_task_'
 
 
 async def get_user_constant(constant_name: str, user_id: int) -> str | None:
@@ -14,8 +14,7 @@ async def get_user_constant(constant_name: str, user_id: int) -> str | None:
     :return:                Значение пользовательской константы.
     """
     name = constant_name + str(user_id)
-    date = await redis_client.get(name)
-    return date if date else None
+    return await redis_client.get(name) or None
 
 
 async def update_user_constant(constant_name: str, user_id: int, value: str) -> None:

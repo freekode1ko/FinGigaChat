@@ -10,7 +10,7 @@ from constants.constants import DEFAULT_RAG_ANSWER, TELEGRAM_MESSAGE_MAX_LEN
 from constants.enums import RetrieverType
 from constants.texts import texts_manager
 from db.rag_user_feedback import add_rag_activity, update_response
-from db.redis import update_dialog
+from db.redis import user_dialog
 from keyboards.rag.constructors import get_feedback_kb
 from utils.base import clear_text_from_url
 from utils.rag_utils.rag_router import RAGRouter
@@ -32,7 +32,7 @@ def format_response(answer: str) -> str:
     return answer
 
 
-async def _get_response(
+async def get_response(
         chat_id: int,
         full_name: str,
         user_query: str,
@@ -58,7 +58,7 @@ async def _get_response(
     return rag_obj.retriever_type, response['body'], response.get('metadata')
 
 
-async def _add_data_to_db(
+async def add_data_to_db(
         session: AsyncSession,
         msg: types.Message,
         user_query: str,
@@ -104,7 +104,7 @@ async def _add_data_to_db(
         )
 
     # обновление истории диалога пользователя и ИИ
-    await update_dialog(
+    await user_dialog.update_dialog(
         chat_id=msg.chat.id,
         msgs={'user': user_query, 'ai': clear_response},
         need_replace=need_replace

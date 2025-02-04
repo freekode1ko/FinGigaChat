@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from constants.constants import END_BUTTON_TXT
 from constants.enums import FeatureType
 from constants.texts import texts_manager
-from db import redis
 from db.rag_user_feedback import update_user_reaction
+from db.redis import user_constants, user_dialog
 from handlers.ai.handler import router
-from handlers.ai.rag.utils import _add_data_to_db, _get_response, format_response, update_keyboard_of_penultimate_bot_msg
+from handlers.ai.rag.utils import add_data_to_db, format_response, get_response, update_keyboard_of_penultimate_bot_msg
 from keyboards.analytics.constructors import get_few_full_research_kb
 from keyboards.rag.callbacks import GetReports, RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
@@ -47,7 +47,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext) -
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
         await update_keyboard_of_penultimate_bot_msg(message, state)
-        await redis.del_dialog_and_history_query(message.chat.id)
+        await user_dialog.del_dialog_and_history_query(message.chat.id)
         await message.answer(texts_manager.RAG_CLEAR_HISTORY)
 
 
@@ -126,12 +126,12 @@ async def ask_with_dialog(
     """
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_query = first_user_query if first_user_query else user_msg
-    await redis.update_user_constant(redis.FON_TASK_NAME, chat_id, user_query)
+    await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
     async with ChatActionSender(bot=message.bot, chat_id=chat_id):
         history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
-        result = await _get_response(chat_id, full_name, user_query, True, history_query)
+        result = await get_response(chat_id, full_name, user_query, True, history_query)
         retriever_type, response, metadata = result
         reports_data = metadata.get('reports_data_research') if metadata else None
 
@@ -142,7 +142,7 @@ async def ask_with_dialog(
             reply_markup=get_feedback_regenerate_kb(rephrase_query=True, with_reports=reports_data is not None)
         )
 
-        await _add_data_to_db(
+        await add_data_to_db(
             session=session,
             msg=msg,
             user_query=user_query,
@@ -151,9 +151,9 @@ async def ask_with_dialog(
             history_query=history_query
         )
 
-        await redis.update_history_query(chat_id, history_query)
-        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data, rag_fon_task=False)
-        await redis.del_user_constant(redis.FON_TASK_NAME, chat_id)
+        await user_dialog.update_history_query(chat_id, history_query)
+        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
+        await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
 
 
 async def ask_without_dialog(
@@ -173,16 +173,16 @@ async def ask_without_dialog(
     async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
         chat_id = call.message.chat.id  # call.message.from_user.id != chat_id, но в бд хранится user_id равный chat_id
         full_name = call.message.from_user.full_name
-        user_query = await redis.get_last_user_msg(chat_id)
-        await redis.update_user_constant(redis.FON_TASK_NAME, chat_id, user_query)
+        user_query = await user_dialog.get_last_user_msg(chat_id)
+        await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
 
         if callback_data.rephrase_query:
-            history_query = await redis.get_history_query(chat_id)
+            history_query = await user_dialog.get_history_query(chat_id)
             rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
-            result = await _get_response(chat_id, full_name, user_query, True, rephrase_query)
+            result = await get_response(chat_id, full_name, user_query, True, rephrase_query)
         else:
             rephrase_query = ''
-            result = await _get_response(chat_id, full_name, user_query, use_rephrase=False)
+            result = await get_response(chat_id, full_name, user_query, use_rephrase=False)
 
         retriever_type, response, metadata = result
         reports_data = metadata.get('reports_data_research') if metadata else None
@@ -199,7 +199,7 @@ async def ask_without_dialog(
             reply_markup=kb
         )
 
-        await _add_data_to_db(
+        await add_data_to_db(
             session,
             msg,
             user_query,
@@ -210,7 +210,7 @@ async def ask_without_dialog(
         )
 
         await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
-        await redis.del_user_constant(redis.FON_TASK_NAME, chat_id)
+        await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
 
 
 @router.callback_query(RegenerateResponse.filter())
@@ -230,7 +230,7 @@ async def ask_regenerate(
     :param session:           Асинхронная сессия базы данных.
     """
     chat_id = call.message.chat.id  # call.message.from_user.id != chat_id, но в бд хранится user_id равный chat_id
-    user_query = await redis.get_last_user_msg(chat_id)
+    user_query = await user_dialog.get_last_user_msg(chat_id)
     if not user_query:
         await update_keyboard_of_penultimate_bot_msg(call.message, state)
         await call.bot.send_message(chat_id, texts_manager.RAG_TRY_AGAIN)

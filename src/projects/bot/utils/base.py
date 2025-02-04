@@ -21,8 +21,9 @@ from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants, enums
 from constants.constants import research_footer
 from constants.texts import texts_manager
-from db import models, redis
+from db import models
 from db.database import async_session, engine
+from db.redis import redis_client, user_constants
 from db.user import get_user, get_user_role
 from log.bot_logger import logger, user_logger
 from log.logger_base import Logger
@@ -72,14 +73,14 @@ async def bot_send_msg(
     return messages
 
 
-async def bot_send_fon_tasks_msg(bot: Bot) -> None:
-    """Просьба повторить попытку снова (бот был перезагружен в процессе выполнения фоновых задач)."""
+async def bot_send_background_tasks_msg(bot: Bot) -> None:
+    """Отправка сообщения с просьбой повторить попытку снова (бот был перезагружен в процессе выполнения фоновых задач)."""
     # Получение констант и отправка сообщений
-    fon_tasks = [key async for key in redis.redis_client.scan_iter(f'{redis.FON_TASK_NAME}*')]
-    for key in fon_tasks:
+    background_tasks = [key async for key in redis_client.scan_iter(f'{user_constants.BACKGROUND_TASK_NAME}*')]
+    for key in background_tasks:
         try:
-            chat_id = int(key.replace(redis.FON_TASK_NAME, ''))
-            message_text = await redis.get_user_constant(redis.FON_TASK_NAME, chat_id)
+            chat_id = int(key.replace(user_constants.BACKGROUND_TASK_NAME, ''))
+            message_text = await user_constants.get_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
             await bot.send_message(
                 text=f'Пожалуйста, повторите свой запрос снова: <blockquote>{message_text}</blockquote>',
                 chat_id=chat_id,
@@ -89,9 +90,9 @@ async def bot_send_fon_tasks_msg(bot: Bot) -> None:
             pass
 
     # Удаление констант с фоновыми задачами
-    if fon_tasks:
-        await redis.redis_client.delete(*fon_tasks)
-        logger.info(f'Удалено {len(fon_tasks)} ключей для фоновых задач')
+    if background_tasks:
+        await redis_client.delete(*background_tasks)
+        logger.info(f'Удалено {len(background_tasks)} ключей для фоновых задач')
 
 
 async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> types.Message:

@@ -7,7 +7,7 @@ from typing import Any
 
 from aiohttp import ClientError, ClientSession
 
-from configs import prompts
+from configs import config, prompts
 from constants import enums
 from constants.constants import DEFAULT_RAG_ANSWER
 from constants.enums import HTTPMethod, RetrieverType
@@ -47,7 +47,7 @@ class RAGRouter:
         self.req_kwargs = dict(
             url='/api/v1/question',
             json={'body': self.add_question_mark(self.query)},
-            timeout=600
+            timeout=config.POST_TO_RAG_SERVICE_TIMEOUT
         )
 
     async def get_rag_type(self) -> None:

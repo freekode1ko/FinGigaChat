@@ -41,7 +41,7 @@ from middlewares.logger import LoggingMiddleware
 from middlewares.state import StateMiddleware
 from utils import newsletter, sessions
 from utils.base import (
-    bot_send_fon_tasks_msg,
+    bot_send_background_tasks_msg,
     check_relevance_features,
     next_weekday_time,
     wait_until
@@ -140,7 +140,7 @@ async def start_bot():
     await bot.set_webhook(config.WEBHOOK_FULL_URL, drop_pending_updates=True)
 
     # Просьба повторить попытку снова из-за прерванных фоновых задач, удаляем константы
-    await bot_send_fon_tasks_msg(bot)
+    await bot_send_background_tasks_msg(bot)
 
 
 async def main():
