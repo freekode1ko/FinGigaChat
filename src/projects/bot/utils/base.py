@@ -75,10 +75,10 @@ async def bot_send_msg(
 async def bot_edit_fon_tasks_msg(bot: Bot) -> None:
     """Просьба повторить попытку снова (бот был перезагружен в процессе выполнения фоновых задач)."""
     # Получение констант и отправка сообщений
-    fon_tasks = [key async for key in redis.redis_client.scan_iter(f'{redis.FON_TASK_PATTERN}*')]
+    fon_tasks = [key async for key in redis.redis_client.scan_iter(f'{redis.FON_TASK_NAME}*')]
     for key in fon_tasks:
         try:
-            chat_id = int(key.replace(redis.FON_TASK_PATTERN, ''))
+            chat_id = int(key.replace(redis.FON_TASK_NAME, ''))
             message_text = await redis.get_user_constant(redis.FON_TASK_NAME, chat_id)
             await bot.send_message(
                 text=f'Пожалуйста, повторите свой запрос снова: <blockquote>{message_text}</blockquote>',

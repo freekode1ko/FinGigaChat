@@ -4,7 +4,6 @@ from db.redis.user_constants import (
     ACTIVITY_NAME,
     del_user_constant,
     FON_TASK_NAME,
-    FON_TASK_PATTERN,
     get_user_constant,
     update_user_constant,
 )
@@ -20,7 +19,6 @@ from db.redis.user_dialog import (
 __all__ = [
     'redis_client',
     'FON_TASK_NAME',
-    'FON_TASK_PATTERN',
     'ACTIVITY_NAME',
     'del_user_constant',
     'del_dialog_and_history_query',
