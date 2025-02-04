@@ -18,7 +18,6 @@ from starlette.responses import JSONResponse
 from api.router import router as api_router
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
-from constants.texts import texts_manager
 from db.database import async_session as async_session_maker, engine
 from handlers import (
     admin,
@@ -140,9 +139,8 @@ async def start_bot():
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
     await bot.set_webhook(config.WEBHOOK_FULL_URL, drop_pending_updates=True)
 
-    # Редактируем сообщения из-за прерванных фоновых задач
+    # Редактируем сообщения из-за прерванных фоновых задач, удаляем константы
     await bot_edit_fon_tasks_msg(bot)
-    texts_manager.delete_fon_tasks()
 
 
 async def main():

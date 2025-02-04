@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pydantic.fields import FieldInfo
 
 from constants.texts.features import CONFIG_CLASSES
-from db.redis import FON_TASK_PATTERN
 from db.redis.client import redis_client_sync as redis_client
 from log.bot_logger import logger
 
@@ -21,8 +20,7 @@ class Text:
 class TextsManager:
     """Класс для хранения конфига в Redis"""
 
-    SETTINGS_PATTERN = 'settings_'
-    FON_TASK_PATTERN = f'{FON_TASK_PATTERN}*'
+    PATTERN = 'settings_'
 
     def __init__(self):
         self._config_registry: dict[str, FieldInfo] = {}
@@ -30,7 +28,7 @@ class TextsManager:
 
     def _get_redis_key(self, key: str) -> str:
         """Получает ключ константы для Redis"""
-        return f'{self.SETTINGS_PATTERN}{key}'
+        return f'{self.PATTERN}{key}'
 
     def _initialize(self) -> None:
         """Инициализация реестра параметров.
@@ -52,15 +50,6 @@ class TextsManager:
                     f'Значение "{current_value}" для "{current_key}" не совпадает со значением "{redis_values[pos]}" в Redis.'
                 )
         redis_client.mset(save_to_redis)
-
-    def delete_fon_tasks(self) -> None:
-        """Удаление констант обозначающих работу фоновых задач."""
-        keys_to_delete = redis_client.scan_iter(self.FON_TASK_PATTERN)
-        if keys := list(keys_to_delete):
-            redis_client.delete(*keys)
-            logger.info(f'Удалено {len(keys)} ключей фоновых задач')
-        else:
-            logger.info('Нет ключей фоновых задач для удаления')
 
     def get_all(self) -> list[Text]:
         """Получает все публичные константы в виде списка объектов Text"""
