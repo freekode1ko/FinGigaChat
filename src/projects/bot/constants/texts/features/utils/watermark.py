@@ -8,6 +8,6 @@ class WatermarkConfig(BaseSettings):
     FONT_TYPE: str = 'Helvetica'                            # Шрифт
     FONT_SIZE: int = 20                                     # Размер шрифта
     ROTATION: int = 45                                      # Угол наклона текста
-    FONT_COLOR_ALPHA: float = 0.3                           # коэф прозрачности
-    VERTICAL_REPETITIONS: int = 3                           # Кол-во строк на странице с вотермаркой
-    HORIZONTAL_REPETITIONS: int = 3                         # Кол-во повторений слова в строке
+    FONT_COLOR_ALPHA: float = 0.1                           # коэф прозрачности
+    VERTICAL_REPETITIONS: int = 2                           # Кол-во строк на странице с вотермаркой
+    HORIZONTAL_REPETITIONS: int = 2                         # Кол-во повторений слова в строке
