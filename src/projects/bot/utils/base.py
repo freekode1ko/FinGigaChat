@@ -21,7 +21,7 @@ from configs.config import PAGE_ELEMENTS_COUNT
 from constants import constants, enums
 from constants.constants import research_footer
 from constants.texts import texts_manager
-from db import models
+from db import models, redis
 from db.database import async_session, engine
 from db.user import get_user, get_user_role
 from log.bot_logger import user_logger
@@ -70,6 +70,21 @@ async def bot_send_msg(
         )
         messages.append(msg)
     return messages
+
+
+async def bot_edit_fon_tasks_msg(bot: Bot) -> None:
+    """Просьба повторить попытку снова (бот был перезагружен в процессе выполнения фоновых задач)."""
+    async for key in redis.redis_client.scan_iter(f'{redis.FON_TASK_PATTERN}*'):
+        try:
+            chat_id = int(key.replace(redis.FON_TASK_PATTERN, ''))
+            message_text = await redis.get_user_constant(redis.FON_TASK_NAME, chat_id)
+            await bot.send_message(
+                text=f'Пожалуйста, повторите свой запрос снова: <blockquote>{message_text}</blockquote>',
+                chat_id=chat_id,
+                parse_mode='HTML'
+            )
+        except (TelegramBadRequest, ValueError):
+            pass
 
 
 async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> types.Message:

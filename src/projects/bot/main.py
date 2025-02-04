@@ -18,6 +18,7 @@ from starlette.responses import JSONResponse
 from api.router import router as api_router
 from configs import config, newsletter_config
 from constants.commands import PUBLIC_COMMANDS
+from constants.texts import texts_manager
 from db.database import async_session as async_session_maker, engine
 from handlers import (
     admin,
@@ -41,6 +42,7 @@ from middlewares.logger import LoggingMiddleware
 from middlewares.state import StateMiddleware
 from utils import newsletter, sessions
 from utils.base import (
+    bot_edit_fon_tasks_msg,
     check_relevance_features,
     next_weekday_time,
     wait_until
@@ -136,7 +138,11 @@ async def start_bot():
     dp.update.middleware(StateMiddleware())
 
     # Отключаем обработку сообщений, которые прислали в период, когда бот был выключен
-    await bot.set_webhook(config.WEBHOOK_FULL_URL)
+    await bot.set_webhook(config.WEBHOOK_FULL_URL, drop_pending_updates=True)
+
+    # Редактируем сообщения из-за прерванных фоновых задач
+    await bot_edit_fon_tasks_msg(bot)
+    texts_manager.delete_fon_tasks()
 
 
 async def main():
@@ -206,14 +212,15 @@ app.include_router(api_router, prefix='/api')
 async def bot_webhook(request: Request):
     """Точка входа для сообщений от сервера Telegram"""
     update = Update.model_validate_json(await request.body(), context={'bot': bot})
+    logger.info(f'Received update {update}')
     try:
         await dp.feed_update(bot, update)
     except Exception as e:
         logger.error(f'Ошибка при отправке ответа: {e}')
-    return JSONResponse(status_code=200, content={"ok": True})
+    return JSONResponse(status_code=200, content={'ok': True})
 
 if __name__ == '__main__':
     try:
-        uvicorn.run(app, host='0.0.0.0', port=config.PORT)
+        uvicorn.run(app, host='0.0.0.0', port=80)
     except KeyboardInterrupt:
         print('bot was terminated')
