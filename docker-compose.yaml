@@ -159,7 +159,7 @@ services:
         environment:
             - TZ=Europe/Moscow
             - LOG_FILE=bert_client_relevance
-            - MODEL_PATH=hellcatAI/ruRoberta_client_relevance_classification_quant
+            - MODEL_PATH=hellcatAI/ruRoberta_client_relevance_classification_quant_v2
         env_file:
             - .env
         ports:
