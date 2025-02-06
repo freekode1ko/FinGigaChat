@@ -6,7 +6,7 @@
 Ссылки на модели:
 
 Клиенты:
-https://huggingface.co/hellcatAI/ruRoberta_client_relevance_classification_quant
+https://huggingface.co/hellcatAI/ruRoberta_client_relevance_classification_quant_v2
 
 Комоды:
 https://huggingface.co/hellcatAI/ruRoberta_commodity_relevance_classification_quant
