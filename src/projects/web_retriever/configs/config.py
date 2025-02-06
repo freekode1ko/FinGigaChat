@@ -27,3 +27,5 @@ N_LINKS_AFTER_TOPIC = 2  # макс количество ссылок, кото�
 N_LINKS_AFTER_ANSWER = 3  # макс количество ссылок, которые оставляем после каждого ответа
 
 DEDUPLICATION_THRESHOLD = 0.5
+
+SERPER_API_KEY = env.str('SERPER_API_KEY', default='')

@@ -4,13 +4,14 @@ import asyncio
 import re
 
 from langchain_community.chat_models import GigaChat
+from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain_community.utilities.duckduckgo_search import DuckDuckGoSearchAPIWrapper
 from pydantic import BaseModel
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from configs.config import *
 from configs.text_constants import *
-from format import format_answer
+from format import format_answer, contains_bad_answer
 
 
 class Question(BaseModel):
@@ -33,7 +34,12 @@ class WebRetriever:
                               profanity_check=False,
                               temperature=0.00001
                               )
-        self.search_engine = DuckDuckGoSearchAPIWrapper(region='ru-ru')
+        self.search_engine_first = DuckDuckGoSearchAPIWrapper(region='ru-ru')
+        self.search_engine_second = GoogleSerperAPIWrapper(serper_api_key=SERPER_API_KEY,
+                                                           gl='ru',
+                                                           hl='ru',
+                                                           num=N_WIDE_ANSWER,
+                                                           tbs='qdr:m1')
         self.logger = logger
         self.vectorizer = TfidfVectorizer()
 
@@ -107,9 +113,9 @@ class WebRetriever:
         self.logger.info(f'Дедубликация документов завершена. Осталось {len(deduplicated_docs)} документов.')
         return deduplicated_docs
 
-    async def _prepare_context_duckduck(self, result_search: list[dict]) -> tuple[str, dict[str, str]]:
+    async def _prepare_context(self, result_search: list[dict]) -> tuple[str, dict[str, str]]:
         """
-        Подготавливает результат, возвращаемый duckduck движком, для подачи в LLM.
+        Подготавливает результат, возвращаемый поисковым движком, для подачи в LLM.
 
         :param result_search: Возвращаемый результат от ретривера в json формате.
         :return: Строка для подачи в LLM, словарь с маппингом ссылок.
@@ -120,13 +126,13 @@ class WebRetriever:
         for i, result in enumerate(result_search):
             link_dict[f'<{i}>'] = result['link']
             context = ' '.join(f'{tag}: {result[tag]}' for tag in
-                               filter(lambda x: x not in ('date', 'source', 'link'), result.keys()))
+                               filter(lambda x: x not in ('source', 'link', 'position'), result.keys()))
             context += f" link: <{i}> \n"
             parsed_answer += context
         return parsed_answer, link_dict
 
     @staticmethod
-    def _post_processing_duckduck(raw_answer: str, link_dict: dict[str, str]) -> str:
+    def _post_processing(raw_answer: str, link_dict: dict[str, str]) -> str:
         """
         Заменяет токены ссылок на реальные ссылки и добавляет в конце ответа техническое сообщение.
 
@@ -160,10 +166,10 @@ class WebRetriever:
         :return: Ответ и массив ссылок, которые были использованы в ответе.
         """
         try:
-            prepared_context, link_dict = await self._prepare_context_duckduck(contexts)
+            prepared_context, link_dict = await self._prepare_context(contexts)
             raw_answer = await self._aget_answer_giga(QNA_WITH_REFS_SYSTEM, QNA_WITH_REFS_USER.format(
                 question=question, context=prepared_context))
-            answer = self._post_processing_duckduck(raw_answer=raw_answer, link_dict=link_dict)
+            answer = self._post_processing(raw_answer=raw_answer, link_dict=link_dict)
             answer = self._change_answer_to_default(answer)
             return answer, list(link_dict.values())
         except Exception as e:
@@ -179,13 +185,18 @@ class WebRetriever:
         :param: debug. Если True, то возвращает и обычный и отформатированный ответ одновременно.
         :return: Самый широкий ответ из нескольких цепочек.
         """
-        # TODO: добавить еще один интернет движок запасной, потому что дак дак может отваливаться
         self.logger.info(f'Старт обработки запроса {query}.')
         try:
-            contexts = self.search_engine.results(query, max_results=N_WIDE_ANSWER)
+            contexts = self.search_engine_first.results(query, max_results=N_WIDE_ANSWER)
+            self.logger.info(f"Получены ответы от первого движка")
         except Exception as e:
-            self.logger.error(f"Не получены ответы от duckduck по причине: {e}")
-            return [DEFAULT_ANSWER]
+            self.logger.error(f"Не получены ответы от первого движка по причине: {e}")
+            try:
+                contexts = (await self.search_engine_second.aresults(query))['organic']
+                self.logger.info(f"Получены ответы от второго движка")
+            except Exception as e:
+                self.logger.error(f"Не получены ответы от второго движка по причине: {e}")
+                return [DEFAULT_ANSWER]
         self.logger.info('Формирование ответов с разным объемом контекста.')
         tasks = [
             self._aanswer_chain(query, contexts),
@@ -198,7 +209,7 @@ class WebRetriever:
         self.logger.info(f"Обработан запрос: {query}, с ответом: {answer_and_links}")
         if debug:
             return [answer_and_links[0], format_answer(answer_and_links[0], answer_and_links[1])]
-        if answer_and_links[0] == DEFAULT_ANSWER:
+        if contains_bad_answer(answer_and_links[0]):
             return [DEFAULT_ANSWER]
         if output_format == 'tg':
             answer_and_links = format_answer(answer_and_links[0], answer_and_links[1])
