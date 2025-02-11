@@ -1,4 +1,5 @@
 """Мидлвейр для отчистки состояния, если прошло времени больше, чем STATE_TIMEOUT или пользователь ввел команду."""
+import asyncio
 import datetime as dt
 from typing import Any, Awaitable, Callable
 
@@ -6,9 +7,21 @@ from aiogram import BaseMiddleware, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 
-from configs.config import BASE_DATETIME_FORMAT, STATE_TIMEOUT
-from db.redis.user_constants import ACTIVITY_NAME, BACKGROUND_TASK_NAME, get_user_constant, update_user_constant
+from configs.config import BACKGROUND_TASK_TIMEOUT, BASE_DATETIME_FORMAT, STATE_TIMEOUT
+from db.redis import user_constants
 from log.bot_logger import logger
+
+
+async def cancel_task(task_name: str):
+    """Отмена задачи по ее имени"""
+    for t in asyncio.all_tasks():
+        if t.get_name() == task_name:
+            logger.warning(f'Отмена задачи {task_name} из-за слишком долгого выполнения')
+            t.cancel()
+            try:
+                await t
+            except asyncio.CancelledError:
+                logger.info(f'Задача {task_name} успешно отменена')
 
 
 class StateMiddleware(BaseMiddleware):
@@ -29,24 +42,48 @@ class StateMiddleware(BaseMiddleware):
         return None
 
     @staticmethod
-    async def update_raw_state_if_timeout(user_id: int, raw_state: State | None, state: FSMContext) -> State | None:
+    async def get_last_activity_date(user_id: int) -> dt.datetime | None:
+        """Получение времени последнего сообщения от бота в диалоге с пользователем."""
+        last_activity_date = await user_constants.get_user_constant(user_constants.ACTIVITY_NAME, user_id)
+        return dt.datetime.strptime(last_activity_date, BASE_DATETIME_FORMAT) if last_activity_date else None
+
+    @staticmethod
+    async def update_raw_state_if_timeout(
+            last_activity: dt.datetime,
+            raw_state: State | None,
+            state: FSMContext
+    ) -> State | None:
         """
         Обновить состояния в None, если после последнего сообщения бота прошло > STATE_TIMEOUT.
 
-        :param user_id:     ID пользователя.
-        :param raw_state:   Значение состояния.
-        :param state:       Объект состояния.
-        :return:            None или входное значение состояния.
+        :param last_activity:   Дата последней активности бота.
+        :param raw_state:       Значение состояния.
+        :param state:           Объект состояния.
+        :return:                None или входное значение состояния.
         """
-        last_activity_date = await get_user_constant(ACTIVITY_NAME, user_id)
-
-        if last_activity_date and raw_state:
-            last_activity_date = dt.datetime.strptime(last_activity_date, BASE_DATETIME_FORMAT)
-            diff = dt.datetime.utcnow() - last_activity_date
+        if last_activity and raw_state:
+            diff = dt.datetime.utcnow() - last_activity
             if diff > STATE_TIMEOUT:
                 await state.clear()
                 return None
         return raw_state
+
+    @staticmethod
+    async def delete_background_task_if_timeout(last_activity: dt.datetime, user_id: int) -> bool:
+        """
+        Обновить состояния в None, если после последнего сообщения бота прошло > STATE_TIMEOUT.
+
+        :param last_activity:   Дата последней активности бота.
+        :param user_id:         ID пользователя.
+        :return:                Удалена ли фоновая задача (True - удалена).
+        """
+        if last_activity:
+            diff = dt.datetime.utcnow() - last_activity
+            if diff > BACKGROUND_TASK_TIMEOUT:
+                await cancel_task(f'{user_constants.BACKGROUND_TASK_NAME}{user_id}')
+                await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, user_id)
+                return True
+        return False
 
     async def __call__(
             self,
@@ -62,13 +99,15 @@ class StateMiddleware(BaseMiddleware):
         :param data:    Контекстные данные.
         """
         user_id = self.get_user_id(event)
+        last_activity = await self.get_last_activity_date(user_id)
         raw_state = data.get('raw_state')
         state = data.get('state')
 
-        has_background_task = await get_user_constant(BACKGROUND_TASK_NAME, user_id)
-        if has_background_task:
-            await event.message.reply('⏳ Повторите свой запрос после того, как я закончу отвечать на предыдущий')
-            return
+        background_task = await user_constants.get_user_constant(user_constants.BACKGROUND_TASK_NAME, user_id)
+        if background_task:
+            if not await self.delete_background_task_if_timeout(last_activity, user_id):
+                await event.message.reply('⏳ Повторите свой запрос после того, как я закончу отвечать на предыдущий')
+                return
 
         try:
             if event.message.text.startswith('/') and raw_state:
@@ -81,7 +120,7 @@ class StateMiddleware(BaseMiddleware):
         if user_id is None:
             return await handler(event, data)
 
-        data['raw_state'] = await self.update_raw_state_if_timeout(user_id, raw_state, state)
+        data['raw_state'] = await self.update_raw_state_if_timeout(last_activity, raw_state, state)
         await handler(event, data)
         activity_date = dt.datetime.utcnow().strftime(BASE_DATETIME_FORMAT)
-        await update_user_constant(ACTIVITY_NAME, user_id, activity_date)
+        await user_constants.update_user_constant(user_constants.ACTIVITY_NAME, user_id, activity_date)
