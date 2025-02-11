@@ -218,11 +218,11 @@ def format_answer_from_rag_analytical(research_response: str, analytical_respons
     :return:                    Объединенный ответ.
     """
     response = ''
-    prefix = '<b>Analytical hub:</b>\n'
+    prefix = '<b>Аналитический хаб:</b>\n'
 
     if research_response and research_response != DEFAULT_RAG_ANSWER:
         prefix = '\n\n\n' + prefix
-        response = '<b>Research:</b>\n' + research_response
+        response = '<b>CIB Research:</b>\n' + research_response
     if analytical_response and analytical_response != DEFAULT_RAG_ANSWER:
         response += prefix + analytical_response
 

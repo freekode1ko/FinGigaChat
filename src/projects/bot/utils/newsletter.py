@@ -619,13 +619,18 @@ class ProductDocumentSender:
 
                 for document in documents:
                     # Создание медиа группы для ускорения отправки сообщений
-                    media = await cls.create_document_media_group(document)
-                    for user_id in users_ids:
-                        user_products[user_id].append({
-                            'media_group': media,
-                            'description': document.description,
-                            'name': document.name,
-                        })
+                    try:
+                        logger.info(f'Старт добавления Документа пользователям id={document.id}')
+                        media = await cls.create_document_media_group(document)
+                        for user_id in users_ids:
+                            user_products[user_id].append({
+                                'media_group': media,
+                                'description': document.description,
+                                'name': document.name,
+                            })
+                        logger.info(f'Конец добавления Документа пользователям id={document.id}')
+                    except Exception as e:
+                        logger.error(f'Документ не добавился пользователям id={document.id} из-за ошибки {str(e)}')
 
             # Отправка сообщения пользователям
             await cls.send_media_to_users(user_products, bot)

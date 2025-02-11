@@ -87,7 +87,7 @@ BASE_QA_ANALYTICAL_URL = 'http://193.124.47.175:8000'
 BASE_QA_WEB_URL = f'http://web_retriever_container:{WEB_RETRIEVER_PORT}'
 BASE_STATE_SUPPORT_URL = 'http://89.223.65.160:8031'
 POST_TO_SERVICE_TIMEOUT = 90
-POST_TO_RAG_SERVICE_TIMEOUT = 600
+POST_TO_RAG_SERVICE_TIMEOUT = 240
 
 research_base_url = 'https://research.sberbank-cib.com/'
 RESEARCH_SOURCE_URL = 'https://research.sberbank-cib.com/group/guest/publication?publicationId='
@@ -104,6 +104,7 @@ CHECK_WEEKLY_PULSE_UPDATE_SLEEP_TIME = 60 * 5
 USER_SUBSCRIPTIONS_LIMIT = 70
 DELETE_TG_MESSAGES_TIMEOUT = 5
 STATE_TIMEOUT = dt.timedelta(minutes=5)
+BACKGROUND_TASK_TIMEOUT = dt.timedelta(minutes=4)
 
 BASE_DATE_FORMAT = '%d.%m.%Y'
 BASE_DATETIME_FORMAT = '%d.%m.%Y %H:%M'

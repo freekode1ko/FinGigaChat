@@ -20,7 +20,7 @@ from handlers.ai.rag.utils import add_data_to_db, format_response, get_response,
 from keyboards.analytics.constructors import get_few_full_research_kb
 from keyboards.rag.callbacks import GetReports, RegenerateResponse
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
-from log.bot_logger import user_logger
+from log.bot_logger import logger, user_logger
 from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
@@ -88,7 +88,10 @@ async def set_rag_mode(
     await message.answer(texts_manager.RAG_START_STATE, reply_markup=keyboard)
     if first_user_query:
         waiting_answer_msg = await message.answer(texts_manager.RAG_FIRST_USER_QUERY.format(query=first_user_query))
-        asyncio.create_task(ask_with_dialog(message, state, session, waiting_answer_msg, first_user_query))
+        asyncio.create_task(
+            ask_with_dialog(message, state, session, waiting_answer_msg, first_user_query),
+            name=f'{user_constants.BACKGROUND_TASK_NAME}{chat_id}'
+        )
 
 
 @router.message(RagState.rag_mode)
@@ -105,7 +108,10 @@ async def handler_rag_mode(message: types.Message, state: FSMContext, session: A
     else:
         user_msg = message.text
     msg = await message.answer(texts_manager.RAG_FIRST_USER_QUERY.format(query=user_msg))
-    asyncio.create_task(ask_with_dialog(message, state, session, msg, user_msg))
+    asyncio.create_task(
+        ask_with_dialog(message, state, session, msg, user_msg),
+        name=f'{user_constants.BACKGROUND_TASK_NAME}{message.chat.id}'
+    )
 
 
 async def ask_with_dialog(
@@ -129,30 +135,36 @@ async def ask_with_dialog(
     await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
     await update_keyboard_of_penultimate_bot_msg(message, state)
 
-    async with ChatActionSender(bot=message.bot, chat_id=chat_id):
-        history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
-        result = await get_response(chat_id, full_name, user_query, True, history_query)
-        retriever_type, response, metadata = result
-        reports_data = metadata.get('reports_data_research') if metadata else None
+    try:
+        async with ChatActionSender(bot=message.bot, chat_id=chat_id):
+            history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
+            result = await get_response(chat_id, full_name, user_query, True, history_query)
+            retriever_type, response, metadata = result
+            reports_data = metadata.get('reports_data_research') if metadata else None
 
-        msg = await waiting_answer_msg.edit_text(
-            text=format_response(response),
-            parse_mode='HTML',
-            disable_web_page_preview=True,
-            reply_markup=get_feedback_regenerate_kb(rephrase_query=True, with_reports=reports_data is not None)
-        )
+            msg = await waiting_answer_msg.edit_text(
+                text=format_response(response),
+                parse_mode='HTML',
+                disable_web_page_preview=True,
+                reply_markup=get_feedback_regenerate_kb(rephrase_query=True, with_reports=reports_data is not None)
+            )
+            await add_data_to_db(
+                session=session,
+                msg=msg,
+                user_query=user_query,
+                clear_response=response,
+                retriever_type=retriever_type,
+                history_query=history_query
+            )
+            await user_dialog.update_history_query(chat_id, history_query)
+            await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
+            await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
 
-        await add_data_to_db(
-            session=session,
-            msg=msg,
-            user_query=user_query,
-            clear_response=response,
-            retriever_type=retriever_type,
-            history_query=history_query
-        )
-
-        await user_dialog.update_history_query(chat_id, history_query)
-        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
+    except (TelegramBadRequest, asyncio.TimeoutError) as e:
+        await waiting_answer_msg.edit_text(texts_manager.RAG_ERROR_ANSWER + '\n' + texts_manager.RAG_TRY_AGAIN)
+        logger.error(f'Ошибка при получении ответа от ВОС: {type(e)}: {e}')
+        # в finally не стоит переносить, так как он и при перезапуске бота удаляет константу,
+        # а она нужна для просьбы повторного запроса
         await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
 
 
@@ -170,46 +182,54 @@ async def ask_without_dialog(
     :param state:             Состояние FSM.
     :param session:           Асинхронная сессия базы данных.
     """
-    async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
-        chat_id = call.message.chat.id  # call.message.from_user.id != chat_id, но в бд хранится user_id равный chat_id
-        full_name = call.message.from_user.full_name
-        user_query = await user_dialog.get_last_user_msg(chat_id)
-        await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
+    chat_id = call.message.chat.id  # call.message.from_user.id != chat_id, но в бд хранится user_id равный chat_id
+    full_name = call.message.from_user.full_name
+    user_query = await user_dialog.get_last_user_msg(chat_id)
+    await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
 
-        if callback_data.rephrase_query:
-            history_query = await user_dialog.get_history_query(chat_id)
-            rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
-            result = await get_response(chat_id, full_name, user_query, True, rephrase_query)
-        else:
-            rephrase_query = ''
-            result = await get_response(chat_id, full_name, user_query, use_rephrase=False)
+    try:
+        async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
+            if callback_data.rephrase_query:
+                history_query = await user_dialog.get_history_query(chat_id)
+                rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
+                result = await get_response(chat_id, full_name, user_query, True, rephrase_query)
+            else:
+                rephrase_query = ''
+                result = await get_response(chat_id, full_name, user_query, use_rephrase=False)
 
-        retriever_type, response, metadata = result
-        reports_data = metadata.get('reports_data_research') if metadata else None
-        with_reports = reports_data is not None
-        if rephrase_query:
-            kb = get_feedback_regenerate_kb(initially_query=True, with_reports=with_reports)
-        else:
-            kb = get_feedback_kb(with_reports=with_reports)
+            retriever_type, response, metadata = result
+            reports_data = metadata.get('reports_data_research') if metadata else None
+            with_reports = reports_data is not None
+            if rephrase_query:
+                kb = get_feedback_regenerate_kb(initially_query=True, with_reports=with_reports)
+            else:
+                kb = get_feedback_kb(with_reports=with_reports)
 
-        msg = await call.message.edit_text(
-            text=format_response(response),
-            parse_mode='HTML',
-            disable_web_page_preview=True,
-            reply_markup=kb
-        )
+            msg = await call.message.edit_text(
+                text=format_response(response),
+                parse_mode='HTML',
+                disable_web_page_preview=True,
+                reply_markup=kb
+            )
 
-        await add_data_to_db(
-            session,
-            msg,
-            user_query,
-            response,
-            retriever_type,
-            rephrase_query=rephrase_query,
-            need_replace=True
-        )
+            await add_data_to_db(
+                session,
+                msg,
+                user_query,
+                response,
+                retriever_type,
+                rephrase_query=rephrase_query,
+                need_replace=True
+            )
 
-        await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
+            await state.update_data(rag_last_bot_msg=msg.message_id, reports_data=reports_data)
+            await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
+
+    except (TelegramBadRequest, asyncio.TimeoutError) as e:
+        await call.message.edit_text(texts_manager.RAG_ERROR_ANSWER + '\n' + texts_manager.RAG_TRY_AGAIN)
+        logger.error(f'Ошибка при получении ответа от ВОС: {type(e)}: {e}')
+        # в finally не стоит переносить, так как он и при перезапуске бота удаляет константу,
+        # а она нужна для просьбы повторного запроса
         await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
 
 
@@ -236,7 +256,10 @@ async def ask_regenerate(
         await call.bot.send_message(chat_id, texts_manager.RAG_TRY_AGAIN)
 
     await call.message.edit_text(texts_manager.RAG_FIRST_USER_QUERY.format(query=user_query))
-    asyncio.create_task(ask_without_dialog(call, callback_data, state, session))
+    asyncio.create_task(
+        ask_without_dialog(call, callback_data, state, session),
+        name=f'{user_constants.BACKGROUND_TASK_NAME}{chat_id}'
+    )
 
 
 @router.callback_query(F.data.endswith('like'))
