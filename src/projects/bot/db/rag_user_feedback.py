@@ -97,7 +97,7 @@ async def get_user_reaction(session: AsyncSession, chat_id: int, msg_id: int) ->
 
     :param session:     Асинхронная сессия базы данных.
     :param chat_id:     Id чата с пользователем.
-    :param msg_id:  Id сообщения с вопросом от пользователя.
+    :param msg_id:      Id сообщения с вопросом от пользователя.
     :return:            Значение реакции пользователя на ответ от РАГ.
     """
     stmt = (
