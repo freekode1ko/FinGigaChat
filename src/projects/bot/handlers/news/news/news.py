@@ -412,8 +412,8 @@ async def process_user_message(
         if function_to_call:
             await function_to_call(message, **kwargs)
         else:
-            await state.set_state(rag.RagState.rag_query)
-            await state.update_data(rag_query=user_msg)
+            await state.set_state(rag.RagState.rag_user_msg)
+            await state.update_data(rag_user_msg=message)
             await send_nearest_subjects(message, user_msg, features)
 
 
