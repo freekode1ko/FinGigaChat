@@ -97,6 +97,9 @@ async def add_data_to_db(
 async def update_keyboard_of_penultimate_bot_msg(session: AsyncSession, message: types.Message, state: FSMContext) -> None:
     """Обновляет клавиатуру предпоследнего сообщения от рага: убирает кнопку генерации."""
     data = await state.get_data()
+    if not data.get('rag_user_msg'):
+        return
+
     reaction = await get_user_reaction(session, message.chat.id, data['rag_user_msg'].message_id)
     if reaction is not None:
         return
