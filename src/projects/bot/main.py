@@ -213,7 +213,7 @@ async def bot_webhook(request: Request):
     try:
         await dp.feed_update(bot, update)
     except Exception as e:
-        logger.error(f'Ошибка при отправке ответа: {e}')
+        logger.exception(f'Ошибка при отправке ответа: {e}')
     return JSONResponse(status_code=200, content={'ok': True})
 
 if __name__ == '__main__':

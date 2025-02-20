@@ -13,7 +13,7 @@ class RAGTexts(BaseSettings):
 
     RAG_FINISH_STATE: str = f'Напишите «{END_BUTTON_TXT}» для завершения общения'
     RAG_START_STATE: str = 'Начато общение с Базой Знаний\n\n' + RAG_FINISH_STATE
-    RAG_FIRST_USER_QUERY: str = 'Подождите...\nФормирую ответ на запрос: "{query}"\n'
+    RAG_WAITING_ANSWER: str = 'Подождите...\nФормирую ответ на запрос: "{query}"'
 
     RAG_TRY_AGAIN: str = 'Напишите, пожалуйста, свой запрос еще раз'
     RAG_ERROR_ANSWER: str = 'Извините, я пока не могу ответить на ваш запрос.'

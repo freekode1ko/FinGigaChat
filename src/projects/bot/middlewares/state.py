@@ -106,7 +106,11 @@ class StateMiddleware(BaseMiddleware):
         background_task = await user_constants.get_user_constant(user_constants.BACKGROUND_TASK_NAME, user_id)
         if background_task:
             if not await self.delete_background_task_if_timeout(last_activity, user_id):
-                await event.message.reply('⏳ Повторите свой запрос после того, как я закончу отвечать на предыдущий')
+                waiting_msg = '⏳ Повторите свой запрос после того, как я закончу отвечать на предыдущий'
+                if event.message:
+                    await event.message.reply(waiting_msg)
+                else:
+                    await event.bot.send_message(user_id, waiting_msg)
                 return
 
         try:

@@ -3,7 +3,7 @@ import asyncio
 import json
 import re
 from copy import deepcopy
-from typing import Any
+from typing import Any, NamedTuple
 
 from aiohttp import ClientError, ClientSession
 
@@ -17,10 +17,17 @@ from db.database import async_session
 from log.bot_logger import logger, user_logger
 from module.gigachat import GigaChat
 from utils.base import is_has_access_to_feature
-from utils.rag_utils.rag_format import extract_summarization, format_answer_from_rag_analytical
+from utils.rag_utils.rag_format import format_rag_answer
 from utils.sessions import RagQaAnalyticalClient, RagQaBankerClient, RagStateSupportClient, RagWebClient
 
 giga = GigaChat(logger)
+
+
+class RagResponse(NamedTuple):
+    """Формат ответа от Раг сервиса."""
+
+    answers: list = [DEFAULT_RAG_ANSWER, ]
+    metadata: dict[str, list[dict[str, str | int]]] = dict()
 
 
 class RAGRouter:
@@ -85,12 +92,6 @@ class RAGRouter:
         query = query.strip()
         return query if query[-1] == '?' else query + '?'
 
-    async def get_response(self) -> str | dict[str, Any]:
-        """Вызов ретривера относительно типа ретривера."""
-        if self.retriever_type == RetrieverType.other:
-            return DEFAULT_RAG_ANSWER
-        return await self.get_combination_response()
-
     async def rag_qa_banker(self) -> dict[str, Any]:
         """Формирование параметров к запросу API по новостям и получение ответа."""
         session = RagQaBankerClient().session
@@ -146,11 +147,7 @@ class RAGRouter:
         return rag_error_msg
 
     async def _request_to_giga(self) -> str:
-        """
-        Получение и форматирование ответа от GigaChat.
-
-        :return:   Оригинальный ответ GigaChat и отформатированный ответ.
-        """
+        """Получение и форматирование ответа от GigaChat."""
         try:
             giga_answer = await giga.aget_giga_answer(text=self.query)
             user_logger.info(f'*{self.chat_id}* {self.full_name} - "{self.query}" : '
@@ -162,29 +159,30 @@ class RAGRouter:
                                  f'GigaChat не сформировал ответ по причине: {e}"')
         return giga_answer
 
-    async def get_combination_response(self) -> dict[str, Any]:
-        """Комбинация ответов от разных рагов."""
+    async def get_response(self) -> RagResponse:
+        """Получение ответов от разных рагов."""
+        if self.retriever_type == RetrieverType.other:
+            return RagResponse()
+
         banker_json, analytical_json, web_json = await asyncio.gather(
-            self.rag_qa_banker(), self.rag_qa_analytical(), self.rag_web()
+            self.rag_qa_banker(),
+            self.rag_qa_analytical(),
+            self.rag_web()
         )
-        banker, web = banker_json['body'], web_json['body']
-        research, analytical_hub = analytical_json['body_research'], analytical_json['body_analytical_hub']
-        analytical = format_answer_from_rag_analytical(research, analytical_hub)
-        logger.debug('Тексты до объединения ответов:')
-        logger.debug(f'Ответ новостного рага: {banker}')
-        logger.debug(f'Ответ веб ретривера: {web}')
-        logger.debug(f'Ответ рага по аналитическим обзорам: {analytical}')
-        banker = extract_summarization(banker, web)
-        logger.debug(f'Ответ после объединения новостного и веб: {banker}')
-        response = self.format_combination_answer(banker, analytical)
+        banker = format_rag_answer(banker_json['body'])
+        research = format_rag_answer(analytical_json['body_research'], '<b>Мнение CIB Research:</b>\n\n')
+        analytical_hub = format_rag_answer(analytical_json['body_analytical_hub'], '<b>Мнение аналитического хаба:</b>\n\n')
+
+        if not (answers := list(filter(None, [banker, research, analytical_hub]))):
+            return RagResponse()
         metadata = await self.prepare_reports_data(research, analytical_json.get('metadata'))
-        return {'body': response, 'metadata': metadata}
+        return RagResponse(answers=answers, metadata=metadata)
 
     async def prepare_reports_data(
             self,
             answer: str,
             metadata: dict[str, list[dict[str, str]]] | None
-    ) -> dict[str, list[dict[str, str | int]]] | None:
+    ) -> dict[str, list[dict[str, str | int]]]:
         """
         Подготавливает данные отчетов, добавляя к ним id отчета.
 
@@ -193,7 +191,7 @@ class RAGRouter:
         :return:            Обновленные метаданные с id отчетов.
         """
         if not answer or answer in self.RAG_BAD_ANSWERS or not metadata or 'reports_data_research' not in metadata:
-            return
+            return dict()
 
         reports_data = metadata['reports_data_research']
         has_ids = False
@@ -208,21 +206,3 @@ class RAGRouter:
         else:
             metadata.pop('reports_data_research')
         return metadata
-
-    def format_combination_answer(self, banker: str, research: str) -> str:
-        """
-        Форматирование, комбинация ответов от рага по новостям и рага рисерч.
-
-        :param banker:    Ответ от рага по новостям.
-        :param research:  Ответ от рага рисерч.
-        :return:          Комбинированный ответ.
-        """
-        if banker == research == texts_manager.RAG_ERROR_ANSWER:
-            return texts_manager.RAG_ERROR_ANSWER
-
-        response = ''
-        if banker not in self.RAG_BAD_ANSWERS:
-            response += banker
-        if research not in self.RAG_BAD_ANSWERS:
-            response += texts_manager.RAG_RESEARCH_SUFFIX.format(answer=research)
-        return response.strip() or DEFAULT_RAG_ANSWER
