@@ -55,7 +55,7 @@ async def update_response(
 
     :param session:          Асинхронная сессия базы данных.
     :param chat_id:          Id чата с пользователем.
-    :param msg_id:       Id сообщения от бота.
+    :param msg_id:           Id сообщения с вопросом от пользователя.
     :param response:         Ответ ретривера (сообщение от бота).
     :param rephrase_query:   Перефразированный с помощью GigaChat запрос пользователя.
     """
@@ -79,7 +79,7 @@ async def update_user_reaction(session: AsyncSession, chat_id: int, msg_id: int,
 
     :param session:     Асинхронная сессия базы данных.
     :param chat_id:     Id чата с пользователем.
-    :param msg_id:  Id сообщения с вопросом от пользователя.
+    :param msg_id:      Id сообщения с вопросом от пользователя.
     :param reaction:    Реакция пользователя на ответ RAG-системы (True/False).
     """
     stmt = (
