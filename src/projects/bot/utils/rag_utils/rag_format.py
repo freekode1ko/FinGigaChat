@@ -5,11 +5,9 @@ from copy import copy
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from constants.constants import DEFAULT_RAG_ANSWER
-
 BEGINNING_LEN = 30
 
-BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)|(в базе знаний нет)|(не могу ответить)|' \
+BAD_PATTERN = '(ответ сгенерирован)|(нет ответа)|(в базе знаний нет)|' \
               '(в предоставленных отрывках нет)|(рекомендуется обратиться)|(не указано в )|(не указаны в )' \
               '|(отсутствуют в представленных документах)|(нет информации)|(информации нет)'
 LINKS_PATTERN = '(https)|(html)'
@@ -209,23 +207,9 @@ def extract_summarization(news_answer: str, duckduck_answer: str, threshold=0.2)
     return '\n\n'.join(filtered for i in ans if (filtered := filter_endings(i)))
 
 
-def format_answer_from_rag_analytical(research_response: str, analytical_response: str) -> str:
-    """
-    Объединить ответы от аналитического РАГа.
-
-    :param research_response:   Ответ от аналитического Рага по данным Research.
-    :param analytical_response: Ответ от аналитического Рага по данным Analytical Hub.
-    :return:                    Объединенный ответ.
-    """
-    response = ''
-    prefix = '<b>Аналитический хаб:</b>\n'
-
-    if research_response and research_response != DEFAULT_RAG_ANSWER:
-        prefix = '\n\n\n' + prefix
-        response = '<b>CIB Research:</b>\n' + research_response
-    if analytical_response and analytical_response != DEFAULT_RAG_ANSWER:
-        response += prefix + analytical_response
-
-    if not response:
-        return DEFAULT_RAG_ANSWER
-    return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', response)
+def format_rag_answer(answer: str, prefix: str = '') -> str | None:
+    """Формотирование ответа от РАГ для отправки в телеграм."""
+    if answer and not contains_bad_pattern(answer):
+        answer = re.sub(r'\n{3,}', '\n\n', prefix + answer)
+        return re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', answer).strip()
+    return

@@ -1,7 +1,7 @@
 """Методы по взаимодействию с таблицей UserRagFeedback в БД."""
 import datetime
 
-from sqlalchemy import insert, update
+from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.enums import RetrieverType
@@ -46,7 +46,7 @@ async def add_rag_activity(
 async def update_response(
         session: AsyncSession,
         chat_id: int,
-        bot_msg_id: int,
+        msg_id: int,
         response: str,
         rephrase_query: str = ''
 ) -> None:
@@ -55,7 +55,7 @@ async def update_response(
 
     :param session:          Асинхронная сессия базы данных.
     :param chat_id:          Id чата с пользователем.
-    :param bot_msg_id:       Id сообщения от бота.
+    :param msg_id:           Id сообщения с вопросом от пользователя.
     :param response:         Ответ ретривера (сообщение от бота).
     :param rephrase_query:   Перефразированный с помощью GigaChat запрос пользователя.
     """
@@ -66,26 +66,42 @@ async def update_response(
 
     stmt = (
         update(RAGUserFeedback).
-        where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == bot_msg_id).
+        where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == msg_id).
         values(values)
     )
     await session.execute(stmt)
     await session.commit()
 
 
-async def update_user_reaction(session: AsyncSession, chat_id: int, bot_msg_id: int, reaction: bool) -> None:
+async def update_user_reaction(session: AsyncSession, chat_id: int, msg_id: int, reaction: bool) -> None:
     """
     Добавление обратной связи от пользователя по использованию RAG-системы.
 
     :param session:     Асинхронная сессия базы данных.
     :param chat_id:     Id чата с пользователем.
-    :param bot_msg_id:  Id сообщения от бота.
+    :param msg_id:      Id сообщения с вопросом от пользователя.
     :param reaction:    Реакция пользователя на ответ RAG-системы (True/False).
     """
     stmt = (
         update(RAGUserFeedback)
-        .where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == bot_msg_id)
+        .where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == msg_id)
         .values(reaction=reaction)
     )
     await session.execute(stmt)
     await session.commit()
+
+
+async def get_user_reaction(session: AsyncSession, chat_id: int, msg_id: int) -> bool | None:
+    """
+    Получение обратной связи от пользователя по использованию RAG-системы.
+
+    :param session:     Асинхронная сессия базы данных.
+    :param chat_id:     Id чата с пользователем.
+    :param msg_id:      Id сообщения с вопросом от пользователя.
+    :return:            Значение реакции пользователя на ответ от РАГ.
+    """
+    stmt = (
+        select(RAGUserFeedback.reaction)
+        .where(RAGUserFeedback.chat_id == chat_id, RAGUserFeedback.bot_msg_id == msg_id)
+    )
+    return await session.scalar(stmt)
