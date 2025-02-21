@@ -43,6 +43,7 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext, s
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
+    :param session:     Сессия к бд.
     """
     state_name = await state.get_state()
     if state_name == RagState.rag_mode:
