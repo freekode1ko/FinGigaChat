@@ -72,34 +72,35 @@ async def help_handler(message: types.Message | types.CallbackQuery, state: FSMC
 
 
 @has_access_to_feature(FeatureType.common)
-async def finish_state(message: types.Message, state: FSMContext, msg_text: str) -> None:
+async def finish_state(message: types.Message, state: FSMContext, msg_text: str, session: AsyncSession) -> None:
     """
     Позволяет пользователю очищать клавиатуру и выходить из любого состояния.
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
     :param msg_text:    Ответное сообщение пользователю.
+    :param session:     Сессия к бд.
     """
     if state is None:
         return
 
-    await clear_user_dialog_if_need(message, state)  # очистка истории диалога, если состояние RagState
+    await clear_user_dialog_if_need(message, state, session)  # очистка истории диалога, если состояние RagState
     await state.clear()
     await message.reply(msg_text, reply_markup=types.ReplyKeyboardRemove())
 
 
 @router.message(Command('exit', 'завершить'))
 @router.message(F.text.lower().in_({'exit', 'завершить'}))
-async def exit_handler(message: types.Message, state: FSMContext) -> None:
+async def exit_handler(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Вызов метода по выходу из состояния."""
-    await finish_state(message, state, 'Завершено')
+    await finish_state(message, state, 'Завершено', session)
 
 
 @router.message(Command('cancel', 'отмена'))
 @router.message(F.text.lower().in_({'cancel', 'отмена'}))
-async def cancel_handler(message: types.Message, state: FSMContext) -> None:
+async def cancel_handler(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """Вызов метода по выходу из состояния."""
-    await finish_state(message, state, 'Отменено')
+    await finish_state(message, state, 'Отменено', session)
 
 
 @router.callback_query(F.data.startswith(CANCEL_CALLBACK))
