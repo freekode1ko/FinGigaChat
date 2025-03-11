@@ -41,9 +41,9 @@ async def call_reports_handler_create_new(callback_query: CallbackQuery, state: 
     await callback_query.message.answer(
         'Вы перешли в режим записи заметки, следуйте инструкциям, чтобы завершить процесс.',
     )
-    # await callback_query.message.answer(
-    #     'Пожалуйста, не включайте в заметку конфиденциальную информацию',
-    # )
+    await callback_query.message.answer(
+        'Пожалуйста, не включайте в заметку конфиденциальную информацию',
+    )
     await callback_query.message.answer(
         'Введите, пожалуйста, заголовок заметки:',
     )

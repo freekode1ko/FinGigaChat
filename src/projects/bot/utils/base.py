@@ -378,10 +378,8 @@ async def __create_fin_table(message: types.Message | types.CallbackQuery, clien
         col_width=4, alias=f'{client_name} - {table_type}'.strip().upper(), fin=True, font_size=16
     )
     photo = types.FSInputFile(png_path)
-    if isinstance(message, types.Message):
-        await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
-    elif isinstance(message, types.CallbackQuery):
-        await message.message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+    message = message if isinstance(message, types.Message) else message.message
+    await message.answer_photo(photo, caption='', parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
 
 async def process_fin_table(message: types.Message | types.CallbackQuery, client_name: str,
@@ -501,7 +499,8 @@ async def send_or_edit(
         message: types.CallbackQuery | types.Message,
         msg_text: str,
         keyboard: Optional[types.InlineKeyboardMarkup] = None,
-        parse_mode: Optional[str] = 'HTML'
+        parse_mode: Optional[str] = 'HTML',
+        protect_content: bool | str = False,
 ) -> None:
     """
     Отправляет новое сообщение, если message это types.Message
@@ -512,10 +511,11 @@ async def send_or_edit(
     :param msg_text: Текст сообщения, длина 1-4096
     :param keyboard: Inline клавиатура
     :param parse_mode: Режим парсинга текста для его форматирования
+    :param protect_content: Защита от пересылки
     """
     # Проверяем, что за тип апдейта. Если Message - отправляем новое сообщение
     if isinstance(message, types.Message):
-        await message.answer(msg_text, reply_markup=keyboard, parse_mode=parse_mode)
+        await message.answer(msg_text, reply_markup=keyboard, parse_mode=parse_mode, protect_content=protect_content)
 
     # Если CallbackQuery - изменяем это сообщение
     else:

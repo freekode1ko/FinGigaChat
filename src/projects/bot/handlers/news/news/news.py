@@ -166,8 +166,15 @@ async def send_newsletter_by_button(callback_query: types.CallbackQuery) -> None
     media = MediaGroupBuilder(caption=weekly_pulse_date_str)
     for path in img_path_list:
         media.add_photo(types.FSInputFile(path))
-    await callback_query.message.answer(text=newsletter, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
-    await callback_query.message.answer_media_group(media=media.build(), protect_content=texts_manager.PROTECT_CONTENT)
+    await callback_query.message.answer(
+        text=newsletter,
+        parse_mode='HTML',
+        # protect_content=texts_manager.PROTECT_CONTENT,
+    )
+    await callback_query.message.answer_media_group(
+        media=media.build(),
+        # protect_content=texts_manager.PROTECT_CONTENT,
+    )
     user_logger.debug(f'*{user_id}* Пользователю пришла рассылка "{title}" по кнопке')
 
 
@@ -202,7 +209,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str, features:
     await message.answer(
         texts_manager.COMMON_CLARIFYING_REQUEST,
         parse_mode='HTML',
-        protect_content=texts_manager.PROTECT_CONTENT,
+        # protect_content=texts_manager.PROTECT_CONTENT,
         disable_web_page_preview=True,
         reply_markup=keyboard,
     )
@@ -361,7 +368,11 @@ async def is_eco_in_message(
     """
     if flag := bool(process.extractOne(user_msg.lower(), aliases.ECO_NAMES, score_cutoff=score_cutoff)):
         msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}">Актуальные ETC</a>'  # TODO: add to quotes redis texts?
-        await message.answer(msg_text, parse_mode='HTML', protect_content=False)
+        await message.answer(
+            msg_text,
+            parse_mode='HTML',
+            # protect_content=False,
+        )
     return flag
 
 

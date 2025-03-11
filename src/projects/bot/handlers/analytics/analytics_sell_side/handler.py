@@ -241,7 +241,10 @@ async def get_last_actual_research(
         await send_researches_to_user(callback_query.bot, user, last_research)
         await send_full_copy_of_message(callback_query)
     else:
-        await callback_query.message.answer(texts_manager.ANAL_NOT_REPORT)
+        await callback_query.message.answer(
+            texts_manager.ANAL_NOT_REPORT,
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -486,7 +489,10 @@ async def economy_monthly_callback(
         await send_researches_to_user(callback_query.bot, user, last_research)
         await send_full_copy_of_message(callback_query)
     else:
-        await callback_query.message.answer(texts_manager.ANAL_NOT_REPORT)
+        await callback_query.message.answer(
+            texts_manager.ANAL_NOT_REPORT,
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 
@@ -540,7 +546,10 @@ async def get_researches_over_period(
         await send_researches_to_user(callback_query.bot, user, researches_df)
         await send_full_copy_of_message(callback_query)
     else:
-        await callback_query.message.answer(texts_manager.ANAL_NOT_REPORT)
+        await callback_query.message.answer(
+            texts_manager.ANAL_NOT_REPORT,
+            protect_content=texts_manager.PROTECT_CONTENT,
+        )
 
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}" : получил отчеты с {research_type_id=:} за {days} дней')
 
@@ -592,7 +601,7 @@ async def get_client_inavigator_source(
     else:
         msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=research_info.name)
 
-    await callback_query.message.answer(msg_text, parse_mode='HTML')
+    await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 

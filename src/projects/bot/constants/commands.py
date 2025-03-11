@@ -19,7 +19,7 @@ PUBLIC_COMMANDS: list[dict] = [
     },
     {
         'command': 'products_menu',
-        'description': 'Продукты (Beta)',
+        'description': 'Продукты',
     },
     {
         'command': 'subscriptions_menu',
@@ -29,9 +29,13 @@ PUBLIC_COMMANDS: list[dict] = [
         'command': 'notes',
         'description': 'Заметки',
     },
+    # {
+    #     'command': 'meeting',
+    #     'description': 'Встречи (Beta)',
+    # },
     {
-        'command': 'meeting',
-        'description': 'Встречи (Beta)',
+        'command': 'industry_BI',
+        'description': 'Отраслевые дэшборды',
     },
     {
         'command': 'knowledgebase',
