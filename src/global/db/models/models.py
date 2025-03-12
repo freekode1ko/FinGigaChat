@@ -904,8 +904,8 @@ class UsersQuotesSubscriptions(Base):
     __table_args__ = {'comment': 'Таблица подписок пользователей на котировки'}
 
     id = sa.Column(sa.Integer, primary_key=True, )
-    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('registered_user.user_id'), nullable=False, comment='Пользователь')
-    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id'), nullable=False, comment='Котировка')
+    user_id = sa.Column(sa.BigInteger, sa.ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False, comment='Пользователь')
+    quote_id = sa.Column(sa.Integer, sa.ForeignKey('quotes.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False, comment='Котировка')
     view_size = sa.Column(
         sa.Enum(SizeEnum),
         nullable=False,
