@@ -429,7 +429,7 @@ async def data_mart_body(message: types.Message) -> None:
             png_path = config.PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
 
             photo = types.FSInputFile(png_path)
-            await __sent_photo_and_msg(message, photo, title='')
+            await __sent_photo_and_msg(message, photo, title='', protect_content=texts_manager.PROTECT_CONTENT)
     user_logger.info(f'*{message.from_user.id}* {message.from_user.full_name} - {message.text}')
 
 
