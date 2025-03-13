@@ -99,7 +99,9 @@ async def get_msg_from_admin(message: types.Message, state: FSMContext) -> None:
     for user_id in users_ids:
         try:
             user_logger.debug(f'*{user_id}* Отправка пользователю сообщения от админа')
-            m = await send_msg_to(message.bot, user_id, msg, file_name, file_type)
+            m = await send_msg_to(
+                message.bot, user_id, msg, file_name, file_type, protect_content=texts_manager.PROTECT_CONTENT,
+            )
             saved_messages.append(dict(user_id=user_id, message_id=m.message_id, message_type=newsletter_type))
             user_logger.debug(f'*{user_id}* Пользователю пришло сообщение {m.message_id} от админа')
             successful_sending += 1
