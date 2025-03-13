@@ -61,7 +61,11 @@ async def help_handler(message: types.Message | types.CallbackQuery, state: FSMC
 
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text if user_msg is None else user_msg
     if is_user_email_exist(chat_id):
-        to_pin = await message.answer(texts_manager.HELP_TEXT, protect_content=texts_manager.PROTECT_CONTENT)
+        to_pin = await message.answer(
+            texts_manager.HELP_TEXT,
+            parse_mode='HTML',
+            # protect_content=texts_manager.PROTECT_CONTENT,
+        )
         msg_id = to_pin.message_id
         await message.bot.pin_chat_message(chat_id=chat_id, message_id=msg_id)
 
@@ -221,17 +225,25 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
                             f'нужный код: {reg_code}, осталось попыток: {attempts_left}.')
 
 
-@router.message(Command('meeting'))
+# @router.message(Command('meeting'))
+# @has_access_to_feature(FeatureType.meeting)
+# async def open_meeting_app(message: types.Message) -> None:
+#     """Открытие веб приложения со встречами."""
+#     markup = types.InlineKeyboardMarkup(
+#         inline_keyboard=[
+#             [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/meeting/show'))],
+#         ],
+#         resize_keyboard=True
+#     )
+#     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+
+
+@router.message(Command('industry_bi'))
 @has_access_to_feature(FeatureType.meeting)
 async def open_meeting_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
-    markup = types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [types.InlineKeyboardButton(text='Мои встречи', web_app=WebAppInfo(url=f'{config.WEB_APP_URL}/meeting/show'))],
-        ],
-        resize_keyboard=True
-    )
-    await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
+    msg = f'<a href="{config.INDUSTRY_EXPERTISE}" >Отраслевая экспертиза</a>'
+    await message.answer(msg, parse_mode='HTML', disable_web_page_preview=True)
 
 
 @router.message(Command('web_app'))

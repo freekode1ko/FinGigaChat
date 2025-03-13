@@ -10,6 +10,7 @@ from aiogram.types import Message
 
 from configs import config
 from constants import enums
+from constants.texts import texts_manager
 from db.api.client import client_db
 from log.bot_logger import logger, user_logger
 from module.article_process import ArticleProcess
@@ -50,7 +51,7 @@ async def get_client_financial_indicators(
         )
     else:
         msg_text = f'По компании {client["name"]} отсутствуют финансовые показатели'
-        await callback_query.message.answer(msg_text, parse_mode='HTML')
+        await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 

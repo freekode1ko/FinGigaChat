@@ -557,7 +557,10 @@ class ProductDocumentSender:
                     await bot.send_message(chat_id=user_id, text=text)
                     for user_file in user_products[user_id]:
                         if (description := user_file['description']) or user_file['name']:
-                            text_message = f'<b>{user_file["name"] or ""}</b>{"\n\n" if description else ""}{description or ""}'
+                            text_message = (
+                                f'<b>{user_file["name"] or ""}</b>\n\n'
+                                f'{description or ""}'
+                            )
                             await bot.send_message(chat_id=user_id, text=text_message, parse_mode=ParseMode.HTML)
                         await bot.send_media_group(chat_id=user_id, media=user_file['media_group'])
                 except Exception as e:

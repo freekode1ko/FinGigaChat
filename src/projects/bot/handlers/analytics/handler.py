@@ -48,7 +48,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
-    await send_or_edit(message, texts_manager.ANAL_START, keyboard)
+    await send_or_edit(message, texts_manager.ANAL_START, keyboard, protect_content=texts_manager.PROTECT_CONTENT)
 
 
 @router.callback_query(callbacks.AnalyticsMenu.filter())
@@ -104,7 +104,7 @@ async def get_full_version_of_research(
     research = await research_db.get(callback_data.research_id)
     formatted_msg_txt = formatter.ResearchFormatter.format(research)
 
-    await bot_send_msg(callback_query.bot, chat_id, formatted_msg_txt)
+    await bot_send_msg(callback_query.bot, chat_id, formatted_msg_txt, protect_content=texts_manager.PROTECT_CONTENT)
 
     # Если есть файл - отправляем
     if research.filepath and os.path.exists(research.filepath):

@@ -115,6 +115,7 @@ class NewsHandler:
         self.subject_par = subject_name_genitive    # 'клиентов'  # сырьевых товаров | отраслей
         self.subject_vin = subject_name_accusative  # 'клиентов'  # сырьевые товары | отрасли
         self.subject_datv = decline_words(subject_name_nominative, ('datv', 'plur'), str.lower)
+        self.subject_sing_nomn = decline_words(subject_name_nominative, ('sing', 'nomn'), str.lower)
 
     def _setup_change_user_subs(self) -> None:
         """Setup change user subs menu"""
@@ -122,7 +123,12 @@ class NewsHandler:
         async def select_or_write(callback_query: types.CallbackQuery, state: FSMContext) -> None:
             keyboard = self.keyboards.change_subs_menu()
             await state.clear()
-            await callback_query.message.edit_text(f'Как вы хотите заполнить подписки по {self.subject_datv}?', reply_markup=keyboard)
+            msg = (
+                'Изменение подписок\n'
+                f'{self.subject_inf.capitalize()}\n\n'
+                f'Выберите отрасль, к которой относится {self.subject_sing_nomn}'
+            )
+            await callback_query.message.edit_text(msg, reply_markup=keyboard)
 
     def _setup_write_new_subscriptions_callback(self) -> None:
         """Setup write_new_subscriptions_callback menu"""
