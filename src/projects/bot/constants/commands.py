@@ -34,7 +34,7 @@ PUBLIC_COMMANDS: list[dict] = [
     #     'description': 'Встречи (Beta)',
     # },
     {
-        'command': 'industry_BI',
+        'command': 'industry_bi',
         'description': 'Отраслевые дэшборды',
     },
     {
