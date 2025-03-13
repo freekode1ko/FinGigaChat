@@ -48,7 +48,7 @@ async def main_menu(message: types.CallbackQuery | types.Message) -> None:
     :param message: types.CallbackQuery | types.Message
     """
     keyboard = keyboards.get_menu_kb()
-    await send_or_edit(message, texts_manager.ANAL_START, keyboard)
+    await send_or_edit(message, texts_manager.ANAL_START, keyboard, protect_content=texts_manager.PROTECT_CONTENT)
 
 
 @router.callback_query(callbacks.AnalyticsMenu.filter())

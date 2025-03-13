@@ -274,7 +274,7 @@ async def not_realized_function(callback_query: types.CallbackQuery) -> None:
     """Выводит сообщение, что функция будет реализована позднее"""
     await callback_query.message.answer(
         texts_manager.COMMON_FEATURE_WILL_APPEAR.strip(),
-        protect_content=texts_manager.PROTECT_CONTENT,
+        # protect_content=texts_manager.PROTECT_CONTENT,
         parse_mode='HTML'
     )
 
@@ -421,7 +421,7 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
         photo=types.FSInputFile(png_path),
         caption=sample_of_img_title.format('Инфляция в России', 'ЦБ РФ', curdatetime),
         parse_mode='HTML',
-        protect_content=texts_manager.PROTECT_CONTENT,
+        # protect_content=texts_manager.PROTECT_CONTENT,
     )
     # сообщение с текущими ставками
     stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
@@ -437,7 +437,15 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
 
     rates = [f"{rate[0]}: {str(rate[1]).replace('%', '').replace(',', '.')}%" for rate in stat.values.tolist()[:3]]
     rates_message = f'<b>{rates[0]}</b>\n{rates[1]}\n{rates[2]}'
-    await message.answer(rates_message, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+    await message.answer(
+        rates_message,
+        parse_mode='HTML',
+        # protect_content=texts_manager.PROTECT_CONTENT,
+    )
     await weekly_pulse.key_rate_dynamics_table(message.bot, message.chat.id)
     msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
-    await message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+    await message.answer(
+        msg_text,
+        parse_mode='HTML',
+        # protect_content=texts_manager.PROTECT_CONTENT,
+    )

@@ -135,6 +135,7 @@ async def get_group_products(
                 parent.description,
                 reply_markup=keyboards.get_sub_menu_kb(parent.children, parent, callback_data),
                 parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
     else:
         keyboard = keyboards.get_sub_menu_kb(sub_products, product_info, callback_data)
@@ -145,9 +146,15 @@ async def get_group_products(
                 caption=msg_text,
                 parse_mode='HTML',
                 reply_markup=keyboard,
+                protect_content=texts_manager.PROTECT_CONTENT,
             )
         else:
-            await message.answer(msg_text, reply_markup=keyboard, parse_mode='HTML')
+            await message.answer(
+                msg_text,
+                reply_markup=keyboard,
+                parse_mode='HTML',
+                protect_content=texts_manager.PROTECT_CONTENT,
+            )
 
         try:
             await message.delete()
@@ -181,7 +188,7 @@ async def get_product_documents_callback(callback_query: types.CallbackQuery, ca
 async def get_product_documents(
         callback_query: types.CallbackQuery | types.Message,
         product: models.Product,
-        resend_message: bool
+        resend_message: bool = False,
 ) -> bool:
     """
     Получение продуктовых предложений
@@ -216,7 +223,7 @@ async def get_product_documents(
             if not documents:
                 msg_text += texts_manager.COMMON_FEATURE_WILL_APPEAR
 
-            await message.answer(msg_text, parse_mode='HTML')
+            await message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
             for document in documents:
                 document_msg_text = ''
@@ -226,11 +233,11 @@ async def get_product_documents(
                     document_msg_text += document.description
 
                 if document_msg_text:
-                    await message.answer(document_msg_text, parse_mode='HTML')
+                    await message.answer(document_msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
 
                 if os.path.exists(document.file_path):
                     await message.bot.send_chat_action(message.chat.id, 'upload_document')
-                    await message.answer_document(types.FSInputFile(document.file_path))
+                    await message.answer_document(types.FSInputFile(document.file_path), protect_content=texts_manager.PROTECT_CONTENT)
 
             if documents:
                 if resend_message:
