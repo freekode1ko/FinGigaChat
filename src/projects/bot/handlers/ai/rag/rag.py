@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
 from constants.enums import FeatureType
 from constants.texts import texts_manager
-from db.rag_user_feedback import update_user_reaction
+from db.api.rag.rag_user_feedback import update_user_reaction
 from db.redis import user_constants, user_dialog
 from handlers.ai.handler import router
 from handlers.ai.rag.utils import add_data_to_db, query_rag, update_keyboard_of_penultimate_bot_msg

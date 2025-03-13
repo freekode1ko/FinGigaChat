@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.enums import RetrieverType
-from db.rag_user_feedback import add_rag_activity, get_user_reaction, update_response
+from db.api.rag.rag_user_feedback import add_rag_activity, get_user_reaction, update_response
 from db.redis import user_dialog
 from keyboards.rag.constructors import get_feedback_kb
 from log.bot_logger import logger
