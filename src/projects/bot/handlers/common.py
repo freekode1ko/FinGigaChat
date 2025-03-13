@@ -238,7 +238,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 #     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
 
 
-@router.message(Command('industry_BI'))
+@router.message(Command('industry_bi'))
 @has_access_to_feature(FeatureType.meeting)
 async def open_meeting_app(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
