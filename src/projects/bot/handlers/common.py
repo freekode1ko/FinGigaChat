@@ -63,6 +63,7 @@ async def help_handler(message: types.Message | types.CallbackQuery, state: FSMC
     if is_user_email_exist(chat_id):
         to_pin = await message.answer(
             texts_manager.HELP_TEXT,
+            parse_mode='HTML',
             # protect_content=texts_manager.PROTECT_CONTENT,
         )
         msg_id = to_pin.message_id
