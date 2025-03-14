@@ -6,3 +6,4 @@ class TelegramMessageParams(BaseSettings):
     """Класс для хранения параметров отправки сообщений в тг боте"""
 
     PROTECT_CONTENT: str = 'True'
+    RAG_PROTECT: str = 'True'
