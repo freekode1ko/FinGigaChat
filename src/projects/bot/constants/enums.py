@@ -219,3 +219,13 @@ class FileType(str, Enum):
     IMAGE = 'image'
     DOCUMENT = 'document'
     OTHER = 'other'
+
+
+class RAGCategoryType(Enum):
+    """RAG категории."""
+
+    other = ('теория по банковской отрасли', 'теория по макроэкономике', 'теория по отрасли', 'прочее')
+    stock_market = ('фондовый рынок - аналитика', )
+
+
+

@@ -952,3 +952,25 @@ class RelationUsersProducts(Base):
 
     user_id = Column(Integer, ForeignKey('registered_user.user_id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
     product_id = Column(Integer, ForeignKey('bot_product.id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
+
+
+class RAGClassificationCategory(Base):
+    __tablename__ = 'rag_classification_category'
+    __table_args__ = {'comment': 'Таблица для RAG с перечнем категорий, к которым относятся пользовательские вопросы'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(256), unique=True, nullable=False, comment='Имя категории')
+    description = Column(Text, comment='Описание категории, используется в системном промпте классификатора')
+    key_words = Column(Text, comment='Ключевые слова, которые используются в вопросах этой категории')
+
+
+class RAGClassificationCategoryQuestionExample(Base):
+    __tablename__ = 'rag_classification_category_question_example'
+    __table_args__ = {'comment': 'Таблица для RAG с примерами категорий и относящихся к ним вопросам'}
+
+    category_id = Column(
+        ForeignKey('rag_classification_category.id', onupdate='CASCADE', ondelete='CASCADE'),
+        comment='Категория',
+        primary_key=True
+    )
+    question = Column(Text, comment='Вопрос в RAG', primary_key=True)
