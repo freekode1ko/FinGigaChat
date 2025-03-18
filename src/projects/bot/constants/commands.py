@@ -51,10 +51,6 @@ PUBLIC_COMMANDS: list[dict] = [
         'command': 'help',
         'description': 'Информация о боте',
     },
-    {
-        'command': INSTRUCTION_COMMAND,
-        'description': 'Инструкция по отключению встроенного браузера',
-    },
     # {
     #     'command': 'gigachat',
     #     'description': 'Переход в режим общения с GigaChat',
@@ -118,5 +114,9 @@ SECRET_COMMANDS: list[dict] = [
     {
         'command': 'send_products_to_users',
         'description': 'Принудительно вызвать отправку сообщений по новым продуктам пользователям',
+    },
+    {
+        'command': INSTRUCTION_COMMAND,
+        'description': 'Инструкция по отключению встроенного браузера',
     },
 ]
