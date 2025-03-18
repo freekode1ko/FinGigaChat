@@ -1,4 +1,5 @@
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
+"""Константы-промпты для классификации вопросов."""
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from configs import prompts
 from db.api.rag.rag_categories import get_rag_categories, get_rag_question_to_categories
@@ -20,9 +21,9 @@ def make_classification_system_msg() -> SystemMessage:
     prompt = prompts.START_OF_CLASSIFICATION_SYSTEM_PROMPT
     for category in RAG_CLASSIFICATION_CATEGORIES:
         prompt += prompts.CATEGORY_TEMPLATE_OF_CLASSIFICATION_SYSTEM_PROMPT.format(
-                category=category.name,
-                description=category.description,
-                key_words=category.key_words
+            category=category.name,
+            description=category.description,
+            key_words=category.key_words
         )
     return SystemMessage(prompt)
 

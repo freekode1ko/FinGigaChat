@@ -1,10 +1,11 @@
+"""Модуль с вызовом ЯМ через langchain и обработкой исключений."""
 import asyncio
 
-from langchain_core.messages import BaseMessage
-from langchain_core.language_models.chat_models import BaseChatModel
-from openai import RateLimitError
 from gigachat.exceptions import ResponseError
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage
 from langchain_gigachat import GigaChat
+from openai import RateLimitError
 
 from configs import config
 from log.bot_logger import logger
@@ -25,6 +26,7 @@ class BaseLLM:
         return self.__class__.__name__
 
     async def ainvoke(self, messages: list[BaseMessage]) -> str | None:
+        """Получить ответ от модели."""
         for attempt in range(self.MAX_RETRIES):
             try:
                 response = await self.client.ainvoke(messages)

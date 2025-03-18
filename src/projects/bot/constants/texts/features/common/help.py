@@ -1,4 +1,5 @@
 """Модуль для приветственного сообщения от бота."""
+# flake8: noqa
 from pydantic import Field
 from pydantic_settings import BaseSettings
 

@@ -1,4 +1,5 @@
-from sqlalchemy import select, func
+"""Модуль работы с таблицами по RAG  category"""
+from sqlalchemy import func, select
 
 from db import database
 from db.models import RAGClassificationCategory, RAGClassificationCategoryQuestionExample
