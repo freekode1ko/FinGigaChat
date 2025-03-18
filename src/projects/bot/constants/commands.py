@@ -1,5 +1,7 @@
 """Файл с командами для бота"""
 
+INSTRUCTION_COMMAND = 'instruction'
+
 PUBLIC_COMMANDS: list[dict] = [
     {
         'command': 'news',
@@ -48,6 +50,10 @@ PUBLIC_COMMANDS: list[dict] = [
     {
         'command': 'help',
         'description': 'Информация о боте',
+    },
+    {
+        'command': INSTRUCTION_COMMAND,
+        'description': 'Инструкция по отключению встроенного браузера',
     },
     # {
     #     'command': 'gigachat',
