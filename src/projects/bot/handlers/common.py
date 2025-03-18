@@ -241,7 +241,7 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 
 @router.message(Command('industry_bi'))
 @has_access_to_feature(FeatureType.meeting)
-async def open_meeting_app(message: types.Message) -> None:
+async def industry_bi(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     msg = f'<a href="{config.INDUSTRY_EXPERTISE}" >Отраслевая экспертиза</a>'
     await message.answer(msg, parse_mode='HTML', disable_web_page_preview=True)
@@ -250,7 +250,7 @@ async def open_meeting_app(message: types.Message) -> None:
 
 @router.message(Command(commands.INSTRUCTION_COMMAND))
 @has_access_to_feature(FeatureType.meeting)
-async def open_meeting_app(message: types.Message) -> None:
+async def instruction(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     msg = texts_manager.INSTRUCTION_TEXT
     await message.answer(msg, parse_mode='HTML', disable_web_page_preview=True)
