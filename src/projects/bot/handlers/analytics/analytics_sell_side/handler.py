@@ -602,6 +602,9 @@ async def get_client_inavigator_source(
         msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=research_info.name)
 
     await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+
+    if navi_link:
+        await callback_query.message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 

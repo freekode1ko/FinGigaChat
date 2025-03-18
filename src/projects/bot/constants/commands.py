@@ -1,5 +1,7 @@
 """Файл с командами для бота"""
 
+INSTRUCTION_COMMAND = 'instruction'
+
 PUBLIC_COMMANDS: list[dict] = [
     {
         'command': 'news',
@@ -112,5 +114,9 @@ SECRET_COMMANDS: list[dict] = [
     {
         'command': 'send_products_to_users',
         'description': 'Принудительно вызвать отправку сообщений по новым продуктам пользователям',
+    },
+    {
+        'command': INSTRUCTION_COMMAND,
+        'description': 'Инструкция по отключению встроенного браузера',
     },
 ]

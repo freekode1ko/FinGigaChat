@@ -449,3 +449,4 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
         parse_mode='HTML',
         # protect_content=texts_manager.PROTECT_CONTENT,
     )
+    await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')

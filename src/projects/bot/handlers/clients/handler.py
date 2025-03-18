@@ -443,6 +443,9 @@ async def get_client_inavigator(
         msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=client_info['name'].capitalize())
 
     await callback_query.message.answer(msg_text, parse_mode='HTML')
+
+    if client_info['navi_link']:
+        await callback_query.message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
 
