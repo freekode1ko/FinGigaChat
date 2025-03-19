@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import requests as req
 
-from configs.config import giga_chat_url, giga_credentials, giga_model, giga_oauth_url, giga_scope
+from configs.config import giga_chat_url, giga_credentials, giga_model_pro, giga_oauth_url, giga_scope
 from utils.sessions import GigaChatClient, GigaOauthClient
 
 warnings.filterwarnings('ignore')
@@ -28,7 +28,7 @@ class GigaChat:
     OAUTH_URL_PART: ClassVar[str] = '/api/v2/oauth'
     CHAT_URL_PART: ClassVar[str] = '/api/v1/chat/completions'
     SCOPE: ClassVar[str] = giga_scope
-    MODEL: ClassVar[str] = giga_model
+    MODEL: ClassVar[str] = giga_model_pro
     CREDENTIALS: ClassVar[str] = giga_credentials
     TEMPERATURE: ClassVar[float] = 0.5
     MAX_TOKENS: ClassVar[int] = 0.5

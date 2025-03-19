@@ -110,7 +110,7 @@ async def exchange_info(callback_query: types.CallbackQuery, callback_data: call
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def exchange_info_command(message: types.Message, session: AsyncSession) -> None:
+async def exchange_info_command(message: types.Message, session: AsyncSession, with_reports: bool = True) -> None:
     """Вывод в чат информации по котировкам связанной с валютой и их курсом"""
     exc_data = await exc_db.get_all()
     df = pd.DataFrame([
@@ -154,11 +154,15 @@ async def exchange_info_command(message: types.Message, session: AsyncSession) -
         text_color='black',
         text_props=text_props,
     )
+    if with_reports:
+        reports = await get_reports_for_quotes(session, report_key=enums.QuotesType.FX, format_func=get_part_from_start_to_end)
+    else:
+        reports = None
 
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.FX, format_func=get_part_from_start_to_end),
+        reports=reports,
         title=sample_of_img_title.format('Курсы валют', 'investing.com, ru.tradingview.com, finam.ru, cbr.ru', curr_date)
     )
     await weekly_pulse.exc_rate_prediction_table(message.bot, message.chat.id)
@@ -360,9 +364,22 @@ async def economy_info(callback_query: types.CallbackQuery, callback_data: callb
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
 async def economy_info_command(message: types.Message, session: AsyncSession) -> None:
     """Вывод в чат информации по котировкам связанной с экономикой (ключевая ставка)"""
+    curdatetime = utils.base.read_curdatetime()
+    await send_eco_global_stake_img(message, session, curdatetime)
+    await send_eco_rus_influence(message, curdatetime)
+    await send_eco_stake(message)
+    await message.answer(f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>', parse_mode='HTML')
+    await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
+
+
+async def send_eco_global_stake_img(
+        message: types.Message,
+        session: AsyncSession,
+        curdatetime: datetime = None,
+        with_reports: bool = True
+) -> None:
+    """Получение картинки с данными о мировых ставках."""
     world_bet = pd.read_sql_query('SELECT * FROM "eco_global_stake"', con=engine)
-    rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
-    rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
     world_bet = world_bet.rename(columns={'Country': 'Страна', 'Last': 'Ставка, %', 'Previous': 'Предыдущая, %'})
     countries = {
         'Japan': 'Япония',
@@ -390,14 +407,22 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
         world_bet.Страна[world_bet.Страна == country] = countries[country]
 
     png_path = dt.Transformer.render_mpl_table(world_bet.round(2), 'world_bet', header_columns=0, col_width=2.2)
-    curdatetime = utils.base.read_curdatetime()
+
+    if not curdatetime:
+        curdatetime = utils.base.read_curdatetime()
+
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.ECO),
+        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.ECO) if with_reports else None,
         title=sample_of_img_title.format('Ключевые ставки ЦБ мира', 'ЦБ стран мира', curdatetime)
     )
 
+
+async def send_eco_rus_influence(message: types.Message, curdatetime: datetime = None) -> None:
+    """Получение картинки с инфляцией России."""
+    rus_infl = pd.read_sql_query('SELECT * FROM "eco_rus_influence"', con=engine)
+    rus_infl = rus_infl[['Дата', 'Инфляция, % г/г']]
     month_dict = {
         1: 'Январь',
         2: 'Февраль',
@@ -417,21 +442,26 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
         rus_infl.Дата[rus_infl.Дата == date] = '{} {}'.format(month_dict[int(cell[0])], cell[1])
 
     png_path = dt.Transformer.render_mpl_table(rus_infl.round(2), 'rus_infl', header_columns=0, col_width=2)
+
+    if not curdatetime:
+        curdatetime = utils.base.read_curdatetime()
+
     await message.answer_photo(
         photo=types.FSInputFile(png_path),
         caption=sample_of_img_title.format('Инфляция в России', 'ЦБ РФ', curdatetime),
         parse_mode='HTML',
         # protect_content=texts_manager.PROTECT_CONTENT,
     )
-    # сообщение с текущими ставками
-    stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
 
+
+async def send_eco_stake(message: types.Message) -> None:
+    """Получение картинок с текущей ключевой ставкой и прогнозной."""
+    stat = pd.read_sql_query('SELECT * FROM "eco_stake"', con=engine)
     stat_order = {
         'Текущая ключевая ставка Банка России': 0,
         'Текущая ставка RUONIA': 1,
         'LPR Китай': 2,
     }
-
     stat['order'] = stat['0'].apply(lambda x: stat_order.get(x, np.inf))
     stat = stat.set_index('order', drop=True).sort_index().reset_index(drop=True)
 
@@ -443,10 +473,3 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
         # protect_content=texts_manager.PROTECT_CONTENT,
     )
     await weekly_pulse.key_rate_dynamics_table(message.bot, message.chat.id)
-    msg_text = f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>'
-    await message.answer(
-        msg_text,
-        parse_mode='HTML',
-        # protect_content=texts_manager.PROTECT_CONTENT,
-    )
-    await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
