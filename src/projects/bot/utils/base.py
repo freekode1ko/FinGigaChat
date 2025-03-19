@@ -35,6 +35,8 @@ async def bot_send_msg(
         msg: str,
         delimiter: str = '\n\n',
         prefix: str = '',
+        *,
+        protect_content: str | bool = False,
 ) -> list[types.Message]:
     """
     Делит сообщение на батчи, если длина больше допустимой
@@ -44,6 +46,7 @@ async def bot_send_msg(
     :param msg: Текст для отправки или подпись к файлу
     :param delimiter: Разделитель текста
     :param prefix: Начало каждого нового сообщения
+    :param protect_content: Защита контента
     return: list[aiogram.types.Message] Список объетов отправленных сообщений
     """
     batches = []
@@ -67,7 +70,7 @@ async def bot_send_msg(
             text=batch,
             parse_mode='HTML',
             disable_web_page_preview=True,
-            protect_content=texts_manager.PROTECT_CONTENT,
+            protect_content=protect_content,
         )
         messages.append(msg)
     return messages
@@ -95,7 +98,15 @@ async def bot_send_background_tasks_msg(bot: Bot) -> None:
         logger.info(f'Удалено {len(background_tasks)} ключей для фоновых задач')
 
 
-async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> types.Message:
+async def send_msg_to(
+    bot: Bot,
+    user_id,
+    message_text,
+    file_name,
+    file_type,
+    *,
+    protect_content: str | bool = False,
+) -> types.Message:
     """
     Рассылка текста и/или файлов(документы и фотокарточки) на выбранного пользователя
 
@@ -104,6 +115,7 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
     :param message_text: Текст для отправки или подпись к файлу
     :param file_name: Текст содержащий в себе название сохраненного файла
     :param file_type: Тип файла для отправки. Может быть None, str("Document") и str("Picture")
+    :param protect_content: Защита контента
     return: aiogram.types.Message отправленное сообщение
     """
     if file_name:
@@ -114,7 +126,7 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
                 chat_id=user_id,
                 caption=message_text,
                 parse_mode='HTML',
-                protect_content=texts_manager.PROTECT_CONTENT,
+                protect_content=protect_content,
             )
         else:
             file = types.FSInputFile('sources/{}'.format(file_name))
@@ -123,10 +135,10 @@ async def send_msg_to(bot: Bot, user_id, message_text, file_name, file_type) -> 
                 chat_id=user_id,
                 caption=message_text,
                 parse_mode='HTML',
-                protect_content=texts_manager.PROTECT_CONTENT,
+                protect_content=protect_content,
             )
     else:
-        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+        msg = await bot.send_message(user_id, message_text, parse_mode='HTML', protect_content=protect_content)
 
     return msg
 
@@ -153,7 +165,15 @@ def file_cleaner(filename) -> None:
         pass
 
 
-async def __text_splitter(message: types.Message, text: str, name: str, date: str, batch_size: int = 2048) -> None:
+async def __text_splitter(
+    message: types.Message,
+    text: str,
+    name: str,
+    date: str,
+    batch_size: int = 2048,
+    *,
+    protect_content: str | bool = False,
+) -> None:
     """
     Разбиение сообщения на части по количеству символов
 
@@ -162,6 +182,7 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
     :param name: Заголовок отчета
     :param date: Дата сборки отчета
     :param batch_size: Размер сообщения в символах. По стандарту это значение равно 2048 символов на сообщение
+    :param protect_content: Защита контента
     return None
     """
     text_group = []
@@ -183,21 +204,23 @@ async def __text_splitter(message: types.Message, text: str, name: str, date: st
             await message.answer(
                 '<b>{}</b>\n\n{}\n\n<i>{}</i>'.format(name, summ_part, research_footer),
                 parse_mode='HTML',
-                protect_content=texts_manager.PROTECT_CONTENT,
+                protect_content=protect_content,
             )
     else:
         await message.answer(
             '<b>{}</b>\n\n{}\n\n{}\n\n<i>{}</i>'.format(name, giga_ans, research_footer, date),
             parse_mode='HTML',
-            protect_content=texts_manager.PROTECT_CONTENT,
+            protect_content=protect_content,
         )
 
 
 async def __sent_photo_and_msg(
-        message: types.Message,
-        photo: types.InputFile | str | None = None,
-        reports: list[list[str]] | None = None,
-        title: str | None = ''
+    message: types.Message,
+    photo: types.InputFile | str | None = None,
+    reports: list[list[str]] | None = None,
+    title: str | None = '',
+    *,
+    protect_content: str | bool = False,
 ) -> None:
     """
     Отправка в чат пользователю сообщение с текстом и/или изображения
@@ -206,19 +229,20 @@ async def __sent_photo_and_msg(
     :param photo:       Фотокарточка для отправки
     :param reports:     Список отчетов (заголовок, текст, дата)
     :param title:       Подпись к фотокарточке
+    :param protect_content: Защита контента
     """
     if reports:
         for report in reports:
             header, text, date_ = report
             text = re.sub(r'[Сс]егодня', f'\\g<0> ({date_})', text)
-            await __text_splitter(message, text, header, date_, batch_size=3_500)
+            await __text_splitter(message, text, header, date_, batch_size=3_500, protect_content=protect_content)
 
     if photo:
         await message.answer_photo(
             photo,
             caption=title,
             parse_mode='HTML',
-            protect_content=texts_manager.PROTECT_CONTENT,
+            protect_content=protect_content,
         )
 
 
@@ -548,7 +572,7 @@ async def send_pdf(
         tg_obj: types.CallbackQuery | types.Message,
         pdf_files: list[Path],
         caption: str,
-        protect_content: bool = texts_manager.PROTECT_CONTENT,
+        protect_content: bool = False,
 ) -> bool:
     """
     Отправка сообщения перед файлами

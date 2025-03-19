@@ -21,6 +21,7 @@ from aiogram.types.web_app_info import WebAppInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from configs import config
+from constants import commands
 from constants.constants import (
     CANCEL_CALLBACK,
     MAX_REGISTRATION_CODE_ATTEMPTS,
@@ -238,11 +239,20 @@ async def validate_user_reg_code(message: types.Message, state: FSMContext) -> N
 #     await message.answer('Для работы со встречами нажмите:', reply_markup=markup)
 
 
-@router.message(Command('industry_BI'))
+@router.message(Command('industry_bi'))
 @has_access_to_feature(FeatureType.meeting)
-async def open_meeting_app(message: types.Message) -> None:
+async def industry_bi(message: types.Message) -> None:
     """Открытие веб приложения со встречами."""
     msg = f'<a href="{config.INDUSTRY_EXPERTISE}" >Отраслевая экспертиза</a>'
+    await message.answer(msg, parse_mode='HTML', disable_web_page_preview=True)
+    await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
+
+
+@router.message(Command(commands.INSTRUCTION_COMMAND))
+@has_access_to_feature(FeatureType.meeting)
+async def instruction(message: types.Message) -> None:
+    """Открытие веб приложения со встречами."""
+    msg = texts_manager.INSTRUCTION_TEXT
     await message.answer(msg, parse_mode='HTML', disable_web_page_preview=True)
 
 

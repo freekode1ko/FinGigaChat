@@ -50,7 +50,10 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext, s
     if state_name == RagState.rag_mode:
         await update_keyboard_of_penultimate_bot_msg(session, message, state)
         await user_dialog.del_dialog_and_history_query(message.chat.id)
-        await message.answer(texts_manager.RAG_CLEAR_HISTORY)
+        await message.answer(
+            texts_manager.RAG_CLEAR_HISTORY,
+            protect_content=texts_manager.RAG_PROTECT,
+        )
 
 
 @router.message(Command('knowledgebase'))
@@ -83,12 +86,19 @@ async def set_rag_mode(
         input_field_placeholder=texts_manager.RAG_FINISH_STATE,
         one_time_keyboard=True
     )
-    await message.answer(texts_manager.RAG_START_STATE, reply_markup=keyboard)
+    await message.answer(
+        texts_manager.RAG_START_STATE,
+        reply_markup=keyboard,
+        protect_content=texts_manager.RAG_PROTECT,
+    )
 
     state_data = await state.get_data()
     first_rag_user_msg: types.Message | None = state_data.get('rag_user_msg')
     if first_rag_user_msg:
-        waiting_answer_msg = await message.answer(texts_manager.RAG_WAITING_ANSWER.format(query=first_rag_user_msg.text))
+        waiting_answer_msg = await message.answer(
+            texts_manager.RAG_WAITING_ANSWER.format(query=first_rag_user_msg.text),
+            protect_content=texts_manager.RAG_PROTECT,
+        )
         asyncio.create_task(
             ask_with_dialog(message, state, session, waiting_answer_msg, first_rag_user_msg.text),
             name=f'{user_constants.BACKGROUND_TASK_NAME}{chat_id}'
@@ -105,7 +115,10 @@ async def handler_rag_mode(message: types.Message, state: FSMContext, session: A
     :param session:     Асинхронная сессия базы данных.
     """
     user_msg = await audio_to_text(message) if message.voice else message.text
-    waiting_answer_msg = await message.answer(texts_manager.RAG_WAITING_ANSWER.format(query=user_msg))
+    waiting_answer_msg = await message.answer(
+        texts_manager.RAG_WAITING_ANSWER.format(query=user_msg),
+        protect_content=texts_manager.RAG_PROTECT,
+    )
 
     state_data = await state.get_data()
     if state_data.get('rag_user_msg'):
@@ -198,7 +211,11 @@ async def ask_without_dialog(
 
     await delete_rag_messages(call.bot, chat_id, state)
     await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
-    waiting_answer_msg = await call.bot.send_message(chat_id, texts_manager.RAG_WAITING_ANSWER.format(query=user_query))
+    waiting_answer_msg = await call.bot.send_message(
+        chat_id,
+        texts_manager.RAG_WAITING_ANSWER.format(query=user_query),
+        protect_content=texts_manager.RAG_PROTECT,
+    )
     state_data = await state.get_data()
 
     try:
@@ -276,7 +293,11 @@ async def ask_regenerate(
     state_data = await state.get_data()
     if not user_query or not state_data.get('rag_user_msg'):
         await update_keyboard_of_penultimate_bot_msg(session, call.message, state)
-        await call.bot.send_message(chat_id, texts_manager.RAG_TRY_AGAIN)
+        await call.bot.send_message(
+            chat_id,
+            texts_manager.RAG_TRY_AGAIN,
+            protect_content=texts_manager.RAG_PROTECT,
+        )
         return
 
     asyncio.create_task(
@@ -365,7 +386,8 @@ async def send_rag_messages(bot: Bot, chat_id: int, answers: list[str], kb: type
             text=answer,
             parse_mode='HTML',
             disable_web_page_preview=True,
-            reply_markup=kb if i == last_index else None
+            reply_markup=kb if i == last_index else None,
+            protect_content=texts_manager.RAG_PROTECT,
         )
         msgs_ids.append(msg.message_id)
     return msgs_ids

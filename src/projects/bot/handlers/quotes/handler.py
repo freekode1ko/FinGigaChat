@@ -369,6 +369,7 @@ async def economy_info_command(message: types.Message, session: AsyncSession) ->
     await send_eco_rus_influence(message, curdatetime)
     await send_eco_stake(message)
     await message.answer(f'<a href="{config.ECO_INAVIGATOR_URL}" >Актуальные ETC</a>', parse_mode='HTML')
+    await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
 
 
 async def send_eco_global_stake_img(

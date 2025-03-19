@@ -429,7 +429,7 @@ async def data_mart_body(message: types.Message) -> None:
             png_path = config.PATH_TO_SOURCES / 'img' / 'key_eco_table.png'
 
             photo = types.FSInputFile(png_path)
-            await __sent_photo_and_msg(message, photo, title='')
+            await __sent_photo_and_msg(message, photo, title='', protect_content=texts_manager.PROTECT_CONTENT)
     user_logger.info(f'*{message.from_user.id}* {message.from_user.full_name} - {message.text}')
 
 
@@ -602,6 +602,9 @@ async def get_client_inavigator_source(
         msg_text = texts_manager.ANAL_NOT_NAVI_LINK.format(name=research_info.name)
 
     await callback_query.message.answer(msg_text, parse_mode='HTML', protect_content=texts_manager.PROTECT_CONTENT)
+
+    if navi_link:
+        await callback_query.message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
     user_logger.info(f'*{chat_id}* {full_name} - "{user_msg}"')
 
 

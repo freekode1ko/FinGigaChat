@@ -234,6 +234,7 @@ async def send_client_navi_link(message: types.Message, client_id: int, ap_obj: 
                 texts_manager.ANAL_NAVI_LINK.format(link=navi_link, name=name),
                 parse_mode='HTML',
             )
+            await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
     except Exception as e:
         logger.error(f'ERROR *{message.chat.id}* {message.text} - {e}')
 
@@ -373,6 +374,7 @@ async def is_eco_in_message(
             parse_mode='HTML',
             # protect_content=False,
         )
+        await message.answer(texts_manager.NAVI_LINK_HELP, parse_mode='HTML')
     return flag
 
 
