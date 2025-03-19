@@ -23,6 +23,7 @@ from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_
 from log.bot_logger import logger, user_logger
 from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
+from utils.rag_utils.classification.gags.calling_gag import call_gag
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
 
 
@@ -143,24 +144,27 @@ async def ask_with_dialog(
             history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
 
             rag_type, response = await query_rag(chat_id, full_name, user_query, True, history_query)
-            reports_data = response.metadata.get('reports_data_research')
-
-            kb = get_feedback_regenerate_kb(
-                user_msg=state_data['rag_user_msg'],
-                rephrase_query=True,
-                with_reports=reports_data is not None
-            )
-            msgs_ids = await send_rag_messages(message.bot, chat_id, response.answers, kb)
+            if response.answers[0] == DEFAULT_RAG_ANSWER:
+                clear_response = await call_gag(history_query, message.bot, chat_id, message, session)
+            else:
+                reports_data = response.metadata.get('reports_data_research')
+                kb = get_feedback_regenerate_kb(
+                    user_msg=state_data['rag_user_msg'],
+                    rephrase_query=True,
+                    with_reports=reports_data is not None
+                )
+                msgs_ids = await send_rag_messages(message.bot, chat_id, response.answers, kb)
+                await state.update_data(rag_bot_msgs_ids=msgs_ids, reports_data=reports_data)
+                clear_response = '\n'.join(response.answers)
 
             await add_data_to_db(
                 session=session,
                 msg=state_data['rag_user_msg'],
                 user_query=user_query,
-                clear_response='\n'.join(response.answers),
+                clear_response=clear_response,
                 rag_type=rag_type,
                 history_query=history_query
             )
-            await state.update_data(rag_bot_msgs_ids=msgs_ids, reports_data=reports_data)
             await user_dialog.update_history_query(chat_id, history_query)
             await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
             await waiting_answer_msg.delete()
@@ -195,6 +199,7 @@ async def ask_without_dialog(
     await delete_rag_messages(call.bot, chat_id, state)
     await user_constants.update_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id, user_query)
     waiting_answer_msg = await call.bot.send_message(chat_id, texts_manager.RAG_WAITING_ANSWER.format(query=user_query))
+    state_data = await state.get_data()
 
     try:
         async with ChatActionSender(bot=call.bot, chat_id=call.message.chat.id):
@@ -206,35 +211,38 @@ async def ask_without_dialog(
                 rephrase_query = ''
                 rag_type, response = await query_rag(chat_id, full_name, user_query, use_rephrase=False)
 
-            reports_data = response.metadata.get('reports_data_research')
-            with_reports = reports_data is not None
-            state_data = await state.get_data()
-            if rephrase_query:
-                kb = get_feedback_regenerate_kb(
-                    user_msg=state_data['rag_user_msg'],
-                    initially_query=True,
-                    with_reports=with_reports
-                )
+            if response.answers[0] == DEFAULT_RAG_ANSWER:
+                clear_response = await call_gag(rephrase_query or user_query, call.bot, chat_id, call.message, session)
             else:
-                kb = get_feedback_kb(
-                    user_msg=state_data['rag_user_msg'],
-                    with_reports=with_reports
-                )
+                reports_data = response.metadata.get('reports_data_research')
+                with_reports = reports_data is not None
+                if rephrase_query:
+                    kb = get_feedback_regenerate_kb(
+                        user_msg=state_data['rag_user_msg'],
+                        initially_query=True,
+                        with_reports=with_reports
+                    )
+                else:
+                    kb = get_feedback_kb(
+                        user_msg=state_data['rag_user_msg'],
+                        with_reports=with_reports
+                    )
 
-            msgs_ids = await send_rag_messages(call.bot, chat_id, response.answers, kb)
+                msgs_ids = await send_rag_messages(call.bot, chat_id, response.answers, kb)
+                await state.update_data(
+                    reports_data=reports_data,
+                    rag_bot_msgs_ids=msgs_ids if callback_data.need_rephrase_query else []
+                )
+                clear_response = '\n'.join(response.answers)
 
             await add_data_to_db(
                 session=session,
                 msg=state_data['rag_user_msg'],
                 user_query=user_query,
-                clear_response='\n'.join(response.answers),
+                clear_response=clear_response,
                 rag_type=rag_type,
                 rephrase_query=rephrase_query,
                 need_replace=True
-            )
-            await state.update_data(
-                reports_data=reports_data,
-                rag_bot_msgs_ids=msgs_ids if callback_data.need_rephrase_query else []
             )
             await user_constants.del_user_constant(user_constants.BACKGROUND_TASK_NAME, chat_id)
             await waiting_answer_msg.delete()

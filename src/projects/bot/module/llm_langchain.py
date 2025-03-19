@@ -2,6 +2,7 @@
 import asyncio
 
 from gigachat.exceptions import ResponseError
+from httpx import ReadTimeout
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_gigachat import GigaChat
@@ -10,6 +11,8 @@ from openai import RateLimitError
 from configs import config
 from log.bot_logger import logger
 
+# import gigachat.context
+# gigachat.context.session_id_cvar.set(str(uuid4()))  # FIXME
 __all__ = ['giga']
 
 
@@ -32,7 +35,7 @@ class BaseLLM:
                 response = await self.client.ainvoke(messages)
                 return response.content
 
-            except (ResponseError, RateLimitError) as e:
+            except (ResponseError, RateLimitError, ReadTimeout) as e:
                 if isinstance(e, ResponseError):
                     error_args = e.args
                     if len(error_args) < 2 or error_args[1] != 429:
