@@ -36,21 +36,11 @@ RAG_CLASSIFICATION_SYSTEM_MESSAGE = make_classification_system_msg()
 
 def make_classification_messages() -> list[BaseMessage]:
     """Создать список сообщений из системного промпта и few-shots."""
+    messages = [RAG_CLASSIFICATION_SYSTEM_MESSAGE, ]
     question_to_categories = get_rag_question_to_categories()
-    categories = [qc[1] for qc in question_to_categories]
-
-    kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=1337)
-    messages = []
-    for train_index, test_index in kf.split(categories, y=categories):
-        train_index, test_index = test_index, train_index
-        random.shuffle(train_index)
-
-        messages = [RAG_CLASSIFICATION_SYSTEM_MESSAGE]
-        for i in train_index:
-            question, category = question_to_categories[i]
-            messages.append(HumanMessage(question))
-            messages.append(AIMessage(category))
+    random.shuffle(question_to_categories)
+    for qc in question_to_categories:
+        question, category = qc
+        messages.append(HumanMessage(question))
+        messages.append(AIMessage(category))
     return messages
-
-
-RAG_CLASSIFICATION_MESSAGES = make_classification_messages()
