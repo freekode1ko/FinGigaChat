@@ -44,3 +44,6 @@ def make_classification_messages() -> list[BaseMessage]:
         messages.append(HumanMessage(question))
         messages.append(AIMessage(category))
     return messages
+
+
+RAG_CLASSIFICATION_MESSAGES = make_classification_messages()
