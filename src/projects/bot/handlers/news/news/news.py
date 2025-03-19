@@ -413,10 +413,10 @@ async def process_user_message(
         aliases_dict = {
             **{alias: (common.help_handler, {'state': state, 'user_msg': user_msg}) for alias in aliases.help_aliases},
             **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
-            **{alias: (quotes.bonds_info_command, {}) for alias in aliases.bonds_aliases},
-            **{alias: (quotes.economy_info_command, {}) for alias in aliases.eco_aliases},
-            **{alias: (quotes.metal_info_command, {}) for alias in aliases.metal_aliases},
-            **{alias: (quotes.exchange_info_command, {}) for alias in aliases.exchange_aliases},
+            **{alias: (quotes.bonds_info_command, {'session': session}) for alias in aliases.bonds_aliases},
+            **{alias: (quotes.economy_info_command, {'session': session}) for alias in aliases.eco_aliases},
+            **{alias: (quotes.metal_info_command, {'session': session}) for alias in aliases.metal_aliases},
+            **{alias: (quotes.exchange_info_command, {'session': session}) for alias in aliases.exchange_aliases},
             **{alias: (analytics_sell_side.data_mart_body, {}) for alias in aliases.view_aliases},
         }
         message_text = user_msg.lower().strip()
