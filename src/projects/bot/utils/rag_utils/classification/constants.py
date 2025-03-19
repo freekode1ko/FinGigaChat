@@ -2,7 +2,6 @@
 import random
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from sklearn.model_selection import StratifiedKFold
 
 from configs import prompts
 from db.api.rag.rag_categories import get_rag_categories, get_rag_question_to_categories
