@@ -158,7 +158,7 @@ async def ask_with_dialog(
 
             rag_type, response = await query_rag(chat_id, full_name, user_query, True, history_query)
             if response.answers[0] == DEFAULT_RAG_ANSWER:
-                clear_response = await call_gag(history_query, message.bot, chat_id, message, session)
+                clear_response = await call_gag(history_query, message.bot, message, session)
             else:
                 reports_data = response.metadata.get('reports_data_research')
                 kb = get_feedback_regenerate_kb(
@@ -229,7 +229,7 @@ async def ask_without_dialog(
                 rag_type, response = await query_rag(chat_id, full_name, user_query, use_rephrase=False)
 
             if response.answers[0] == DEFAULT_RAG_ANSWER:
-                clear_response = await call_gag(rephrase_query or user_query, call.bot, chat_id, call.message, session)
+                clear_response = await call_gag(rephrase_query or user_query, call.bot, call.message, session)
             else:
                 reports_data = response.metadata.get('reports_data_research')
                 with_reports = reports_data is not None
