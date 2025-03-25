@@ -39,7 +39,7 @@ async def send_gag(question: str, bot: Bot, message: Message, session: AsyncSess
                 msg_text = await send_currency_market_anal_reports(bot, chat_id, session)
 
             case RAGCategoryGroup.unemployment:
-                msg_text = await send_eco_marks(bot, chat_id, texts_manager.UNEMPLOYMENT, 'безработицаq')
+                msg_text = await send_eco_marks(bot, chat_id, texts_manager.UNEMPLOYMENT, 'безработица')
 
             case RAGCategoryGroup.inner_info:
                 msg_text = await send_text_msg_and_cor(bot, chat_id, texts_manager.INNER_INFO, main_menu(message))
