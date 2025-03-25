@@ -251,7 +251,7 @@ async def metal_info(callback_query: types.CallbackQuery, callback_data: callbac
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def metal_info_command(message: types.Message, session: AsyncSession) -> None:
+async def metal_info_command(message: types.Message, session: AsyncSession, with_reports: bool = True) -> None:
     """Вывод в чат информации по котировкам связанной с сырьем (комодами)."""
     query = text(
         'SELECT sub_name, unit, "Price", "%", "Weekly", "Monthly", "YoY" FROM metals '
@@ -266,10 +266,11 @@ async def metal_info_command(message: types.Message, session: AsyncSession) -> N
     materials_df[number_columns[1:]] = materials_df[number_columns[1:]].applymap(lambda x: x + '%' if x else '-')
 
     png_path = dt.Transformer.render_mpl_table(materials_df, 'metal', header_columns=0, col_width=1.5)
+    reports = await get_reports_for_quotes(session, enums.QuotesType.COMMODITIES, get_until_upper_case) if with_reports else None
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, enums.QuotesType.COMMODITIES, get_until_upper_case),
+        reports=reports,
         title=sample_of_img_title.format('Сырьевые товары', 'LME, Bloomberg, investing.com', utils.base.read_curdatetime())
     )
 
@@ -321,7 +322,7 @@ async def bonds_info(callback_query: types.CallbackQuery, callback_data: callbac
 
 
 @decorators.has_access_to_feature(enums.FeatureType.quotes_menu)
-async def bonds_info_command(message: types.Message, session: AsyncSession) -> None:
+async def bonds_info_command(message: types.Message, session: AsyncSession, with_reports: bool = True) -> None:
     """Вывод в чат информации по котировкам связанной с облигациями"""
     columns = ['Название', 'Доходность', 'Изм, %']
     bonds = pd.read_sql_query('SELECT * FROM "bonds"', con=engine)
@@ -332,11 +333,18 @@ async def bonds_info_command(message: types.Message, session: AsyncSession) -> N
     for num, name in enumerate(bond_ru['Cрок до погашения'].values):
         bond_ru['Cрок до погашения'].values[num] = years[num]
     png_path = dt.Transformer.render_mpl_table(bond_ru, 'bonds', header_columns=0, col_width=2.5)
-
+    if with_reports:
+        reports = await get_reports_for_quotes(
+            session,
+            report_key=enums.QuotesType.FI,
+            format_func=get_part_from_start_to_end
+        )
+    else:
+        reports = None
     await utils.base.__sent_photo_and_msg(
         message,
         photo=types.FSInputFile(png_path),
-        reports=await get_reports_for_quotes(session, report_key=enums.QuotesType.FI, format_func=get_part_from_start_to_end),
+        reports=reports,
         title=sample_of_img_title.format('Доходность ОФЗ', 'investing.com', utils.base.read_curdatetime())
     )
 
