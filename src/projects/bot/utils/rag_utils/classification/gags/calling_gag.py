@@ -16,6 +16,7 @@ from handlers.quotes.handler import (
     send_eco_rus_influence,
     send_eco_stake
 )
+from log.bot_logger import logger
 from utils.rag_utils.classification.gags.hard_gags.eco_mark import send_eco_marks
 from utils.rag_utils.classification.gags.hard_gags.reports import (
     send_currency_market_anal_reports,
@@ -26,8 +27,8 @@ from utils.rag_utils.classification.gags.simple_gags import answer_by_gigachat, 
 from utils.rag_utils.classification.prediction import predict_category_by_question
 
 
-async def call_gag(question: str, bot: Bot, message: Message, session: AsyncSession) -> str:
-    """Вызов заглушки относительно категории вопроса."""
+async def send_gag(question: str, bot: Bot, message: Message, session: AsyncSession) -> str:
+    """Отправка заглушки относительно категории вопроса."""
     chat_id = message.chat.id
     msg_text = DEFAULT_RAG_ANSWER
     category = await predict_category_by_question(question)
@@ -38,7 +39,7 @@ async def call_gag(question: str, bot: Bot, message: Message, session: AsyncSess
                 msg_text = await send_currency_market_anal_reports(bot, chat_id, session)
 
             case RAGCategoryGroup.unemployment:
-                msg_text = await send_eco_marks(bot, chat_id, texts_manager.UNEMPLOYMENT, 'безработица')
+                msg_text = await send_eco_marks(bot, chat_id, texts_manager.UNEMPLOYMENT, 'безработицаq')
 
             case RAGCategoryGroup.inner_info:
                 msg_text = await send_text_msg_and_cor(bot, chat_id, texts_manager.INNER_INFO, main_menu(message))
@@ -93,3 +94,13 @@ async def call_gag(question: str, bot: Bot, message: Message, session: AsyncSess
             case _:
                 await bot.send_message(chat_id, text=msg_text)
     return msg_text
+
+
+async def call_gag(question: str, bot: Bot, message: Message, session: AsyncSession) -> str:
+    """Вызов метода с заглушками."""
+    try:
+        return await send_gag(question, bot, message, session)
+    except Exception as e:
+        logger.exception(f'*{message.chat.id}* возникла ошибка при создании заглушки для вопроса "{question}": {e}')
+        await bot.send_message(message.chat.id, text=DEFAULT_RAG_ANSWER)
+        return DEFAULT_RAG_ANSWER
