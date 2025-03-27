@@ -16,7 +16,7 @@ from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
-from handlers.ai.rag.rag import RagState
+from handlers.ai.rag.utils import RagState
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
