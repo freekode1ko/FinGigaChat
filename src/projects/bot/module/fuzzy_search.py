@@ -182,6 +182,7 @@ class FuzzyAlternativeNames:
         if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
             return []
 
+        subjects_names = sorted(subjects_names, key=lambda x: x[0])
         client_name = name.lower().strip().replace('"', '')
         matches = process.extractBests(client_name, [_[1] for _ in subjects_names], score_cutoff=score)
 
