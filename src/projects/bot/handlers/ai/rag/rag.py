@@ -5,7 +5,6 @@ from aiogram import Bot, F, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,7 @@ from constants.texts import texts_manager
 from db.api.rag.rag_user_feedback import update_user_reaction
 from db.redis import user_constants, user_dialog
 from handlers.ai.handler import router
-from handlers.ai.rag.utils import add_data_to_db, query_rag, update_keyboard_of_penultimate_bot_msg
+from handlers.ai.rag.utils import add_data_to_db, query_rag, RagState, update_keyboard_of_penultimate_bot_msg
 from keyboards.analytics.constructors import get_few_full_research_kb
 from keyboards.rag.callbacks import GetReports, RegenerateResponse, SetReaction
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
@@ -25,15 +24,6 @@ from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 from utils.rag_utils.classification.gags.calling_gag import call_gag
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
-
-
-class RagState(StatesGroup):
-    """Автомат состояний общения с RAG-системами."""
-
-    rag_mode = State()
-    reports_data = State()
-    rag_user_msg = State()
-    rag_bot_msgs_ids = State()
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))

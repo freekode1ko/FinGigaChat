@@ -49,7 +49,7 @@ def first_load_quotes():
     try:
         run_async(load_quotes)
     except Exception as e:
-        logger.error(f'Загрузка котировок закончилась с ошибкой:{e}')
+        logger.exception(f'Загрузка котировок закончилась с ошибкой:{e}')
         print(f'Загрузка котировок закончилась с ошибкой:{e}')
     else:
         logger.info('Загрузка котировок закончилась успешно')
@@ -62,7 +62,7 @@ def update_quotes():
     try:
         run_async(update_quote_data)
     except Exception as e:
-        logger.error(f'Сборка котировок закончилась с ошибкой:{e}')
+        logger.exception(f'Сборка котировок закончилась с ошибкой:{e}')
     else:
         logger.info('Сборка котировок закончилась')
 

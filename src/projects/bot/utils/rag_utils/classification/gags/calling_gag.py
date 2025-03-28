@@ -17,7 +17,9 @@ from handlers.quotes.handler import (
     send_eco_stake
 )
 from log.bot_logger import logger
+from utils.rag_utils.classification.gags.hard_gags.client import send_company_menu
 from utils.rag_utils.classification.gags.hard_gags.eco_mark import send_eco_marks
+from utils.rag_utils.classification.gags.hard_gags.industry import send_industry_report
 from utils.rag_utils.classification.gags.hard_gags.reports import (
     send_currency_market_anal_reports,
     send_eco_research_reports,
@@ -37,6 +39,12 @@ async def send_gag(question: str, bot: Bot, message: Message, session: AsyncSess
         match category:
             case RAGCategoryGroup.currency_market_analytics:
                 msg_text = await send_currency_market_anal_reports(bot, chat_id, session)
+
+            case RAGCategoryGroup.industry_analytics:
+                msg_text = await send_industry_report(question, bot, message)
+
+            case RAGCategoryGroup.clients:
+                msg_text = await send_company_menu(question, bot, message)
 
             case RAGCategoryGroup.unemployment:
                 msg_text = await send_eco_marks(bot, chat_id, texts_manager.UNEMPLOYMENT, 'безработица')
@@ -88,11 +96,9 @@ async def send_gag(question: str, bot: Bot, message: Message, session: AsyncSess
             case RAGCategoryGroup.etc:
                 msg_text = await send_text_msg_and_cor(bot, chat_id, texts_manager.ETC)
 
-            case RAGCategoryGroup.other:
+            case _:
                 msg_text = await answer_by_gigachat(question, bot, chat_id)
 
-            case _:
-                await bot.send_message(chat_id, text=msg_text)
     return msg_text
 
 

@@ -43,7 +43,7 @@ class MetalsGetter(QuotesGetter):
         return copper_source
 
     @staticmethod
-    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, dt.datetime]:
+    def get_com_data_from_gigaparsers(session: req.sessions.Session, name: str) -> tuple[str, Any, None, dt.datetime] | None:
         """
         Получение цены товара (меди) от GigaParsers.
 
@@ -53,9 +53,10 @@ class MetalsGetter(QuotesGetter):
         """
         response = session.post(config.GIGAPARSERS_QUOTES)
         response.raise_for_status()
-        data: dict[str, float] = response.json()['bloomberg']['LMCADS03:COM:USD']
+        data: dict[str, dict[str, str]] = response.json()['bloomberg']['LMCADS03:COM:USD']
         update_date, price = next(iter(data.items()))
-        return name, price, None, dt.datetime.fromtimestamp(int(update_date))
+        price = price.get('value') or price
+        return None if isinstance(price, dict) else (name, price, None, dt.datetime.fromtimestamp(int(update_date)))
 
     @staticmethod
     def filter(table_row: list) -> bool:
@@ -115,7 +116,8 @@ class MetalsGetter(QuotesGetter):
         elif page_metals == 'LMCADS03:COM':
             # Получение данных о коммодах (меди) от GigaParsers
             data = self.get_com_data_from_gigaparsers(session, 'Copper Bloomberg')
-            metals_from_html.append(data)
+            if data:
+                metals_from_html.append(data)
 
         return metals_from_html, metals, U7
 
