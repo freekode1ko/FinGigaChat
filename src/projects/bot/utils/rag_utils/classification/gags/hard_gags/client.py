@@ -1,7 +1,6 @@
 """Модуль с заглушкой по клиентам."""
 import ast
 
-import pandas as pd
 from aiogram import Bot, types
 from langchain_core.messages import HumanMessage
 
