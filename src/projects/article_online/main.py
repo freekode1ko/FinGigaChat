@@ -17,7 +17,7 @@ from module.article_process import ArticleProcess
 from module.monitoring import update_parsing_status, update_saving_status
 from module.utils import add_links_to_queue
 
-MAX_NEWS_BATCH_SIZE = 500
+MAX_NEWS_BATCH_SIZE = 1000
 
 
 def try_post_n_times(n: int, **kwargs) -> requests.Response:
