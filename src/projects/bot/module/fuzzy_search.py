@@ -2,7 +2,7 @@
 from typing import Optional, Type
 
 import sqlalchemy as sa
-from fuzzywuzzy import process
+from fuzzywuzzy import fuzz, process
 from sqlalchemy.orm import InstrumentedAttribute
 
 from constants.texts import texts_manager
@@ -182,8 +182,9 @@ class FuzzyAlternativeNames:
         if not (subjects_names := await self.get_subjects_names(models_to_search, with_id=True)):
             return []
 
-        subjects_names = sorted(subjects_names, key=lambda x: x[0])
         client_name = name.lower().strip().replace('"', '')
-        matches = process.extractBests(client_name, [_[1] for _ in subjects_names], score_cutoff=score)
-
-        return [j[0] for j in subjects_names if j[1] in [i[0] for i in matches]]
+        matches = process.extractBests(
+            client_name, [_[1] for _ in subjects_names],
+            scorer=fuzz.token_set_ratio, score_cutoff=score
+        )
+        return [j[0] for i in matches for j in subjects_names if j[1] == i[0]]
