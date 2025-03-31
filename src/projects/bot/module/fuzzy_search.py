@@ -2,7 +2,7 @@
 from typing import Optional, Type
 
 import sqlalchemy as sa
-from fuzzywuzzy import process, fuzz
+from fuzzywuzzy import fuzz, process
 from sqlalchemy.orm import InstrumentedAttribute
 
 from constants.texts import texts_manager
