@@ -57,3 +57,17 @@ SUMMARIZATION_PROMPT = (
     '________________'
     'Твой ответ:'
 )
+
+
+START_OF_CLASSIFICATION_SYSTEM_PROMPT = """\
+Твоя задача классифицировать запрос пользователя на одну наиболее вероятную категорию из представленных.
+В ответе только название категории, без пояснений.
+
+Категории:
+"""
+
+CATEGORY_TEMPLATE_OF_CLASSIFICATION_SYSTEM_PROMPT = '- {category} ({description} ({key_words}))\n'
+
+CLASSIFICATION_EXTRA_HUMAN_PROMPT = """\
+Я тебя не понял. Ты не должен отвечать на вопрос. Твоя задача просто предсказать одну из категорий:\n{categories}
+"""

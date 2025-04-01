@@ -22,7 +22,7 @@ async def find_and_run_tool_function(message: types.Message, message_text: str) 
     giga = GigaChat(
         verbose=True, credentials=config.giga_credentials,
         scope=config.giga_scope,
-        model=config.giga_model,
+        model=config.giga_model_pro,
         verify_ssl_certs=False,
         profanity_check=False,
         temperature=0.00001

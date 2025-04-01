@@ -2,15 +2,25 @@
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants.enums import RetrieverType
-from db.rag_user_feedback import add_rag_activity, get_user_reaction, update_response
+from db.api.rag.rag_user_feedback import add_rag_activity, get_user_reaction, update_response
 from db.redis import user_dialog
 from keyboards.rag.constructors import get_feedback_kb
 from log.bot_logger import logger
 from utils.base import clear_text_from_url
 from utils.rag_utils.rag_router import RagResponse, RAGRouter
+
+
+class RagState(StatesGroup):
+    """Автомат состояний общения с RAG-системами."""
+
+    rag_mode = State()
+    reports_data = State()
+    rag_user_msg = State()
+    rag_bot_msgs_ids = State()
 
 
 async def query_rag(
