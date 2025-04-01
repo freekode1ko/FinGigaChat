@@ -94,12 +94,14 @@ async def set_rag_mode(
     state_data = await state.get_data()
     first_rag_user_msg: types.Message | None = state_data.get('rag_user_msg')
     if first_rag_user_msg:
+        first_rag_user_query = await audio_to_text(
+            first_rag_user_msg) if first_rag_user_msg.voice else first_rag_user_msg.text
         waiting_answer_msg = await message.answer(
-            texts_manager.RAG_WAITING_ANSWER.format(query=first_rag_user_msg.text),
+            texts_manager.RAG_WAITING_ANSWER.format(query=first_rag_user_query),
             protect_content=texts_manager.RAG_PROTECT,
         )
         asyncio.create_task(
-            ask_with_dialog(message, state, session, waiting_answer_msg, first_rag_user_msg.text),
+            ask_with_dialog(message, state, session, waiting_answer_msg, first_rag_user_query),
             name=f'{user_constants.BACKGROUND_TASK_NAME}{chat_id}'
         )
 
