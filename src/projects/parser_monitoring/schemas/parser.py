@@ -1,8 +1,10 @@
 """Описание pydantic моделей для взаимодействия с сервисом мониторинга."""
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, NaiveDatetime
+
+from configs.config import MOSCOW_TZ
 
 
 class ParserBase(BaseModel):
@@ -31,7 +33,7 @@ class ParserUpdate(ParserBase):
     period_cron: Optional[str] = None
     alert_timedelta: Optional[int] = None
     last_update_datetime: Optional[NaiveDatetime] = Field(
-        examples=[datetime.now(tz=timezone.utc).replace(tzinfo=None),],
+        examples=[datetime.now(tz=MOSCOW_TZ).replace(tzinfo=None),],
         default=None,
         description='Дата и время последнего обновления'
     )
@@ -41,4 +43,4 @@ class ParserUpdateLastUpdateTime(BaseModel):
     """Модель для обновления даты последнего парсинга парсера."""
 
     name: str | int
-    last_update_datetime: NaiveDatetime = Field(examples=[datetime.now(tz=timezone.utc).replace(tzinfo=None)])
+    last_update_datetime: NaiveDatetime = Field(examples=[datetime.now(tz=MOSCOW_TZ).replace(tzinfo=None)])
