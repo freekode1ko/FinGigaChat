@@ -5,17 +5,18 @@ from aiogram import Bot, F, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.chat_action import ChatActionSender
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from constants import commands
 from constants.constants import DEFAULT_RAG_ANSWER, END_BUTTON_TXT
 from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.api.rag.rag_user_feedback import update_user_reaction
 from db.redis import user_constants, user_dialog
 from handlers.ai.handler import router
-from handlers.ai.rag.utils import add_data_to_db, query_rag, RagState, update_keyboard_of_penultimate_bot_msg
 from keyboards.analytics.constructors import get_few_full_research_kb
 from keyboards.rag.callbacks import GetReports, RegenerateResponse, SetReaction
 from keyboards.rag.constructors import get_feedback_kb, get_feedback_regenerate_kb
@@ -24,6 +25,16 @@ from utils.decorators import has_access_to_feature
 from utils.handler_utils import audio_to_text
 from utils.rag_utils.classification.gags.calling_gag import call_gag
 from utils.rag_utils.rag_rephrase import get_rephrase_query, get_rephrase_query_by_history
+from . import const, enums, service, utils
+
+
+class AiState(StatesGroup):
+    """Автомат состояний общения с RAG-системами."""
+
+    ai_mode = State()
+    reports_data = State()
+    capture_message = State()
+    rag_bot_msgs_ids = State()
 
 
 @router.message(F.text.lower().in_({'clear', 'очистить историю диалога', 'очистить историю'}))
@@ -37,8 +48,8 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext, s
     :param session:     Сессия к бд.
     """
     state_name = await state.get_state()
-    if state_name == RagState.rag_mode:
-        await update_keyboard_of_penultimate_bot_msg(session, message, state)
+    if state_name == AiState.ai_mode:
+        await utils.update_previous_rag_msg_keyboard(session, message, state)
         await user_dialog.del_dialog_and_history_query(message.chat.id)
         await message.answer(
             texts_manager.RAG_CLEAR_HISTORY,
@@ -46,76 +57,115 @@ async def clear_user_dialog_if_need(message: types.Message, state: FSMContext, s
         )
 
 
-@router.message(Command('knowledgebase'))
+@router.message(Command(commands.AI_HELPER))
 @has_access_to_feature(FeatureType.knowledgebase)
-async def set_rag_mode(
+async def set_gen_ai_mode(
         message: types.Message,
         state: FSMContext,
         session: AsyncSession,
 ) -> None:
     """
-    Переключение в режим общения с Вопросно-ответной системой (ВОС).
+    Переключение в режим общения с Gen AI.
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
     :param session:     Асинхронная сессия базы данных.
     """
-    await state.set_state(RagState.rag_mode)
+    await state.set_state(AiState.ai_mode)
     chat_id, full_name, user_msg = message.chat.id, message.from_user.full_name, message.text
     user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
 
     buttons = [
         [
-            types.KeyboardButton(text='Очистить историю диалога'),
+            # types.KeyboardButton(text='Очистить историю диалога'),
             types.KeyboardButton(text=END_BUTTON_TXT),
         ]
     ]
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=buttons,
         resize_keyboard=True,
-        input_field_placeholder=texts_manager.RAG_FINISH_STATE,
+        input_field_placeholder=texts_manager.GEN_AI_FINISH_STATE,
         one_time_keyboard=True
     )
-    await message.answer(
-        texts_manager.RAG_START_STATE,
-        reply_markup=keyboard,
-        protect_content=texts_manager.RAG_PROTECT,
-    )
-
     state_data = await state.get_data()
-    first_rag_user_msg: types.Message | None = state_data.get('rag_user_msg')
-    if first_rag_user_msg:
-        first_rag_user_query = await audio_to_text(
-            first_rag_user_msg) if first_rag_user_msg.voice else first_rag_user_msg.text
-        waiting_answer_msg = await message.answer(
-            texts_manager.RAG_WAITING_ANSWER.format(query=first_rag_user_query),
+    captured_message: types.Message | None = state_data.get(const.CAPTURE_MESSAGE_KEY)
+
+    if captured_message is None:
+        await message.answer(
+            texts_manager.GEN_AI_START_STATE,
+            reply_markup=keyboard,
             protect_content=texts_manager.RAG_PROTECT,
         )
-        asyncio.create_task(
-            ask_with_dialog(message, state, session, waiting_answer_msg, first_rag_user_query),
-            name=f'{user_constants.BACKGROUND_TASK_NAME}{chat_id}'
+    else:
+        captured_msg = await audio_to_text(captured_message) if captured_message.voice else captured_message.text
+        await message.answer(
+            texts_manager.GEN_AI_CAPTURE_MESSAGE.format(query=captured_msg),
+            protect_content=texts_manager.RAG_PROTECT,
         )
+        await handle_gen_ai_request(captured_msg, message, state, session)
 
 
-@router.message(RagState.rag_mode)
-async def handler_rag_mode(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
+@router.message(AiState.ai_mode)
+async def handle_ai_mode(message: types.Message, state: FSMContext, session: AsyncSession) -> None:
     """
-    Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя.
+    Отправка пользователю ответа, сформированного Gen AI, на сообщение пользователя.
 
     :param message:     Объект, содержащий в себе информацию по отправителю, чату и сообщению.
     :param state:       Состояние FSM.
     :param session:     Асинхронная сессия базы данных.
     """
     user_msg = await audio_to_text(message) if message.voice else message.text
+    await handle_gen_ai_request(user_msg, message, state, session)
+
+
+async def handle_gen_ai_request(
+        user_msg: str,
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+) -> None:
+    """Обработка запроса пользователя к Gen AI"""
+    chat_id, full_name = message.chat.id, message.from_user.full_name
+    logger.info(f'Start Gen AI request handling: {chat_id=}, {message.message_id=}, {user_msg=}')
+    user_logger.info(f'*{chat_id}* {full_name} - {user_msg}')
+    request_type = await utils.classify_gen_ai_request(user_msg)
+    logger.info(f'Gen AI request type: {chat_id=}, {message.message_id=}, {request_type=}')
+    match request_type:
+        case enums.GenAIEnum.GENAIDY:
+            await service.ask_genaidy(user_msg, message, state, session)
+        case enums.GenAIEnum.MEET_PREPARING:
+            await service.prepare_to_meeting(user_msg, message, state, session)
+        case _:
+            await handler_rag_mode(message, state, session, captured_message=user_msg)
+
+
+async def handler_rag_mode(
+        message: types.Message,
+        state: FSMContext,
+        session: AsyncSession,
+        *,
+        captured_message: str | None = None,
+) -> None:
+    """
+    Отправка пользователю ответа, сформированного ВОС, на сообщение пользователя.
+
+    :param message:             Объект, содержащий в себе информацию по отправителю, чату и сообщению.
+    :param state:               Состояние FSM.
+    :param session:             Асинхронная сессия базы данных.
+    :param captured_message:
+    """
+    user_msg = captured_message
+    if user_msg is None:
+        user_msg = await audio_to_text(message) if message.voice else message.text
     waiting_answer_msg = await message.answer(
         texts_manager.RAG_WAITING_ANSWER.format(query=user_msg),
         protect_content=texts_manager.RAG_PROTECT,
     )
 
     state_data = await state.get_data()
-    if state_data.get('rag_user_msg'):
-        await update_keyboard_of_penultimate_bot_msg(session, message, state)
-    await state.update_data(rag_user_msg=message)
+    if state_data.get(const.CAPTURE_MESSAGE_KEY):
+        await utils.update_previous_rag_msg_keyboard(session, message, state)
+    await state.update_data(**{const.CAPTURE_MESSAGE_KEY: message})
     asyncio.create_task(
         ask_with_dialog(message, state, session, waiting_answer_msg, user_msg),
         name=f'{user_constants.BACKGROUND_TASK_NAME}{message.chat.id}'
@@ -148,13 +198,13 @@ async def ask_with_dialog(
             state_data = await state.get_data()
             history_query = await get_rephrase_query_by_history(chat_id, full_name, user_query)
 
-            rag_type, response = await query_rag(chat_id, full_name, user_query, True, history_query)
+            rag_type, response = await utils.query_rag(chat_id, full_name, user_query, True, history_query)
             if response.answers[0] == DEFAULT_RAG_ANSWER:
                 clear_response = await call_gag(history_query, message.bot, message, session)
             else:
                 reports_data = response.metadata.get('reports_data_research')
                 kb = get_feedback_regenerate_kb(
-                    user_msg=state_data['rag_user_msg'],
+                    user_msg=state_data[const.CAPTURE_MESSAGE_KEY],
                     rephrase_query=True,
                     with_reports=reports_data is not None
                 )
@@ -162,9 +212,9 @@ async def ask_with_dialog(
                 await state.update_data(rag_bot_msgs_ids=msgs_ids, reports_data=reports_data)
                 clear_response = '\n'.join(response.answers)
 
-            await add_data_to_db(
+            await utils.add_data_to_db(
                 session=session,
-                msg=state_data['rag_user_msg'],
+                msg=state_data[const.CAPTURE_MESSAGE_KEY],
                 user_query=user_query,
                 clear_response=clear_response,
                 rag_type=rag_type,
@@ -215,10 +265,10 @@ async def ask_without_dialog(
             if callback_data.need_rephrase_query:
                 history_query = await user_dialog.get_history_query(chat_id)
                 rephrase_query = await get_rephrase_query(chat_id, full_name, user_query, history_query)
-                rag_type, response = await query_rag(chat_id, full_name, user_query, True, rephrase_query)
+                rag_type, response = await utils.query_rag(chat_id, full_name, user_query, True, rephrase_query)
             else:
                 rephrase_query = ''
-                rag_type, response = await query_rag(chat_id, full_name, user_query, use_rephrase=False)
+                rag_type, response = await utils.query_rag(chat_id, full_name, user_query, use_rephrase=False)
 
             if response.answers[0] == DEFAULT_RAG_ANSWER:
                 clear_response = await call_gag(rephrase_query or user_query, call.bot, call.message, session)
@@ -227,13 +277,13 @@ async def ask_without_dialog(
                 with_reports = reports_data is not None
                 if rephrase_query:
                     kb = get_feedback_regenerate_kb(
-                        user_msg=state_data['rag_user_msg'],
+                        user_msg=state_data[const.CAPTURE_MESSAGE_KEY],
                         initially_query=True,
                         with_reports=with_reports
                     )
                 else:
                     kb = get_feedback_kb(
-                        user_msg=state_data['rag_user_msg'],
+                        user_msg=state_data[const.CAPTURE_MESSAGE_KEY],
                         with_reports=with_reports
                     )
 
@@ -244,9 +294,9 @@ async def ask_without_dialog(
                 )
                 clear_response = '\n'.join(response.answers)
 
-            await add_data_to_db(
+            await utils.add_data_to_db(
                 session=session,
-                msg=state_data['rag_user_msg'],
+                msg=state_data[const.CAPTURE_MESSAGE_KEY],
                 user_query=user_query,
                 clear_response=clear_response,
                 rag_type=rag_type,
@@ -283,8 +333,8 @@ async def ask_regenerate(
     chat_id = call.message.chat.id  # call.message.from_user.id != chat_id, но в бд хранится user_id равный chat_id
     user_query = await user_dialog.get_last_user_msg(chat_id)
     state_data = await state.get_data()
-    if not user_query or not state_data.get('rag_user_msg'):
-        await update_keyboard_of_penultimate_bot_msg(session, call.message, state)
+    if not user_query or not state_data.get(const.CAPTURE_MESSAGE_KEY):
+        await utils.update_previous_rag_msg_keyboard(session, call.message, state)
         await call.bot.send_message(
             chat_id,
             texts_manager.RAG_TRY_AGAIN,

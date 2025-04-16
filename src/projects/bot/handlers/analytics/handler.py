@@ -16,7 +16,7 @@ from constants.enums import FeatureType
 from constants.texts import texts_manager
 from db.api.research import research_db
 from db.user import get_user
-from handlers.ai.rag.utils import RagState
+from handlers.ai.rag.rag import AiState
 from keyboards.analytics import callbacks, constructors as keyboards
 from log.bot_logger import logger, user_logger
 from module import formatter
@@ -128,7 +128,7 @@ async def get_full_version_of_research(
                 protect_content=texts_manager.PROTECT_CONTENT,
             )
 
-    if await state.get_state() != RagState.rag_mode:
+    if await state.get_state() != AiState.ai_mode:
         try:
             await callback_query.message.delete()
         except TelegramAPIError:

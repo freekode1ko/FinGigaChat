@@ -12,6 +12,7 @@ from keyboards.rag.constructors import get_feedback_kb
 from log.bot_logger import logger
 from utils.base import clear_text_from_url
 from utils.rag_utils.rag_router import RagResponse, RAGRouter
+from . import const, enums
 
 
 class RagState(StatesGroup):
@@ -49,6 +50,12 @@ async def query_rag(
         logger.exception(f'При получении ответа на вопрос "{user_query}": произошла ошибка {type(exc)}:{exc}')
         raise RuntimeError
     return rag_obj.retriever_type, response
+
+
+async def classify_gen_ai_request(request: str, session: AsyncSession) -> enums.GenAIEnum:
+    """Classify gen ai request type"""
+    prompt = await db.api.rag.get_gen_ai_classification_prompt(session)
+    response = await llm_interface.ainvoke(request, prompt, structured_output=None)
 
 
 async def add_data_to_db(
@@ -104,13 +111,13 @@ async def add_data_to_db(
     )
 
 
-async def update_keyboard_of_penultimate_bot_msg(session: AsyncSession, message: types.Message, state: FSMContext) -> None:
+async def update_previous_rag_msg_keyboard(session: AsyncSession, message: types.Message, state: FSMContext) -> None:
     """Обновляет клавиатуру предпоследнего сообщения от рага: убирает кнопку генерации."""
     data = await state.get_data()
-    if not data.get('rag_user_msg'):
+    if not data.get(const.CAPTURE_MESSAGE_KEY):
         return
 
-    reaction = await get_user_reaction(session, message.chat.id, data['rag_user_msg'].message_id)
+    reaction = await get_user_reaction(session, message.chat.id, data[const.CAPTURE_MESSAGE_KEY].message_id)
     if reaction is not None:
         return
 
@@ -119,7 +126,7 @@ async def update_keyboard_of_penultimate_bot_msg(session: AsyncSession, message:
             await message.bot.edit_message_reply_markup(
                 chat_id=message.chat.id,
                 message_id=rag_bot_msgs_ids[-1],
-                reply_markup=get_feedback_kb(data['rag_user_msg'])
+                reply_markup=get_feedback_kb(data[const.CAPTURE_MESSAGE_KEY])
             )
         except TelegramBadRequest:
             pass

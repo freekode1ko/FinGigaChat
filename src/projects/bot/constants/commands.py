@@ -1,6 +1,7 @@
 """Файл с командами для бота"""
 
 INSTRUCTION_COMMAND = 'instruction'
+AI_HELPER = 'ai_helper'
 
 PUBLIC_COMMANDS: list[dict] = [
     {
@@ -40,8 +41,8 @@ PUBLIC_COMMANDS: list[dict] = [
         'description': 'Отраслевые дэшборды',
     },
     {
-        'command': 'knowledgebase',
-        'description': 'Спросить у Базы Знаний',
+        'command': AI_HELPER,
+        'description': 'Спроси у GenAIдия',
     },
     # {
     #     'command': 'get_tg_news',

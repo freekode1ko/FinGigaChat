@@ -20,7 +20,7 @@ from db.api.commodity import commodity_db
 from db.api.industry import industry_db
 from db.api.subject_interface import SubjectInterface
 from handlers import common, quotes
-from handlers.ai.rag import rag
+from handlers.ai.rag import rag, const as rag_const
 from handlers.analytics import analytics_sell_side
 from handlers.clients.callback_data_factories import ClientsMenuData, ClientsMenusEnum
 from handlers.clients.keyboards import get_client_menu_kb, get_stakeholder_menu_kb
@@ -194,7 +194,7 @@ async def send_nearest_subjects(message: types.Message, user_msg: str, features:
 
     buttons = [[types.KeyboardButton(text=texts_manager.COMMON_CANCEL_WORD)], ]
     if features.get(enums.FeatureType.knowledgebase):
-        buttons.append([types.KeyboardButton(text=texts_manager.RAG_ASK_KNOWLEDGE)])
+        buttons.append([types.KeyboardButton(text=texts_manager.ASK_GEN_AI)])
 
     for subject_name in nearest_subjects:
         buttons.append([types.KeyboardButton(text=subject_name)])
@@ -412,7 +412,7 @@ async def process_user_message(
     else:
         aliases_dict = {
             **{alias: (common.help_handler, {'state': state, 'user_msg': user_msg}) for alias in aliases.help_aliases},
-            **{alias: (rag.set_rag_mode, {'state': state, 'session': session}) for alias in aliases.giga_and_rag_aliases},
+            **{alias: (rag.set_gen_ai_mode, {'state': state, 'session': session}) for alias in aliases.gen_ai_aliases},
             **{alias: (quotes.bonds_info_command, {'session': session}) for alias in aliases.bonds_aliases},
             **{alias: (quotes.economy_info_command, {'session': session}) for alias in aliases.eco_aliases},
             **{alias: (quotes.metal_info_command, {'session': session}) for alias in aliases.metal_aliases},
@@ -424,8 +424,8 @@ async def process_user_message(
         if function_to_call:
             await function_to_call(message, **kwargs)
         else:
-            await state.set_state(rag.RagState.rag_user_msg)
-            await state.update_data(rag_user_msg=message)
+            await state.set_state(rag.AiState.capture_message)
+            await state.set_data({rag_const.CAPTURE_MESSAGE_KEY: message})
             await send_nearest_subjects(message, user_msg, features)
 
 

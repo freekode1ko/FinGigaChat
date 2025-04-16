@@ -1,7 +1,7 @@
 """Пакет с текстовыми константами для функционала бота."""
 from pydantic_settings import BaseSettings
 
-from constants.texts.features.ai import CallReportsTexts, GagsTexts, RAGTexts
+from constants.texts.features.ai import CallReportsTexts, GagsTexts, RAGTexts, GenAiTexts
 from constants.texts.features.analytics import AnalyticsTexts
 from constants.texts.features.broadcast import BroadcastTexts
 from constants.texts.features.common import CommonTexts, HelpTexts, RegistrationTexts
@@ -35,6 +35,7 @@ CONFIG_CLASSES: list[type[BaseSettings]] = [
     TelegramWebAppParams,
     BroadcastTexts,
     GagsTexts,
+    GenAiTexts,
 ]
 
 __all__ = [

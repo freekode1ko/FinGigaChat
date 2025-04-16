@@ -1,3 +1,10 @@
 """Хендлеры RAG"""
 
-from handlers.ai.rag import rag  # noqa:F401
+from . import const, utils, rag
+
+
+__all__ = [
+    'const',
+    'utils',
+    'rag',
+]
