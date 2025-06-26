@@ -59,4 +59,5 @@ class BondsGetter(QuotesGetter):
                 preprocessed_ids.add(tables_row[1])
             except Exception as e:
                 self.logger.error(f'При обработке источника {tables_row[3]} ({group_name}) произошла ошибка: %s', e)
+        bonds_kot = bonds_kot[~bonds_kot[bonds_kot_columns[0]].str.contains('месячн', case=False, na=False)]
         return bonds_kot, preprocessed_ids

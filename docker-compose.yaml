@@ -296,25 +296,6 @@ services:
         restart: always
 
 
-    parser_monitoring:
-        build:
-            context: ./src/projects/parser_monitoring
-            additional_contexts:
-                root_dir: ./
-        container_name: parser_monitoring_container
-        environment:
-            - TZ=Europe/Moscow
-        env_file:
-            - .env
-        command: poetry run python main.py
-        depends_on:
-            - database
-        volumes:
-            - ./logs:/code/logs
-            - ./data:/code/data
-            - ./sources:/code/sources/
-        restart: always
-
 
     nginx:
         image: nginx:latest
@@ -351,7 +332,6 @@ services:
             - quotes
             - research
             - users_statistics
-            - parser_monitoring
 
 volumes:
   redis_data:
