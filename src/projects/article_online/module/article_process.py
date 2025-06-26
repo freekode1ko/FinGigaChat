@@ -18,6 +18,10 @@ from module.model_pipe import (
     model_func_online,
 )
 
+# Define acceptable timestamp range in seconds
+MIN_TS = 0              # Unix epoch start (1970-01-01)
+MAX_TS = 1e10           # Roughly corresponds to year 2286
+
 
 class ArticleProcess:
     """Класс обработчик новостей"""
@@ -57,6 +61,9 @@ class ArticleProcess:
                 f'В выгрузке содержатся старые новости! Количество новостей после их удаления - {len(df)}')
         return df
 
+    def make_datetime_as_local(self, dttm: dt.datetime) -> dt.datetime:
+        """Transform datetime to local datetime without timezone"""
+
     def preprocess_article_online(self, df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         """
         Предобработать поступившие новости.
@@ -88,7 +95,11 @@ class ArticleProcess:
         df['text'] = df['text'].str.replace('»', '"')
         df['title'] = df['title'].str.replace('«', '"')
         df['title'] = df['title'].str.replace('»', '"')
+        self._logger.info('Filter incorrent datetime timestamps')
+        df = df[(df['date'] >= MIN_TS) & (df['date'] <= MAX_TS)].copy()
+        self._logger.info('Transform datetime to Moscow timezone')
         df['date'] = df['date'].apply(lambda x: pd.to_datetime(x, unit='s') + pd.to_timedelta(3, unit='h'))
+        self._logger.info('Group articles by link')
         try:
             df = (
                 df.groupby('link')
